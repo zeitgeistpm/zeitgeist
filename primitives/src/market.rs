@@ -31,8 +31,10 @@ use sp_runtime::RuntimeDebug;
 /// * `BN`: Block number
 /// * `M`: Moment (time moment)
 /// * `A`: Asset
+/// * `MI`: Market ID
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Market<AI, BA, BN, M, A> {
+pub struct Market<AI, BA, BN, M, A, MI> {
+    pub market_id: Option<MI>,
     /// Base asset of the market.
     pub base_asset: A,
     /// Creator of this market.
@@ -68,7 +70,7 @@ pub struct Market<AI, BA, BN, M, A> {
     pub early_close: Option<EarlyClose<BN, M>>,
 }
 
-impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
+impl<AI, BA, BN, M, A, MI> Market<AI, BA, BN, M, A, MI> {
     pub fn resolution_mechanism(&self) -> ResolutionMechanism {
         match self.scoring_rule {
             ScoringRule::Lmsr | ScoringRule::Orderbook => ResolutionMechanism::RedeemTokens,
@@ -139,7 +141,7 @@ impl<AI, BA> Default for MarketBonds<AI, BA> {
     }
 }
 
-impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
+impl<AI, BA, BN, M, A, MI> Market<AI, BA, BN, M, A, MI> {
     // Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
@@ -165,16 +167,18 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
     }
 }
 
-impl<AI, BA, BN, M, A> MaxEncodedLen for Market<AI, BA, BN, M, A>
+impl<AI, BA, BN, M, A, MI> MaxEncodedLen for Market<AI, BA, BN, M, A, MI>
 where
     AI: MaxEncodedLen,
     BA: MaxEncodedLen,
     BN: MaxEncodedLen,
     M: MaxEncodedLen,
     A: MaxEncodedLen,
+    MI: MaxEncodedLen,
 {
     fn max_encoded_len() -> usize {
         AI::max_encoded_len()
+            .saturating_add(Option::<MI>::max_encoded_len())
             .saturating_add(A::max_encoded_len())
             .saturating_add(MarketCreation::max_encoded_len())
             .saturating_add(Perbill::max_encoded_len())
@@ -347,7 +351,7 @@ pub enum ResolutionMechanism {
 mod tests {
     use crate::{market::*, types::Asset};
     use test_case::test_case;
-    type Market = crate::market::Market<u32, u32, u32, u32, Asset<u32>>;
+    type Market = crate::market::Market<u32, u32, u32, u32, Asset<u32>, u32>;
 
     #[test_case(
         MarketType::Categorical(6),
@@ -403,6 +407,7 @@ mod tests {
         expected: bool,
     ) {
         let market = Market {
+            market_id: Some(9),
             base_asset: Asset::Ztg,
             creator: 1,
             creation: MarketCreation::Permissionless,

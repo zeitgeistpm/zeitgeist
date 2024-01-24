@@ -60,8 +60,14 @@ mod pallet {
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <T as Config>::Balance;
     pub(crate) type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
-    pub(crate) type MarketOf<T> =
-        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberOf<T>, MomentOf<T>, AssetOf<T>>;
+    pub(crate) type MarketOf<T> = Market<
+        AccountIdOf<T>,
+        BalanceOf<T>,
+        BlockNumberOf<T>,
+        MomentOf<T>,
+        AssetOf<T>,
+        MarketIdOf<T>,
+    >;
     pub type MarketIdOf<T> = <T as Config>::MarketId;
     pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
@@ -105,6 +111,8 @@ mod pallet {
         NoReport,
         /// There's a pool registered for this market already.
         PoolAlreadyExists,
+        /// Attempting to issue a market ID for a market object that already has an ID.
+        MarketIdDoubleWrite,
     }
 
     #[pallet::hooks]
@@ -124,7 +132,7 @@ mod pallet {
         // on the storage so next following calls will return yet another incremented number.
         //
         // Returns `Err` if `MarketId` addition overflows.
-        pub fn next_market_id() -> Result<T::MarketId, DispatchError> {
+        fn next_market_id() -> Result<T::MarketId, DispatchError> {
             let id = MarketCounter::<T>::get();
             let new_counter = id.checked_add_res(&1u8.into())?;
             <MarketCounter<T>>::put(new_counter);
@@ -175,10 +183,15 @@ mod pallet {
             })
         }
 
-        fn push_market(market: MarketOf<T>) -> Result<Self::MarketId, DispatchError> {
+        fn push_market(
+            market: MarketOf<T>,
+        ) -> Result<(Self::MarketId, MarketOf<T>), DispatchError> {
+            ensure!(market.market_id.is_none(), Error::<T>::MarketIdDoubleWrite);
             let market_id = Self::next_market_id()?;
-            <Markets<T>>::insert(market_id, market);
-            Ok(market_id)
+            let mut mut_market = market;
+            mut_market.market_id = Some(market_id);
+            <Markets<T>>::insert(market_id, mut_market.clone());
+            Ok((market_id, mut_market))
         }
 
         fn remove_market(market_id: &Self::MarketId) -> DispatchResult {

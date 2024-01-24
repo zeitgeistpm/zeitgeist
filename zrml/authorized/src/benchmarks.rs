@@ -51,7 +51,7 @@ benchmarks! {
         let now = frame_system::Pallet::<T>::block_number();
         let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
         for _ in 1..=m {
-            let id = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
+            let (id, _) = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
             T::DisputeResolution::add_auto_resolve(&id, correction_period_ends_at).unwrap();
         }
 

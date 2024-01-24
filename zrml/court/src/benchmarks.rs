@@ -54,6 +54,7 @@ where
     T: Config,
 {
     Market {
+        market_id: Default::default(),
         base_asset: Asset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),
@@ -176,7 +177,7 @@ where
     let now = <frame_system::Pallet<T>>::block_number();
     <RequestBlock<T>>::put(now + 1u64.saturated_into::<T::BlockNumber>());
 
-    let market_id = T::MarketCommons::push_market(get_market::<T>()).unwrap();
+    let (market_id, _) = T::MarketCommons::push_market(get_market::<T>()).unwrap();
     Court::<T>::on_dispute(&market_id, &get_market::<T>()).unwrap();
 
     let court_id = <MarketIdToCourtId<T>>::get(market_id).unwrap();

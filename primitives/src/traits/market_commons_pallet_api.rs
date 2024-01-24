@@ -36,6 +36,7 @@ type MarketOf<T> = Market<
     <T as MarketCommonsPalletApi>::BlockNumber,
     <T as MarketCommonsPalletApi>::Moment,
     Asset<<T as MarketCommonsPalletApi>::MarketId>,
+    <T as MarketCommonsPalletApi>::MarketId,
 >;
 
 /// Abstraction over storage operations for markets
@@ -78,8 +79,16 @@ pub trait MarketCommonsPalletApi {
     where
         F: FnOnce(&mut MarketOf<Self>) -> DispatchResult;
 
-    /// Pushes a new market into the storage, returning its related auto-incremented ID.
-    fn push_market(market: MarketOf<Self>) -> Result<Self::MarketId, DispatchError>;
+    /// Equips a market with a market ID, writes the market to storage and then returns the ID and
+    /// the modified market.
+    ///
+    /// This function is the only public means by which new IDs are issued. The market's `market_id`
+    /// field is expected to be `None`. If that's not the case, this function will raise an error to
+    /// avoid double-writes, which are always the result of an incorrect issuance process for market
+    /// IDs.
+    fn push_market(
+        market: MarketOf<Self>,
+    ) -> Result<(Self::MarketId, MarketOf<Self>), DispatchError>;
 
     /// Removes a market from the storage.
     fn remove_market(market_id: &Self::MarketId) -> DispatchResult;

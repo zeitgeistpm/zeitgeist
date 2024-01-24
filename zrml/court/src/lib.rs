@@ -220,6 +220,7 @@ mod pallet {
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
         Asset<MarketIdOf<T>>,
+        MarketIdOf<T>,
     >;
     pub(crate) type HashOf<T> = <T as frame_system::Config>::Hash;
     pub(crate) type AccountIdLookupOf<T> =

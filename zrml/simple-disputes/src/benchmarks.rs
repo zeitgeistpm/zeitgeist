@@ -67,7 +67,7 @@ benchmarks! {
         let last_dispute = disputes.last().unwrap();
         let auto_resolve = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
         for i in 0..r {
-            let id = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
+            let (id, _) = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
             T::DisputeResolution::add_auto_resolve(&id, auto_resolve).unwrap();
         }
 
@@ -76,7 +76,7 @@ benchmarks! {
         let dispute_duration_ends_at_block =
                 now.saturating_add(market.deadlines.dispute_duration);
         for i in 0..e {
-            let id = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
+            let (id, _) = T::MarketCommons::push_market(market_mock::<T>()).unwrap();
             T::DisputeResolution::add_auto_resolve(&id, dispute_duration_ends_at_block).unwrap();
         }
 

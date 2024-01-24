@@ -101,6 +101,7 @@ mod pallet {
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
         AssetOf<T>,
+        MarketIdOf<T>,
     >;
     pub(crate) type MomentOf<T> =
         <<T as zrml_market_commons::Config>::Timestamp as frame_support::traits::Time>::Moment;
@@ -666,6 +667,7 @@ mod pallet {
 
             Self::clear_auto_close(&market_id)?;
             let edited_market = Self::construct_market(
+                Some(market_id),
                 base_asset,
                 old_market.creator,
                 old_market.creator_fee,
@@ -2105,6 +2107,7 @@ mod pallet {
             };
 
             let market = Self::construct_market(
+                None,
                 base_asset,
                 who.clone(),
                 creator_fee,
@@ -2128,7 +2131,7 @@ mod pallet {
                 bonds.total_amount_bonded(&who),
             )?;
 
-            let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
+            let (market_id, market) = <zrml_market_commons::Pallet<T>>::push_market(market)?;
             let market_account = Self::market_account(market_id);
 
             let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
@@ -2873,6 +2876,7 @@ mod pallet {
         }
 
         fn construct_market(
+            market_id: Option<MarketIdOf<T>>,
             base_asset: AssetOf<T>,
             creator: T::AccountId,
             creator_fee: Perbill,
@@ -2914,6 +2918,7 @@ mod pallet {
                 MarketCreation::Advised => MarketStatus::Proposed,
             };
             Ok(Market {
+                market_id,
                 base_asset,
                 creation,
                 creator_fee,
