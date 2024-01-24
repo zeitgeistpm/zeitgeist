@@ -340,7 +340,7 @@ mod pallet {
         // Within the same block, operations that interact with the activeness of the same
         // market will behave differently before and after this call.
         #[pallet::call_index(1)]
-        #[pallet::weight((T::WeightInfo::admin_move_market_to_closed(CacheSize::get()), Pays::No))]
+        #[pallet::weight(T::WeightInfo::admin_move_market_to_closed(CacheSize::get()))]
         #[transactional]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
@@ -364,7 +364,7 @@ mod pallet {
         /// Complexity: `O(n + m)`, where `n` is the number of market ids
         /// per dispute / report block, m is the number of disputes.
         #[pallet::call_index(2)]
-        #[pallet::weight((
+        #[pallet::weight(
             T::WeightInfo::admin_move_market_to_resolved_scalar_reported(CacheSize::get())
             .max(
                 T::WeightInfo::admin_move_market_to_resolved_categorical_reported(CacheSize::get())
@@ -372,9 +372,8 @@ mod pallet {
                 T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(CacheSize::get())
             ).max(
                 T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(CacheSize::get())
-            ),
-            Pays::No,
-        ))]
+            )
+        )]
         #[transactional]
         pub fn admin_move_market_to_resolved(
             origin: OriginFor<T>,
@@ -425,7 +424,7 @@ mod pallet {
         ///
         /// Complexity: `O(1)`
         #[pallet::call_index(3)]
-        #[pallet::weight((T::WeightInfo::approve_market(), Pays::No))]
+        #[pallet::weight(T::WeightInfo::approve_market())]
         #[transactional]
         pub fn approve_market(
             origin: OriginFor<T>,
@@ -448,7 +447,8 @@ mod pallet {
 
             Self::deposit_event(Event::MarketApproved(market_id, new_status));
             // The ApproveOrigin should not pay fees for providing this service
-            Ok((Some(T::WeightInfo::approve_market()), Pays::No).into())
+            let default_weight: Option<Weight> = None;
+            Ok((default_weight, Pays::No).into())
         }
 
         /// Request an edit to a proposed market.
@@ -464,16 +464,15 @@ mod pallet {
         ///
         /// Complexity: `O(edit_reason.len())`
         #[pallet::call_index(4)]
-        #[pallet::weight((
-            T::WeightInfo::request_edit(edit_reason.len() as u32),
-            Pays::No,
-        ))]
+        #[pallet::weight(
+            T::WeightInfo::request_edit(edit_reason.len() as u32)
+        )]
         #[transactional]
         pub fn request_edit(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             edit_reason: Vec<u8>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             T::RequestEditOrigin::ensure_origin(origin)?;
             let edit_reason: EditReason<T> = edit_reason
                 .try_into()
@@ -489,7 +488,8 @@ mod pallet {
                 }
             })?;
             Self::deposit_event(Event::MarketRequestedEdit(market_id, edit_reason));
-            Ok(())
+            let default_weight: Option<Weight> = None;
+            Ok((default_weight, Pays::No).into())
         }
 
         /// Buy a complete set of outcome shares of a market.
@@ -833,15 +833,11 @@ mod pallet {
                 }
             }
 
-            // Weight correction
-            if let OutcomeReport::Categorical(_) = resolved_outcome {
-                return Ok(Some(T::WeightInfo::redeem_shares_categorical()).into());
-            } else if let OutcomeReport::Scalar(_) = resolved_outcome {
-                return Ok(Some(T::WeightInfo::redeem_shares_scalar()).into());
-            }
-
-            let default_weight: Option<Weight> = None;
-            Ok((default_weight, Pays::No).into())
+            let weight = match resolved_outcome {
+                OutcomeReport::Categorical(_) => T::WeightInfo::redeem_shares_categorical(),
+                OutcomeReport::Scalar(_) => T::WeightInfo::redeem_shares_scalar(),
+            };
+            Ok(Some(weight).into())
         }
 
         /// Rejects a market that is waiting for approval from the advisory committee.
@@ -854,10 +850,8 @@ mod pallet {
         /// and `m` is the number of market ids,
         /// which close at the same time as the specified market.
         #[pallet::call_index(13)]
-        #[pallet::weight((
-            T::WeightInfo::reject_market(CacheSize::get(), reject_reason.len() as u32),
-            Pays::No,
-        ))]
+        #[pallet::weight(
+            T::WeightInfo::reject_market(CacheSize::get(), reject_reason.len() as u32))]
         #[transactional]
         pub fn reject_market(
             origin: OriginFor<T>,
