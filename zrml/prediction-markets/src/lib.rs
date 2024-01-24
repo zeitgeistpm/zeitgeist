@@ -831,16 +831,11 @@ mod pallet {
                 }
             }
 
-            // Weight correction
-            let weight = if let OutcomeReport::Categorical(_) = resolved_outcome {
-                Some(T::WeightInfo::redeem_shares_categorical())
-            } else if let OutcomeReport::Scalar(_) = resolved_outcome {
-                Some(T::WeightInfo::redeem_shares_scalar())
-            } else {
-                None
+            let weight = match resolved_outcome {
+                OutcomeReport::Categorical(_) => T::WeightInfo::redeem_shares_categorical(),
+                OutcomeReport::Scalar(_) => T::WeightInfo::redeem_shares_scalar(),
             };
-
-            Ok((weight, Pays::No).into())
+            Ok(Some(weight).into())
         }
 
         /// Rejects a market that is waiting for approval from the advisory committee.
