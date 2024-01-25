@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -173,19 +173,7 @@ pub mod pallet {
             + TypeInfo;
     }
 
-    #[pallet::error]
-    pub enum Error<T> {
-        /// Cannot convert Amount (MultiCurrencyExtended implementation) into Balance type.
-        AmountIntoBalanceFailed,
-        /// Cannot start managed destruction as a destruction for the asset is in progress.
-        DestructionInProgress,
-        /// The vector holding all assets to destroy reached it's boundary.
-        TooManyManagedDestroys,
-        /// Asset conversion failed.
-        UnknownAsset,
-        /// Operation is not supported for given asset.
-        Unsupported,
-    }
+    const LOG_TARGET: &str = "runtime::asset-router";
 
     /// Keeps track of assets that have to be destroyed.
     #[pallet::storage]
@@ -197,57 +185,22 @@ pub mod pallet {
     pub type IndestructibleAssets<T: Config> =
         StorageValue<_, BoundedVec<T::AssetType, ConstU32<8192>>, ValueQuery>;
 
+    #[pallet::error]
+    pub enum Error<T> {
+        /// Cannot convert Amount (MultiCurrencyExtended implementation) into Balance type.
+        AmountIntoBalanceFailed,
+        /// Cannot start managed destruction as a destruction for the asset is in progress.
+        DestructionInProgress,
+        /// The vector holding all assets to destroy reached it's boundary.
+        TooManyManagedDestroys,
+        /// Asset conversion failed.
+        UnknownAsset,
+        /// Operation is not supported for given asset
+        Unsupported,
+    }
+
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
-
-    #[pallet::call]
-    impl<T: Config> Pallet<T> {}
-
-    /// This macro converts the invoked asset type into the respective
-    /// implementation that handles it and finally calls the $method on it.
-    macro_rules! route_call {
-        ($currency_id:expr, $currency_method:ident, $asset_method:ident, $($args:expr),*) => {
-            if let Ok(currency) = T::CurrencyType::try_from($currency_id) {
-                Ok(<T::Currencies as MultiCurrency<T::AccountId>>::$currency_method(currency, $($args),*))
-            } else if let Ok(asset) = T::MarketAssetType::try_from($currency_id) {
-                Ok(T::MarketAssets::$asset_method(asset, $($args),*))
-            } else if let Ok(asset) = T::CampaignAssetType::try_from($currency_id) {
-                Ok(T::CampaignAssets::$asset_method(asset, $($args),*))
-            } else if let Ok(asset) = T::CustomAssetType::try_from($currency_id)  {
-                Ok(T::CustomAssets::$asset_method(asset, $($args),*))
-            } else {
-                Err(Error::<T>::UnknownAsset)
-            }
-        };
-    }
-
-    /// This macro delegates a call to Currencies if the asset represents a currency, otherwise
-    /// it returns an error.
-    macro_rules! only_currency {
-        ($currency_id:expr, $error:expr, $currency_trait:ident, $currency_method:ident, $($args:expr),+) => {
-            if let Ok(currency) = T::CurrencyType::try_from($currency_id) {
-                <T::Currencies as $currency_trait<T::AccountId>>::$currency_method(currency, $($args),+)
-            } else {
-                $error
-            }
-        };
-    }
-
-    /// This macro delegates a call to one *Asset instance if the asset does not represent a currency, otherwise
-    /// it returns an error.
-    macro_rules! only_asset {
-        ($asset_id:expr, $error:expr, $asset_trait:ident, $asset_method:ident, $($args:expr),*) => {
-            if let Ok(asset) = T::MarketAssetType::try_from($asset_id) {
-                <T::MarketAssets as $asset_trait<T::AccountId>>::$asset_method(asset, $($args),*)
-            } else if let Ok(asset) = T::CampaignAssetType::try_from($asset_id) {
-                T::CampaignAssets::$asset_method(asset, $($args),*)
-            } else if let Ok(asset) = T::CustomAssetType::try_from($asset_id)  {
-                T::CustomAssets::$asset_method(asset, $($args),*)
-            } else {
-                $error
-            }
-        };
-    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
@@ -380,6 +333,64 @@ pub mod pallet {
         }
     }
 
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {}
+
+    /// This macro converts the invoked asset type into the respective
+    /// implementation that handles it and finally calls the $method on it.
+    macro_rules! route_call {
+        ($currency_id:expr, $currency_method:ident, $asset_method:ident, $($args:expr),*) => {
+            if let Ok(currency) = T::CurrencyType::try_from($currency_id) {
+                Ok(<T::Currencies as MultiCurrency<T::AccountId>>::$currency_method(currency, $($args),*))
+            } else if let Ok(asset) = T::MarketAssetType::try_from($currency_id) {
+                Ok(T::MarketAssets::$asset_method(asset, $($args),*))
+            } else if let Ok(asset) = T::CampaignAssetType::try_from($currency_id) {
+                Ok(T::CampaignAssets::$asset_method(asset, $($args),*))
+            } else if let Ok(asset) = T::CustomAssetType::try_from($currency_id)  {
+                Ok(T::CustomAssets::$asset_method(asset, $($args),*))
+            } else {
+                Err(Error::<T>::UnknownAsset)
+            }
+        };
+    }
+
+    /// This macro delegates a call to Currencies if the asset represents a currency, otherwise
+    /// it returns an error.
+    macro_rules! only_currency {
+        ($currency_id:expr, $error:expr, $currency_trait:ident, $currency_method:ident, $($args:expr),+) => {
+            if let Ok(currency) = T::CurrencyType::try_from($currency_id) {
+                <T::Currencies as $currency_trait<T::AccountId>>::$currency_method(currency, $($args),+)
+            } else {
+                Self::log_unsupported($currency_id, stringify!($currency_method));
+                $error
+            }
+        };
+    }
+
+    /// This macro delegates a call to one *Asset instance if the asset does not represent a currency, otherwise
+    /// it returns an error.
+    macro_rules! only_asset {
+        ($asset_id:expr, $error:expr, $asset_trait:ident, $asset_method:ident, $($args:expr),*) => {
+            if let Ok(asset) = T::MarketAssetType::try_from($asset_id) {
+                <T::MarketAssets as $asset_trait<T::AccountId>>::$asset_method(asset, $($args),*)
+            } else if let Ok(asset) = T::CampaignAssetType::try_from($asset_id) {
+                T::CampaignAssets::$asset_method(asset, $($args),*)
+            } else if let Ok(asset) = T::CustomAssetType::try_from($asset_id)  {
+                T::CustomAssets::$asset_method(asset, $($args),*)
+            } else {
+                Self::log_unsupported($asset_id, stringify!($asset_method));
+                $error
+            }
+        };
+    }
+
+    impl<T: Config> Pallet<T> {
+        #[inline]
+        fn log_unsupported(asset: T::AssetType, function: &str) {
+            log::warn!(target: LOG_TARGET, "Asset {:?} not supported in function {:?}", asset, function);
+        }
+    }
+
     impl<T: Config> TransferAll<T::AccountId> for Pallet<T> {
         #[transactional]
         fn transfer_all(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
@@ -394,17 +405,26 @@ pub mod pallet {
 
         fn minimum_balance(currency_id: Self::CurrencyId) -> Self::Balance {
             let min_balance = route_call!(currency_id, minimum_balance, minimum_balance,);
-            min_balance.unwrap_or(0u8.into())
+            min_balance.unwrap_or_else(|_b| {
+                Self::log_unsupported(currency_id, "minimum_balance");
+                Self::Balance::zero()
+            })
         }
 
         fn total_issuance(currency_id: Self::CurrencyId) -> Self::Balance {
             let total_issuance = route_call!(currency_id, total_issuance, total_issuance,);
-            total_issuance.unwrap_or(0u8.into())
+            total_issuance.unwrap_or_else(|_b| {
+                Self::log_unsupported(currency_id, "total_issuance");
+                Self::Balance::zero()
+            })
         }
 
         fn total_balance(currency_id: Self::CurrencyId, who: &T::AccountId) -> Self::Balance {
             let total_balance = route_call!(currency_id, total_balance, balance, who);
-            total_balance.unwrap_or(0u8.into())
+            total_balance.unwrap_or_else(|_b| {
+                Self::log_unsupported(currency_id, "total_balance");
+                Self::Balance::zero()
+            })
         }
 
         fn free_balance(currency_id: Self::CurrencyId, who: &T::AccountId) -> Self::Balance {
@@ -417,7 +437,8 @@ pub mod pallet {
             } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
                 T::CustomAssets::reducible_balance(asset, who, false)
             } else {
-                0u8.into()
+                Self::log_unsupported(currency_id, "free_balance");
+                Self::Balance::zero()
             }
         }
 
@@ -432,7 +453,8 @@ pub mod pallet {
                 );
             }
 
-            let withdraw_reason = if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
+            let withdraw_consequence = if let Ok(asset) = T::MarketAssetType::try_from(currency_id)
+            {
                 T::MarketAssets::can_withdraw(asset, who, amount)
             } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
                 T::CampaignAssets::can_withdraw(asset, who, amount)
@@ -442,7 +464,7 @@ pub mod pallet {
                 return Err(Error::<T>::UnknownAsset.into());
             };
 
-            withdraw_reason.into_result().map(|_| ())
+            withdraw_consequence.into_result().map(|_| ())
         }
 
         fn transfer(
@@ -497,7 +519,6 @@ pub mod pallet {
             who: &T::AccountId,
             value: Self::Balance,
         ) -> bool {
-            // TODO
             if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 <T::Currencies as MultiCurrency<T::AccountId>>::can_slash(currency, who, value)
             } else if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
@@ -507,6 +528,7 @@ pub mod pallet {
             } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
                 T::CustomAssets::reducible_balance(asset, who, false) >= value
             } else {
+                Self::log_unsupported(currency_id, "can_slash");
                 false
             }
         }
@@ -531,6 +553,7 @@ pub mod pallet {
                     .map(|b| amount.saturating_sub(b))
                     .unwrap_or_else(|_| amount)
             } else {
+                Self::log_unsupported(currency_id, "slash");
                 amount
             }
         }
@@ -554,10 +577,9 @@ pub mod pallet {
                 return Ok(());
             }
 
-            // Ensure this doesn't overflow. There isn't any traits that exposes
-            // `saturating_abs` so we need to do it manually.
+            // Ensure that no overflows happen during abs().
             let by_amount_abs = if by_amount == Self::Amount::min_value() {
-                Self::Amount::max_value()
+                return Err(Error::<T>::AmountIntoBalanceFailed.into());
             } else {
                 by_amount.abs()
             };
@@ -705,6 +727,7 @@ pub mod pallet {
                 );
             }
 
+            Self::log_unsupported(currency_id, "reserved_balance_named");
             Zero::zero()
         }
 
@@ -735,6 +758,7 @@ pub mod pallet {
                 );
             }
 
+            Self::log_unsupported(currency_id, "unreserve_named");
             value
         }
 
@@ -750,6 +774,7 @@ pub mod pallet {
                 );
             }
 
+            Self::log_unsupported(currency_id, "slash_reserved_named");
             value
         }
 
@@ -777,15 +802,15 @@ pub mod pallet {
         type Balance = T::Balance;
 
         fn total_issuance(asset: Self::AssetId) -> Self::Balance {
-            only_asset!(asset, Zero::zero(), Inspect, total_issuance,)
+            route_call!(asset, total_issuance, total_issuance,).unwrap_or(Zero::zero())
         }
 
         fn minimum_balance(asset: Self::AssetId) -> Self::Balance {
-            only_asset!(asset, Zero::zero(), Inspect, minimum_balance,)
+            route_call!(asset, minimum_balance, minimum_balance,).unwrap_or(Zero::zero())
         }
 
         fn balance(asset: Self::AssetId, who: &T::AccountId) -> Self::Balance {
-            only_asset!(asset, Zero::zero(), Inspect, balance, who)
+            route_call!(asset, total_balance, balance, who).unwrap_or(Zero::zero())
         }
 
         fn reducible_balance(
@@ -793,7 +818,11 @@ pub mod pallet {
             who: &T::AccountId,
             keep_alive: bool,
         ) -> Self::Balance {
-            only_asset!(asset, Zero::zero(), Inspect, reducible_balance, who, keep_alive)
+            if T::CurrencyType::try_from(asset).is_ok() {
+                <Self as MultiCurrency<T::AccountId>>::free_balance(asset, who)
+            } else {
+                only_asset!(asset, Zero::zero(), Inspect, reducible_balance, who, keep_alive)
+            }
         }
 
         fn can_deposit(
@@ -802,15 +831,26 @@ pub mod pallet {
             amount: Self::Balance,
             mint: bool,
         ) -> DepositConsequence {
-            only_asset!(
-                asset,
-                DepositConsequence::UnknownAsset,
-                Inspect,
-                can_deposit,
-                who,
-                amount,
-                mint
-            )
+            if T::CurrencyType::try_from(asset).is_err() {
+                return only_asset!(
+                    asset,
+                    DepositConsequence::UnknownAsset,
+                    Inspect,
+                    can_deposit,
+                    who,
+                    amount,
+                    mint
+                );
+            }
+
+            let total_balance = <Self as MultiCurrency<T::AccountId>>::total_balance(asset, who);
+            let min_balance = <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
+
+            if total_balance.saturating_add(amount) < min_balance {
+                DepositConsequence::BelowMinimum
+            } else {
+                DepositConsequence::Success
+            }
         }
 
         fn can_withdraw(
@@ -818,18 +858,41 @@ pub mod pallet {
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> WithdrawConsequence<Self::Balance> {
-            only_asset!(
-                asset,
-                WithdrawConsequence::UnknownAsset,
-                Inspect,
-                can_withdraw,
-                who,
-                amount
-            )
+            if T::CurrencyType::try_from(asset).is_err() {
+                return only_asset!(
+                    asset,
+                    WithdrawConsequence::UnknownAsset,
+                    Inspect,
+                    can_withdraw,
+                    who,
+                    amount
+                );
+            }
+
+            let can_withdraw =
+                <Self as MultiCurrency<T::AccountId>>::ensure_can_withdraw(asset, who, amount);
+
+            if let Err(_e) = can_withdraw {
+                return WithdrawConsequence::NoFunds;
+            }
+
+            let total_balance = <Self as MultiCurrency<T::AccountId>>::total_balance(asset, who);
+            let min_balance = <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
+            let remainder = total_balance.saturating_sub(amount);
+
+            if remainder < min_balance {
+                WithdrawConsequence::ReducedToZero(remainder)
+            } else {
+                WithdrawConsequence::Success
+            }
         }
 
         fn asset_exists(asset: Self::AssetId) -> bool {
-            only_asset!(asset, false, Inspect, asset_exists,)
+            if T::CurrencyType::try_from(asset).is_ok() {
+                true
+            } else {
+                only_asset!(asset, false, Inspect, asset_exists,)
+            }
         }
     }
 

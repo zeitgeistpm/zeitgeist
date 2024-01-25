@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2019-2020 Parity Technologies (UK) Ltd.
 //
@@ -569,7 +569,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl orml_asset_registry::Config for Runtime {
-            type AssetId = Assets;
+            type AssetId = Currencies;
             type AssetProcessor = CustomAssetProcessor;
             type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrTwoThirdsCouncil>;
             type Balance = Balance;
@@ -686,10 +686,7 @@ macro_rules! impl_config_traits {
             type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
             type Currency = Balances;
             type Extra = ();
-            type ForceOrigin = EitherOfDiverse<
-                EnsureRootOrTwoThirdsCouncil,
-                EnsureRootOrAllTechnicalCommittee,
-            >;
+            type ForceOrigin = EnsureRootOrTwoThirdsCouncil;
             type Freezer = ();
             type MetadataDepositBase = CampaignAssetsMetadataDepositBase;
             type MetadataDepositPerByte = CampaignAssetsMetadataDepositPerByte;
@@ -726,7 +723,7 @@ macro_rules! impl_config_traits {
             type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
             type Currency = Balances;
             type Extra = ();
-            type ForceOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+            type ForceOrigin = EnsureRootOrAllTechnicalCommittee;
             type Freezer = ();
             type MetadataDepositBase = MarketAssetsMetadataDepositBase;
             type MetadataDepositPerByte = MarketAssetsMetadataDepositPerByte;
@@ -1256,7 +1253,6 @@ macro_rules! impl_config_traits {
             type AdvisoryBond = AdvisoryBond;
             type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
             type ApproveOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
-            type AssetLifetime = AssetRouter;
             type AssetManager = AssetManager;
             #[cfg(feature = "parachain")]
             type AssetRegistry = AssetRegistry;
@@ -1502,7 +1498,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
                     orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
                     orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
-                    list_benchmark!(list, extra, pallet_assets, CustomAsset);
+                    list_benchmark!(list, extra, pallet_assets, CustomAssets);
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_bounties, Bounties);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
@@ -1607,7 +1603,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
                     orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
                     orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
-                    add_benchmark!(params, batches, pallet_assets, CustomAsset);
+                    add_benchmark!(params, batches, pallet_assets, CustomAssets);
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_bounties, Bounties);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
@@ -2117,15 +2113,15 @@ macro_rules! create_common_benchmark_logic {
 
             pub(crate) mod tokens {
                 use super::utils::{lookup_of_account, set_balance as update_balance};
-                use crate::{AccountId, Balance, Assets, Tokens, Runtime};
+                use crate::{AccountId, Balance, Tokens, Runtime};
                 use frame_benchmarking::{account, vec, whitelisted_caller};
                 use frame_system::RawOrigin;
                 use orml_benchmarking::runtime_benchmarks;
                 use orml_traits::MultiCurrency;
-                use zeitgeist_primitives::{constants::BASE, types::Asset};
+                use zeitgeist_primitives::{constants::BASE, types::Currencies};
 
                 const SEED: u32 = 0;
-                const ASSET: Assets = Asset::CategoricalOutcome(0, 0);
+                const ASSET: Currencies = Currencies::ForeignAsset(7);
 
                 runtime_benchmarks! {
                     { Runtime, orml_tokens }
@@ -2134,7 +2130,7 @@ macro_rules! create_common_benchmark_logic {
                         let amount: Balance = BASE;
 
                         let from: AccountId = whitelisted_caller();
-                        update_balance(ASSET, &from, amount);
+                        update_balance(ASSET.into(), &from, amount);
 
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to.clone());
@@ -2147,7 +2143,7 @@ macro_rules! create_common_benchmark_logic {
                         let amount: Balance = BASE;
 
                         let from: AccountId = whitelisted_caller();
-                        update_balance(ASSET, &from, amount);
+                        update_balance(ASSET.into(), &from, amount);
 
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to);
@@ -2158,7 +2154,7 @@ macro_rules! create_common_benchmark_logic {
 
                     transfer_keep_alive {
                         let from: AccountId = whitelisted_caller();
-                        update_balance(ASSET, &from, 2 * BASE);
+                        update_balance(ASSET.into(), &from, 2 * BASE);
 
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to.clone());
@@ -2170,7 +2166,7 @@ macro_rules! create_common_benchmark_logic {
                     force_transfer {
                         let from: AccountId = account("from", 0, SEED);
                         let from_lookup = lookup_of_account(from.clone());
-                        update_balance(ASSET, &from, 2 * BASE);
+                        update_balance(ASSET.into(), &from, 2 * BASE);
 
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to.clone());

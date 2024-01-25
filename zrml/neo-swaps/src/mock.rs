@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -462,7 +462,7 @@ impl pallet_treasury::Config for Runtime {
 #[cfg(feature = "parachain")]
 zrml_prediction_markets::impl_mock_registry! {
     MockRegistry,
-    Assets,
+    Currencies,
     Balance,
     zeitgeist_primitives::types::CustomMetadata
 }
@@ -501,7 +501,7 @@ impl ExtBuilder {
         #[cfg(feature = "parachain")]
         orml_asset_registry_mock::GenesisConfig {
             metadata: vec![(
-                FOREIGN_ASSET,
+                Currencies::try_from(FOREIGN_ASSET).unwrap(),
                 AssetMetadata {
                     decimals: 18,
                     name: "MKL".as_bytes().to_vec(),

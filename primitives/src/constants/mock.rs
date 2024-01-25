@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -32,6 +32,16 @@ parameter_types! {
     pub const DestroyAccountWeight: Weight = Weight::from_all(1000);
     pub const DestroyApprovalWeight: Weight = Weight::from_all(1000);
     pub const DestroyFinishWeight: Weight = Weight::from_all(1000);
+}
+
+// Assets
+parameter_types! {
+    pub const AssetsAccountDeposit: Balance = 0;
+    pub const AssetsApprovalDeposit: Balance = 0;
+    pub const AssetsDeposit: Balance = 0;
+    pub const AssetsStringLimit: u32 = 256;
+    pub const AssetsMetadataDepositBase: Balance = 0;
+    pub const AssetsMetadataDepositPerByte: Balance = 0;
 }
 
 // Authorized
@@ -171,11 +181,19 @@ parameter_types! {
     pub const GetNativeCurrencyId: Assets = Asset::Ztg;
 }
 
+// Will be removed once asset-system is completely integerated
 parameter_type_with_key! {
-    pub ExistentialDeposits: |currency_id: Currencies| -> Balance {
+    pub ExistentialDeposits: |currency_id: Assets| -> Balance {
         match currency_id {
-            _ => ExistentialDeposit::get(),
+            Asset::Ztg => ExistentialDeposit::get(),
+            _ => 10
         }
+    };
+}
+
+parameter_type_with_key! {
+    pub ExistentialDepositsNew: |_currency_id: Currencies| -> Balance {
+        1
     };
 }
 

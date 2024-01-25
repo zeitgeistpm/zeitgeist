@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -44,17 +44,18 @@ mod pallet {
         require_transactional,
         storage::{with_transaction, TransactionOutcome},
         traits::{
-            fungibles::{Create, Destroy},
-            tokens::BalanceStatus,
-            Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType, NamedReservableCurrency,
-            OnUnbalanced, StorageVersion,
+            tokens::BalanceStatus, Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType,
+            NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 
     #[cfg(feature = "parachain")]
-    use {orml_traits::asset_registry::Inspect, zeitgeist_primitives::types::CustomMetadata};
+    use {
+        orml_traits::asset_registry::Inspect,
+        zeitgeist_primitives::types::{CurrencyClass, CustomMetadata},
+    };
 
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
@@ -1706,10 +1707,6 @@ mod pallet {
         /// The origin that is allowed to approve / reject pending advised markets.
         type ApproveOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        /// Implemention that has the capability to create and destroy assets
-        type AssetLifetime: Create<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>
-            + Destroy<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
-
         /// Shares of outcome assets and native currency
         type AssetManager: MultiCurrency<Self::AccountId, Balance = BalanceOf<Self>, CurrencyId = AssetOf<Self>>
             + NamedMultiReservableCurrency<
@@ -1721,7 +1718,7 @@ mod pallet {
 
         #[cfg(feature = "parachain")]
         type AssetRegistry: Inspect<
-                AssetId = Asset<MarketIdOf<Self>>,
+                AssetId = CurrencyClass<MarketIdOf<Self>>,
                 Balance = BalanceOf<Self>,
                 CustomMetadata = CustomMetadata,
             >;
@@ -2405,11 +2402,6 @@ mod pallet {
 
             let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
 
-            for asset in Self::outcome_assets(market_id, &market) {
-                let min_balance = T::AssetManager::minimum_balance(asset);
-                T::AssetLifetime::create(asset, market_account.clone(), false, min_balance)?;
-            }
-
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
             Ok((ids_amount, market_id))
@@ -2637,8 +2629,8 @@ mod pallet {
 
             let market_account = <zrml_market_commons::Pallet<T>>::market_account(market_id);
             T::AssetManager::transfer(market.base_asset, &who, &market_account, amount)?;
-            let assets = Self::outcome_assets(market_id, &market);
 
+            let assets = Self::outcome_assets(market_id, &market);
             for asset in assets.iter() {
                 T::AssetManager::deposit(*asset, &who, amount)?;
             }
@@ -3455,7 +3447,11 @@ mod pallet {
                 Asset::Ztg => true,
                 #[cfg(feature = "parachain")]
                 Asset::ForeignAsset(fa) => {
-                    if let Some(metadata) = T::AssetRegistry::metadata(&Asset::ForeignAsset(fa)) {
+                    if let Some(metadata) =
+                        T::AssetRegistry::metadata(&CurrencyClass::<MarketIdOf<T>>::ForeignAsset(
+                            fa,
+                        ))
+                    {
                         metadata.additional.allow_as_base_asset
                     } else {
                         return Err(Error::<T>::UnregisteredForeignAsset.into());

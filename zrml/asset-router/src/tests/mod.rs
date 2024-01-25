@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -20,7 +20,7 @@
 use super::{mock::*, Error};
 use alloc::collections::BTreeMap;
 use frame_support::{
-    assert_err, assert_ok,
+    assert_noop, assert_ok,
     dispatch::RawOrigin::Signed,
     traits::{
         tokens::{

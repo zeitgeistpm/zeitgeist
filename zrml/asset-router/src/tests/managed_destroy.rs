@@ -20,23 +20,17 @@
 use super::*;
 use frame_support::traits::tokens::fungibles::Inspect;
 
-/*
--> Asset destruction works
--> Asset destruction respects weight
--> Asset destruction moves invalid assets to other storage
-*/
-
 #[test]
 fn adds_assets_properly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_err!(
+        assert_noop!(
             AssetRouter::managed_destroy(CAMPAIGN_ASSET, None),
             Error::<Runtime>::UnknownAsset
         );
 
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         assert_ok!(AssetRouter::managed_destroy(CAMPAIGN_ASSET, None));
-        assert_err!(
+        assert_noop!(
             AssetRouter::managed_destroy(CAMPAIGN_ASSET, None),
             Error::<Runtime>::DestructionInProgress
         );
@@ -48,11 +42,11 @@ fn adds_assets_properly() {
 
         crate::IndestructibleAssets::<Runtime>::put(crate::DestroyAssets::<Runtime>::get());
         crate::DestroyAssets::<Runtime>::kill();
-        assert_err!(
+        assert_noop!(
             AssetRouter::managed_destroy(CAMPAIGN_ASSET, None),
             Error::<Runtime>::DestructionInProgress
         );
-        assert_err!(
+        assert_noop!(
             AssetRouter::managed_destroy(CUSTOM_ASSET, None),
             Error::<Runtime>::DestructionInProgress
         );
@@ -63,7 +57,7 @@ fn adds_assets_properly() {
 fn adds_multi_assets_properly() {
     ExtBuilder::default().build().execute_with(|| {
         let assets = BTreeMap::from([(CAMPAIGN_ASSET, None), (CUSTOM_ASSET, None)]);
-        assert_err!(
+        assert_noop!(
             AssetRouter::managed_destroy_multi(assets.clone()),
             Error::<Runtime>::UnknownAsset
         );
@@ -75,13 +69,13 @@ fn adds_multi_assets_properly() {
         assert_ok!(AssetRouter::managed_destroy_multi(assets.clone()));
 
         for (asset, _) in assets.clone() {
-            assert_err!(
+            assert_noop!(
                 AssetRouter::managed_destroy(asset, None),
                 Error::<Runtime>::DestructionInProgress
             );
         }
 
-        assert_err!(
+        assert_noop!(
             AssetRouter::managed_destroy_multi(assets.clone()),
             Error::<Runtime>::DestructionInProgress
         );
@@ -89,7 +83,7 @@ fn adds_multi_assets_properly() {
 
         crate::IndestructibleAssets::<Runtime>::put(crate::DestroyAssets::<Runtime>::get());
         crate::DestroyAssets::<Runtime>::kill();
-        assert_err!(
+        assert_noop!(
             AssetRouter::managed_destroy_multi(assets),
             Error::<Runtime>::DestructionInProgress
         );

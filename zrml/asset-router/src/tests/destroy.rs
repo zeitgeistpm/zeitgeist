@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -74,7 +74,7 @@ fn routes_market_assets_correctly() {
         assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE,));
         assert_ok!(
             pallet_assets::Call::<Runtime, MarketAssetsInstance>::approve_transfer {
-                id: MARKET_ASSET_INTERNAL.into(),
+                id: MARKET_ASSET_INTERNAL,
                 delegate: BOB,
                 amount: 1
             }
@@ -93,9 +93,9 @@ fn routes_currencies_correctly() {
             &ALICE,
             CURRENCY_INITIAL_AMOUNT
         ));
-        assert_err!(AssetRouter::start_destroy(CURRENCY, None), Error::<Runtime>::Unsupported);
-        assert_err!(AssetRouter::destroy_accounts(CURRENCY, 100), Error::<Runtime>::Unsupported);
-        assert_err!(AssetRouter::destroy_approvals(CURRENCY, 100), Error::<Runtime>::Unsupported);
-        assert_err!(AssetRouter::finish_destroy(CURRENCY), Error::<Runtime>::Unsupported);
+        assert_noop!(AssetRouter::start_destroy(CURRENCY, None), Error::<Runtime>::Unsupported);
+        assert_noop!(AssetRouter::destroy_accounts(CURRENCY, 100), Error::<Runtime>::Unsupported);
+        assert_noop!(AssetRouter::destroy_approvals(CURRENCY, 100), Error::<Runtime>::Unsupported);
+        assert_noop!(AssetRouter::finish_destroy(CURRENCY), Error::<Runtime>::Unsupported);
     });
 }

@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -23,10 +23,13 @@ use orml_traits::MultiCurrency;
 fn unroutable_test_helper(asset: Assets, initial_amount: <Runtime as crate::Config>::Balance) {
     assert_ok!(AssetRouter::deposit(asset, &ALICE, initial_amount));
     assert!(!AssetRouter::can_reserve(asset, &ALICE, initial_amount));
-    assert_err!(AssetRouter::reserve(asset, &ALICE, initial_amount), Error::<Runtime>::Unsupported);
+    assert_noop!(
+        AssetRouter::reserve(asset, &ALICE, initial_amount),
+        Error::<Runtime>::Unsupported
+    );
     assert_eq!(AssetRouter::reserved_balance(asset, &ALICE), 0);
     assert_eq!(AssetRouter::slash_reserved(asset, &ALICE, 1), 1);
-    assert_err!(
+    assert_noop!(
         AssetRouter::repatriate_reserved(asset, &ALICE, &BOB, 1, BalanceStatus::Reserved),
         Error::<Runtime>::Unsupported
     );

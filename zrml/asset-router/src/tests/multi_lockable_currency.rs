@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -21,15 +21,15 @@ use super::*;
 use orml_traits::MultiCurrency;
 
 fn unroutable_test_helper(asset: Assets) {
-    assert_err!(
+    assert_noop!(
         AssetRouter::set_lock(Default::default(), asset, &ALICE, 1),
         Error::<Runtime>::Unsupported
     );
-    assert_err!(
+    assert_noop!(
         AssetRouter::extend_lock(Default::default(), asset, &ALICE, 1),
         Error::<Runtime>::Unsupported
     );
-    assert_err!(
+    assert_noop!(
         AssetRouter::remove_lock(Default::default(), asset, &ALICE),
         Error::<Runtime>::Unsupported
     );

@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -40,60 +40,70 @@ fn test_helper(asset: Assets, initial_amount: <Runtime as crate::Config>::Balanc
 #[test]
 fn routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
+        use orml_traits::MultiCurrency;
+
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE,));
-
+        assert_eq!(
+            <AssetRouter as Inspect<AccountId>>::minimum_balance(CAMPAIGN_ASSET),
+            CAMPAIGN_ASSET_MIN_BALANCE
+        );
         test_helper(CAMPAIGN_ASSET, CAMPAIGN_ASSET_INITIAL_AMOUNT);
-
-        assert_eq!(AssetRouter::total_issuance(CUSTOM_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(MARKET_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(CURRENCY), 0);
+        assert_eq!(<CustomAssets as Inspect<AccountId>>::total_issuance(CUSTOM_ASSET_INTERNAL), 0);
+        assert_eq!(<MarketAssets as Inspect<AccountId>>::total_issuance(MARKET_ASSET_INTERNAL), 0);
+        assert_eq!(<Tokens as MultiCurrency<AccountId>>::total_issuance(CURRENCY_INTERNAL), 0);
     });
 }
 
 #[test]
 fn routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
+        use orml_traits::MultiCurrency;
+
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE,));
-
+        assert_eq!(
+            <AssetRouter as Inspect<AccountId>>::minimum_balance(CUSTOM_ASSET),
+            CUSTOM_ASSET_MIN_BALANCE
+        );
         test_helper(CUSTOM_ASSET, CUSTOM_ASSET_INITIAL_AMOUNT);
-
-        assert_eq!(AssetRouter::total_issuance(CAMPAIGN_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(MARKET_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(CURRENCY), 0);
+        assert_eq!(
+            <CampaignAssets as Inspect<AccountId>>::total_issuance(CAMPAIGN_ASSET_INTERNAL),
+            0
+        );
+        assert_eq!(<MarketAssets as Inspect<AccountId>>::total_issuance(MARKET_ASSET_INTERNAL), 0);
+        assert_eq!(<Tokens as MultiCurrency<AccountId>>::total_issuance(CURRENCY_INTERNAL), 0);
     });
 }
 
 #[test]
 fn routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
+        use orml_traits::MultiCurrency;
+
         assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE,));
-
+        assert_eq!(
+            <AssetRouter as Inspect<AccountId>>::minimum_balance(MARKET_ASSET),
+            MARKET_ASSET_MIN_BALANCE
+        );
         test_helper(MARKET_ASSET, MARKET_ASSET_INITIAL_AMOUNT);
-
-        assert_eq!(AssetRouter::total_issuance(CAMPAIGN_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(CUSTOM_ASSET), 0);
-        assert_eq!(AssetRouter::total_issuance(CURRENCY), 0);
+        assert_eq!(
+            <CampaignAssets as Inspect<AccountId>>::total_issuance(CAMPAIGN_ASSET_INTERNAL),
+            0
+        );
+        assert_eq!(<CustomAssets as Inspect<AccountId>>::total_issuance(CUSTOM_ASSET_INTERNAL), 0);
+        assert_eq!(<Tokens as MultiCurrency<AccountId>>::total_issuance(CURRENCY_INTERNAL), 0);
     });
 }
 
 #[test]
-fn multicurrency_routes_currencies_correctly() {
+fn routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(<AssetRouter as orml_traits::MultiCurrency<AccountId>>::deposit(
-            CURRENCY,
-            &ALICE,
-            CURRENCY_INITIAL_AMOUNT
-        ));
-        assert_eq!(AssetRouter::total_issuance(CURRENCY), 0);
-        assert_eq!(AssetRouter::balance(CURRENCY, &ALICE), 0);
-        assert_eq!(AssetRouter::reducible_balance(CURRENCY, &ALICE, false), 0);
+        assert_eq!(AssetRouter::minimum_balance(CURRENCY), CURRENCY_MIN_BALANCE);
+        test_helper(CURRENCY, CURRENCY_INITIAL_AMOUNT);
         assert_eq!(
-            AssetRouter::can_withdraw(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT),
-            WithdrawConsequence::UnknownAsset
+            <CampaignAssets as Inspect<AccountId>>::total_issuance(CAMPAIGN_ASSET_INTERNAL),
+            0
         );
-        assert_eq!(
-            AssetRouter::can_deposit(CURRENCY, &ALICE, 1, true),
-            DepositConsequence::UnknownAsset
-        );
+        assert_eq!(<CustomAssets as Inspect<AccountId>>::total_issuance(CUSTOM_ASSET_INTERNAL), 0);
+        assert_eq!(<MarketAssets as Inspect<AccountId>>::total_issuance(MARKET_ASSET_INTERNAL), 0);
     });
 }

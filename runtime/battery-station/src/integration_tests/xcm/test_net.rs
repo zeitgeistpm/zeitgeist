@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Centrifuge GmbH (centrifuge.io).
 //
 // This file is part of Zeitgeist.
@@ -103,8 +103,8 @@ pub(super) fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
     ExtBuilder::default()
         .set_balances(vec![
             (ALICE, Assets::Ztg, ztg(10)),
-            (ALICE, FOREIGN_PARENT_ID, roc(10)),
-            (ZeitgeistTreasuryAccount::get(), FOREIGN_PARENT_ID, roc(1)),
+            (ALICE, FOREIGN_PARENT_ID.into(), roc(10)),
+            (ZeitgeistTreasuryAccount::get(), FOREIGN_PARENT_ID.into(), roc(1)),
         ])
         .set_parachain_id(parachain_id)
         .build()

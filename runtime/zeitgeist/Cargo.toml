@@ -373,6 +373,7 @@ try-runtime = [
     "orml-xtokens?/try-runtime",
 
     # Zeitgeist runtime pallets
+    "zrml-asset-router/try-runtime",
     "zrml-authorized/try-runtime",
     "zrml-court/try-runtime",
     "zrml-liquidity-mining/try-runtime",
