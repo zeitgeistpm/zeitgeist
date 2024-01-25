@@ -959,7 +959,7 @@ pub mod pallet {
             asset: Self::AssetId,
             maybe_check_owner: Option<T::AccountId>,
         ) -> DispatchResult {
-            Self::asset_exists(asset).then_some(()).ok_or_else(|| Error::<T>::UnknownAsset)?;
+            Self::asset_exists(asset).then_some(()).ok_or(Error::<T>::UnknownAsset)?;
 
             let mut destroy_assets = DestroyAssets::<T>::get();
             frame_support::ensure!(!destroy_assets.is_full(), Error::<T>::TooManyManagedDestroys);
@@ -992,7 +992,7 @@ pub mod pallet {
             let mut destroy_assets = DestroyAssets::<T>::get();
 
             for (asset, maybe_check_owner) in assets {
-                Self::asset_exists(asset).then_some(()).ok_or_else(|| Error::<T>::UnknownAsset)?;
+                Self::asset_exists(asset).then_some(()).ok_or(Error::<T>::UnknownAsset)?;
 
                 frame_support::ensure!(
                     !destroy_assets.is_full(),

@@ -63,7 +63,7 @@ fn adds_multi_assets_properly() {
         );
 
         for (asset, _) in assets.clone() {
-            assert_ok!(AssetRouter::create(asset.clone(), ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
+            assert_ok!(AssetRouter::create(asset, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         }
 
         assert_ok!(AssetRouter::managed_destroy_multi(assets.clone()));
@@ -97,7 +97,7 @@ fn destroys_assets_fully_properly() {
         let assets = BTreeMap::from_iter(assets_raw.to_vec());
 
         for (asset, _) in &assets_raw[..] {
-            assert_ok!(AssetRouter::create(asset.clone(), ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
+            assert_ok!(AssetRouter::create(*asset, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         }
 
         assert_ok!(AssetRouter::managed_destroy_multi(assets.clone()));
@@ -126,7 +126,7 @@ fn destroys_assets_partially_properly() {
         let assets = BTreeMap::from_iter(assets_raw.to_vec());
 
         for (asset, _) in &assets_raw[..] {
-            assert_ok!(AssetRouter::create(asset.clone(), ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
+            assert_ok!(AssetRouter::create(*asset, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         }
 
         assert_ok!(AssetRouter::managed_destroy_multi(assets.clone()));

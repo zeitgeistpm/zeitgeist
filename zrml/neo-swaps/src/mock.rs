@@ -63,8 +63,8 @@ use zeitgeist_primitives::{
     },
     traits::{DeployPoolApi, DistributeFees},
     types::{
-        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, Hash,
-        Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
+        Currencies, Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
     },
 };
 use zrml_neo_swaps::BalanceOf;
