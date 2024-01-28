@@ -34,7 +34,7 @@ use sp_runtime::RuntimeDebug;
 /// * `MI`: Market ID
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Market<AI, BA, BN, M, A, MI> {
-    pub market_id: Option<MI>,
+    pub market_id: MI,
     /// Base asset of the market.
     pub base_asset: A,
     /// Creator of this market.
@@ -178,7 +178,7 @@ where
 {
     fn max_encoded_len() -> usize {
         AI::max_encoded_len()
-            .saturating_add(Option::<MI>::max_encoded_len())
+            .saturating_add(MI::max_encoded_len())
             .saturating_add(A::max_encoded_len())
             .saturating_add(MarketCreation::max_encoded_len())
             .saturating_add(Perbill::max_encoded_len())
@@ -407,7 +407,7 @@ mod tests {
         expected: bool,
     ) {
         let market = Market {
-            market_id: Some(9),
+            market_id: 9,
             base_asset: Asset::Ztg,
             creator: 1,
             creation: MarketCreation::Permissionless,

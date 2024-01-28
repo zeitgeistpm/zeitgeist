@@ -18,7 +18,10 @@
 
 #![allow(clippy::type_complexity)]
 
-use crate::types::{Asset, Market, PoolId};
+use crate::{
+    traits::MarketBuilder,
+    types::{Asset, Market, PoolId},
+};
 use frame_support::{
     dispatch::{fmt::Debug, DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
@@ -30,12 +33,13 @@ use sp_runtime::traits::{AtLeast32Bit, AtLeast32BitUnsigned};
 
 // Abstraction of the market type, which is not a part of `MarketCommonsPalletApi` because Rust
 // doesn't support type aliases in traits.
-type MarketOf<T> = Market<
+type AssetOf<T> = Asset<<T as MarketCommonsPalletApi>::MarketId>;
+pub type MarketOf<T> = Market<
     <T as MarketCommonsPalletApi>::AccountId,
     <T as MarketCommonsPalletApi>::Balance,
     <T as MarketCommonsPalletApi>::BlockNumber,
     <T as MarketCommonsPalletApi>::Moment,
-    Asset<<T as MarketCommonsPalletApi>::MarketId>,
+    AssetOf<T>,
     <T as MarketCommonsPalletApi>::MarketId,
 >;
 
@@ -79,16 +83,29 @@ pub trait MarketCommonsPalletApi {
     where
         F: FnOnce(&mut MarketOf<Self>) -> DispatchResult;
 
+    /// Add a `market` to the API's list of markets, overwrite its `market_id` field with a new ID
+    /// and return the market's new ID.
+    ///
+    /// Deprecated since v0.5.1. For testing purposes only; use `build_market` in production.
+    fn push_market(market: MarketOf<Self>) -> Result<Self::MarketId, DispatchError>;
+
     /// Equips a market with a market ID, writes the market to storage and then returns the ID and
-    /// the modified market.
+    /// the built market.
     ///
     /// This function is the only public means by which new IDs are issued. The market's `market_id`
     /// field is expected to be `None`. If that's not the case, this function will raise an error to
     /// avoid double-writes, which are always the result of an incorrect issuance process for market
     /// IDs.
-    fn push_market(
-        market: MarketOf<Self>,
-    ) -> Result<(Self::MarketId, MarketOf<Self>), DispatchError>;
+    fn build_market<U>(market_builder: U) -> Result<(Self::MarketId, MarketOf<Self>), DispatchError>
+    where
+        U: MarketBuilder<
+                Self::AccountId,
+                Self::Balance,
+                Self::BlockNumber,
+                Self::Moment,
+                AssetOf<Self>,
+                Self::MarketId,
+            >;
 
     /// Removes a market from the storage.
     fn remove_market(market_id: &Self::MarketId) -> DispatchResult;

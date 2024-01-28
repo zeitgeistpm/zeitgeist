@@ -181,7 +181,7 @@ where
     T: Config,
 {
     let market = Market {
-        market_id: None,
+        market_id: 0u8.into(),
         base_asset,
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),
@@ -199,8 +199,7 @@ where
         bonds: Default::default(),
         early_close: None,
     };
-    let (market_id, _) = T::MarketCommons::push_market(market).unwrap();
-    market_id
+    T::MarketCommons::push_market(market).unwrap()
 }
 
 fn create_spot_prices<T: Config>(asset_count: u16) -> Vec<BalanceOf<T>> {

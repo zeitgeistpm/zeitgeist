@@ -64,7 +64,7 @@ use zrml_market_commons::{Error as MError, MarketCommonsPalletApi};
 const ORACLE_REPORT: OutcomeReport = OutcomeReport::Scalar(u128::MAX);
 
 const DEFAULT_MARKET: MarketOf<Runtime> = Market {
-    market_id: None,
+    market_id: 0,
     base_asset: Asset::Ztg,
     creation: MarketCreation::Permissionless,
     creator_fee: sp_runtime::Perbill::zero(),
@@ -103,7 +103,7 @@ fn initialize_court() -> CourtId {
     Court::join_court(RuntimeOrigin::signed(CHARLIE), amount_charlie).unwrap();
     Court::join_court(RuntimeOrigin::signed(DAVE), amount_dave).unwrap();
     Court::join_court(RuntimeOrigin::signed(EVE), amount_eve).unwrap();
-    let (market_id, _) = MarketCommons::push_market(DEFAULT_MARKET).unwrap();
+    let market_id = MarketCommons::push_market(DEFAULT_MARKET).unwrap();
     MarketCommons::mutate_market(&market_id, |market| {
         market.report = Some(Report { at: 1, by: BOB, outcome: ORACLE_REPORT });
         Ok(())
@@ -2451,7 +2451,7 @@ fn on_resolution_sets_court_status() {
 #[test]
 fn on_resolution_fails_if_court_not_found() {
     ExtBuilder::default().build().execute_with(|| {
-        let (market_id, _) = MarketCommons::push_market(DEFAULT_MARKET).unwrap();
+        let market_id = MarketCommons::push_market(DEFAULT_MARKET).unwrap();
         let market = MarketCommons::market(&market_id).unwrap();
 
         <MarketIdToCourtId<Runtime>>::insert(market_id, 0);
@@ -2858,7 +2858,7 @@ fn has_failed_returns_true_for_uninitialized_court() {
     ExtBuilder::default().build().execute_with(|| {
         // force empty jurors pool
         <CourtPool<Runtime>>::kill();
-        let (market_id, _) = MarketCommons::push_market(DEFAULT_MARKET).unwrap();
+        let market_id = MarketCommons::push_market(DEFAULT_MARKET).unwrap();
         let report_block = 42;
         MarketCommons::mutate_market(&market_id, |market| {
             market.report = Some(Report { at: report_block, by: BOB, outcome: ORACLE_REPORT });

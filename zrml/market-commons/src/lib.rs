@@ -18,6 +18,7 @@
 
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![feature(trait_alias)]
 
 extern crate alloc;
 
@@ -50,6 +51,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         math::checked_ops_res::CheckedAddRes,
+        traits::MarketBuilder,
         types::{Asset, Market, PoolId},
     };
 
@@ -183,15 +185,31 @@ mod pallet {
             })
         }
 
-        fn push_market(
-            market: MarketOf<T>,
-        ) -> Result<(Self::MarketId, MarketOf<T>), DispatchError> {
-            ensure!(market.market_id.is_none(), Error::<T>::MarketIdDoubleWrite);
+        fn push_market(mut market: MarketOf<T>) -> Result<Self::MarketId, DispatchError> {
             let market_id = Self::next_market_id()?;
-            let mut mut_market = market;
-            mut_market.market_id = Some(market_id);
-            <Markets<T>>::insert(market_id, mut_market.clone());
-            Ok((market_id, mut_market))
+            market.market_id = market_id;
+            Markets::<T>::insert(market_id, market.clone());
+            Ok(market_id)
+        }
+
+        fn build_market<U>(
+            mut market_builder: U,
+        ) -> Result<(Self::MarketId, MarketOf<T>), DispatchError>
+        where
+            U: MarketBuilder<
+                    Self::AccountId,
+                    Self::Balance,
+                    Self::BlockNumber,
+                    Self::Moment,
+                    AssetOf<T>,
+                    Self::MarketId,
+                >,
+        {
+            let market_id = Self::next_market_id()?;
+            market_builder.market_id(market_id);
+            let market = market_builder.build();
+            <Markets<T>>::insert(market_id, market.clone());
+            Ok((market_id, market))
         }
 
         fn remove_market(market_id: &Self::MarketId) -> DispatchResult {

@@ -208,7 +208,9 @@ mod pallet {
     const APPEAL_BOND_BASIS: u32 = 2;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+    pub(crate) type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
     pub(crate) type NegativeImbalanceOf<T> =
         <<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
     pub(crate) type MarketIdOf<T> =
@@ -217,9 +219,9 @@ mod pallet {
     pub(crate) type MarketOf<T> = Market<
         AccountIdOf<T>,
         BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
+        BlockNumberOf<T>,
         MomentOf<T>,
-        Asset<MarketIdOf<T>>,
+        AssetOf<T>,
         MarketIdOf<T>,
     >;
     pub(crate) type HashOf<T> = <T as frame_system::Config>::Hash;
