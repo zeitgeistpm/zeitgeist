@@ -126,8 +126,8 @@ mod pallet {
 
         type WeightInfo: WeightInfoZeitgeist;
 
-        /// The maximum allowed liquidity tree depth per pool. Each pool can support `2^(depth + 1)
-        /// - 1` liquidity providers. **Must** be less than 16.
+        /// The maximum allowed liquidity tree depth per pool. Each pool can support 
+        /// `2^(depth + 1) - 1` liquidity providers. **Must** be less than 16.
         #[pallet::constant]
         type MaxLiquidityTreeDepth: Get<u32>;
 
