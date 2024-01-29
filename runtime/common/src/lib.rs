@@ -661,6 +661,7 @@ macro_rules! impl_config_traits {
             type CallbackHandle = ();
             type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
             type Currency = Balances;
+            type Destroyer = AssetRouter;
             type Extra = ();
             type ForceOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
             type Freezer = ();
@@ -685,6 +686,7 @@ macro_rules! impl_config_traits {
             type CallbackHandle = ();
             type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
             type Currency = Balances;
+            type Destroyer = AssetRouter;
             type Extra = ();
             type ForceOrigin = EnsureRootOrTwoThirdsCouncil;
             type Freezer = ();
@@ -722,6 +724,7 @@ macro_rules! impl_config_traits {
             type CallbackHandle = ();
             type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
             type Currency = Balances;
+            type Destroyer = AssetRouter;
             type Extra = ();
             type ForceOrigin = EnsureRootOrAllTechnicalCommittee;
             type Freezer = ();

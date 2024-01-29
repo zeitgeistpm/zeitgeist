@@ -330,7 +330,25 @@ opt-level = 3
 panic = "unwind"
 
 [patch."https://github.com/paritytech/substrate"]
+#frame-benchmarking = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#frame-support = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#frame-system = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+pallet-assets = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-assets-managed-destroy" }
+#pallet-bounties = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#pallet-contracts = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#pallet-utility = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#pallet-democracy = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#pallet-multisig = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#pallet-scheduler = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#pallet-proxy = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#sp-application-crypto = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#sp-core = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#sp-externalities = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#sp-runtime = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#sp-io = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
+#sp-timestamp = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-managed-asset-destroy" }
 substrate-wasm-builder = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-fix-new-rustc-build" }
+
 
 [patch."https://github.com/paritytech/polkadot"]
 pallet-xcm = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.38-recent-bootnodes" }
