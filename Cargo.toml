@@ -333,7 +333,6 @@ panic = "unwind"
 pallet-assets = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-assets-managed-destroy" }
 substrate-wasm-builder = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-fix-new-rustc-build" }
 
-
 [patch."https://github.com/paritytech/polkadot"]
 pallet-xcm = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.38-recent-bootnodes" }
 polkadot-cli = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.38-recent-bootnodes" }
