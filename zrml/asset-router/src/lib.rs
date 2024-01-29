@@ -50,6 +50,7 @@ pub mod pallet {
         },
         BalanceStatus, LockIdentifier,
     };
+    use pallet_assets::ManagedDestroy;
     use parity_scale_codec::{FullCodec, MaxEncodedLen};
     use scale_info::TypeInfo;
     use sp_runtime::{
@@ -58,7 +59,7 @@ pub mod pallet {
         },
         FixedPointOperand, SaturatedConversion,
     };
-    use zeitgeist_primitives::traits::{CheckedDivPerComponent, ManagedDestroy};
+    use zeitgeist_primitives::traits::CheckedDivPerComponent;
 
     pub trait AssetTraits<T: Config, A>:
         Create<T::AccountId, AssetId = A, Balance = T::Balance>
@@ -1022,4 +1023,3 @@ pub mod pallet {
         }
     }
 }
-

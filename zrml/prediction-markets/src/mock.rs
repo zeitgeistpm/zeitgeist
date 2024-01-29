@@ -371,6 +371,7 @@ impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountIdTest>;
     type Freezer = ();
+    type Destroyer = AssetRouter;
     type MetadataDepositBase = AssetsMetadataDepositBase;
     type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
     type RemoveItemsLimit = ConstU32<50>;
@@ -394,6 +395,7 @@ impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountIdTest>;
     type Freezer = ();
+    type Destroyer = AssetRouter;
     type MetadataDepositBase = AssetsMetadataDepositBase;
     type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
     type RemoveItemsLimit = ConstU32<50>;
@@ -417,6 +419,7 @@ impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountIdTest>;
     type Freezer = ();
+    type Destroyer = AssetRouter;
     type MetadataDepositBase = AssetsMetadataDepositBase;
     type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
     type RemoveItemsLimit = ConstU32<50>;

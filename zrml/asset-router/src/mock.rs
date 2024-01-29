@@ -185,6 +185,7 @@ impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
     type Currency = Balances;
     type Extra = ();
     type ForceOrigin = EnsureSigned<AccountIdTest>;
+    type Destroyer = AssetRouter;
     type Freezer = ();
     type MetadataDepositBase = ConstU128<0>;
     type MetadataDepositPerByte = ConstU128<0>;
@@ -208,6 +209,7 @@ impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
     type Currency = Balances;
     type Extra = ();
     type ForceOrigin = EnsureSigned<AccountIdTest>;
+    type Destroyer = AssetRouter;
     type Freezer = ();
     type MetadataDepositBase = ConstU128<0>;
     type MetadataDepositPerByte = ConstU128<0>;
@@ -246,6 +248,7 @@ impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
     type Currency = Balances;
     type Extra = ();
     type ForceOrigin = EnsureSigned<AccountIdTest>;
+    type Destroyer = AssetRouter;
     type Freezer = ();
     type MetadataDepositBase = ConstU128<0>;
     type MetadataDepositPerByte = ConstU128<0>;

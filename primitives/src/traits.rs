@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-mod assets;
 mod complete_set_operations_api;
 mod deploy_pool_api;
 mod dispute_api;
@@ -27,7 +26,6 @@ mod swaps;
 mod weights;
 mod zeitgeist_multi_reservable_currency;
 
-pub use assets::ManagedDestroy;
 pub use complete_set_operations_api::CompleteSetOperationsApi;
 pub use deploy_pool_api::DeployPoolApi;
 pub use dispute_api::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi};

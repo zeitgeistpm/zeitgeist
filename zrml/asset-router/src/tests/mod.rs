@@ -36,7 +36,7 @@ use orml_traits::{
     NamedMultiReservableCurrency,
 };
 use sp_runtime::traits::Get;
-use zeitgeist_primitives::{traits::ManagedDestroy, types::Assets};
+use zeitgeist_primitives::types::Assets;
 
 mod create;
 mod destroy;

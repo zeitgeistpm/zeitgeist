@@ -19,6 +19,7 @@
 
 use super::*;
 use frame_support::traits::tokens::fungibles::Inspect;
+use pallet_assets::ManagedDestroy;
 
 #[test]
 fn adds_assets_properly() {

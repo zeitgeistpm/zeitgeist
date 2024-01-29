@@ -5863,7 +5863,7 @@ dependencies = [
 [[package]]
 name = "pallet-assets"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-assets-managed-destroy#135cfbdb68429e2d860f5054463a2a094908eeb4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
