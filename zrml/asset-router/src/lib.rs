@@ -29,7 +29,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use alloc::collections::BTreeMap;
-    use core::{fmt::Debug, marker::PhantomData};
+    use core::{cmp::Ordering, fmt::Debug, marker::PhantomData};
     use frame_support::{
         log,
         pallet_prelude::{DispatchError, DispatchResult, Hooks, StorageValue, ValueQuery, Weight},
@@ -51,7 +51,7 @@ pub mod pallet {
         BalanceStatus, LockIdentifier,
     };
     use pallet_assets::ManagedDestroy;
-    use parity_scale_codec::{FullCodec, MaxEncodedLen};
+    use parity_scale_codec::{Decode, Encode, FullCodec, MaxEncodedLen};
     use scale_info::TypeInfo;
     use sp_runtime::{
         traits::{
@@ -178,12 +178,12 @@ pub mod pallet {
 
     /// Keeps track of assets that have to be destroyed.
     #[pallet::storage]
-    pub type DestroyAssets<T: Config> =
-        StorageValue<_, BoundedVec<T::AssetType, ConstU32<8192>>, ValueQuery>;
+    pub(super) type DestroyAssets<T: Config> =
+        StorageValue<_, BoundedVec<AssetInDestruction<T::AssetType>, ConstU32<8192>>, ValueQuery>;
 
     /// Keeps track of assets that can't be destroyed.
     #[pallet::storage]
-    pub type IndestructibleAssets<T: Config> =
+    pub(crate) type IndestructibleAssets<T: Config> =
         StorageValue<_, BoundedVec<T::AssetType, ConstU32<8192>>, ValueQuery>;
 
     #[pallet::error]
@@ -203,139 +203,89 @@ pub mod pallet {
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
 
-    #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        fn on_idle(_: T::BlockNumber, mut remaining_weight: Weight) -> Weight {
-            let mut destroy_assets = DestroyAssets::<T>::get();
-            let destroy_account_weight = T::DestroyAccountWeight::get();
-            let destroy_approval_weight = T::DestroyApprovalWeight::get();
-            let destroy_finish_weight = T::DestroyFinishWeight::get();
-            remaining_weight =
-                remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1));
+    /// This macro handles the single stages of the asset destruction.
+    macro_rules! handle_asset_destruction {
+        ($asset:expr, $remaining_weight:expr, $asset_storage:expr, $asset_method:ident) => {
+            let state_before = *($asset.state());
+            let call_result = Self::$asset_method($asset, $remaining_weight);
+            $remaining_weight = call_result.map_or_else(|weight| weight, |weight| weight);
 
-            if destroy_assets.len() == 0 {
-                return remaining_weight.saturating_add(T::DbWeight::get().writes(1));
+            // In case destruction failed during finalization, there is most likely still
+            // some weight available.
+            if call_result.is_err() && state_before != DestructionState::Finalization {
+                break;
             }
 
-            let mut indestructible_asset = None;
-
-            while let Some(asset) = destroy_assets.pop() {
-                // Destroy accounts
-                // Weight is overestimated
-                if let Some(destroy_account_cap) =
-                    remaining_weight.checked_div_per_component(&destroy_account_weight)
-                {
-                    match Self::destroy_accounts(asset, destroy_account_cap.saturated_into()) {
-                        Ok(destroyed_accounts) => {
-                            // TODO(#1202): More precise weights
-                            remaining_weight = remaining_weight.saturating_sub(
-                                destroy_account_weight
-                                    .saturating_mul(destroyed_accounts.into())
-                                    .max(destroy_account_weight),
-                            );
-
-                            if destroyed_accounts == destroy_account_cap.saturated_into::<u32>() {
-                                destroy_assets.force_push(asset);
-                                break;
-                            }
-                        }
-                        Err(e) => {
-                            log::error!(
-                                "Error during managed asset account destruction of {:?}: {:?}",
-                                asset,
-                                e
-                            );
-                            indestructible_asset = Some(asset);
-                            remaining_weight =
-                                remaining_weight.saturating_sub(destroy_account_weight);
-                            break;
-                        }
-                    }
-                } else {
-                    destroy_assets.force_push(asset);
-                    break;
-                }
-
-                // Destroy approvals
-                // Weight is overestimated
-                if let Some(destroy_approval_cap) =
-                    remaining_weight.checked_div_per_component(&destroy_approval_weight)
-                {
-                    match Self::destroy_approvals(asset, destroy_approval_cap.saturated_into()) {
-                        Ok(destroyed_approvals) => {
-                            // TODO(#1202): More precise weights
-                            remaining_weight = remaining_weight.saturating_sub(
-                                destroy_approval_weight
-                                    .saturating_mul(destroyed_approvals.into())
-                                    .max(destroy_approval_weight),
-                            );
-
-                            if destroyed_approvals == destroy_approval_cap.saturated_into::<u32>() {
-                                destroy_assets.force_push(asset);
-                                break;
-                            }
-                        }
-                        Err(e) => {
-                            log::error!(
-                                "Error during managed asset approval destruction of {:?}: {:?}",
-                                asset,
-                                e
-                            );
-                            indestructible_asset = Some(asset);
-                            remaining_weight =
-                                remaining_weight.saturating_sub(destroy_approval_weight);
-                            break;
-                        }
-                    }
-                } else {
-                    destroy_assets.force_push(asset);
-                    break;
-                }
-
-                // Finalize asset destruction
-                if remaining_weight.all_gte(destroy_finish_weight) {
-                    // TODO(#1202): More precise weights
-                    if let Err(e) = Self::finish_destroy(asset) {
-                        log::error!(
-                            "Error during managed asset destruction finalization of {:?}: {:?}",
-                            asset,
-                            e
-                        );
-                        indestructible_asset = Some(asset);
-                        break;
-                    }
-
-                    remaining_weight = remaining_weight.saturating_sub(destroy_finish_weight);
-                } else {
-                    destroy_assets.force_push(asset);
-                    remaining_weight = remaining_weight.saturating_sub(destroy_finish_weight);
-                    break;
-                }
-            }
-
-            if let Some(asset) = indestructible_asset {
-                if let Err(e) = IndestructibleAssets::<T>::try_mutate(|assets| {
-                    let idx = assets.partition_point(|&asset_inner| asset_inner < asset);
-                    assets.try_insert(idx, asset)
-                }) {
+            if *($asset.state()) == state_before {
+                // Should be infallible since the asset was just poppoed and force inserting
+                // is not possible.
+                if let Err(e) = $asset_storage.try_insert(0, *($asset)) {
                     log::error!(
-                        "Error during storage of indestructible asset {:?}, dropping asset: {:?}",
-                        asset,
+                        target: LOG_TARGET,
+                        "Cannot reintroduce asset {:?} into DestroyAssets storage: {:?}",
+                        $asset,
                         e
                     );
                 }
 
-                remaining_weight =
-                    remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1));
+                break;
+            }
+        };
+    }
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        fn on_idle(_: T::BlockNumber, mut remaining_weight: Weight) -> Weight {
+            let mut destroy_assets = DestroyAssets::<T>::get();
+
+            if destroy_assets.len() == 0 {
+                return remaining_weight.saturating_sub(T::DbWeight::get().reads(1));
+            }
+
+            remaining_weight =
+                remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1));
+
+            while let Some(mut asset) = destroy_assets.pop() {
+                // TODO loop
+                match asset.state() {
+                    DestructionState::Accounts => {
+                        handle_asset_destruction!(
+                            &mut asset,
+                            remaining_weight,
+                            destroy_assets,
+                            handle_destroy_accounts
+                        );
+                    }
+                    DestructionState::Approvals => {
+                        handle_asset_destruction!(
+                            &mut asset,
+                            remaining_weight,
+                            destroy_assets,
+                            handle_destroy_approvals
+                        );
+                    }
+                    DestructionState::Finalization => {
+                        handle_asset_destruction!(
+                            &mut asset,
+                            remaining_weight,
+                            destroy_assets,
+                            handle_destroy_finish
+                        );
+                    }
+                    // Next two states should never occur. Just remove the asset.
+                    DestructionState::Destroyed => {
+                        log::warn!(target: LOG_TARGET, "Asset {:?} has invalid state", asset);
+                    }
+                    DestructionState::Indestructible => {
+                        log::warn!(target: LOG_TARGET, "Asset {:?} has invalid state", asset);
+                    }
+                }
             }
 
             DestroyAssets::<T>::put(destroy_assets);
             remaining_weight
         }
     }
-
-    #[pallet::call]
-    impl<T: Config> Pallet<T> {}
 
     /// This macro converts the invoked asset type into the respective
     /// implementation that handles it and finally calls the $method on it.
@@ -385,7 +335,233 @@ pub mod pallet {
         };
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq, Decode, Encode, MaxEncodedLen, TypeInfo)]
+    pub(crate) enum DestructionState {
+        Accounts,
+        Approvals,
+        Destroyed,
+        Finalization,
+        Indestructible,
+    }
+
+    #[derive(Clone, Copy, Encode, Debug, Decode, MaxEncodedLen, TypeInfo)]
+    pub(crate) struct AssetInDestruction<A> {
+        asset: A,
+        state: DestructionState,
+    }
+
+    // Ordering hack for binary search of assets in destruction.
+    impl<A> PartialEq for AssetInDestruction<A>
+    where
+        A: Eq + Ord + PartialEq + PartialOrd,
+    {
+        fn eq(&self, other: &Self) -> bool {
+            self.asset == other.asset
+        }
+    }
+
+    impl<A> Eq for AssetInDestruction<A> where A: Eq + Ord + PartialEq + PartialOrd {}
+
+    impl<A> PartialOrd for AssetInDestruction<A>
+    where
+        A: Eq + Ord + PartialEq + PartialOrd,
+    {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            self.asset.partial_cmp(&other.asset)
+        }
+    }
+
+    impl<A> Ord for AssetInDestruction<A>
+    where
+        A: Eq + Ord + PartialEq + PartialOrd,
+    {
+        fn cmp(&self, other: &Self) -> Ordering {
+            self.asset.cmp(&other.asset)
+        }
+    }
+
+    impl<A> AssetInDestruction<A> {
+        pub(crate) fn new(asset: A) -> Self {
+            AssetInDestruction { asset, state: DestructionState::Accounts }
+        }
+
+        pub(crate) fn asset(&self) -> &A {
+            &self.asset
+        }
+
+        pub(crate) fn state(&self) -> &DestructionState {
+            &self.state
+        }
+
+        pub(crate) fn transit_indestructible(&mut self) {
+            self.state = DestructionState::Indestructible;
+        }
+
+        // Returns the new state on change, None otherwise
+        pub(crate) fn transit_state(&mut self) -> Option<&DestructionState> {
+            let state_before = self.state;
+
+            self.state = match self.state {
+                DestructionState::Accounts => DestructionState::Approvals,
+                DestructionState::Approvals => DestructionState::Finalization,
+                DestructionState::Destroyed => DestructionState::Destroyed,
+                DestructionState::Finalization => DestructionState::Destroyed,
+                DestructionState::Indestructible => DestructionState::Indestructible,
+            };
+
+            if state_before != self.state { Some(&self.state) } else { None }
+        }
+    }
+
     impl<T: Config> Pallet<T> {
+        fn mark_asset_as_indestructible(
+            asset: &mut AssetInDestruction<T::AssetType>,
+            mut remaining_weight: Weight,
+            max_weight: Weight,
+            error: DispatchError,
+        ) -> Weight {
+            let asset_inner = *asset.asset();
+
+            log::error!(
+                target: LOG_TARGET,
+                "Error during managed asset account destruction of {:?}: {:?}",
+                asset_inner,
+                error
+            );
+
+            remaining_weight = remaining_weight.saturating_sub(max_weight);
+
+            if let Err(e) = IndestructibleAssets::<T>::try_mutate(|assets| {
+                let idx = assets.partition_point(|&asset_in_vec| asset_in_vec < asset_inner);
+                assets.try_insert(idx, asset_inner)
+            }) {
+                log::error!(
+                    target: LOG_TARGET,
+                    "Error during storage of indestructible asset {:?}, dropping asset: {:?}",
+                    asset_inner,
+                    e
+                );
+            }
+
+            asset.transit_indestructible();
+            remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1))
+        }
+
+        fn handle_destroy_accounts(
+            asset: &mut AssetInDestruction<T::AssetType>,
+            mut remaining_weight: Weight,
+        ) -> Result<Weight, Weight> {
+            if *asset.state() != DestructionState::Accounts {
+                return Ok(remaining_weight);
+            }
+            let destroy_account_weight = T::DestroyAccountWeight::get();
+
+            let destroy_account_cap =
+                match remaining_weight.checked_div_per_component(&destroy_account_weight) {
+                    Some(amount) => amount,
+                    None => return Ok(remaining_weight),
+                };
+
+            match Self::destroy_accounts(*asset.asset(), destroy_account_cap.saturated_into()) {
+                Ok(destroyed_accounts) => {
+                    // TODO(#1202): More precise weights
+                    remaining_weight = remaining_weight.saturating_sub(
+                        destroy_account_weight
+                            .saturating_mul(destroyed_accounts.into())
+                            .max(destroy_account_weight),
+                    );
+
+                    if u64::from(destroyed_accounts) != destroy_account_cap {
+                        asset.transit_state();
+                    }
+
+                    Ok(remaining_weight)
+                }
+                Err(e) => {
+                    // In this case, it is not known how many accounts have been destroyed prior
+                    // to triggering this error. The only safe handling is consuming all the
+                    // remaining weight.
+                    let remaining_weight_err = Self::mark_asset_as_indestructible(
+                        asset,
+                        remaining_weight,
+                        destroy_account_weight.saturating_mul(destroy_account_cap),
+                        e,
+                    );
+                    Err(remaining_weight_err)
+                }
+            }
+        }
+
+        fn handle_destroy_approvals(
+            asset: &mut AssetInDestruction<T::AssetType>,
+            mut remaining_weight: Weight,
+        ) -> Result<Weight, Weight> {
+            if *asset.state() != DestructionState::Approvals {
+                return Ok(remaining_weight);
+            }
+            let destroy_approval_weight = T::DestroyAccountWeight::get();
+
+            let destroy_approval_cap =
+                match remaining_weight.checked_div_per_component(&destroy_approval_weight) {
+                    Some(amount) => amount,
+                    None => return Ok(remaining_weight),
+                };
+
+            match Self::destroy_approvals(*asset.asset(), destroy_approval_cap.saturated_into()) {
+                Ok(destroyed_approvals) => {
+                    // TODO(#1202): More precise weights
+                    remaining_weight = remaining_weight.saturating_sub(
+                        destroy_approval_weight
+                            .saturating_mul(destroyed_approvals.into())
+                            .max(destroy_approval_weight),
+                    );
+
+                    if u64::from(destroyed_approvals) != destroy_approval_cap {
+                        asset.transit_state();
+                    }
+
+                    Ok(remaining_weight)
+                }
+                Err(e) => {
+                    // In this case, it is not known how many approvals have been destroyed prior
+                    // to triggering this error. The only safe handling is consuming all the
+                    // remaining weight.
+                    let remaining_weight_err = Self::mark_asset_as_indestructible(
+                        asset,
+                        remaining_weight,
+                        destroy_approval_weight.saturating_mul(destroy_approval_cap),
+                        e,
+                    );
+                    Err(remaining_weight_err)
+                }
+            }
+        }
+
+        fn handle_destroy_finish(
+            asset: &mut AssetInDestruction<T::AssetType>,
+            remaining_weight: Weight,
+        ) -> Result<Weight, Weight> {
+            if *asset.state() != DestructionState::Approvals {
+                return Ok(remaining_weight);
+            }
+            let destroy_finish_weight = T::DestroyFinishWeight::get();
+
+            if remaining_weight.all_gte(destroy_finish_weight) {
+                // TODO(#1202): More precise weights
+                if let Err(e) = Self::finish_destroy(*asset.asset()) {
+                    let remaining_weight_err = Self::mark_asset_as_indestructible(
+                        asset,
+                        remaining_weight,
+                        destroy_finish_weight,
+                        e,
+                    );
+                    return Err(remaining_weight_err);
+                }
+            }
+
+            Ok(remaining_weight.saturating_sub(destroy_finish_weight))
+        }
+
         #[inline]
         fn log_unsupported(asset: T::AssetType, function: &str) {
             log::warn!(target: LOG_TARGET, "Asset {:?} not supported in function {:?}", asset, function);
@@ -961,11 +1137,11 @@ pub mod pallet {
             maybe_check_owner: Option<T::AccountId>,
         ) -> DispatchResult {
             Self::asset_exists(asset).then_some(()).ok_or(Error::<T>::UnknownAsset)?;
-
             let mut destroy_assets = DestroyAssets::<T>::get();
             frame_support::ensure!(!destroy_assets.is_full(), Error::<T>::TooManyManagedDestroys);
+            let asset_to_insert = AssetInDestruction::new(asset);
 
-            let idx = match destroy_assets.binary_search(&asset) {
+            let idx = match destroy_assets.binary_search(&asset_to_insert) {
                 Ok(_) => return Err(Error::<T>::DestructionInProgress.into()),
                 Err(idx) => {
                     if IndestructibleAssets::<T>::get().binary_search(&asset).is_ok() {
@@ -977,7 +1153,7 @@ pub mod pallet {
             };
 
             destroy_assets
-                .try_insert(idx, asset)
+                .try_insert(idx, asset_to_insert)
                 .map_err(|_| Error::<T>::TooManyManagedDestroys)?;
 
             Self::start_destroy(asset, maybe_check_owner)?;
@@ -994,13 +1170,13 @@ pub mod pallet {
 
             for (asset, maybe_check_owner) in assets {
                 Self::asset_exists(asset).then_some(()).ok_or(Error::<T>::UnknownAsset)?;
-
                 frame_support::ensure!(
                     !destroy_assets.is_full(),
                     Error::<T>::TooManyManagedDestroys
                 );
+                let asset_to_insert = AssetInDestruction::new(asset);
 
-                let idx = match destroy_assets.binary_search(&asset) {
+                let idx = match destroy_assets.binary_search(&asset_to_insert) {
                     Ok(_) => return Err(Error::<T>::DestructionInProgress.into()),
                     Err(idx) => {
                         if IndestructibleAssets::<T>::get().binary_search(&asset).is_ok() {
@@ -1012,7 +1188,7 @@ pub mod pallet {
                 };
 
                 destroy_assets
-                    .try_insert(idx, asset)
+                    .try_insert(idx, asset_to_insert)
                     .map_err(|_| Error::<T>::TooManyManagedDestroys)?;
 
                 Self::start_destroy(asset, maybe_check_owner)?;
