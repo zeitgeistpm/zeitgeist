@@ -23,32 +23,22 @@ use scale_info::TypeInfo;
 pub(crate) type DestroyAssetsT<T> =
     BoundedVec<AssetInDestruction<<T as Config>::AssetType>, ConstU32<8192>>;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Decode, Encode, MaxEncodedLen, TypeInfo)]
+#[derive(
+    Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord, Decode, Encode, MaxEncodedLen, TypeInfo,
+)]
 pub(crate) enum DestructionState {
     Accounts,
     Approvals,
-    Destroyed,
     Finalization,
+    Destroyed,
     Indestructible,
 }
 
-#[derive(Clone, Copy, Encode, Debug, Decode, MaxEncodedLen, TypeInfo)]
+#[derive(Clone, Copy, Encode, Eq, Debug, Decode, MaxEncodedLen, PartialEq, TypeInfo)]
 pub(crate) struct AssetInDestruction<A> {
     asset: A,
     state: DestructionState,
 }
-
-// Ordering hack for binary search of assets in destruction.
-impl<A> PartialEq for AssetInDestruction<A>
-where
-    A: Eq + Ord + PartialEq + PartialOrd,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.asset == other.asset
-    }
-}
-
-impl<A> Eq for AssetInDestruction<A> where A: Eq + Ord + PartialEq + PartialOrd {}
 
 impl<A> PartialOrd for AssetInDestruction<A>
 where
@@ -59,12 +49,25 @@ where
     }
 }
 
+// Ordering for binary search of assets in destruction.
+// Prioritize asset state first, then asset.
 impl<A> Ord for AssetInDestruction<A>
 where
     A: Eq + Ord + PartialEq + PartialOrd,
 {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.asset.cmp(&other.asset)
+        match self.state.cmp(&other.state) {
+            Ordering::Equal => {
+                // Since asset destruction will always pop from the vector, sorting has to be reverse.
+                match self.asset.cmp(&other.asset) {
+                    Ordering::Equal => Ordering::Equal,
+                    Ordering::Less => Ordering::Greater,
+                    Ordering::Greater => Ordering::Less,
+                }
+            },
+            Ordering::Less => Ordering::Less,
+            Ordering::Greater => Ordering::Greater
+        }
     }
 }
 

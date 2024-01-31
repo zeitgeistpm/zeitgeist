@@ -43,7 +43,9 @@ fn adds_assets_properly() {
 
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE));
         assert_ok!(AssetRouter::managed_destroy(CUSTOM_ASSET, None));
-        assert_eq!(crate::DestroyAssets::<Runtime>::get(), vec![campaign_asset, custom_asset]);
+        let mut expected = vec![campaign_asset, custom_asset];
+        expected.sort();
+        assert_eq!(crate::DestroyAssets::<Runtime>::get(), expected);
 
         crate::IndestructibleAssets::<Runtime>::put(BoundedVec::truncate_from(vec![
             CAMPAIGN_ASSET,
@@ -90,7 +92,9 @@ fn adds_multi_assets_properly() {
             AssetRouter::managed_destroy_multi(assets.clone()),
             Error::<Runtime>::DestructionInProgress
         );
-        assert_eq!(crate::DestroyAssets::<Runtime>::get(), vec![campaign_asset, custom_asset]);
+        let mut expected = vec![campaign_asset, custom_asset];
+        expected.sort();
+        assert_eq!(crate::DestroyAssets::<Runtime>::get(), expected);
 
         crate::IndestructibleAssets::<Runtime>::put(BoundedVec::truncate_from(vec![
             CAMPAIGN_ASSET,
