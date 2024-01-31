@@ -37,6 +37,7 @@ use orml_traits::{
 use zeitgeist_primitives::types::Assets;
 
 mod create;
+mod custom_types;
 mod destroy;
 mod inspect;
 mod managed_destroy;
