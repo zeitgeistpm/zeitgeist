@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-pub mod impl_create;
-pub mod impl_destroy;
-pub mod impl_inspect;
-pub mod impl_managed_destroy;
-pub mod impl_multi_lockable_currency;
-pub mod impl_multi_reserveable_currency;
-pub mod impl_multicurrency;
-pub mod impl_multicurrency_extended;
-pub mod impl_named_multi_reserveable_currency;
-pub mod impl_transfer_all;
+pub mod create;
+pub mod destroy;
+pub mod inspect;
+pub mod managed_destroy;
+pub mod multi_lockable_currency;
+pub mod multi_reserveable_currency;
+pub mod multicurrency;
+pub mod multicurrency_extended;
+pub mod named_multi_reserveable_currency;
+pub mod transfer_all;
