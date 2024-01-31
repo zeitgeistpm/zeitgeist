@@ -29,13 +29,11 @@ use frame_support::{
         },
         OnIdle, UnfilteredDispatchable,
     },
-    weights::RuntimeDbWeight,
 };
 use orml_traits::{
     BalanceStatus, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
     NamedMultiReservableCurrency,
 };
-use sp_runtime::traits::Get;
 use zeitgeist_primitives::types::Assets;
 
 mod create;

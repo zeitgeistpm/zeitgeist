@@ -205,15 +205,19 @@ pub mod pallet {
 
     /// This macro handles the single stages of the asset destruction.
     macro_rules! handle_asset_destruction {
-        ($asset:expr, $remaining_weight:expr, $asset_storage:expr, $asset_method:ident) => {
+        ($asset:expr, $remaining_weight:expr, $asset_storage:expr, $asset_method:ident, $outer_loop:tt) => {
             let state_before = *($asset.state());
             let call_result = Self::$asset_method($asset, $remaining_weight);
             $remaining_weight = call_result.map_or_else(|weight| weight, |weight| weight);
 
-            // In case destruction failed during finalization, there is most likely still
-            // some weight available.
-            if call_result.is_err() && state_before != DestructionState::Finalization {
-                break;
+            if call_result.is_err() {
+                if state_before != DestructionState::Finalization {
+                    break $outer_loop;
+                } else {
+                    // In case destruction failed during finalization, there is most likely still
+                    // some weight available.
+                    break;
+                }
             }
 
             if *($asset.state()) == state_before {
@@ -228,7 +232,7 @@ pub mod pallet {
                     );
                 }
 
-                break;
+                break $outer_loop;
             }
         };
     }
@@ -245,40 +249,51 @@ pub mod pallet {
             remaining_weight =
                 remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1));
 
-            while let Some(mut asset) = destroy_assets.pop() {
-                // TODO loop
-                match asset.state() {
-                    DestructionState::Accounts => {
-                        handle_asset_destruction!(
-                            &mut asset,
-                            remaining_weight,
-                            destroy_assets,
-                            handle_destroy_accounts
-                        );
+            'outer: while let Some(mut asset) = destroy_assets.pop() {
+                let mut safety_counter: u8 = 0;
+
+                while (*asset.state() != DestructionState::Destroyed
+                    || *asset.state() != DestructionState::Indestructible)
+                    && safety_counter < 6
+                {
+                    match asset.state() {
+                        DestructionState::Accounts => {
+                            handle_asset_destruction!(
+                                &mut asset,
+                                remaining_weight,
+                                destroy_assets,
+                                handle_destroy_accounts,
+                                'outer
+                            );
+                        }
+                        DestructionState::Approvals => {
+                            handle_asset_destruction!(
+                                &mut asset,
+                                remaining_weight,
+                                destroy_assets,
+                                handle_destroy_approvals,
+                                'outer
+                            );
+                        }
+                        DestructionState::Finalization => {
+                            handle_asset_destruction!(
+                                &mut asset,
+                                remaining_weight,
+                                destroy_assets,
+                                handle_destroy_finish,
+                                'outer
+                            );
+                        }
+                        // Next two states should never occur. Just remove the asset.
+                        DestructionState::Destroyed => {
+                            log::warn!(target: LOG_TARGET, "Asset {:?} has invalid state", asset);
+                        }
+                        DestructionState::Indestructible => {
+                            log::warn!(target: LOG_TARGET, "Asset {:?} has invalid state", asset);
+                        }
                     }
-                    DestructionState::Approvals => {
-                        handle_asset_destruction!(
-                            &mut asset,
-                            remaining_weight,
-                            destroy_assets,
-                            handle_destroy_approvals
-                        );
-                    }
-                    DestructionState::Finalization => {
-                        handle_asset_destruction!(
-                            &mut asset,
-                            remaining_weight,
-                            destroy_assets,
-                            handle_destroy_finish
-                        );
-                    }
-                    // Next two states should never occur. Just remove the asset.
-                    DestructionState::Destroyed => {
-                        log::warn!(target: LOG_TARGET, "Asset {:?} has invalid state", asset);
-                    }
-                    DestructionState::Indestructible => {
-                        log::warn!(target: LOG_TARGET, "Asset {:?} has invalid state", asset);
-                    }
+
+                    safety_counter += 1;
                 }
             }
 
@@ -541,7 +556,7 @@ pub mod pallet {
             asset: &mut AssetInDestruction<T::AssetType>,
             remaining_weight: Weight,
         ) -> Result<Weight, Weight> {
-            if *asset.state() != DestructionState::Approvals {
+            if *asset.state() != DestructionState::Finalization {
                 return Ok(remaining_weight);
             }
             let destroy_finish_weight = T::DestroyFinishWeight::get();
@@ -557,9 +572,12 @@ pub mod pallet {
                     );
                     return Err(remaining_weight_err);
                 }
+
+                asset.transit_state();
+                return Ok(remaining_weight.saturating_sub(destroy_finish_weight));
             }
 
-            Ok(remaining_weight.saturating_sub(destroy_finish_weight))
+            Ok(remaining_weight)
         }
 
         #[inline]
