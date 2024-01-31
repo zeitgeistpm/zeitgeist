@@ -105,7 +105,7 @@ fn adds_multi_assets_properly() {
 }
 
 #[test]
-fn destroys_assets_fully_properly() {
+fn destroys_assets_fully_works_properly() {
     ExtBuilder::default().build().execute_with(|| {
         let assets_raw = [(CAMPAIGN_ASSET, None), (CUSTOM_ASSET, None), (MARKET_ASSET, None)];
         let assets = BTreeMap::from_iter(assets_raw.to_vec());

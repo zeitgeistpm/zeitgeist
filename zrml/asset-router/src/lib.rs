@@ -266,7 +266,7 @@ pub mod pallet {
                         }
                     }
 
-                    safety_counter += 1;
+                    safety_counter = safety_counter.saturating_add(1);
                 }
             }
 
