@@ -64,9 +64,9 @@ where
                     Ordering::Less => Ordering::Greater,
                     Ordering::Greater => Ordering::Less,
                 }
-            },
+            }
             Ordering::Less => Ordering::Less,
-            Ordering::Greater => Ordering::Greater
+            Ordering::Greater => Ordering::Greater,
         }
     }
 }
