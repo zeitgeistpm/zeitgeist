@@ -51,7 +51,7 @@ where
     A: Eq + Ord + PartialEq + PartialOrd,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.asset.partial_cmp(&other.asset)
+        Some(self.cmp(other))
     }
 }
 

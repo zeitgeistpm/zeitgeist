@@ -1,5 +1,5 @@
-// Copyright 2023 Forecasting Technologies LTD.
-// Copyright (C) Parity Technologies (UK) Ltd.
+// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2023 Parity Technologies (UK) Ltd.
 
 // This file is part of Zeitgeist.
 //

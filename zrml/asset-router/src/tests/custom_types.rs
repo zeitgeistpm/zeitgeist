@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -17,18 +17,18 @@
 
 use crate::{AssetInDestruction, DestructionState};
 
-type AID = AssetInDestruction<u32>;
+type Aid = AssetInDestruction<u32>;
 
 #[test]
 fn asset_in_destruction_created_properly() {
-    let aid = AID::new(2);
+    let aid = Aid::new(2);
     assert_eq!(*aid.asset(), 2);
     assert_eq!(*aid.state(), DestructionState::Accounts);
 }
 
 #[test]
 fn asset_in_destruction_transitions_states_properly() {
-    let mut aid = AID::new(2);
+    let mut aid = Aid::new(2);
 
     aid.transit_state();
     assert_eq!(*aid.state(), DestructionState::Approvals);
@@ -45,7 +45,7 @@ fn asset_in_destruction_transitions_states_properly() {
 
 #[test]
 fn asset_in_destruction_indestructible_state_works() {
-    let mut aid = AID::new(2);
+    let mut aid = Aid::new(2);
 
     aid.transit_indestructible();
     assert_eq!(*aid.state(), DestructionState::Indestructible);
