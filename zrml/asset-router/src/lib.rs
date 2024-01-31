@@ -185,8 +185,7 @@ pub mod pallet {
 
     /// Keeps track of assets that have to be destroyed.
     #[pallet::storage]
-    pub(super) type DestroyAssets<T: Config> =
-        StorageValue<_, BoundedVec<AssetInDestruction<T::AssetType>, ConstU32<8192>>, ValueQuery>;
+    pub(super) type DestroyAssets<T: Config> = StorageValue<_, DestroyAssetsT<T>, ValueQuery>;
 
     /// Keeps track of assets that can't be destroyed.
     #[pallet::storage]

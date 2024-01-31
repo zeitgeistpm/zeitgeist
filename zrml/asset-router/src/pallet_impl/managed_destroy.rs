@@ -17,13 +17,13 @@
 
 use crate::pallet::*;
 
-impl<T: Config> ManagedDestroy<T::AccountId> for Pallet<T> {
-    fn managed_destroy(
-        asset: Self::AssetId,
+impl<T: Config> Pallet<T> {
+    fn add_asset_to_managed_destruction(
+        destroy_assets: &mut DestroyAssetsT<T>,
+        asset: T::AssetType,
         maybe_check_owner: Option<T::AccountId>,
     ) -> DispatchResult {
         Self::asset_exists(asset).then_some(()).ok_or(Error::<T>::UnknownAsset)?;
-        let mut destroy_assets = DestroyAssets::<T>::get();
         frame_support::ensure!(!destroy_assets.is_full(), Error::<T>::TooManyManagedDestroys);
         let asset_to_insert = AssetInDestruction::new(asset);
 
@@ -43,8 +43,18 @@ impl<T: Config> ManagedDestroy<T::AccountId> for Pallet<T> {
             .map_err(|_| Error::<T>::TooManyManagedDestroys)?;
 
         Self::start_destroy(asset, maybe_check_owner)?;
-        DestroyAssets::<T>::put(destroy_assets);
+        Ok(())
+    }
+}
 
+impl<T: Config> ManagedDestroy<T::AccountId> for Pallet<T> {
+    fn managed_destroy(
+        asset: Self::AssetId,
+        maybe_check_owner: Option<T::AccountId>,
+    ) -> DispatchResult {
+        let mut destroy_assets = DestroyAssets::<T>::get();
+        Self::add_asset_to_managed_destruction(&mut destroy_assets, asset, maybe_check_owner)?;
+        DestroyAssets::<T>::put(destroy_assets);
         Ok(())
     }
 
@@ -55,26 +65,7 @@ impl<T: Config> ManagedDestroy<T::AccountId> for Pallet<T> {
         let mut destroy_assets = DestroyAssets::<T>::get();
 
         for (asset, maybe_check_owner) in assets {
-            Self::asset_exists(asset).then_some(()).ok_or(Error::<T>::UnknownAsset)?;
-            frame_support::ensure!(!destroy_assets.is_full(), Error::<T>::TooManyManagedDestroys);
-            let asset_to_insert = AssetInDestruction::new(asset);
-
-            let idx = match destroy_assets.binary_search(&asset_to_insert) {
-                Ok(_) => return Err(Error::<T>::DestructionInProgress.into()),
-                Err(idx) => {
-                    if IndestructibleAssets::<T>::get().binary_search(&asset).is_ok() {
-                        return Err(Error::<T>::DestructionInProgress.into());
-                    }
-
-                    idx
-                }
-            };
-
-            destroy_assets
-                .try_insert(idx, asset_to_insert)
-                .map_err(|_| Error::<T>::TooManyManagedDestroys)?;
-
-            Self::start_destroy(asset, maybe_check_owner)?;
+            Self::add_asset_to_managed_destruction(&mut destroy_assets, asset, maybe_check_owner)?;
         }
 
         DestroyAssets::<T>::put(destroy_assets);

@@ -15,9 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::{BoundedVec, Config, ConstU32};
 use core::cmp::Ordering;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+
+pub(crate) type DestroyAssetsT<T> =
+    BoundedVec<AssetInDestruction<<T as Config>::AssetType>, ConstU32<8192>>;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Decode, Encode, MaxEncodedLen, TypeInfo)]
 pub(crate) enum DestructionState {
