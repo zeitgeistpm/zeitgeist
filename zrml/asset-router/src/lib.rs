@@ -38,7 +38,7 @@ pub mod pallet {
     pub(crate) use alloc::collections::BTreeMap;
     pub(crate) use core::{fmt::Debug, marker::PhantomData};
     pub(crate) use frame_support::{
-        log,
+        ensure, log,
         pallet_prelude::{DispatchError, DispatchResult, Hooks, StorageValue, ValueQuery, Weight},
         require_transactional,
         traits::{

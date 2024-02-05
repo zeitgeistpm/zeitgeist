@@ -23,7 +23,7 @@ impl<T: Config> Pallet<T> {
         asset: T::AssetType,
         maybe_check_owner: Option<T::AccountId>,
     ) -> DispatchResult {
-        Self::asset_exists(asset).then_some(()).ok_or(Error::<T>::UnknownAsset)?;
+        ensure!(Self::asset_exists(asset), Error::<T>::UnknownAsset);
         frame_support::ensure!(!destroy_assets.is_full(), Error::<T>::TooManyManagedDestroys);
         let asset_to_insert = AssetInDestruction::new(asset);
 
