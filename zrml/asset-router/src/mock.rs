@@ -20,14 +20,15 @@
 extern crate alloc;
 
 use crate::{self as zrml_asset_router};
-use alloc::{vec, vec::Vec};
+use alloc::{vec, vec::Vec, BTreeMap};
 use frame_support::{
     construct_runtime,
-    pallet_prelude::Weight,
+    pallet_prelude::{DispatchResult, Weight},
     traits::{AsEnsureOriginWithArg, Everything},
 };
 use frame_system::EnsureSigned;
 use orml_traits::parameter_type_with_key;
+use pallet_assets::ManagedDestroy;
 use parity_scale_codec::Compact;
 use sp_runtime::{
     testing::Header,
@@ -291,10 +292,6 @@ impl ExtBuilder {
         t.into()
     }
 }
-
-use pallet_assets::ManagedDestroy;
-use alloc::collections::BTreeMap;
-use frame_support::pallet_prelude::DispatchResult;
 
 #[frame_support::transactional]
 pub(super) fn managed_destroy_multi_transactional(

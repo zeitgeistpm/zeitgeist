@@ -215,8 +215,11 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_idle(_: T::BlockNumber, mut remaining_weight: Weight) -> Weight {
-            let mut destroy_assets = DestroyAssets::<T>::get();
+            if !remaining_weight.all_gte(T::DbWeight::get().reads(1)) {
+                return remaining_weight;
+            };
 
+            let mut destroy_assets = DestroyAssets::<T>::get();
             if destroy_assets.len() == 0 {
                 return remaining_weight.saturating_sub(T::DbWeight::get().reads(1));
             }

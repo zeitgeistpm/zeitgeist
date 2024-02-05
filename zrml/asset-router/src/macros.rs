@@ -81,7 +81,7 @@ macro_rules! handle_asset_destruction {
         }
 
         if *($asset.state()) == state_before {
-            // Should be infallible since the asset was just poppoed and force inserting
+            // Should be infallible since the asset was just popped and force inserting
             // is not possible.
             if let Err(e) = $asset_storage.try_insert(0, *($asset)) {
                 log::error!(
