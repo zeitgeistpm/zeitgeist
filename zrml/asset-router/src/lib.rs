@@ -40,6 +40,7 @@ pub mod pallet {
     pub(crate) use frame_support::{
         log,
         pallet_prelude::{DispatchError, DispatchResult, Hooks, StorageValue, ValueQuery, Weight},
+        require_transactional,
         traits::{
             tokens::{
                 fungibles::{Create, Destroy, Inspect, Mutate, Transfer},
@@ -47,7 +48,7 @@ pub mod pallet {
             },
             BalanceStatus as Status, ConstU32,
         },
-        transactional, BoundedVec, Parameter,
+        BoundedVec, Parameter,
     };
     pub(crate) use orml_traits::{
         arithmetic::Signed,
