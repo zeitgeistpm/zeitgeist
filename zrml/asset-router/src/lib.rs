@@ -233,8 +233,8 @@ pub mod pallet {
                 let safety_counter_inner_max = 6u8;
                 let mut safety_counter_inner = 0u8;
 
-                while *asset.state() != DestructionState::Destroyed
-                    || *asset.state() != DestructionState::Indestructible
+                while (*asset.state() != DestructionState::Destroyed
+                    && *asset.state() != DestructionState::Indestructible)
                         && safety_counter_inner < safety_counter_inner_max
                 {
                     match asset.state() {
