@@ -230,8 +230,8 @@ pub mod pallet {
             'outer: while let Some(mut asset) = destroy_assets.pop() {
                 let mut safety_counter: u8 = 0;
 
-                while (*asset.state() != DestructionState::Destroyed
-                    || *asset.state() != DestructionState::Indestructible)
+                while *asset.state() != DestructionState::Destroyed
+                    && *asset.state() != DestructionState::Indestructible
                     && safety_counter < 6
                 {
                     match asset.state() {
