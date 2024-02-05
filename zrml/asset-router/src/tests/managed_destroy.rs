@@ -122,6 +122,15 @@ fn destroys_assets_fully_works_properly() {
             assert_ok!(AssetRouter::create(*asset, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         }
 
+        assert_ok!(
+            pallet_assets::Call::<Runtime, CampaignAssetsInstance>::approve_transfer {
+                id: CAMPAIGN_ASSET_INTERNAL.into(),
+                delegate: BOB,
+                amount: 1
+            }
+            .dispatch_bypass_filter(Signed(ALICE).into())
+        );
+
         assert_ok!(managed_destroy_multi_transactional(assets.clone()));
         assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 3);
 
