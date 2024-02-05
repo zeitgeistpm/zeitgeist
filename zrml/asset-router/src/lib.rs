@@ -317,16 +317,16 @@ pub mod pallet {
         fn handle_destroy_accounts(
             asset: &mut AssetInDestruction<T::AssetType>,
             mut remaining_weight: Weight,
-        ) -> Result<Weight, Weight> {
+        ) -> DestructionResult {
             if *asset.state() != DestructionState::Accounts {
-                return Ok(remaining_weight);
+                return Err(DestructionError::WrongState(remaining_weight));
             }
             let destroy_account_weight = T::DestroyAccountWeight::get();
 
             let destroy_account_cap =
                 match remaining_weight.checked_div_per_component(&destroy_account_weight) {
                     Some(amount) => amount,
-                    None => return Ok(remaining_weight),
+                    None => return Ok(DestructionOk::Incomplete(remaining_weight)),
                 };
 
             match Self::destroy_accounts(*asset.asset(), destroy_account_cap.saturated_into()) {
@@ -340,9 +340,10 @@ pub mod pallet {
 
                     if u64::from(destroyed_accounts) != destroy_account_cap {
                         asset.transit_state();
+                        Ok(DestructionOk::Complete(remaining_weight))
+                    } else {
+                        Ok(DestructionOk::Incomplete(remaining_weight))
                     }
-
-                    Ok(remaining_weight)
                 }
                 Err(e) => {
                     // In this case, it is not known how many accounts have been destroyed prior
@@ -355,7 +356,7 @@ pub mod pallet {
                         e,
                     );
                     // Play it safe, consume all remaining weight.
-                    Err(Weight::zero())
+                    Err(DestructionError::Indestructible(Weight::zero()))
                 }
             }
         }
@@ -363,16 +364,16 @@ pub mod pallet {
         fn handle_destroy_approvals(
             asset: &mut AssetInDestruction<T::AssetType>,
             mut remaining_weight: Weight,
-        ) -> Result<Weight, Weight> {
+        ) -> DestructionResult {
             if *asset.state() != DestructionState::Approvals {
-                return Ok(remaining_weight);
+                return Err(DestructionError::WrongState(remaining_weight));
             }
             let destroy_approval_weight = T::DestroyApprovalWeight::get();
 
             let destroy_approval_cap =
                 match remaining_weight.checked_div_per_component(&destroy_approval_weight) {
                     Some(amount) => amount,
-                    None => return Ok(remaining_weight),
+                    None => return Ok(DestructionOk::Incomplete(remaining_weight)),
                 };
 
             match Self::destroy_approvals(*asset.asset(), destroy_approval_cap.saturated_into()) {
@@ -386,9 +387,10 @@ pub mod pallet {
 
                     if u64::from(destroyed_approvals) != destroy_approval_cap {
                         asset.transit_state();
+                        Ok(DestructionOk::Complete(remaining_weight))
+                    } else {
+                        Ok(DestructionOk::Incomplete(remaining_weight))
                     }
-
-                    Ok(remaining_weight)
                 }
                 Err(e) => {
                     // In this case, it is not known how many approvals have been destroyed prior
@@ -401,7 +403,7 @@ pub mod pallet {
                         e,
                     );
                     // Play it safe, consume all remaining weight.
-                    Err(Weight::zero())
+                    Err(DestructionError::Indestructible(Weight::zero()))
                 }
             }
         }
@@ -409,9 +411,9 @@ pub mod pallet {
         fn handle_destroy_finish(
             asset: &mut AssetInDestruction<T::AssetType>,
             remaining_weight: Weight,
-        ) -> Result<Weight, Weight> {
+        ) -> DestructionResult {
             if *asset.state() != DestructionState::Finalization {
-                return Ok(remaining_weight);
+                return Err(DestructionError::WrongState(remaining_weight));
             }
             let destroy_finish_weight = T::DestroyFinishWeight::get();
 
@@ -424,14 +426,16 @@ pub mod pallet {
                         destroy_finish_weight,
                         e,
                     );
-                    return Err(remaining_weight_err);
+                    return Err(DestructionError::Indestructible(remaining_weight_err));
                 }
 
                 asset.transit_state();
-                return Ok(remaining_weight.saturating_sub(destroy_finish_weight));
+                return Ok(DestructionOk::Complete(
+                    remaining_weight.saturating_sub(destroy_finish_weight),
+                ));
             }
 
-            Ok(remaining_weight)
+            Ok(DestructionOk::Incomplete(remaining_weight))
         }
 
         #[inline]

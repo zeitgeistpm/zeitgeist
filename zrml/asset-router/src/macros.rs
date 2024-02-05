@@ -68,31 +68,36 @@ macro_rules! handle_asset_destruction {
     ($asset:expr, $remaining_weight:expr, $asset_storage:expr, $asset_method:ident, $outer_loop:tt) => {
         let state_before = *($asset.state());
         let call_result = Self::$asset_method($asset, $remaining_weight);
-        $remaining_weight = call_result.map_or_else(|weight| weight, |weight| weight);
+        match call_result {
+            Ok(DestructionOk::Incomplete(weight)) => {
+                // Should be infallible since the asset was just popped and force inserting
+                // is not possible.
+                if let Err(e) = $asset_storage.try_insert($asset_storage.len(), *($asset)) {
+                    log::error!(
+                        target: LOG_TARGET,
+                        "Cannot reintroduce asset {:?} into DestroyAssets storage: {:?}",
+                        $asset,
+                        e
+                    );
+                }
 
-        if call_result.is_err() {
-            if state_before != DestructionState::Finalization {
+                $remaining_weight = weight;
                 break $outer_loop;
-            } else {
-                // In case destruction failed during finalization, there is most likely still
-                // some weight available.
-                break;
-            }
-        }
+            },
+            Ok(DestructionOk::Complete(weight)) | Err(DestructionError::WrongState(weight))  => {
+                $remaining_weight = weight;
+            },
+            Err(DestructionError::Indestructible(weight)) => {
+                $remaining_weight = weight;
 
-        if *($asset.state()) == state_before {
-            // Should be infallible since the asset was just popped and force inserting
-            // is not possible.
-            if let Err(e) = $asset_storage.try_insert(0, *($asset)) {
-                log::error!(
-                    target: LOG_TARGET,
-                    "Cannot reintroduce asset {:?} into DestroyAssets storage: {:?}",
-                    $asset,
-                    e
-                );
+                if state_before != DestructionState::Finalization {
+                    break $outer_loop;
+                } else {
+                    // In case destruction failed during finalization, there is most likely still
+                    // some weight available.
+                    break;
+                }
             }
-
-            break $outer_loop;
         }
     };
 }
