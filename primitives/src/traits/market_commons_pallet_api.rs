@@ -96,7 +96,9 @@ pub trait MarketCommonsPalletApi {
     /// field is expected to be `None`. If that's not the case, this function will raise an error to
     /// avoid double-writes, which are always the result of an incorrect issuance process for market
     /// IDs.
-    fn build_market<U>(market_builder: U) -> Result<(Self::MarketId, MarketOf<Self>), DispatchError>
+    fn build_market<U>(
+        market_builder: U,
+    ) -> Result<(Self::MarketId, MarketOf<Self>), DispatchError>
     where
         U: MarketBuilder<
                 Self::AccountId,

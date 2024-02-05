@@ -25,6 +25,8 @@ use zeitgeist_primitives::{
     },
 };
 
+/// Fully-fledged mutably referenced market builder struct.
+///
 /// # Generics
 ///
 /// * `AI`: The account ID type.
@@ -51,6 +53,7 @@ pub struct PredictionMarketBuilder<AI, BA, BN, M, A, MI> {
     pub resolved_outcome: Option<Option<OutcomeReport>>,
     pub dispute_mechanism: Option<Option<MarketDisputeMechanism>>,
     pub bonds: Option<MarketBonds<AI, BA>>,
+
     pub early_close: Option<Option<EarlyClose<BN, M>>>,
 }
 

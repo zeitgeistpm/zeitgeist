@@ -18,7 +18,6 @@
 
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![feature(trait_alias)]
 
 extern crate alloc;
 
@@ -113,8 +112,6 @@ mod pallet {
         NoReport,
         /// There's a pool registered for this market already.
         PoolAlreadyExists,
-        /// Attempting to issue a market ID for a market object that already has an ID.
-        MarketIdDoubleWrite,
     }
 
     #[pallet::hooks]

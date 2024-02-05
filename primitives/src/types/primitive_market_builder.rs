@@ -22,8 +22,8 @@ use crate::{
         MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
     },
 };
-use sp_runtime::Perbill;
 use alloc::vec::Vec;
+use sp_runtime::Perbill;
 
 /// A sample market builder struct used for testing. No verification is done when calling `build()`;
 /// use at your own risk!

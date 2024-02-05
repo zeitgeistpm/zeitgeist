@@ -15,11 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use alloc::vec::Vec;
 use crate::types::{
     Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
+use alloc::vec::Vec;
 use sp_runtime::Perbill;
 
 macro_rules! builder_methods {
