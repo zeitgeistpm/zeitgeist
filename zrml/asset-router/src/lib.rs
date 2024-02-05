@@ -70,6 +70,9 @@ pub mod pallet {
     pub(crate) use zeitgeist_primitives::traits::CheckedDivPerComponent;
 
     pub(crate) const LOG_TARGET: &str = "runtime::asset-router";
+    const MAX_ASSET_DESTRUCTIONS_PER_BLOCK: u8 = 128;
+    pub(crate) const MAX_ASSETS_IN_DESTRUCTION: u32 = 2048;
+    const MAX_INDESTRUCTIBLE_ASSETS: u32 = 256;
 
     pub trait AssetTraits<T: Config, A>:
         Create<T::AccountId, AssetId = A, Balance = T::Balance>
@@ -191,7 +194,7 @@ pub mod pallet {
     /// Keeps track of assets that can't be destroyed.
     #[pallet::storage]
     pub(crate) type IndestructibleAssets<T: Config> =
-        StorageValue<_, BoundedVec<T::AssetType, ConstU32<8192>>, ValueQuery>;
+        StorageValue<_, BoundedVec<T::AssetType, ConstU32<MAX_ASSETS_IN_DESTRUCTION>>, ValueQuery>;
 
     #[pallet::error]
     pub enum Error<T> {
@@ -215,7 +218,26 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_idle(_: T::BlockNumber, mut remaining_weight: Weight) -> Weight {
-            if !remaining_weight.all_gte(T::DbWeight::get().reads(1)) {
+            let max_proof_size_destructibles: u64 =
+                AssetInDestruction::<T::AssetType>::max_encoded_len()
+                    .saturating_mul(MAX_ASSETS_IN_DESTRUCTION.saturated_into())
+                    .saturated_into();
+            let max_proof_size_indestructibles: u64 = T::AssetType::max_encoded_len()
+                .saturating_mul(MAX_INDESTRUCTIBLE_ASSETS.saturated_into())
+                .saturated_into();
+            let max_proof_size_total =
+                max_proof_size_destructibles.saturating_add(max_proof_size_indestructibles);
+
+            let max_extra_weight = Weight::from_parts(
+                // 1ms extra execution time
+                1_000_000_000,
+                // Maximum proof size assuming writes on full storage
+                max_proof_size_total,
+            );
+
+            if !remaining_weight
+                .all_gte(max_extra_weight.saturating_add(T::DbWeight::get().reads(1)))
+            {
                 return remaining_weight;
             };
 
@@ -224,18 +246,19 @@ pub mod pallet {
                 return remaining_weight.saturating_sub(T::DbWeight::get().reads(1));
             }
 
-            remaining_weight =
-                remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1));
-            let saftey_counter_outer_max = 128u8;
+            remaining_weight = remaining_weight
+                .saturating_sub(T::DbWeight::get().reads_writes(1, 1))
+                .saturating_sub(max_extra_weight);
+            let saftey_counter_outer_max = MAX_ASSET_DESTRUCTIONS_PER_BLOCK;
             let mut saftey_counter_outer;
 
             'outer: while let Some(mut asset) = destroy_assets.pop() {
-                let safety_counter_inner_max = 6u8;
+                let safety_counter_inner_max = DESTRUCTION_STATES;
                 let mut safety_counter_inner = 0u8;
 
                 while (*asset.state() != DestructionState::Destroyed
                     && *asset.state() != DestructionState::Indestructible)
-                        && safety_counter_inner < safety_counter_inner_max
+                    && safety_counter_inner < safety_counter_inner_max
                 {
                     match asset.state() {
                         DestructionState::Accounts => {

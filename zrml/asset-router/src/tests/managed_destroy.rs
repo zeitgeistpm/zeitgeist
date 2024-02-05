@@ -18,8 +18,12 @@
 #![cfg(test)]
 
 use super::*;
-use crate::AssetInDestruction;
-use frame_support::{traits::tokens::fungibles::Inspect, BoundedVec};
+use crate::{AssetInDestruction, Weight};
+use frame_support::{
+    traits::{tokens::fungibles::Inspect, Get},
+    weights::RuntimeDbWeight,
+    BoundedVec,
+};
 use pallet_assets::ManagedDestroy;
 
 #[test]
@@ -121,7 +125,7 @@ fn destroys_assets_fully_works_properly() {
         assert_ok!(managed_destroy_multi_transactional(assets.clone()));
         assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 3);
 
-        let available_weight = 1_000_000_000.into();
+        let available_weight = 10_000_000_000.into();
         let remaining_weight = AssetRouter::on_idle(0, available_weight);
         assert!(!AssetRouter::asset_exists(CAMPAIGN_ASSET));
         assert!(!AssetRouter::asset_exists(CUSTOM_ASSET));
@@ -129,7 +133,9 @@ fn destroys_assets_fully_works_properly() {
         assert_eq!(crate::IndestructibleAssets::<Runtime>::get(), vec![]);
         assert_eq!(crate::DestroyAssets::<Runtime>::get(), vec![]);
 
-        let consumed_weight = available_weight - 3u64 * 3u64 * DESTROY_WEIGHT;
+        let mut consumed_weight = available_weight - 3u64 * 3u64 * DESTROY_WEIGHT;
+        // Consider safety buffer for extra execution time and storage proof size
+        consumed_weight = consumed_weight.saturating_sub(Weight::from_parts(1_000_000_000, 45_824));
         assert_eq!(remaining_weight, consumed_weight);
     })
 }
@@ -147,15 +153,17 @@ fn destroys_assets_partially_properly() {
         assert_ok!(managed_destroy_multi_transactional(assets.clone()));
         assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 3);
 
-        let available_weight = DESTROY_WEIGHT * 3;
+        let mut available_weight: Weight = Weight::from_all(1_000_000_000) + 2u64 * DESTROY_WEIGHT;
         // Make on_idle only partially delete the first asset
-        let _ = AssetRouter::on_idle(0, available_weight - 2u32 * DESTROY_WEIGHT);
+        let _ = AssetRouter::on_idle(0, available_weight);
         assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 3);
 
         // Now delete each asset one by one by supplying exactly the required weight
+        available_weight = Weight::from_all(1_000_000_000) + DESTROY_WEIGHT;
         let _ = AssetRouter::on_idle(0, available_weight);
         assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 2);
 
+        available_weight = Weight::from_all(1_000_000_000) + 3u64 * DESTROY_WEIGHT;
         let _ = AssetRouter::on_idle(0, available_weight);
         assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 1);
 
@@ -173,7 +181,7 @@ fn properly_handles_indestructible_assets() {
     ExtBuilder::default().build().execute_with(|| {
         let assets_raw = vec![CAMPAIGN_ASSET, CUSTOM_ASSET, MARKET_ASSET];
         let mut destroy_assets = crate::DestroyAssets::<Runtime>::get();
-        let available_weight = 1_000_000_000.into();
+        let available_weight = 10_000_000_000.into();
 
         for asset in assets_raw {
             destroy_assets.force_push(AssetInDestruction::new(asset));
@@ -226,7 +234,9 @@ fn properly_handles_indestructible_assets() {
         crate::DestroyAssets::<Runtime>::put(destroy_assets);
         assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 3);
         let remaining_weight = AssetRouter::on_idle(0, available_weight);
-        let consumed_weight = available_weight - 2u32 * 3u32 * DESTROY_WEIGHT - DESTROY_WEIGHT;
+        let mut consumed_weight = available_weight - 2u32 * 3u32 * DESTROY_WEIGHT - DESTROY_WEIGHT;
+        // Consider safety buffer for extra execution time and storage proof size
+        consumed_weight = consumed_weight.saturating_sub(Weight::from_parts(1_000_000_000, 45_824));
         assert_eq!(remaining_weight, consumed_weight);
         assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 0);
         assert_eq!(crate::IndestructibleAssets::<Runtime>::get().len(), 1);
@@ -234,5 +244,33 @@ fn properly_handles_indestructible_assets() {
         assert!(!AssetRouter::asset_exists(CAMPAIGN_ASSET));
         assert!(!AssetRouter::asset_exists(CUSTOM_ASSET));
         assert!(!AssetRouter::asset_exists(MARKET_ASSET));
+    })
+}
+
+#[test]
+fn does_not_execute_on_insufficient_weight() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
+        assert_ok!(AssetRouter::managed_destroy(CAMPAIGN_ASSET, None));
+        assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 1);
+
+        let db_weight: RuntimeDbWeight = <Runtime as frame_system::Config>::DbWeight::get();
+        let mut available_weight =
+            Weight::from_parts(1_000_000_000, 45_824) + db_weight.reads(1) - 1u64.into();
+        let mut remaining_weight = AssetRouter::on_idle(0, available_weight);
+        assert_eq!(available_weight, remaining_weight);
+        assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 1);
+
+        available_weight += 1u64.into();
+        let mut remaining_weight_expected: Weight = 0u64.into();
+        remaining_weight = AssetRouter::on_idle(0, available_weight);
+        assert_eq!(remaining_weight_expected, remaining_weight);
+        assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 1);
+
+        remaining_weight_expected = 1u64.into();
+        available_weight += 3u64 * DESTROY_WEIGHT + remaining_weight_expected;
+        remaining_weight = AssetRouter::on_idle(0, available_weight);
+        assert_eq!(remaining_weight_expected, remaining_weight);
+        assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 0);
     })
 }

@@ -66,7 +66,7 @@ pub(super) const CUSTOM_ASSET_INITIAL_AMOUNT: Balance = 20;
 pub(super) const MARKET_ASSET_INITIAL_AMOUNT: Balance = 30;
 pub(super) const CURRENCY_INITIAL_AMOUNT: Balance = 40;
 
-pub(super) const DESTROY_WEIGHT: Weight = Weight::from_all(1000);
+pub(super) const DESTROY_WEIGHT: Weight = Weight::from_parts(1000, 0);
 
 pub(super) type AccountId = <Runtime as frame_system::Config>::AccountId;
 pub(super) type CustomAssetsInstance = pallet_assets::Instance1;
