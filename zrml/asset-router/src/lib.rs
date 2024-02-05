@@ -197,6 +197,8 @@ pub mod pallet {
     pub enum Error<T> {
         /// Cannot convert Amount (MultiCurrencyExtended implementation) into Balance type.
         AmountIntoBalanceFailed,
+        /// Cannot start managed destruction as the asset was marked as indestructible.
+        AssetIndestructible,
         /// Cannot start managed destruction as a destruction for the asset is in progress.
         DestructionInProgress,
         /// The vector holding all assets to destroy reached it's boundary.

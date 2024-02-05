@@ -270,7 +270,7 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = ();
 }
 
-pub struct ExtBuilder {
+pub(super) struct ExtBuilder {
     balances: Vec<(AccountIdTest, Balance)>,
 }
 
@@ -290,4 +290,15 @@ impl ExtBuilder {
 
         t.into()
     }
+}
+
+use pallet_assets::ManagedDestroy;
+use alloc::collections::BTreeMap;
+use frame_support::pallet_prelude::DispatchResult;
+
+#[frame_support::transactional]
+pub(super) fn managed_destroy_multi_transactional(
+    assets: BTreeMap<Assets, Option<AccountIdTest>>,
+) -> DispatchResult {
+    AssetRouter::managed_destroy_multi(assets)
 }

@@ -31,7 +31,7 @@ impl<T: Config> Pallet<T> {
             Ok(_) => return Err(Error::<T>::DestructionInProgress.into()),
             Err(idx) => {
                 if IndestructibleAssets::<T>::get().binary_search(&asset).is_ok() {
-                    return Err(Error::<T>::DestructionInProgress.into());
+                    return Err(Error::<T>::AssetIndestructible.into());
                 }
 
                 idx

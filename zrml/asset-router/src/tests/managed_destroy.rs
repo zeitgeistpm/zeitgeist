@@ -54,11 +54,11 @@ fn adds_assets_properly() {
         crate::DestroyAssets::<Runtime>::kill();
         assert_noop!(
             AssetRouter::managed_destroy(CAMPAIGN_ASSET, None),
-            Error::<Runtime>::DestructionInProgress
+            Error::<Runtime>::AssetIndestructible
         );
         assert_noop!(
             AssetRouter::managed_destroy(CUSTOM_ASSET, None),
-            Error::<Runtime>::DestructionInProgress
+            Error::<Runtime>::AssetIndestructible
         );
     });
 }
@@ -71,7 +71,7 @@ fn adds_multi_assets_properly() {
         let custom_asset = AssetInDestruction::new(CUSTOM_ASSET);
 
         assert_noop!(
-            AssetRouter::managed_destroy_multi(assets.clone()),
+            managed_destroy_multi_transactional(assets.clone()),
             Error::<Runtime>::UnknownAsset
         );
 
@@ -79,7 +79,7 @@ fn adds_multi_assets_properly() {
             assert_ok!(AssetRouter::create(asset, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         }
 
-        assert_ok!(AssetRouter::managed_destroy_multi(assets.clone()));
+        assert_ok!(managed_destroy_multi_transactional(assets.clone()));
 
         for (asset, _) in assets.clone() {
             assert_noop!(
@@ -89,7 +89,7 @@ fn adds_multi_assets_properly() {
         }
 
         assert_noop!(
-            AssetRouter::managed_destroy_multi(assets.clone()),
+            managed_destroy_multi_transactional(assets.clone()),
             Error::<Runtime>::DestructionInProgress
         );
         let mut expected = vec![campaign_asset, custom_asset];
@@ -102,8 +102,8 @@ fn adds_multi_assets_properly() {
         ]));
         crate::DestroyAssets::<Runtime>::kill();
         assert_noop!(
-            AssetRouter::managed_destroy_multi(assets),
-            Error::<Runtime>::DestructionInProgress
+            managed_destroy_multi_transactional(assets),
+            Error::<Runtime>::AssetIndestructible
         );
     });
 }
@@ -118,7 +118,7 @@ fn destroys_assets_fully_works_properly() {
             assert_ok!(AssetRouter::create(*asset, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         }
 
-        assert_ok!(AssetRouter::managed_destroy_multi(assets.clone()));
+        assert_ok!(managed_destroy_multi_transactional(assets.clone()));
         assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 3);
 
         let available_weight = 1_000_000_000.into();
@@ -144,7 +144,7 @@ fn destroys_assets_partially_properly() {
             assert_ok!(AssetRouter::create(*asset, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
         }
 
-        assert_ok!(AssetRouter::managed_destroy_multi(assets.clone()));
+        assert_ok!(managed_destroy_multi_transactional(assets.clone()));
         assert_eq!(crate::DestroyAssets::<Runtime>::get().len(), 3);
 
         let available_weight = DESTROY_WEIGHT * 3;
