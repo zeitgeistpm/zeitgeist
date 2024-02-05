@@ -20,7 +20,7 @@
 extern crate alloc;
 
 use crate::{self as zrml_asset_router};
-use alloc::{vec, vec::Vec, BTreeMap};
+use alloc::{collections::BTreeMap, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
     pallet_prelude::{DispatchResult, Weight},

@@ -348,13 +348,14 @@ pub mod pallet {
                     // In this case, it is not known how many accounts have been destroyed prior
                     // to triggering this error. The only safe handling is consuming all the
                     // remaining weight.
-                    let remaining_weight_err = Self::mark_asset_as_indestructible(
+                    let _ = Self::mark_asset_as_indestructible(
                         asset,
                         remaining_weight,
-                        destroy_account_weight.saturating_mul(destroy_account_cap),
+                        remaining_weight,
                         e,
                     );
-                    Err(remaining_weight_err)
+                    // Play it safe, consume all remaining weight.
+                    Err(Weight::zero())
                 }
             }
         }
@@ -393,13 +394,14 @@ pub mod pallet {
                     // In this case, it is not known how many approvals have been destroyed prior
                     // to triggering this error. The only safe handling is consuming all the
                     // remaining weight.
-                    let remaining_weight_err = Self::mark_asset_as_indestructible(
+                    let _ = Self::mark_asset_as_indestructible(
                         asset,
                         remaining_weight,
-                        destroy_approval_weight.saturating_mul(destroy_approval_cap),
+                        remaining_weight,
                         e,
                     );
-                    Err(remaining_weight_err)
+                    // Play it safe, consume all remaining weight.
+                    Err(Weight::zero())
                 }
             }
         }
