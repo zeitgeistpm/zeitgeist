@@ -366,7 +366,7 @@ pub mod pallet {
             if *asset.state() != DestructionState::Approvals {
                 return Ok(remaining_weight);
             }
-            let destroy_approval_weight = T::DestroyAccountWeight::get();
+            let destroy_approval_weight = T::DestroyApprovalWeight::get();
 
             let destroy_approval_cap =
                 match remaining_weight.checked_div_per_component(&destroy_approval_weight) {
