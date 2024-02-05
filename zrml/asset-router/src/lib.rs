@@ -228,11 +228,12 @@ pub mod pallet {
                 remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1));
 
             'outer: while let Some(mut asset) = destroy_assets.pop() {
-                let mut safety_counter: u8 = 0;
+                let safety_counter_max_value = 6u8;
+                let mut safety_counter = 0u8;
 
                 while *asset.state() != DestructionState::Destroyed
-                    && *asset.state() != DestructionState::Indestructible
-                    && safety_counter < 6
+                    || *asset.state() != DestructionState::Indestructible
+                        && safety_counter < safety_counter_max_value
                 {
                     match asset.state() {
                         DestructionState::Accounts => {
@@ -272,6 +273,16 @@ pub mod pallet {
                     }
 
                     safety_counter = safety_counter.saturating_add(1);
+                }
+
+                #[cfg(test)]
+                assert!(
+                    safety_counter != safety_counter_max_value,
+                    "Destruction loop iteration guard triggered"
+                );
+
+                if safety_counter == safety_counter_max_value {
+                    log::warn!(target: LOG_TARGET, "Asset {:?} has invalid state", asset);
                 }
             }
 
