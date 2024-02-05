@@ -226,14 +226,16 @@ pub mod pallet {
 
             remaining_weight =
                 remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1));
+            let saftey_counter_outer_max = 128u8;
+            let mut saftey_counter_outer;
 
             'outer: while let Some(mut asset) = destroy_assets.pop() {
-                let safety_counter_max_value = 6u8;
-                let mut safety_counter = 0u8;
+                let safety_counter_inner_max = 6u8;
+                let mut safety_counter_inner = 0u8;
 
                 while *asset.state() != DestructionState::Destroyed
                     || *asset.state() != DestructionState::Indestructible
-                        && safety_counter < safety_counter_max_value
+                        && safety_counter_inner < safety_counter_inner_max
                 {
                     match asset.state() {
                         DestructionState::Accounts => {
@@ -272,17 +274,31 @@ pub mod pallet {
                         }
                     }
 
-                    safety_counter = safety_counter.saturating_add(1);
+                    safety_counter_inner = safety_counter_inner.saturating_add(1);
                 }
 
+                // Only reachable if there is an error in the destruction state machine
                 #[cfg(test)]
                 assert!(
-                    safety_counter != safety_counter_max_value,
-                    "Destruction loop iteration guard triggered"
+                    safety_counter_inner != safety_counter_inner_max,
+                    "Destruction inner loop iteration guard triggered"
                 );
 
-                if safety_counter == safety_counter_max_value {
-                    log::warn!(target: LOG_TARGET, "Asset {:?} has invalid state", asset);
+                if safety_counter_inner == safety_counter_inner_max {
+                    log::warn!(target: LOG_TARGET, "Can't transit state of asset {:?}", asset);
+                }
+
+                saftey_counter_outer = saftey_counter_outer_max.saturating_add(1);
+
+                // Only reachable if there is an error in the implementation of pop() for Vec.
+                #[cfg(test)]
+                assert!(
+                    saftey_counter_outer != saftey_counter_outer_max,
+                    "Destruction outer loop iteration guard triggered"
+                );
+
+                if saftey_counter_outer == saftey_counter_outer_max {
+                    log::warn!(target: LOG_TARGET, "Reached asset destruction limit of {}", saftey_counter_outer_max);
                 }
             }
 
