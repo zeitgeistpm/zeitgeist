@@ -70,7 +70,7 @@ pub mod pallet {
     pub(crate) use zeitgeist_primitives::traits::CheckedDivPerComponent;
 
     pub(crate) const LOG_TARGET: &str = "runtime::asset-router";
-    const MAX_ASSET_DESTRUCTIONS_PER_BLOCK: u8 = 128;
+    pub(crate) const MAX_ASSET_DESTRUCTIONS_PER_BLOCK: u8 = 128;
     pub(crate) const MAX_ASSETS_IN_DESTRUCTION: u32 = 2048;
     const MAX_INDESTRUCTIBLE_ASSETS: u32 = 256;
     // 1 ms minimum computation time.
@@ -250,15 +250,14 @@ pub mod pallet {
             remaining_weight = remaining_weight
                 .saturating_sub(T::DbWeight::get().reads_writes(1, 1))
                 .saturating_sub(max_extra_weight);
-            let saftey_counter_outer_max = MAX_ASSET_DESTRUCTIONS_PER_BLOCK;
-            let mut saftey_counter_outer;
+            let mut saftey_counter_outer = 0u8;
 
             'outer: while let Some(mut asset) = destroy_assets.pop() {
                 let safety_counter_inner_max = DESTRUCTION_STATES;
                 let mut safety_counter_inner = 0u8;
 
-                while (*asset.state() != DestructionState::Destroyed
-                    && *asset.state() != DestructionState::Indestructible)
+                while *asset.state() != DestructionState::Destroyed
+                    && *asset.state() != DestructionState::Indestructible
                     && safety_counter_inner < safety_counter_inner_max
                 {
                     match asset.state() {
@@ -312,17 +311,17 @@ pub mod pallet {
                     log::warn!(target: LOG_TARGET, "Can't transit state of asset {:?}", asset);
                 }
 
-                saftey_counter_outer = saftey_counter_outer_max.saturating_add(1);
+                saftey_counter_outer = saftey_counter_outer.saturating_add(1);
 
                 // Only reachable if there is an error in the implementation of pop() for Vec.
                 #[cfg(test)]
                 assert!(
-                    saftey_counter_outer != saftey_counter_outer_max,
+                    saftey_counter_outer != MAX_ASSET_DESTRUCTIONS_PER_BLOCK,
                     "Destruction outer loop iteration guard triggered"
                 );
 
-                if saftey_counter_outer == saftey_counter_outer_max {
-                    log::warn!(target: LOG_TARGET, "Reached asset destruction limit of {}", saftey_counter_outer_max);
+                if saftey_counter_outer == MAX_ASSET_DESTRUCTIONS_PER_BLOCK {
+                    log::warn!(target: LOG_TARGET, "Reached asset destruction limit of {}", MAX_ASSET_DESTRUCTIONS_PER_BLOCK);
                 }
             }
 
