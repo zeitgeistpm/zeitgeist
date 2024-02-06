@@ -73,6 +73,8 @@ pub mod pallet {
     const MAX_ASSET_DESTRUCTIONS_PER_BLOCK: u8 = 128;
     pub(crate) const MAX_ASSETS_IN_DESTRUCTION: u32 = 2048;
     const MAX_INDESTRUCTIBLE_ASSETS: u32 = 256;
+    // 1 ms minimum computation time.
+    pub(crate) const MIN_ON_IDLE_EXTRA_COMPUTATION_WEIGHT: u64 = 1_000_000_000;
 
     pub trait AssetTraits<T: Config, A>:
         Create<T::AccountId, AssetId = A, Balance = T::Balance>
@@ -229,9 +231,8 @@ pub mod pallet {
                 max_proof_size_destructibles.saturating_add(max_proof_size_indestructibles);
 
             let max_extra_weight = Weight::from_parts(
-                // 1ms extra execution time
-                1_000_000_000,
-                // Maximum proof size assuming writes on full storage
+                MIN_ON_IDLE_EXTRA_COMPUTATION_WEIGHT,
+                // Maximum proof size assuming writes on full storage.
                 max_proof_size_total,
             );
 
@@ -300,7 +301,7 @@ pub mod pallet {
                     safety_counter_inner = safety_counter_inner.saturating_add(1);
                 }
 
-                // Only reachable if there is an error in the destruction state machine
+                // Only reachable if there is an error in the destruction state machine.
                 #[cfg(test)]
                 assert!(
                     safety_counter_inner != safety_counter_inner_max,
