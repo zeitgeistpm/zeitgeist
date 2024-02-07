@@ -22,21 +22,26 @@ use crate::{
     traits::{LiquiditySharesManager, PoolOperations},
     Error,
 };
-use alloc::vec::Vec;
-use frame_support::{storage::bounded_btree_map::BoundedBTreeMap, CloneNoBound};
+use alloc::{fmt::Debug, vec::Vec};
+use frame_support::{
+    storage::bounded_btree_map::BoundedBTreeMap, CloneNoBound, PartialEqNoBound,
+    RuntimeDebugNoBound,
+};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{CheckedAdd, CheckedSub, Get},
-    DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion, Saturating,
+    DispatchError, DispatchResult, SaturatedConversion, Saturating,
 };
 
-#[derive(CloneNoBound, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(
+    CloneNoBound, Decode, Encode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
+)]
 #[scale_info(skip_type_params(S, T))]
 pub struct Pool<T, LSM, S>
 where
     T: Config,
-    LSM: Clone + LiquiditySharesManager<T>,
+    LSM: Clone + Debug + LiquiditySharesManager<T> + PartialEq,
     S: Get<u32>,
 {
     pub account_id: T::AccountId,
@@ -51,7 +56,7 @@ impl<T, LSM, S> PoolOperations<T> for Pool<T, LSM, S>
 where
     T: Config,
     BalanceOf<T>: SaturatedConversion,
-    LSM: Clone + LiquiditySharesManager<T> + TypeInfo,
+    LSM: Clone + Debug + LiquiditySharesManager<T> + TypeInfo + PartialEq,
     S: Get<u32>,
 {
     fn assets(&self) -> Vec<AssetOf<T>> {

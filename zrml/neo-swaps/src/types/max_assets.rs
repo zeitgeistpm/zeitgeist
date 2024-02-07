@@ -16,11 +16,12 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use sp_runtime::traits::Get;
+use crate::consts::MAX_ASSETS;
 
 pub(crate) struct MaxAssets;
 
 impl Get<u32> for MaxAssets {
     fn get() -> u32 {
-        128
+        MAX_ASSETS
     }
 }
