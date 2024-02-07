@@ -222,21 +222,7 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_idle(_: T::BlockNumber, mut remaining_weight: Weight) -> Weight {
-            let max_proof_size_destructibles: u64 =
-                AssetInDestruction::<T::AssetType>::max_encoded_len()
-                    .saturating_mul(MAX_ASSETS_IN_DESTRUCTION.saturated_into())
-                    .saturated_into();
-            let max_proof_size_indestructibles: u64 = T::AssetType::max_encoded_len()
-                .saturating_mul(MAX_INDESTRUCTIBLE_ASSETS.saturated_into())
-                .saturated_into();
-            let max_proof_size_total =
-                max_proof_size_destructibles.saturating_add(max_proof_size_indestructibles);
-
-            let max_extra_weight = Weight::from_parts(
-                MIN_ON_IDLE_EXTRA_COMPUTATION_WEIGHT,
-                // Maximum proof size assuming writes on full storage.
-                max_proof_size_total,
-            );
+            let max_extra_weight = Self::on_idle_max_extra_weight();
 
             if !remaining_weight
                 .all_gte(max_extra_weight.saturating_add(T::DbWeight::get().reads(1)))
@@ -252,6 +238,20 @@ pub mod pallet {
             remaining_weight = remaining_weight
                 .saturating_sub(T::DbWeight::get().reads_writes(1, 1))
                 .saturating_sub(max_extra_weight);
+
+            remaining_weight =
+                Self::handle_asset_destruction(remaining_weight, &mut destroy_assets);
+
+            DestroyAssets::<T>::put(destroy_assets);
+            remaining_weight
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
+        fn handle_asset_destruction(
+            mut remaining_weight: Weight,
+            destroy_assets: &mut DestroyAssetsT<T>,
+        ) -> Weight {
             let mut saftey_counter_outer = 0u8;
 
             'outer: while let Some(mut asset) = destroy_assets.pop() {
@@ -302,7 +302,7 @@ pub mod pallet {
                         // Next two states should never occur. Just remove the asset.
                         DestructionState::Destroyed => {
                             unreachable_non_terminating!(
-                                false
+                                false,
                                 LOG_TARGET,
                                 "Asset {:?} has invalid state",
                                 asset
@@ -310,7 +310,7 @@ pub mod pallet {
                         }
                         DestructionState::Indestructible => {
                             unreachable_non_terminating!(
-                                false
+                                false,
                                 LOG_TARGET,
                                 "Asset {:?} has invalid state",
                                 asset
@@ -332,43 +332,7 @@ pub mod pallet {
                 saftey_counter_outer = saftey_counter_outer.saturating_add(1);
             }
 
-            DestroyAssets::<T>::put(destroy_assets);
             remaining_weight
-        }
-    }
-
-    impl<T: Config> Pallet<T> {
-        fn mark_asset_as_indestructible(
-            asset: &mut AssetInDestruction<T::AssetType>,
-            mut remaining_weight: Weight,
-            max_weight: Weight,
-            error: DispatchError,
-        ) -> Weight {
-            let asset_inner = *asset.asset();
-
-            log::error!(
-                target: LOG_TARGET,
-                "Error during managed asset account destruction of {:?}: {:?}",
-                asset_inner,
-                error
-            );
-
-            remaining_weight = remaining_weight.saturating_sub(max_weight);
-
-            if let Err(e) = IndestructibleAssets::<T>::try_mutate(|assets| {
-                let idx = assets.partition_point(|&asset_in_vec| asset_in_vec < asset_inner);
-                assets.try_insert(idx, asset_inner)
-            }) {
-                log::error!(
-                    target: LOG_TARGET,
-                    "Error during storage of indestructible asset {:?}, dropping asset: {:?}",
-                    asset_inner,
-                    e
-                );
-            }
-
-            asset.transit_indestructible();
-            remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1))
         }
 
         fn handle_destroy_accounts(
@@ -493,6 +457,57 @@ pub mod pallet {
             }
 
             Ok(DestructionOk::Incomplete(remaining_weight))
+        }
+
+        fn mark_asset_as_indestructible(
+            asset: &mut AssetInDestruction<T::AssetType>,
+            mut remaining_weight: Weight,
+            max_weight: Weight,
+            error: DispatchError,
+        ) -> Weight {
+            let asset_inner = *asset.asset();
+
+            log::error!(
+                target: LOG_TARGET,
+                "Error during managed asset account destruction of {:?}: {:?}",
+                asset_inner,
+                error
+            );
+
+            remaining_weight = remaining_weight.saturating_sub(max_weight);
+
+            if let Err(e) = IndestructibleAssets::<T>::try_mutate(|assets| {
+                let idx = assets.partition_point(|&asset_in_vec| asset_in_vec < asset_inner);
+                assets.try_insert(idx, asset_inner)
+            }) {
+                log::error!(
+                    target: LOG_TARGET,
+                    "Error during storage of indestructible asset {:?}, dropping asset: {:?}",
+                    asset_inner,
+                    e
+                );
+            }
+
+            asset.transit_indestructible();
+            remaining_weight.saturating_sub(T::DbWeight::get().reads_writes(1, 1))
+        }
+
+        fn on_idle_max_extra_weight() -> Weight {
+            let max_proof_size_destructibles: u64 =
+                AssetInDestruction::<T::AssetType>::max_encoded_len()
+                    .saturating_mul(MAX_ASSETS_IN_DESTRUCTION.saturated_into())
+                    .saturated_into();
+            let max_proof_size_indestructibles: u64 = T::AssetType::max_encoded_len()
+                .saturating_mul(MAX_INDESTRUCTIBLE_ASSETS.saturated_into())
+                .saturated_into();
+            let max_proof_size_total =
+                max_proof_size_destructibles.saturating_add(max_proof_size_indestructibles);
+
+            return Weight::from_parts(
+                MIN_ON_IDLE_EXTRA_COMPUTATION_WEIGHT,
+                // Maximum proof size assuming writes on full storage.
+                max_proof_size_total,
+            );
         }
 
         #[inline]
