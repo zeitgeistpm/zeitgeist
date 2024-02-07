@@ -35,7 +35,7 @@ mod types;
 #[frame_support::pallet]
 pub mod pallet {
     pub(crate) use super::types::*;
-    pub(crate) use alloc::collections::BTreeMap;
+    pub(crate) use alloc::{collections::BTreeMap, format};
     pub(crate) use core::{fmt::Debug, marker::PhantomData};
     pub(crate) use frame_support::{
         ensure, log,
@@ -503,11 +503,11 @@ pub mod pallet {
             let max_proof_size_total =
                 max_proof_size_destructibles.saturating_add(max_proof_size_indestructibles);
 
-            return Weight::from_parts(
+            Weight::from_parts(
                 MIN_ON_IDLE_EXTRA_COMPUTATION_WEIGHT,
                 // Maximum proof size assuming writes on full storage.
                 max_proof_size_total,
-            );
+            )
         }
 
         #[inline]

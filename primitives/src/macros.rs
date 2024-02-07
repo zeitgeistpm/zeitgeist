@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-
 /// This macro does ensure that a condition `$condition` is met, and if it is not met
 /// it will log a message `$message` with optional message arguments `message_args` to
 /// an optional log target `$log_target`, cause an assertion in a test environment
