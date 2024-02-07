@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use sp_runtime::traits::Get;
 use crate::consts::MAX_ASSETS;
+use sp_runtime::traits::Get;
 
 pub(crate) struct MaxAssets;
 
