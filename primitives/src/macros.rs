@@ -27,7 +27,7 @@ macro_rules! unreachable_non_terminating {
         #[cfg(test)]
         assert!($condition, "{}", message);
 
-        if $condition {
+        if !$condition {
             log::warn!("{}", message);
         }
     };
@@ -37,7 +37,7 @@ macro_rules! unreachable_non_terminating {
         #[cfg(test)]
         assert!($condition, "{}", message);
 
-        if $condition {
+        if !$condition {
             log::warn!(target: $log_target, "{}", message);
         }
     };
