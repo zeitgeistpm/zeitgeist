@@ -1148,22 +1148,21 @@ mod pallet {
             let now_block = <frame_system::Pallet<T>>::block_number();
             let now_time = <zrml_market_commons::Pallet<T>>::now();
 
-            let get_new_period = |block_period,
-                                  time_frame_period|
-             -> Result<MarketPeriodOf<T>, DispatchError> {
-                match &market.period {
-                    MarketPeriod::Block(range) => {
-                        let close_time = now_block.saturating_add(block_period);
-                        ensure!(close_time < range.end, Error::<T>::EarlyCloseRequestTooLate);
-                        Ok(MarketPeriod::Block(range.start..close_time))
+            let get_new_period =
+                |block_period, time_frame_period| -> Result<MarketPeriodOf<T>, DispatchError> {
+                    match &market.period {
+                        MarketPeriod::Block(range) => {
+                            let close_time = now_block.saturating_add(block_period);
+                            ensure!(close_time < range.end, Error::<T>::EarlyCloseRequestTooLate);
+                            Ok(MarketPeriod::Block(range.start..close_time))
+                        }
+                        MarketPeriod::Timestamp(range) => {
+                            let close_time = now_time.saturating_add(time_frame_period);
+                            ensure!(close_time < range.end, Error::<T>::EarlyCloseRequestTooLate);
+                            Ok(MarketPeriod::Timestamp(range.start..close_time))
+                        }
                     }
-                    MarketPeriod::Timestamp(range) => {
-                        let close_time = now_time.saturating_add(time_frame_period);
-                        ensure!(close_time < range.end, Error::<T>::EarlyCloseRequestTooLate);
-                        Ok(MarketPeriod::Timestamp(range.start..close_time))
-                    }
-                }
-            };
+                };
             let new_period = if let Some(p) = &market.early_close {
                 ensure!(is_authorized, Error::<T>::OnlyAuthorizedCanScheduleEarlyClose);
 
