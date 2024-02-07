@@ -20,7 +20,7 @@ use crate::types::{
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
 use alloc::vec::Vec;
-use sp_runtime::Perbill;
+use sp_runtime::{DispatchError, Perbill};
 
 macro_rules! builder_methods {
     ($($field:ident: $type:ty),*) => {
@@ -37,7 +37,7 @@ macro_rules! builder_methods {
 /// builder.clone().build()
 /// ```
 pub trait MarketBuilder<AI, BA, BN, M, A, MI> {
-    fn build(self) -> Market<AI, BA, BN, M, A, MI>;
+    fn build(self) -> Result<Market<AI, BA, BN, M, A, MI>, DispatchError>;
 
     builder_methods! {
         market_id: MI,

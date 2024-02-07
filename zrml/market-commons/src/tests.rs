@@ -82,17 +82,17 @@ fn build_market_interacts_correct_with_latest_market_id_and_returns_correct_valu
         let mut builder = create_market_builder(3);
         let (market_id, market) = MarketCommons::build_market(builder.clone()).unwrap();
         assert_eq!(market_id, 0);
-        assert_eq!(market, builder.market_id(market_id).clone().build());
+        assert_eq!(market, builder.market_id(market_id).clone().build().unwrap());
 
         let mut builder = create_market_builder(6);
         let (market_id, market) = MarketCommons::build_market(builder.clone()).unwrap();
         assert_eq!(market_id, 1);
-        assert_eq!(market, builder.market_id(market_id).clone().build());
+        assert_eq!(market, builder.market_id(market_id).clone().build().unwrap());
 
         let mut builder = create_market_builder(9);
         let (market_id, market) = MarketCommons::build_market(builder.clone()).unwrap();
         assert_eq!(market_id, 2);
-        assert_eq!(market, builder.market_id(market_id).clone().build());
+        assert_eq!(market, builder.market_id(market_id).clone().build().unwrap());
     });
 }
 

@@ -23,7 +23,7 @@ use crate::{
     },
 };
 use alloc::vec::Vec;
-use sp_runtime::Perbill;
+use sp_runtime::{DispatchError, Perbill};
 
 /// A sample market builder struct used for testing. No verification is done when calling `build()`;
 /// use at your own risk!
@@ -74,8 +74,8 @@ macro_rules! impl_builder_methods {
 impl<AI, BA, BN, M, A, MI> MarketBuilder<AI, BA, BN, M, A, MI>
     for PrimitiveMarketBuilder<AI, BA, BN, M, A, MI>
 {
-    fn build(self) -> Market<AI, BA, BN, M, A, MI> {
-        Market {
+    fn build(self) -> Result<Market<AI, BA, BN, M, A, MI>, DispatchError> {
+        Ok(Market {
             market_id: self.market_id.unwrap(),
             base_asset: self.base_asset,
             creator: self.creator,
@@ -93,7 +93,7 @@ impl<AI, BA, BN, M, A, MI> MarketBuilder<AI, BA, BN, M, A, MI>
             dispute_mechanism: self.dispute_mechanism,
             bonds: self.bonds,
             early_close: self.early_close,
-        }
+        })
     }
 
     fn market_id(&mut self, market_id: MI) -> &mut Self {

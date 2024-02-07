@@ -204,7 +204,7 @@ mod pallet {
         {
             let market_id = Self::next_market_id()?;
             market_builder.market_id(market_id);
-            let market = market_builder.build();
+            let market = market_builder.build()?;
             <Markets<T>>::insert(market_id, market.clone());
             Ok((market_id, market))
         }

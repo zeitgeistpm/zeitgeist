@@ -15,8 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::{
+    AccountIdOf, AssetOf, BalanceOf, BlockNumberOf, Config, DeadlinesOf, EarlyCloseOf,
+    MarketBondsOf, MarketIdOf, MarketOf, MarketPeriodOf, MomentOf, ReportOf,
+};
 use alloc::vec::Vec;
-use sp_runtime::Perbill;
+use sp_runtime::{DispatchError, Perbill};
 use zeitgeist_primitives::{
     traits::MarketBuilder,
     types::{
@@ -36,28 +40,33 @@ use zeitgeist_primitives::{
 /// * `A`: The asset type.
 /// * `MI`: The market ID type.
 #[derive(Clone)]
-pub struct PredictionMarketBuilder<AI, BA, BN, M, A, MI> {
-    pub market_id: Option<MI>,
-    pub base_asset: Option<A>,
-    pub creator: Option<AI>,
+pub struct PredictionMarketBuilder<T>
+where
+    T: Config,
+{
+    pub market_id: Option<MarketIdOf<T>>,
+    pub base_asset: Option<AssetOf<T>>,
+    pub creator: Option<AccountIdOf<T>>,
     pub creation: Option<MarketCreation>,
     pub creator_fee: Option<Perbill>,
-    pub oracle: Option<AI>,
+    pub oracle: Option<AccountIdOf<T>>,
     pub metadata: Option<Vec<u8>>,
     pub market_type: Option<MarketType>,
-    pub period: Option<MarketPeriod<BN, M>>,
-    pub deadlines: Option<Deadlines<BN>>,
+    pub period: Option<MarketPeriodOf<T>>,
+    pub deadlines: Option<DeadlinesOf<T>>,
     pub scoring_rule: Option<ScoringRule>,
     pub status: Option<MarketStatus>,
-    pub report: Option<Option<Report<AI, BN>>>,
+    pub report: Option<Option<ReportOf<T>>>,
     pub resolved_outcome: Option<Option<OutcomeReport>>,
     pub dispute_mechanism: Option<Option<MarketDisputeMechanism>>,
-    pub bonds: Option<MarketBonds<AI, BA>>,
-
-    pub early_close: Option<Option<EarlyClose<BN, M>>>,
+    pub bonds: Option<MarketBondsOf<T>>,
+    pub early_close: Option<Option<EarlyCloseOf<T>>>,
 }
 
-impl<AI, BA, BN, M, A, MI> PredictionMarketBuilder<AI, BA, BN, M, A, MI> {
+impl<T> PredictionMarketBuilder<T>
+where
+    T: Config,
+{
     pub(crate) fn new() -> Self {
         PredictionMarketBuilder {
             market_id: None,
@@ -92,12 +101,21 @@ macro_rules! impl_builder_methods {
     }
 }
 
-impl<AI, BA, BN, M, A, MI> MarketBuilder<AI, BA, BN, M, A, MI>
-    for PredictionMarketBuilder<AI, BA, BN, M, A, MI>
+impl<T>
+    MarketBuilder<
+        AccountIdOf<T>,
+        BalanceOf<T>,
+        BlockNumberOf<T>,
+        MomentOf<T>,
+        AssetOf<T>,
+        MarketIdOf<T>,
+    > for PredictionMarketBuilder<T>
+where
+    T: Config,
 {
-    fn build(self) -> Market<AI, BA, BN, M, A, MI> {
+    fn build(self) -> Result<MarketOf<T>, DispatchError> {
         // TODO Remove unwraps, make build return result
-        Market {
+        Ok(Market {
             market_id: self.market_id.unwrap(),
             base_asset: self.base_asset.unwrap(),
             creator: self.creator.unwrap(),
@@ -115,26 +133,26 @@ impl<AI, BA, BN, M, A, MI> MarketBuilder<AI, BA, BN, M, A, MI>
             dispute_mechanism: self.dispute_mechanism.unwrap(),
             bonds: self.bonds.unwrap(),
             early_close: self.early_close.unwrap(),
-        }
+        })
     }
 
     impl_builder_methods! {
-        market_id: MI,
-        base_asset: A,
-        creator: AI,
+        market_id: MarketIdOf<T>,
+        base_asset: AssetOf<T>,
+        creator: AccountIdOf<T>,
         creation: MarketCreation,
         creator_fee: Perbill,
-        oracle: AI,
+        oracle: AccountIdOf<T>,
         metadata: Vec<u8>,
         market_type: MarketType,
-        period: MarketPeriod<BN, M>,
-        deadlines: Deadlines<BN>,
+        period: MarketPeriodOf<T>,
+        deadlines: DeadlinesOf<T>,
         scoring_rule: ScoringRule,
         status: MarketStatus,
-        report: Option<Report<AI, BN>>,
+        report: Option<ReportOf<T>>,
         resolved_outcome: Option<OutcomeReport>,
         dispute_mechanism: Option<MarketDisputeMechanism>,
-        bonds: MarketBonds<AI, BA>,
-        early_close: Option<EarlyClose<BN, M>>
+        bonds: MarketBondsOf<T>,
+        early_close: Option<EarlyCloseOf<T>>
     }
 }
