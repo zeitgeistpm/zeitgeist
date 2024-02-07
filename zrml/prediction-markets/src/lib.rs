@@ -1855,6 +1855,8 @@ mod pallet {
         MarketNotInCloseTimeFrameList,
         /// The market period end was not already reached yet.
         MarketPeriodEndNotAlreadyReachedYet,
+        /// Unexpectedly failed to build a market due to missing data.
+        IncompleteMarketBuilder,
     }
 
     #[pallet::event]
