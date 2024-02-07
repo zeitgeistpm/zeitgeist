@@ -67,7 +67,9 @@ pub mod pallet {
         },
         FixedPointOperand, SaturatedConversion,
     };
-    pub(crate) use zeitgeist_primitives::traits::CheckedDivPerComponent;
+    pub(crate) use zeitgeist_primitives::{
+        traits::CheckedDivPerComponent, unreachable_non_terminating,
+    };
 
     pub(crate) const LOG_TARGET: &str = "runtime::asset-router";
     pub(crate) const MAX_ASSET_DESTRUCTIONS_PER_BLOCK: u8 = 128;
@@ -253,6 +255,15 @@ pub mod pallet {
             let mut saftey_counter_outer = 0u8;
 
             'outer: while let Some(mut asset) = destroy_assets.pop() {
+                // Only reachable if there is an error in the implementation of pop() for Vec.
+                unreachable_non_terminating!(
+                    saftey_counter_outer != MAX_ASSET_DESTRUCTIONS_PER_BLOCK,
+                    LOG_TARGET,
+                    break,
+                    "Destruction outer loop iteration guard triggered, iteration: {:?}",
+                    saftey_counter_outer
+                );
+
                 let safety_counter_inner_max = DESTRUCTION_STATES;
                 let mut safety_counter_inner = 0u8;
 
@@ -290,10 +301,20 @@ pub mod pallet {
                         }
                         // Next two states should never occur. Just remove the asset.
                         DestructionState::Destroyed => {
-                            log::warn!(target: LOG_TARGET, "Asset {:?} has invalid state", asset);
+                            unreachable_non_terminating!(
+                                false
+                                LOG_TARGET,
+                                "Asset {:?} has invalid state",
+                                asset
+                            );
                         }
                         DestructionState::Indestructible => {
-                            log::warn!(target: LOG_TARGET, "Asset {:?} has invalid state", asset);
+                            unreachable_non_terminating!(
+                                false
+                                LOG_TARGET,
+                                "Asset {:?} has invalid state",
+                                asset
+                            );
                         }
                     }
 
@@ -301,28 +322,14 @@ pub mod pallet {
                 }
 
                 // Only reachable if there is an error in the destruction state machine.
-                #[cfg(test)]
-                assert!(
+                unreachable_non_terminating!(
                     safety_counter_inner != safety_counter_inner_max,
-                    "Destruction inner loop iteration guard triggered"
+                    LOG_TARGET,
+                    "Destruction inner loop iteration guard triggered, asset: {:?}",
+                    asset
                 );
-
-                if safety_counter_inner == safety_counter_inner_max {
-                    log::warn!(target: LOG_TARGET, "Can't transit state of asset {:?}", asset);
-                }
 
                 saftey_counter_outer = saftey_counter_outer.saturating_add(1);
-
-                // Only reachable if there is an error in the implementation of pop() for Vec.
-                #[cfg(test)]
-                assert!(
-                    saftey_counter_outer != MAX_ASSET_DESTRUCTIONS_PER_BLOCK,
-                    "Destruction outer loop iteration guard triggered"
-                );
-
-                if saftey_counter_outer == MAX_ASSET_DESTRUCTIONS_PER_BLOCK {
-                    log::warn!(target: LOG_TARGET, "Reached asset destruction limit of {}", MAX_ASSET_DESTRUCTIONS_PER_BLOCK);
-                }
             }
 
             DestroyAssets::<T>::put(destroy_assets);
