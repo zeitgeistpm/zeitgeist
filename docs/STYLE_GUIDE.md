@@ -159,14 +159,14 @@ duplicating documentation.
 - If possible, test unreachable code and states thought to be impossible using
   the following schema:
 
-```rust
-// In code logic
-zeitgeist_primitives::unreachable_non_terminating!(condition, log_target, message)
-```
-
-```rust
-// In test
-#[test]
-#[should_panic(expected = message)]
-// Cause assertion
-```
+  ```rust
+  // In code logic
+  zeitgeist_primitives::unreachable_non_terminating!(condition, log_target, message)
+  ```
+  
+  ```rust
+  // In test
+  #[test]
+  #[should_panic(expected = message)]
+  // Cause assertion
+  ```
