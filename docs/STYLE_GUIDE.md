@@ -161,7 +161,7 @@ duplicating documentation.
 
   ```rust
   // In code logic
-  zeitgeist_primitives::unreachable_non_terminating!(condition, log_target, message)
+  zeitgeist_macros::unreachable_non_terminating!(condition, log_target, message)
   ```
   
   ```rust
