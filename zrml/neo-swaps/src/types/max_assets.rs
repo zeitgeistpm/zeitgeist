@@ -15,10 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-mod fee_distribution;
-mod max_assets;
-mod pool;
+use sp_runtime::traits::Get;
 
-pub(crate) use fee_distribution::*;
-pub(crate) use max_assets::*;
-pub(crate) use pool::*;
+pub(crate) struct MaxAssets;
+
+impl Get<u32> for MaxAssets {
+    fn get() -> u32 {
+        128
+    }
+}

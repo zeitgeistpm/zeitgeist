@@ -38,11 +38,11 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        consts::{LN_NUMERICAL_LIMIT, MAX_ASSETS},
+        consts::LN_NUMERICAL_LIMIT,
         liquidity_tree::types::{BenchmarkInfo, LiquidityTree, LiquidityTreeError},
         math::{Math, MathOps},
         traits::{pool_operations::PoolOperations, LiquiditySharesManager},
-        types::{FeeDistribution, Pool},
+        types::{FeeDistribution, MaxAssets, Pool},
         weights::*,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};
@@ -99,7 +99,7 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
-    pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>>;
+    pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>, MaxAssets>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -833,7 +833,7 @@ mod pallet {
             ensure!(market.scoring_rule == ScoringRule::Lmsr, Error::<T>::InvalidTradingMechanism);
             let asset_count = spot_prices.len();
             ensure!(asset_count as u16 == market.outcomes(), Error::<T>::IncorrectVecLen);
-            ensure!(market.outcomes() <= MAX_ASSETS, Error::<T>::AssetCountAboveMax);
+            ensure!(market.outcomes() as u32 <= MaxAssets::get(), Error::<T>::AssetCountAboveMax);
             ensure!(swap_fee >= MIN_SWAP_FEE.saturated_into(), Error::<T>::SwapFeeBelowMin);
             ensure!(swap_fee <= T::MaxSwapFee::get(), Error::<T>::SwapFeeAboveMax);
             ensure!(
@@ -869,7 +869,7 @@ mod pallet {
             let collateral = market.base_asset;
             let pool = Pool {
                 account_id: pool_account_id.clone(),
-                reserves: reserves.clone(),
+                reserves: reserves.clone().try_into().map_err(|_| Error::<T>::Unexpected)?,
                 collateral,
                 liquidity_parameter,
                 liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
