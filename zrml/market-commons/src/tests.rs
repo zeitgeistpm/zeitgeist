@@ -20,60 +20,51 @@
 
 use crate::{
     mock::{ExtBuilder, MarketCommons, Runtime},
-    AccountIdOf, AssetOf, BalanceOf, BlockNumberOf, MarketCounter, MarketIdOf, Markets, MomentOf,
+    types::MarketBuilder,
+    AccountIdOf, MarketCounter, Markets,
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
 use sp_runtime::{DispatchError, Perbill};
 use zeitgeist_primitives::{
-    traits::{MarketBuilder, MarketCommonsPalletApi},
+    traits::{MarketBuilderTrait, MarketCommonsPalletApi},
     types::{
         Asset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-        MarketStatus, MarketType, PrimitiveMarketBuilder, ScoringRule,
+        MarketStatus, MarketType, ScoringRule,
     },
 };
 
-type PrimitiveMarketBuilderOf<Runtime> = PrimitiveMarketBuilder<
-    AccountIdOf<Runtime>,
-    BalanceOf<Runtime>,
-    BlockNumberOf<Runtime>,
-    MomentOf<Runtime>,
-    AssetOf<Runtime>,
-    MarketIdOf<Runtime>,
->;
-
 // Creates a sample market builder. We use the `oracle` field to tell markets apart from each other.
-// For testing purposes, we allow `market_id` to be defined, as well.
-fn create_market_builder(oracle: AccountIdOf<Runtime>) -> PrimitiveMarketBuilderOf<Runtime> {
-    PrimitiveMarketBuilder {
-        market_id: None,
-        base_asset: Asset::Ztg,
-        creation: MarketCreation::Permissionless,
-        creator_fee: Perbill::zero(),
-        creator: 0,
-        market_type: MarketType::Scalar(0..=100),
-        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
-        metadata: vec![],
-        oracle,
-        period: MarketPeriod::Block(0..100),
-        deadlines: Deadlines {
+fn create_market_builder(oracle: AccountIdOf<Runtime>) -> MarketBuilder<Runtime> {
+    let mut market_builder = MarketBuilder::new();
+    market_builder
+        .base_asset(Asset::Ztg)
+        .creation(MarketCreation::Permissionless)
+        .creator_fee(Perbill::zero())
+        .creator(0)
+        .market_type(MarketType::Scalar(0..=100))
+        .dispute_mechanism(Some(MarketDisputeMechanism::Authorized))
+        .metadata(vec![])
+        .oracle(oracle)
+        .period(MarketPeriod::Block(0..100))
+        .deadlines(Deadlines {
             grace_period: 1_u64,
             oracle_duration: 1_u64,
             dispute_duration: 1_u64,
-        },
-        report: None,
-        resolved_outcome: None,
-        scoring_rule: ScoringRule::Lmsr,
-        status: MarketStatus::Disputed,
-        bonds: MarketBonds {
+        })
+        .report(None)
+        .resolved_outcome(None)
+        .scoring_rule(ScoringRule::Lmsr)
+        .status(MarketStatus::Disputed)
+        .bonds(MarketBonds {
             creation: None,
             oracle: None,
             outsider: None,
             dispute: None,
             close_dispute: None,
             close_request: None,
-        },
-        early_close: None,
-    }
+        })
+        .early_close(None);
+    market_builder
 }
 
 #[test]

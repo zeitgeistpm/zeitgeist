@@ -19,7 +19,7 @@
 #![allow(clippy::type_complexity)]
 
 use crate::{
-    traits::MarketBuilder,
+    traits::MarketBuilderTrait,
     types::{Asset, Market, PoolId},
 };
 use frame_support::{
@@ -100,7 +100,7 @@ pub trait MarketCommonsPalletApi {
         market_builder: U,
     ) -> Result<(Self::MarketId, MarketOf<Self>), DispatchError>
     where
-        U: MarketBuilder<
+        U: MarketBuilderTrait<
                 Self::AccountId,
                 Self::Balance,
                 Self::BlockNumber,

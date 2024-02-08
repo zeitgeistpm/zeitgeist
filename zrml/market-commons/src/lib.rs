@@ -24,6 +24,7 @@ extern crate alloc;
 pub mod migrations;
 mod mock;
 mod tests;
+pub mod types;
 
 pub use pallet::*;
 pub use zeitgeist_primitives::traits::MarketCommonsPalletApi;
@@ -50,8 +51,8 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         math::checked_ops_res::CheckedAddRes,
-        traits::MarketBuilder,
-        types::{Asset, Market, PoolId},
+        traits::MarketBuilderTrait,
+        types::{Asset, Deadlines, EarlyClose, Market, MarketBonds, MarketPeriod, PoolId, Report},
     };
 
     /// The current storage version.
@@ -61,6 +62,7 @@ mod pallet {
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <T as Config>::Balance;
     pub(crate) type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
+    pub(crate) type MarketIdOf<T> = <T as Config>::MarketId;
     pub(crate) type MarketOf<T> = Market<
         AccountIdOf<T>,
         BalanceOf<T>,
@@ -69,8 +71,12 @@ mod pallet {
         AssetOf<T>,
         MarketIdOf<T>,
     >;
-    pub type MarketIdOf<T> = <T as Config>::MarketId;
-    pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
+    pub(crate) type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
+    pub(crate) type DeadlinesOf<T> = Deadlines<BlockNumberOf<T>>;
+    pub(crate) type EarlyCloseOf<T> = EarlyClose<BlockNumberOf<T>, MomentOf<T>>;
+    pub(crate) type MarketBondsOf<T> = MarketBonds<AccountIdOf<T>, BalanceOf<T>>;
+    pub(crate) type MarketPeriodOf<T> = MarketPeriod<BlockNumberOf<T>, MomentOf<T>>;
+    pub(crate) type ReportOf<T> = Report<AccountIdOf<T>, BlockNumberOf<T>>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
@@ -112,6 +118,8 @@ mod pallet {
         NoReport,
         /// There's a pool registered for this market already.
         PoolAlreadyExists,
+        /// Unexpectedly failed to build a market due to missing data.
+        IncompleteMarketBuilder,
     }
 
     #[pallet::hooks]
@@ -193,7 +201,7 @@ mod pallet {
             mut market_builder: U,
         ) -> Result<(Self::MarketId, MarketOf<T>), DispatchError>
         where
-            U: MarketBuilder<
+            U: MarketBuilderTrait<
                     Self::AccountId,
                     Self::Balance,
                     Self::BlockNumber,

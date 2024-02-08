@@ -23,7 +23,7 @@ use alloc::vec::Vec;
 use sp_runtime::{DispatchError, Perbill};
 
 macro_rules! builder_methods {
-    ($($field:ident: $type:ty),*) => {
+    ($($field:ident: $type:ty),* $(,)?) => {
         $(fn $field(&mut self, $field: $type) -> &mut Self;)*
     }
 }
@@ -32,11 +32,11 @@ macro_rules! builder_methods {
 /// the usual calling pattern is:
 ///
 /// ```ignore
-/// let builder = MarketBuilderImpl::new(args...);
+/// let builder = MarketBuilderImpl::new();
 /// builder.field1(value1).field2(value2);
 /// builder.clone().build()
 /// ```
-pub trait MarketBuilder<AI, BA, BN, M, A, MI> {
+pub trait MarketBuilderTrait<AI, BA, BN, M, A, MI> {
     fn build(self) -> Result<Market<AI, BA, BN, M, A, MI>, DispatchError>;
 
     builder_methods! {
@@ -56,6 +56,6 @@ pub trait MarketBuilder<AI, BA, BN, M, A, MI> {
         resolved_outcome: Option<OutcomeReport>,
         dispute_mechanism: Option<MarketDisputeMechanism>,
         bonds: MarketBonds<AI, BA>,
-        early_close: Option<EarlyClose<BN, M>>
+        early_close: Option<EarlyClose<BN, M>>,
     }
 }

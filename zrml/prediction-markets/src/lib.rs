@@ -28,7 +28,6 @@ pub mod migrations;
 pub mod mock;
 pub mod orml_asset_registry;
 mod tests;
-mod types;
 pub mod weights;
 
 pub use pallet::*;
@@ -56,7 +55,6 @@ mod pallet {
     #[cfg(feature = "parachain")]
     use {orml_traits::asset_registry::Inspect, zeitgeist_primitives::types::CustomMetadata};
 
-    use crate::types::PredictionMarketBuilder;
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
     use sp_runtime::{
@@ -67,7 +65,7 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{
             CompleteSetOperationsApi, DeployPoolApi, DisputeApi, DisputeMaxWeightApi,
-            DisputeResolutionApi, MarketBuilder, ZeitgeistAssetManager,
+            DisputeResolutionApi, MarketBuilderTrait, ZeitgeistAssetManager,
         },
         types::{
             Asset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem, Market,
@@ -78,7 +76,7 @@ mod pallet {
     };
     use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
-    use zrml_market_commons::MarketCommonsPalletApi;
+    use zrml_market_commons::{types::MarketBuilder, MarketCommonsPalletApi};
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
@@ -95,7 +93,6 @@ mod pallet {
     pub(crate) type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
     pub(crate) type CacheSize = ConstU32<64>;
     pub(crate) type DeadlinesOf<T> = Deadlines<BlockNumberOf<T>>;
-    pub(crate) type EarlyCloseOf<T> = EarlyClose<BlockNumberOf<T>, MomentOf<T>>;
     pub(crate) type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub(crate) type InitialItemOf<T> = InitialItem<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type MarketBondsOf<T> = MarketBonds<AccountIdOf<T>, BalanceOf<T>>;
@@ -1854,8 +1851,6 @@ mod pallet {
         MarketNotInCloseTimeFrameList,
         /// The market period end was not already reached yet.
         MarketPeriodEndNotAlreadyReachedYet,
-        /// Unexpectedly failed to build a market due to missing data.
-        IncompleteMarketBuilder,
     }
 
     #[pallet::event]
@@ -2895,7 +2890,7 @@ mod pallet {
             report: Option<ReportOf<T>>,
             resolved_outcome: Option<OutcomeReport>,
             bonds: MarketBondsOf<T>,
-        ) -> Result<PredictionMarketBuilder<T>, DispatchError> {
+        ) -> Result<MarketBuilder<T>, DispatchError> {
             let valid_base_asset = match base_asset {
                 Asset::Ztg => true,
                 #[cfg(feature = "parachain")]
@@ -2921,7 +2916,7 @@ mod pallet {
                 MarketCreation::Permissionless => MarketStatus::Active,
                 MarketCreation::Advised => MarketStatus::Proposed,
             };
-            let mut market_builder = PredictionMarketBuilder::new();
+            let mut market_builder = MarketBuilder::new();
             market_builder
                 .base_asset(base_asset)
                 .creator(creator)
