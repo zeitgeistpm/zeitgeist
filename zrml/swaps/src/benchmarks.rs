@@ -269,7 +269,7 @@ benchmarks! {
         Pallet::<T>::destroy_pool(pool_id).unwrap();
     } verify {
         assert!(Pallet::<T>::pool_by_id(pool_id).is_err());
-        assert_last_event::<T>(Event::PoolDestroyed::<T>(pool_id).into());
+        assert_last_event::<T>(Event::PoolDestroyed::<T>{ pool_id }.into());
     }
 
     impl_benchmark_test_suite!(

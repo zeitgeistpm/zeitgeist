@@ -153,7 +153,7 @@ fn destroy_pool_emits_correct_event() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool(0, true);
         assert_ok!(Swaps::destroy_pool(DEFAULT_POOL_ID));
-        System::assert_last_event(Event::PoolDestroyed(DEFAULT_POOL_ID).into());
+        System::assert_last_event(Event::PoolDestroyed { pool_id: DEFAULT_POOL_ID }.into());
     });
 }
 
@@ -358,12 +358,12 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
 
         let pool_account = Swaps::pool_account_id(&DEFAULT_POOL_ID);
         System::assert_last_event(
-            Event::PoolCreate(
-                CommonPoolEventParams { pool_id: next_pool_before, who: BOB },
+            Event::PoolCreate {
+                common: CommonPoolEventParams { pool_id: next_pool_before, who: BOB },
                 pool,
-                amount,
+                pool_amount: amount,
                 pool_account,
-            )
+            }
             .into(),
         );
     });
@@ -1903,7 +1903,7 @@ fn close_pool_succeeds_and_emits_correct_event_if_pool_exists() {
         assert_ok!(Swaps::close_pool(DEFAULT_POOL_ID));
         let pool = Swaps::pool_by_id(DEFAULT_POOL_ID).unwrap();
         assert_eq!(pool.status, PoolStatus::Closed);
-        System::assert_last_event(Event::PoolClosed(DEFAULT_POOL_ID).into());
+        System::assert_last_event(Event::PoolClosed { pool_id: DEFAULT_POOL_ID }.into());
     });
 }
 
@@ -1944,7 +1944,7 @@ fn open_pool_succeeds_and_emits_correct_event_if_pool_exists() {
         assert_ok!(Swaps::open_pool(DEFAULT_POOL_ID));
         let pool = Swaps::pool_by_id(DEFAULT_POOL_ID).unwrap();
         assert_eq!(pool.status, PoolStatus::Open);
-        System::assert_last_event(Event::PoolActive(DEFAULT_POOL_ID).into());
+        System::assert_last_event(Event::PoolActive { pool_id: DEFAULT_POOL_ID }.into());
     });
 }
 
