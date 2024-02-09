@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -26,9 +26,7 @@ use frame_support::dispatch::DispatchError;
 use zeitgeist_primitives::{
     constants::BASE,
     math::{
-        checked_ops_res::{
-            CheckedAddRes, CheckedDivRes, CheckedMulRes, CheckedRemRes, CheckedSubRes,
-        },
+        checked_ops_res::{CheckedAddRes, CheckedDivRes, CheckedMulRes, CheckedSubRes},
         fixed::{FixedDiv, FixedMul},
     },
 };
@@ -55,7 +53,7 @@ pub fn bsub_sign(a: u128, b: u128) -> Result<(u128, bool), DispatchError> {
 }
 
 pub fn bpowi(a: u128, n: u128) -> Result<u128, DispatchError> {
-    let mut z = if n.checked_rem_res(&2)? != 0 { a } else { BASE };
+    let mut z = if n % 2 != 0 { a } else { BASE };
 
     let mut b = a;
     let mut m = n.checked_div_res(&2)?;
