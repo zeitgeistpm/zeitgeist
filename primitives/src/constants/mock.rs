@@ -23,9 +23,16 @@ use crate::{
     assets::Asset,
     types::{Assets, Balance, Currencies, Moment},
 };
-use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
+use frame_support::{pallet_prelude::Weight, parameter_types, traits::LockIdentifier, PalletId};
 use orml_traits::parameter_type_with_key;
 use sp_arithmetic::Perbill;
+
+// Asset-Router
+parameter_types! {
+    pub const DestroyAccountWeight: Weight = Weight::from_all(1000);
+    pub const DestroyApprovalWeight: Weight = Weight::from_all(1000);
+    pub const DestroyFinishWeight: Weight = Weight::from_all(1000);
+}
 
 // Assets
 parameter_types! {

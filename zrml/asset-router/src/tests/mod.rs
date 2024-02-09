@@ -18,6 +18,7 @@
 #![cfg(test)]
 
 use super::{mock::*, Error};
+use alloc::collections::BTreeMap;
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::RawOrigin::Signed,
@@ -26,7 +27,7 @@ use frame_support::{
             fungibles::{Create, Destroy},
             DepositConsequence, WithdrawConsequence,
         },
-        UnfilteredDispatchable,
+        OnIdle, UnfilteredDispatchable,
     },
 };
 use orml_traits::{
@@ -36,8 +37,10 @@ use orml_traits::{
 use zeitgeist_primitives::types::Assets;
 
 mod create;
+mod custom_types;
 mod destroy;
 mod inspect;
+mod managed_destroy;
 mod multi_currency;
 mod multi_lockable_currency;
 mod multi_reservable_currency;

@@ -330,6 +330,7 @@ opt-level = 3
 panic = "unwind"
 
 [patch."https://github.com/paritytech/substrate"]
+pallet-assets = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-assets-managed-destroy" }
 substrate-wasm-builder = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-fix-new-rustc-build" }
 
 [patch."https://github.com/paritytech/polkadot"]

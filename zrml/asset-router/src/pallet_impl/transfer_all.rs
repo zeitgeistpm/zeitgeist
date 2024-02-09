@@ -1,5 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
-// Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -16,19 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+use crate::pallet::*;
 
-extern crate alloc;
-
-mod assets;
-pub mod constants;
-pub mod macros;
-mod market;
-pub mod math;
-mod max_runtime_usize;
-mod outcome_report;
-mod pool;
-mod pool_status;
-mod proxy_type;
-pub mod traits;
-pub mod types;
+impl<T: Config> TransferAll<T::AccountId> for Pallet<T> {
+    #[require_transactional]
+    fn transfer_all(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
+        // Only transfers assets maintained in orml-tokens, not implementable for pallet-assets
+        <T::Currencies as TransferAll<T::AccountId>>::transfer_all(source, dest)
+    }
+}

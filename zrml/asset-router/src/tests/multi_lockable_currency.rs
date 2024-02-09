@@ -20,7 +20,7 @@
 use super::*;
 use orml_traits::MultiCurrency;
 
-fn multi_lockable_currency_unroutable_test_helper(asset: Assets) {
+fn unroutable_test_helper(asset: Assets) {
     assert_noop!(
         AssetRouter::set_lock(Default::default(), asset, &ALICE, 1),
         Error::<Runtime>::Unsupported
@@ -36,7 +36,7 @@ fn multi_lockable_currency_unroutable_test_helper(asset: Assets) {
 }
 
 #[test]
-fn multi_lockable_currency_routes_currencies_correctly() {
+fn routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::deposit(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT));
         assert_ok!(AssetRouter::set_lock(Default::default(), CURRENCY, &ALICE, 1));
@@ -70,28 +70,28 @@ fn multi_lockable_currency_routes_currencies_correctly() {
 }
 
 #[test]
-fn multi_lockable_currency_routes_campaign_assets_correctly() {
+fn routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE,));
 
-        multi_lockable_currency_unroutable_test_helper(CAMPAIGN_ASSET);
+        unroutable_test_helper(CAMPAIGN_ASSET);
     });
 }
 
 #[test]
-fn multi_lockable_currency_routes_custom_assets_correctly() {
+fn routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE,));
 
-        multi_lockable_currency_unroutable_test_helper(CUSTOM_ASSET);
+        unroutable_test_helper(CUSTOM_ASSET);
     });
 }
 
 #[test]
-fn multi_lockable_currency_routes_market_assets_correctly() {
+fn routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE,));
 
-        multi_lockable_currency_unroutable_test_helper(MARKET_ASSET);
+        unroutable_test_helper(MARKET_ASSET);
     });
 }

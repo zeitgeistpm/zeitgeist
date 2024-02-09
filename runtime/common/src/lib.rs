@@ -661,6 +661,7 @@ macro_rules! impl_config_traits {
             type CallbackHandle = ();
             type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
             type Currency = Balances;
+            type Destroyer = AssetRouter;
             type Extra = ();
             type ForceOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
             type Freezer = ();
@@ -685,6 +686,7 @@ macro_rules! impl_config_traits {
             type CallbackHandle = ();
             type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
             type Currency = Balances;
+            type Destroyer = AssetRouter;
             type Extra = ();
             type ForceOrigin = EnsureRootOrTwoThirdsCouncil;
             type Freezer = ();
@@ -722,6 +724,7 @@ macro_rules! impl_config_traits {
             type CallbackHandle = ();
             type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
             type Currency = Balances;
+            type Destroyer = AssetRouter;
             type Extra = ();
             type ForceOrigin = EnsureRootOrAllTechnicalCommittee;
             type Freezer = ();
@@ -1168,6 +1171,9 @@ macro_rules! impl_config_traits {
             type CampaignAssets = CampaignAssets;
             type CustomAssetType = CustomAsset;
             type CustomAssets = CustomAssets;
+            type DestroyAccountWeight = DestroyAccountWeight;
+            type DestroyApprovalWeight = DestroyApprovalWeight;
+            type DestroyFinishWeight = DestroyFinishWeight;
             type MarketAssetType = MarketAsset;
             type MarketAssets = MarketAssets;
         }
@@ -1250,6 +1256,9 @@ macro_rules! impl_config_traits {
             type AdvisoryBond = AdvisoryBond;
             type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
             type ApproveOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
+            type AssetManager = AssetManager;
+            #[cfg(feature = "parachain")]
+            type AssetRegistry = AssetRegistry;
             type Authorized = Authorized;
             type Currency = Balances;
             type Court = Court;
@@ -1290,9 +1299,6 @@ macro_rules! impl_config_traits {
             type RejectOrigin = EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee;
             type RequestEditOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type ResolveOrigin = EnsureRoot<AccountId>;
-            type AssetManager = AssetManager;
-            #[cfg(feature = "parachain")]
-            type AssetRegistry = AssetRegistry;
             type SimpleDisputes = SimpleDisputes;
             type Slash = Treasury;
             type Swaps = Swaps;

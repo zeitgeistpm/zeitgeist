@@ -23,6 +23,7 @@ mod distribute_fees;
 mod market_commons_pallet_api;
 mod market_id;
 mod swaps;
+mod weights;
 mod zeitgeist_multi_reservable_currency;
 
 pub use complete_set_operations_api::CompleteSetOperationsApi;
@@ -32,4 +33,5 @@ pub use distribute_fees::DistributeFees;
 pub use market_commons_pallet_api::MarketCommonsPalletApi;
 pub use market_id::MarketId;
 pub use swaps::Swaps;
+pub use weights::CheckedDivPerComponent;
 pub use zeitgeist_multi_reservable_currency::ZeitgeistAssetManager;

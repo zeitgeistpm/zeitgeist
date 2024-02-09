@@ -20,17 +20,19 @@
 extern crate alloc;
 
 use crate::{self as zrml_asset_router};
-use alloc::{vec, vec::Vec};
+use alloc::{collections::BTreeMap, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
+    pallet_prelude::{DispatchResult, Weight},
     traits::{AsEnsureOriginWithArg, Everything},
 };
 use frame_system::EnsureSigned;
 use orml_traits::parameter_type_with_key;
+use pallet_assets::ManagedDestroy;
 use parity_scale_codec::Compact;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, ConstU128, ConstU32, IdentityLookup},
+    traits::{parameter_types, BlakeTwo256, ConstU128, ConstU32, IdentityLookup},
 };
 use zeitgeist_primitives::{
     constants::mock::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves, BASE},
@@ -64,10 +66,16 @@ pub(super) const CUSTOM_ASSET_INITIAL_AMOUNT: Balance = 20;
 pub(super) const MARKET_ASSET_INITIAL_AMOUNT: Balance = 30;
 pub(super) const CURRENCY_INITIAL_AMOUNT: Balance = 40;
 
+pub(super) const DESTROY_WEIGHT: Weight = Weight::from_parts(1000, 0);
+
 pub(super) type AccountId = <Runtime as frame_system::Config>::AccountId;
 pub(super) type CustomAssetsInstance = pallet_assets::Instance1;
 pub(super) type CampaignAssetsInstance = pallet_assets::Instance2;
 pub(super) type MarketAssetsInstance = pallet_assets::Instance3;
+
+parameter_types! {
+    pub const DestroyWeight: Weight = DESTROY_WEIGHT;
+}
 
 construct_runtime!(
     pub enum Runtime
@@ -95,6 +103,9 @@ impl crate::Config for Runtime {
     type CampaignAssets = CampaignAssets;
     type CustomAssetType = CustomAsset;
     type CustomAssets = CustomAssets;
+    type DestroyAccountWeight = DestroyWeight;
+    type DestroyApprovalWeight = DestroyWeight;
+    type DestroyFinishWeight = DestroyWeight;
     type MarketAssetType = MarketAsset;
     type MarketAssets = MarketAssets;
 }
@@ -175,6 +186,7 @@ impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
     type Currency = Balances;
     type Extra = ();
     type ForceOrigin = EnsureSigned<AccountIdTest>;
+    type Destroyer = AssetRouter;
     type Freezer = ();
     type MetadataDepositBase = ConstU128<0>;
     type MetadataDepositPerByte = ConstU128<0>;
@@ -198,6 +210,7 @@ impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
     type Currency = Balances;
     type Extra = ();
     type ForceOrigin = EnsureSigned<AccountIdTest>;
+    type Destroyer = AssetRouter;
     type Freezer = ();
     type MetadataDepositBase = ConstU128<0>;
     type MetadataDepositPerByte = ConstU128<0>;
@@ -236,6 +249,7 @@ impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
     type Currency = Balances;
     type Extra = ();
     type ForceOrigin = EnsureSigned<AccountIdTest>;
+    type Destroyer = AssetRouter;
     type Freezer = ();
     type MetadataDepositBase = ConstU128<0>;
     type MetadataDepositPerByte = ConstU128<0>;
@@ -257,7 +271,7 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = ();
 }
 
-pub struct ExtBuilder {
+pub(super) struct ExtBuilder {
     balances: Vec<(AccountIdTest, Balance)>,
 }
 
@@ -277,4 +291,11 @@ impl ExtBuilder {
 
         t.into()
     }
+}
+
+#[frame_support::transactional]
+pub(super) fn managed_destroy_multi_transactional(
+    assets: BTreeMap<Assets, Option<AccountIdTest>>,
+) -> DispatchResult {
+    AssetRouter::managed_destroy_multi(assets)
 }

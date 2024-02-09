@@ -47,7 +47,7 @@ mock = [
     "orml-currencies/default",
     "orml-tokens/default",
     "pallet-assets/default",
-    "pallet-balances",
+    "pallet-balances/default",
     "pallet-randomness-collective-flip/default",
     "pallet-timestamp/default",
     "pallet-treasury/default",

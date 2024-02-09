@@ -22,7 +22,7 @@ use orml_traits::MultiCurrency;
 use test_case::test_case;
 use zeitgeist_primitives::types::{Amount, Balance};
 
-fn multicurrency_test_helper(
+fn test_helper(
     asset: Assets,
     initial_amount: <Runtime as crate::Config>::Balance,
     min_balance: <Runtime as crate::Config>::Balance,
@@ -52,17 +52,13 @@ fn multicurrency_test_helper(
 }
 
 #[test]
-fn multicurrency_routes_campaign_assets_correctly() {
+fn routes_campaign_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         use frame_support::traits::tokens::fungibles::Inspect;
 
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
 
-        multicurrency_test_helper(
-            CAMPAIGN_ASSET,
-            CAMPAIGN_ASSET_INITIAL_AMOUNT,
-            CAMPAIGN_ASSET_MIN_BALANCE,
-        );
+        test_helper(CAMPAIGN_ASSET, CAMPAIGN_ASSET_INITIAL_AMOUNT, CAMPAIGN_ASSET_MIN_BALANCE);
 
         assert_eq!(<CustomAssets as Inspect<AccountId>>::total_issuance(CUSTOM_ASSET_INTERNAL), 0);
         assert_eq!(<MarketAssets as Inspect<AccountId>>::total_issuance(MARKET_ASSET_INTERNAL), 0);
@@ -71,17 +67,13 @@ fn multicurrency_routes_campaign_assets_correctly() {
 }
 
 #[test]
-fn multicurrency_routes_custom_assets_correctly() {
+fn routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         use frame_support::traits::tokens::fungibles::Inspect;
 
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE));
 
-        multicurrency_test_helper(
-            CUSTOM_ASSET,
-            CUSTOM_ASSET_INITIAL_AMOUNT,
-            CUSTOM_ASSET_MIN_BALANCE,
-        );
+        test_helper(CUSTOM_ASSET, CUSTOM_ASSET_INITIAL_AMOUNT, CUSTOM_ASSET_MIN_BALANCE);
 
         assert_eq!(
             <CampaignAssets as Inspect<AccountId>>::total_issuance(CAMPAIGN_ASSET_INTERNAL),
@@ -93,17 +85,13 @@ fn multicurrency_routes_custom_assets_correctly() {
 }
 
 #[test]
-fn multicurrency_routes_market_assets_correctly() {
+fn routes_market_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         use frame_support::traits::tokens::fungibles::Inspect;
 
         assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE));
 
-        multicurrency_test_helper(
-            MARKET_ASSET,
-            MARKET_ASSET_INITIAL_AMOUNT,
-            MARKET_ASSET_MIN_BALANCE,
-        );
+        test_helper(MARKET_ASSET, MARKET_ASSET_INITIAL_AMOUNT, MARKET_ASSET_MIN_BALANCE);
 
         assert_eq!(
             <CampaignAssets as Inspect<AccountId>>::total_issuance(CAMPAIGN_ASSET_INTERNAL),
@@ -115,11 +103,11 @@ fn multicurrency_routes_market_assets_correctly() {
 }
 
 #[test]
-fn multicurrency_routes_currencies_correctly() {
+fn routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         use frame_support::traits::tokens::fungibles::Inspect;
 
-        multicurrency_test_helper(CURRENCY, CURRENCY_INITIAL_AMOUNT, CURRENCY_MIN_BALANCE);
+        test_helper(CURRENCY, CURRENCY_INITIAL_AMOUNT, CURRENCY_MIN_BALANCE);
 
         assert_eq!(
             <CampaignAssets as Inspect<AccountId>>::total_issuance(CAMPAIGN_ASSET_INTERNAL),
@@ -134,10 +122,7 @@ fn multicurrency_routes_currencies_correctly() {
 #[test_case(Amount::max_value(), Some(Amount::max_value().unsigned_abs() as Balance); "max")]
 #[test_case(Amount::min_value(), None; "min")]
 #[test_case(Amount::min_value() + 1, Some((Amount::min_value() + 1).unsigned_abs() as Balance); "min_plus_one")]
-fn multicurrency_update_balance_handles_overflows_correctly(
-    update: Amount,
-    expected: Option<Balance>,
-) {
+fn update_balance_handles_overflows_correctly(update: Amount, expected: Option<Balance>) {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
 

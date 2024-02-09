@@ -47,18 +47,19 @@ use zeitgeist_primitives::{
         BalanceFractionalDecimals, BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod,
         CloseEarlyDisputeBond, CloseEarlyProtectionBlockPeriod,
         CloseEarlyProtectionTimeFramePeriod, CloseEarlyRequestBond, CloseEarlyTimeFramePeriod,
-        CorrectionPeriod, CourtPalletId, ExistentialDeposit, ExistentialDepositsNew, ExitFee,
-        GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId, GlobalDisputesPalletId,
-        InflationPeriod, LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxAssets,
-        MaxCategories, MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration,
-        MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio,
-        MaxMarketLifetime, MaxOracleDuration, MaxOutRatio, MaxOwners, MaxRejectReasonLen,
-        MaxReserves, MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
-        MinAssets, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
-        MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond,
-        OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
-        SimpleDisputesPalletId, SwapsPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee,
-        BASE, CENT, MILLISECS_PER_BLOCK,
+        CorrectionPeriod, CourtPalletId, DestroyAccountWeight, DestroyApprovalWeight,
+        DestroyFinishWeight, ExistentialDeposit, ExistentialDepositsNew, ExitFee, GdVotingPeriod,
+        GetNativeCurrencyId, GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod,
+        LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxAssets, MaxCategories,
+        MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes,
+        MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxInRatio, MaxMarketLifetime,
+        MaxOracleDuration, MaxOutRatio, MaxOwners, MaxRejectReasonLen, MaxReserves,
+        MaxSelectedDraws, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
+        MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount,
+        MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OutcomeBond, OutcomeFactor,
+        OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId,
+        SwapsPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
+        MILLISECS_PER_BLOCK,
     },
     traits::DeployPoolApi,
     types::{
@@ -370,6 +371,7 @@ impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountIdTest>;
     type Freezer = ();
+    type Destroyer = AssetRouter;
     type MetadataDepositBase = AssetsMetadataDepositBase;
     type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
     type RemoveItemsLimit = ConstU32<50>;
@@ -393,6 +395,7 @@ impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountIdTest>;
     type Freezer = ();
+    type Destroyer = AssetRouter;
     type MetadataDepositBase = AssetsMetadataDepositBase;
     type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
     type RemoveItemsLimit = ConstU32<50>;
@@ -416,6 +419,7 @@ impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
     type Extra = ();
     type ForceOrigin = EnsureRoot<AccountIdTest>;
     type Freezer = ();
+    type Destroyer = AssetRouter;
     type MetadataDepositBase = AssetsMetadataDepositBase;
     type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
     type RemoveItemsLimit = ConstU32<50>;
@@ -433,6 +437,9 @@ impl zrml_asset_router::Config for Runtime {
     type CampaignAssets = CampaignAssets;
     type CustomAssetType = CustomAsset;
     type CustomAssets = CustomAssets;
+    type DestroyAccountWeight = DestroyAccountWeight;
+    type DestroyApprovalWeight = DestroyApprovalWeight;
+    type DestroyFinishWeight = DestroyFinishWeight;
     type MarketAssetType = MarketAsset;
     type MarketAssets = MarketAssets;
 }

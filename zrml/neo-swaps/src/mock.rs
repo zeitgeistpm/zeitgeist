@@ -41,7 +41,7 @@ use sp_runtime::{
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 #[cfg(feature = "parachain")]
-use zeitgeist_primitives::types::Asset;
+use zeitgeist_primitives::types::{Asset, Currencies};
 use zeitgeist_primitives::{
     constants::mock::{
         AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
@@ -63,8 +63,8 @@ use zeitgeist_primitives::{
     },
     traits::{DeployPoolApi, DistributeFees},
     types::{
-        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        Currencies, Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, Hash,
+        Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
     },
 };
 use zrml_neo_swaps::BalanceOf;
