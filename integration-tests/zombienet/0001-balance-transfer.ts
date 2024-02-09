@@ -25,7 +25,7 @@ const ALICE = '//Alice';
 const BOB = '//Bob';
 
 export const run = async (nodeName: string, networkInfo: any, args: any) => {
-    const provider = new WsProvider('ws://127.0.0.1:9944');
+    const provider = new WsProvider('ws://127.0.0.1:9966');
     const api = await ApiPromise.create({ provider });
 
     // Wait for the crypto library to be ready

@@ -158,3 +158,5 @@ dmypy.json
 .pyre/
 
 /integration-tests/tmp
+
+/integration-tests/specs

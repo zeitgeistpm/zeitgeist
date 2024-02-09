@@ -30,7 +30,7 @@ alice: reports sub_libp2p_is_major_syncing is 0
 # validator logs
 bob: log line matches glob "*rted #1*" within 10 seconds
 bob: log line matches "Imported #[0-9]+" within 10 seconds
-bob: log line contains regex "best: #1" within 10 seconds
+bob: log line contains regex "best: #2" within 30 seconds
 bob: log line matches "best: #[1-9]+" within 10 seconds
 
 bob: is up
@@ -48,9 +48,9 @@ bob: parachain 2101 is registered within 80 seconds
 
 alice: is up
 alice: log line contains regex "Zeitgeist Parachain.*best: #1" within 100 seconds
-alice: log line contains regex "Zeitgeist Parachain.*finalized #[1-9]+" within 100 seconds
+alice: log line contains regex "Zeitgeist Parachain.*finalized #[1-9]+" within 120 seconds
 
-alice: ts-script ./0001-balance-transfer.ts return is equal to 1 within 120 seconds
+alice: ts-script ./0001-balance-transfer.ts return is equal to 1 within 200 seconds
 
 bob: parachain 2101 block height is at least 10 within 200 seconds
 

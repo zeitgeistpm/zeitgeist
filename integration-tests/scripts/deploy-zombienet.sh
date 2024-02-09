@@ -5,7 +5,7 @@ if [ ! -d "./integration-tests/scripts" ]; then
     exit 1
 fi;
 
-cargo build --features parachain
+echo "Please make sure you executed 'cargo build --release --features parachain'."
 
 export ADDITIONAL_ZOMBIECONFIG="${ADDITIONAL_ZOMBIECONFIG:-}"
 export ZOMBIENET_CONFIG_FILE="${ZOMBIENET_CONFIG_FILE:-"./integration-tests/zombienet/produce-blocks.toml"}"
@@ -67,6 +67,7 @@ function download_zombienet {
     fi
 
     mkdir -p ./tmp/
+    mkdir -p ./integration-tests/tmp/
 
     # Download the file
     echo "Downloading ${FILE_NAME} from ${DOWNLOAD_URL}"

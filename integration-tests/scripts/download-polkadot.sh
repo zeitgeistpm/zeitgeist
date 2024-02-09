@@ -23,13 +23,14 @@ set -e
 
 # Check if the operating system is macOS
 if [[ $(uname) == "Darwin" ]]; then
-    echo "This script is not intended for MacOS. But keep in mind you need to have 'polkadot', 'polkadot-execute-worker', 'polkadot-prepare-worker' in any case! So compile those yourself! Exiting..."
+    echo "This script is not intended for MacOS, since the prebuild binaries are meant to be executed on Linux. But keep in mind you need to have 'polkadot', 'polkadot-execute-worker', 'polkadot-prepare-worker' in any case! So compile those yourself! Exiting..."
     exit 1
 fi
 
-# Grab Polkadot version
-branch=$(egrep -o '/polkadot.*#([^\"]*)' $(dirname $0)/../../Cargo.lock | head -1 | sed 's/.*release-//#')
-polkadot_release=$(echo $branch | sed 's/#.*//' | sed 's/\/polkadot-sdk?branch=tanssi-polkadot-v//')
+# TODO: Use following line instead of the one above once Zeitgeist uses >=polkadot-v1.1.0
+# Note: Version 1.4.0 of relaychain didn't allow the parachain to produce blocks
+# polkadot_release=$(echo $branch | sed 's/#.*//' | sed 's/\/polkadot-sdk?branch=polkadot-v//' | sed 's/-.*//')
+polkadot_release="1.1.0"
 
 # Always run the commands from the "integration-tests" dir
 cd $(dirname $0)/..

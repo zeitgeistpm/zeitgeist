@@ -1,0 +1,269 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, chralt98-add-it-tests ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_parachain:
+    name: Build Parachain
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      - name: Build Parachain
+        run: cargo build --release --features parachain
+      
+      - name: Save runtime wasm
+        run: |
+            mkdir -p runtimes
+            cp target/release/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm runtimes/;
+            cp target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm runtimes/;
+
+      - name: Upload runtimes
+        uses: actions/upload-artifact@v3.1.2
+        with:
+            name: runtimes
+            path: runtimes
+
+      - name: Save zeitgeist binary
+        run: |
+            mkdir -p binaries
+            cp target/release/zeitgeist binaries/;
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v3.1.2
+        with:
+            name: binaries
+            path: binaries
+
+  zombienet_zndsl:
+    name: ZNDSL Tests
+    runs-on: ubuntu-20.04
+    needs: ["build_parachain"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: "pnpm"
+          cache-dependency-path: "./integration-tests/pnpm-lock.yaml"
+      
+      - name: Install pnpm packages
+        run: |
+          cd integration-tests
+          pnpm install
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Create local folders
+        run: |
+          mkdir -p target/release/wbuild/zeitgeist-runtime/
+          mkdir -p integration-tests/tmp
+
+      - name: Download runtime
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: runtimes
+          path: target/release/wbuild/zeitgeist-runtime/
+
+      - name: Download binary
+        uses: actions/download-artifact@v3.0.2
+        with:
+            name: binaries
+            path: target/release
+          
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: target/
+
+      - name: Run ZNDSL integration tests
+        run: |
+          chmod uog+x target/release/zeitgeist
+
+          cd integration-tests
+          ./scripts/download-polkadot.sh
+          cd ../
+          ./integration-tests/scripts/deploy-zombienet.sh --test
+
+  zombienet_zeitgeist_upgrade:
+    name: Zeitgeist Zombienet Post-Upgrade Tests
+    runs-on: ubuntu-20.04
+    needs: ["build_parachain"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: "pnpm"
+          cache-dependency-path: "./integration-tests/pnpm-lock.yaml"
+        
+      - name: Install pnpm packages
+        run: |
+          cd integration-tests
+          pnpm install
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Create local folders
+        run: |
+          mkdir -p target/release/wbuild/zeitgeist-runtime/
+          mkdir -p integration-tests/tmp
+
+      - name: Download runtime
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: runtimes
+          path: target/release/wbuild/zeitgeist-runtime/
+
+      - name: Download binary
+        uses: actions/download-artifact@v3.0.2
+        with:
+            name: binaries
+            path: target/release
+
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: target/
+
+      - name: Test zeitgeist runtime upgrade using Zombienet
+        run: |
+          chmod uog+x target/release/zeitgeist
+          
+          cd integration-tests
+          pnpm exec moonwall test zombienet_zeitgeist_upgrade
+
+  chopsticks_battery_station_upgrade:
+    name: Battery Station Chopsticks Post-Upgrade Tests
+    runs-on: ubuntu-20.04
+    needs: ["build_parachain"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: "pnpm"
+          cache-dependency-path: "./integration-tests/pnpm-lock.yaml"
+        
+      - name: Install pnpm packages
+        run: |
+          cd integration-tests
+          pnpm install
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Create local folders
+        run: |
+          mkdir -p target/release/wbuild/battery-station-runtime/
+          mkdir -p integration-tests/tmp/node_logs
+
+      - name: Download runtime
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: runtimes
+          path: target/release/wbuild/battery-station-runtime/
+
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: target/
+
+      - name: Battery Station post-upgrade tests using Chopsticks
+        run: |
+          cd integration-tests
+          pnpm exec moonwall test chopsticks_battery_station_upgrade
+
+      - name: Show chopsticks logs
+        if: ${{ failure() }}
+        run: |
+          cd integration-tests
+          ls -R tmp/node_logs/
+          cat tmp/node_logs/*.log | tail -n 1000
+
+  chopsticks_zeitgeist_upgrade:
+    name: Zeitgeist Chopsticks Post-Upgrade Tests
+    runs-on: ubuntu-20.04
+    needs: ["build_parachain"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install build tools
+        run: ./scripts/init.sh
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: "pnpm"
+          cache-dependency-path: "./integration-tests/pnpm-lock.yaml"
+
+      - name: Install pnpm packages
+        run: |
+          cd integration-tests
+          pnpm install
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Create local folders
+        run: |
+          mkdir -p target/release/wbuild/zeitgeist-runtime/
+          mkdir -p integration-tests/tmp/node_logs
+
+      - name: "Download runtime"
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: runtimes
+          path: target/release/wbuild/zeitgeist-runtime/
+
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: target/
+
+      - name: Zeitgeist post-upgrade tests using Chopsticks
+        run: |
+          cd integration-tests
+          pnpm exec moonwall test chopsticks_zeitgeist_upgrade
+
+      - name: Show chopsticks logs
+        if: ${{ failure() }}
+        run: |
+          cd integration-tests
+          ls -R tmp/node_logs/
+          cat tmp/node_logs/*.log | tail -n 1000
