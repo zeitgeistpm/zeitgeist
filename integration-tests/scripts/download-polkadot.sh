@@ -31,7 +31,7 @@ fi
 branch=$(egrep -o '/polkadot.*#([^\"]*)' $(dirname $0)/../../Cargo.lock | head -1 | sed 's/.*release-//#')
 polkadot_release=$(echo $branch | sed 's/#.*//' | sed 's/\/polkadot-sdk?branch=tanssi-polkadot-v//')
 
-# Always run the commands from the "test" dir
+# Always run the commands from the "integration-tests" dir
 cd $(dirname $0)/..
 
 if [[ -f tmp/polkadot ]]; then
