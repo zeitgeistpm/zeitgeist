@@ -126,8 +126,8 @@ mod pallet {
 
         type WeightInfo: WeightInfoZeitgeist;
 
-        /// The maximum allowed liquidity tree depth per pool. Each pool can support `2^(depth + 1)
-        /// - 1` liquidity providers. **Must** be less than 16.
+        /// The maximum allowed liquidity tree depth per pool. Each pool can support
+        /// `2^(depth + 1) - 1` liquidity providers. **Must** be less than 16.
         #[pallet::constant]
         type MaxLiquidityTreeDepth: Get<u32>;
 
@@ -164,7 +164,8 @@ mod pallet {
             external_fee_amount: BalanceOf<T>,
         },
         /// Informant sold a position. `amount_out` is the amount of collateral received by `who`,
-        /// including swap and external fees.
+        /// with swap and external fees not yet deducted. The actual amount received is
+        /// `amount_out - swap_fee_amount - external_fee_amount`.
         SellExecuted {
             who: T::AccountId,
             market_id: MarketIdOf<T>,
