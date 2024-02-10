@@ -1103,14 +1103,7 @@ mod pallet {
             // Check that the account has at least as many free shares as we wish to burn!
             T::AssetManager::ensure_can_withdraw(shares_id, from, amount)
                 .map_err(|_| Error::<T>::InsufficientBalance)?;
-            let missing = T::AssetManager::slash(shares_id, from, amount);
-            debug_assert!(
-                missing.is_zero(),
-                "Could not slash all of the amount. shares_id {:?}, who: {:?}, amount: {:?}.",
-                shares_id,
-                &from,
-                amount,
-            );
+            T::AssetManager::withdraw(shares_id, from, amount)?;
             Ok(())
         }
 
