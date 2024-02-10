@@ -1092,8 +1092,6 @@ mod pallet {
             Ok(())
         }
 
-        // TODO The missing/debug_assert construction can probably be avoided here by using a better
-        // call than `slash`!
         pub(crate) fn burn_pool_shares(
             pool_id: PoolId,
             from: &T::AccountId,
@@ -1286,15 +1284,7 @@ mod pallet {
             let asset_len = pool.assets.len() as u32;
             for asset in pool.assets.into_iter() {
                 let amount = T::AssetManager::free_balance(asset, &pool_account);
-                let missing = T::AssetManager::slash(asset, &pool_account, amount);
-                debug_assert!(
-                    missing.is_zero(),
-                    "Could not slash all of the amount. asset {:?}, pool_account: {:?}, amount: \
-                     {:?}.",
-                    asset,
-                    &pool_account,
-                    amount,
-                );
+                T::AssetManager::withdraw(asset, &pool_account, amount)?;
             }
             // NOTE: Currently we don't clean up accounts with pool_share_id.
             // TODO(#792): Remove pool_share_id asset for accounts! It may require storage migration.
