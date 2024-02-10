@@ -50,7 +50,7 @@ where
     T: Config,
 {
     Pallet::<T>::ensure_pool_is_active(p.pool)?;
-    ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
+    ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotInPool);
     let pool_account = Pallet::<T>::pool_account_id(&p.pool_id);
 
     let asset_balance = T::AssetManager::free_balance(p.asset, &pool_account);
@@ -91,7 +91,7 @@ where
     let pool_account_id = Pallet::<T>::pool_account_id(&p.pool_id);
     let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
 
-    ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
+    ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotInPool);
     let asset_balance = T::AssetManager::free_balance(p.asset, p.pool_account_id);
 
     let asset_amount = (p.asset_amount)(asset_balance, total_issuance)?;
@@ -164,8 +164,8 @@ where
     Pallet::<T>::ensure_pool_is_active(p.pool)?;
     ensure!(p.pool.assets.binary_search(&p.asset_in).is_ok(), Error::<T>::AssetNotInPool);
     ensure!(p.pool.assets.binary_search(&p.asset_out).is_ok(), Error::<T>::AssetNotInPool);
-    ensure!(p.pool.bound(&p.asset_in), Error::<T>::AssetNotBound);
-    ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotBound);
+    ensure!(p.pool.bound(&p.asset_in), Error::<T>::AssetNotInPool);
+    ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotInPool);
 
     let spot_price_before =
         Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, true)?;

@@ -256,7 +256,7 @@ fn assets_must_be_bounded() {
                 Some(1),
                 Some(1)
             ),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
         assert_noop!(
             Swaps::swap_exact_amount_in(
@@ -268,7 +268,7 @@ fn assets_must_be_bounded() {
                 Some(1),
                 Some(1)
             ),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
 
         assert_noop!(
@@ -281,7 +281,7 @@ fn assets_must_be_bounded() {
                 1,
                 Some(1)
             ),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
         assert_noop!(
             Swaps::swap_exact_amount_out(
@@ -293,7 +293,7 @@ fn assets_must_be_bounded() {
                 1,
                 Some(1)
             ),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
 
         assert_noop!(
@@ -304,16 +304,16 @@ fn assets_must_be_bounded() {
                 1,
                 1
             ),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
         assert_noop!(
             Swaps::pool_join_with_exact_pool_amount(alice_signed(), DEFAULT_POOL_ID, ASSET_B, 1, 1),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
 
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(alice_signed(), DEFAULT_POOL_ID, ASSET_B, 1, 1),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
         assert_noop!(
             Swaps::pool_exit_with_exact_asset_amount(
@@ -323,7 +323,7 @@ fn assets_must_be_bounded() {
                 1,
                 1
             ),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
     });
 }

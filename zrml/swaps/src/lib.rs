@@ -438,10 +438,6 @@ mod pallet {
         /// The weight of an asset in a CPMM swap pool is greater than the upper weight cap.
         #[codec(index = 0)]
         AboveMaximumWeight,
-        // TODO Duplicate: AssetNotBound, AssetNotInPool?
-        /// Asset not found in the specified pool.
-        #[codec(index = 1)]
-        AssetNotBound,
         /// The asset in question could not be found within the pool.
         #[codec(index = 2)]
         AssetNotInPool,
@@ -464,7 +460,6 @@ mod pallet {
         #[codec(index = 11)]
         InvalidStateTransition,
         /// A transferal of funds into a swaps pool was above a threshold specified by the sender.
-        // TODO Split tests
         #[codec(index = 13)]
         LimitIn,
         /// No limit was specified for a swap.
@@ -535,7 +530,6 @@ mod pallet {
         }
     }
 
-    // TODO Rewrite these to have proper documentation/field names
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T>
@@ -635,6 +629,7 @@ mod pallet {
             // If the pool is still in use, prevent a pool drain.
             Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
             let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
+
             let params = PoolParams {
                 asset_bounds: min_assets_out,
                 event: |evt| Self::deposit_event(Event::PoolExit(evt)),
@@ -658,6 +653,7 @@ mod pallet {
                 },
                 who: who_clone,
             };
+
             crate::utils::pool::<_, _, _, _, T>(params)
         }
 
@@ -707,6 +703,7 @@ mod pallet {
                 pool_id,
                 pool: pool_ref,
             };
+
             pool_exit_with_exact_amount::<_, _, _, _, T>(params)
         }
 
@@ -739,7 +736,6 @@ mod pallet {
                 who: who.clone(),
             };
 
-            // TODO Fix inconsistent imports
             crate::utils::pool::<_, _, _, _, T>(params)
         }
 
@@ -787,6 +783,7 @@ mod pallet {
                 pool_id,
                 pool: pool_ref,
             };
+
             pool_exit_with_exact_amount::<_, _, _, _, T>(params)
         }
 
@@ -829,6 +826,7 @@ mod pallet {
                 pool_id,
                 pool: pool_ref,
             };
+
             pool_join_with_exact_amount::<_, _, _, T>(params)
         }
 
@@ -842,6 +840,7 @@ mod pallet {
         ) -> DispatchResult {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
+
             let params = PoolJoinWithExactAmountParams {
                 asset,
                 asset_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
@@ -873,6 +872,7 @@ mod pallet {
                 pool: &pool,
                 who,
             };
+
             pool_join_with_exact_amount::<_, _, _, T>(params)
         }
 
@@ -890,10 +890,8 @@ mod pallet {
                 min_asset_amount_out.is_some() || max_price.is_some(),
                 Error::<T>::LimitMissing,
             );
-
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
-
             ensure!(
                 T::AssetManager::free_balance(asset_in, &who) >= asset_amount_in,
                 Error::<T>::InsufficientBalance
@@ -936,6 +934,7 @@ mod pallet {
                 pool: &pool,
                 who: who.clone(),
             };
+
             swap_exact_amount::<_, _, T>(params)
         }
 
@@ -989,6 +988,7 @@ mod pallet {
                 pool: &pool,
                 who,
             };
+
             swap_exact_amount::<_, _, T>(params)
         }
 
@@ -1165,7 +1165,7 @@ mod pallet {
         }
 
         fn pool_weight_rslt(pool: &PoolOf<T>, asset: &AssetOf<T>) -> Result<u128, Error<T>> {
-            pool.weights.get(asset).cloned().ok_or(Error::<T>::AssetNotBound)
+            pool.weights.get(asset).cloned().ok_or(Error::<T>::AssetNotInPool)
         }
 
         /// Calculate the exit fee percentage for `pool`.
@@ -1187,7 +1187,6 @@ mod pallet {
         type Balance = BalanceOf<T>;
 
         #[frame_support::transactional]
-        // TODO replace `amount` with a vector!
         fn create_pool(
             who: T::AccountId,
             assets: Vec<AssetOf<T>>,
@@ -1270,7 +1269,6 @@ mod pallet {
             Ok(T::WeightInfo::close_pool(asset_len))
         }
 
-        // TODO Remove this function
         fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account = Self::pool_account_id(&pool_id);
