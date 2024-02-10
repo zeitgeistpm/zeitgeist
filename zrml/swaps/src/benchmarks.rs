@@ -159,7 +159,7 @@ benchmarks! {
         let max_asset_amount: BalanceOf<T> = u128::MAX.saturated_into();
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], pool_amount, max_asset_amount)
 
-    swap_exact_amount_in_cpmm {
+    swap_exact_amount_in {
         // We're trying to get as many iterations in `bpow_approx` as possible. Experiments have
         // shown that y = 3/4, weight_ratio=1/2 (almost) maximizes the number of iterations for
         // calculating y^r within the set of values allowed in `swap_exact_amount_in` (see
@@ -195,7 +195,7 @@ benchmarks! {
         max_price
     )
 
-    swap_exact_amount_out_cpmm {
+    swap_exact_amount_out {
         // We're trying to get as many iterations in `bpow_approx` as possible. Experiments have
         // shown that y = 3/2, weight_ratio=1/4 (almost) maximizes the number of iterations for
         // calculating y^r within the set of values allowed in `swap_exact_amount_out` (see

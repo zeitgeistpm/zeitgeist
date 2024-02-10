@@ -294,8 +294,7 @@ mod pallet {
         ///
         /// Complexity: `O(1)`
         #[pallet::call_index(9)]
-        // TODO No need to call this `*_cpmm` anymore
-        #[pallet::weight(T::WeightInfo::swap_exact_amount_in_cpmm())]
+        #[pallet::weight(T::WeightInfo::swap_exact_amount_in())]
         #[transactional]
         pub fn swap_exact_amount_in(
             origin: OriginFor<T>,
@@ -338,8 +337,7 @@ mod pallet {
         ///
         /// Complexity: `O(1)`
         #[pallet::call_index(10)]
-        // TODO No need to call this `*_cpmm` anymore
-        #[pallet::weight(T::WeightInfo::swap_exact_amount_out_cpmm())]
+        #[pallet::weight(T::WeightInfo::swap_exact_amount_out())]
         #[transactional]
         pub fn swap_exact_amount_out(
             origin: OriginFor<T>,
