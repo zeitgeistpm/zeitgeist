@@ -29,7 +29,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use crate::{types::PoolStatus, AssetOf, Config, Event};
+use crate::{types::PoolStatus, AssetOf, Config, Event, MAX_IN_RATIO, MAX_OUT_RATIO};
 use frame_benchmarking::{benchmarks, vec, whitelisted_caller, Vec};
 use frame_support::traits::Get;
 use frame_system::RawOrigin;
@@ -167,7 +167,7 @@ benchmarks! {
         // amount_in = 1/3 * balance_in, weight_in = 1, weight_out = 2.
         let asset_count = T::MaxAssets::get();
         let balance: BalanceOf<T> = LIQUIDITY.saturated_into();
-        let asset_amount_in: BalanceOf<T> = balance.bmul(T::MaxInRatio::get()).unwrap();
+        let asset_amount_in: BalanceOf<T> = balance.bmul(MAX_IN_RATIO.saturated_into()).unwrap();
         let weight_in = T::MinWeight::get();
         let weight_out = 2 * weight_in;
         let mut weights = vec![weight_in; asset_count as usize];
@@ -203,7 +203,7 @@ benchmarks! {
         // amount_out = 1/3 * balance_out, weight_out = 1, weight_in = 4.
         let asset_count = T::MaxAssets::get();
         let balance: BalanceOf<T> = LIQUIDITY.saturated_into();
-        let asset_amount_out: BalanceOf<T> = balance.bmul(T::MaxOutRatio::get()).unwrap();
+        let asset_amount_out: BalanceOf<T> = balance.bmul(MAX_OUT_RATIO.saturated_into()).unwrap();
         let weight_out = T::MinWeight::get();
         let weight_in = 4 * weight_out;
         let mut weights = vec![weight_out; asset_count as usize];

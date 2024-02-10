@@ -75,7 +75,7 @@ mod pallet {
         DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        constants::CENT,
+        constants::{BASE, CENT},
         math::{
             checked_ops_res::{CheckedAddRes, CheckedMulRes},
             fixed::FixedMul,
@@ -95,6 +95,8 @@ mod pallet {
     pub(crate) type PoolOf<T> = Pool<AssetOf<T>, BalanceOf<T>>;
 
     const MIN_BALANCE: u128 = CENT;
+    pub(crate) const MAX_IN_RATIO: u128 = BASE / 3 + 1;
+    pub(crate) const MAX_OUT_RATIO: u128 = BASE / 3 + 1;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -407,14 +409,6 @@ mod pallet {
         #[pallet::constant]
         type MaxAssets: Get<u16>;
 
-        // TODO Hard-code this!
-        #[pallet::constant]
-        type MaxInRatio: Get<BalanceOf<Self>>;
-
-        // TODO Hard-code this!
-        #[pallet::constant]
-        type MaxOutRatio: Get<BalanceOf<Self>>;
-
         /// The maximum allowed swap fee.
         #[pallet::constant]
         type MaxSwapFee: Get<BalanceOf<Self>>;
@@ -684,7 +678,7 @@ mod pallet {
             let params = PoolExitWithExactAmountParams {
                 asset,
                 asset_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let mul: BalanceOf<T> = total_supply.bmul(T::MaxInRatio::get())?;
+                    let mul = total_supply.bmul(MAX_IN_RATIO.saturated_into())?;
                     ensure!(pool_amount <= mul, Error::<T>::MaxInRatio);
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_out_given_pool_in(
                         asset_balance.saturated_into(),
@@ -699,7 +693,7 @@ mod pallet {
                     ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(asset_amount >= min_asset_amount, Error::<T>::LimitOut);
                     ensure!(
-                        asset_amount <= asset_balance.bmul(T::MaxOutRatio::get())?,
+                        asset_amount <= asset_balance.bmul(MAX_OUT_RATIO.saturated_into())?,
                         Error::<T>::MaxOutRatio
                     );
                     Self::ensure_minimum_balance(pool_id, &pool, asset, asset_amount)?;
@@ -767,7 +761,7 @@ mod pallet {
                 bound: max_pool_amount,
                 ensure_balance: |asset_balance: BalanceOf<T>| {
                     ensure!(
-                        asset_amount <= asset_balance.bmul(T::MaxOutRatio::get())?,
+                        asset_amount <= asset_balance.bmul(MAX_OUT_RATIO.saturated_into())?,
                         Error::<T>::MaxOutRatio
                     );
                     Ok(())
@@ -815,7 +809,7 @@ mod pallet {
                 asset_amount: |_, _| Ok(asset_amount),
                 bound: min_pool_amount,
                 pool_amount: move |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let mul: BalanceOf<T> = asset_balance.bmul(T::MaxInRatio::get())?;
+                    let mul = asset_balance.bmul(MAX_IN_RATIO.saturated_into())?;
                     ensure!(asset_amount <= mul, Error::<T>::MaxInRatio);
                     let pool_amount: BalanceOf<T> = crate::math::calc_pool_out_given_single_in(
                         asset_balance.saturated_into(),
@@ -851,7 +845,7 @@ mod pallet {
             let params = PoolJoinWithExactAmountParams {
                 asset,
                 asset_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let mul: BalanceOf<T> = total_supply.bmul(T::MaxOutRatio::get())?;
+                    let mul = total_supply.bmul(MAX_OUT_RATIO.saturated_into())?;
                     ensure!(pool_amount <= mul, Error::<T>::MaxOutRatio);
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_in_given_pool_out(
                         asset_balance.saturated_into(),
@@ -865,7 +859,8 @@ mod pallet {
                     ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(asset_amount <= max_asset_amount, Error::<T>::LimitIn);
                     ensure!(
-                        asset_amount <= asset_balance.checked_mul_res(&T::MaxInRatio::get())?,
+                        asset_amount
+                            <= asset_balance.checked_mul_res(&MAX_IN_RATIO.saturated_into())?,
                         Error::<T>::MaxInRatio
                     );
                     Ok(asset_amount)
@@ -910,7 +905,7 @@ mod pallet {
                     let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
                     let balance_in = T::AssetManager::free_balance(asset_in, &pool_account_id);
                     ensure!(
-                        asset_amount_in <= balance_in.bmul(T::MaxInRatio::get())?,
+                        asset_amount_in <= balance_in.bmul(MAX_IN_RATIO.saturated_into())?,
                         Error::<T>::MaxInRatio
                     );
                     let asset_amount_out: BalanceOf<T> = crate::math::calc_out_given_in(
@@ -963,7 +958,7 @@ mod pallet {
                 asset_amounts: || {
                     let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
                     ensure!(
-                        asset_amount_out <= balance_out.bmul(T::MaxOutRatio::get(),)?,
+                        asset_amount_out <= balance_out.bmul(MAX_OUT_RATIO.saturated_into())?,
                         Error::<T>::MaxOutRatio,
                     );
 

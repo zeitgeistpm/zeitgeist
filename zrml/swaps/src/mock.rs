@@ -40,9 +40,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposit, GetNativeCurrencyId, MaxAssets, MaxInRatio, MaxLocks,
-        MaxOutRatio, MaxReserves, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight,
-        MinimumPeriod, SwapsPalletId, BASE,
+        BlockHashCount, ExistentialDeposit, GetNativeCurrencyId, MaxAssets, MaxLocks, MaxReserves,
+        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight, MinimumPeriod, SwapsPalletId,
+        BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -99,8 +99,6 @@ impl crate::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type ExitFee = ExitFeeMock;
     type MaxAssets = MaxAssets;
-    type MaxInRatio = MaxInRatio;
-    type MaxOutRatio = MaxOutRatio;
     type MaxSwapFee = MaxSwapFee;
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
