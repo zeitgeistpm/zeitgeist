@@ -238,9 +238,8 @@ mod pallet {
         /// * `pool_id`: The ID of the pool to join.
         /// * `pool_amount`: The amount of LP shares for this pool that should be minted to the
         ///   provider.
-        /// * `max_assets_in`: List of upper bounds on the assets to move the the pool. The
-        ///   transaction is rolled back if any of the specified lower bounds are violated. provided
-        ///   values.
+        /// * `max_assets_in`: List of upper bounds on the assets to move to the pool. The
+        ///   transaction is rolled back if any of the specified lower bounds are violated.
         ///
         /// # Weight
         ///
@@ -318,8 +317,8 @@ mod pallet {
             .map(|_| ())
         }
 
-        /// Exchanges an LP's (liquidity provider's) holdings of _one_ of the assets
-        /// in the pool for an exact amount of pool shares.
+        /// Exchanges an LP's (liquidity provider's) holdings of _one_ of the assets in the pool for
+        /// an exact amount of pool shares.
         ///
         /// # Arguments
         ///
@@ -577,14 +576,14 @@ mod pallet {
         /// A function was called for a swaps pool that does not fulfill the state requirement.
         #[codec(index = 11)]
         InvalidStateTransition,
-        /// A transferal of funds into a swaps pool was above a threshhold specified by the sender.
+        /// A transferal of funds into a swaps pool was above a threshold specified by the sender.
         // TODO Split tests
         #[codec(index = 13)]
         LimitIn,
         /// No limit was specified for a swap.
         #[codec(index = 15)]
         LimitMissing,
-        /// A transferal of funds out of a swaps pool was below a threshhold specified by the
+        /// A transferal of funds out of a swaps pool was below a threshold specified by the
         /// receiver.
         #[codec(index = 16)]
         LimitOut,
@@ -592,14 +591,14 @@ mod pallet {
         #[codec(index = 17)]
         MathApproximation,
         /// The proportion of an asset added into a pool in comparison to the amount
-        /// of that asset in the pool is above the threshhold specified by a constant.
+        /// of that asset in the pool is above the threshold specified by a constant.
         #[codec(index = 18)]
         MaxInRatio,
         /// The proportion of an asset taken from a pool in comparison to the amount
-        /// of that asset in the pool is above the threshhold specified by a constant.
+        /// of that asset in the pool is above the threshold specified by a constant.
         #[codec(index = 19)]
         MaxOutRatio,
-        /// The total weight of all assets within a CPMM pool is above a treshhold specified
+        /// The total weight of all assets within a CPMM pool is above a threshold specified
         /// by a constant.
         #[codec(index = 20)]
         MaxTotalWeight,
@@ -618,11 +617,11 @@ mod pallet {
         /// The swap fee is higher than the allowed maximum.
         #[codec(index = 29)]
         SwapFeeTooHigh,
-        /// Tried to create a pool that has less assets than the lower threshhold specified by
+        /// Tried to create a pool that has less assets than the lower threshold specified by
         /// a constant.
         #[codec(index = 30)]
         TooFewAssets,
-        /// Tried to create a pool that has more assets than the upper threshhold specified by
+        /// Tried to create a pool that has more assets than the upper threshold specified by
         /// a constant.
         #[codec(index = 31)]
         TooManyAssets,
@@ -977,17 +976,6 @@ mod pallet {
         type Asset = AssetOf<T>;
         type Balance = BalanceOf<T>;
 
-        /// Creates a pool.
-        ///
-        /// # Arguments
-        ///
-        /// * `who`: The account that is the creator of the pool. Must have enough
-        ///     funds for each of the assets to cover the `amount`.
-        /// * `assets`: The assets that are used in the pool.
-        /// * `swap_fee`: The fee applied to each swap on a CPMM pool, specified as fixed-point
-        ///     ratio (0.1 equals 10% swap fee)
-        /// * `amount`: The amount of each asset added to the pool.
-        /// * `weights`: The raw/denormalized weights of the assts in the pool.
         #[frame_support::transactional]
         // TODO replace `amount` with a vector!
         fn create_pool(
