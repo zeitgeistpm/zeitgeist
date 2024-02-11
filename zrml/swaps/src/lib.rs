@@ -277,20 +277,7 @@ mod pallet {
             )
         }
 
-        /// Buy the `asset_out`/`asset_in` pair from the pool for an exact amount of `asset_in`.
-        ///
-        /// This function will error is both `min_asset_amount_out` and `max_price` are `None`.
-        ///
-        /// # Arguments
-        ///
-        /// * `pool_id`: The pool to execute the trade on.
-        /// * `asset_in`: Asset entering the pool.
-        /// * `asset_amount_in`: Exact mount that will be transferred from the user to the pool.
-        /// * `asset_out`: Asset leaving the pool.
-        /// * `min_asset_amount_out`: Minimum asset amount requested by the user. The trade is
-        ///   rolled back if this limit is violated. If this is `None`, there is no limit.
-        /// * `max_price`: The maximum price _after execution_ the user is willing to accept. The
-        ///   trade is rolled back if this limit is violated. If this is `None`, there is no limit.
+        /// See [`zeitgeist_primitives::traits::Swaps::swap_exact_amount_in`].
         ///
         /// # Weight
         ///
@@ -319,21 +306,7 @@ mod pallet {
             )
         }
 
-        /// Buy the `asset_out`/`asset_in` pair from the pool, receiving an exact amount of
-        /// `asset_out`.
-        ///
-        /// This function will error is both `min_asset_amount_out` and `max_price` are `None`.
-        ///
-        /// # Arguments
-        ///
-        /// * `pool_id`: The pool to execute the trade on.
-        /// * `asset_in`: Asset entering the pool.
-        /// * `max_asset_amount_out`: Maximum asset amount the user is willing to pay. The trade is
-        ///   rolled back if this limit is violated.
-        /// * `asset_out`: Asset leaving the pool.
-        /// * `asset_amount_out`: Exact amount that will be transferred from the user to the pool.
-        /// * `max_price`: The maximum price _after execution_ the user is willing to accept. The
-        ///   trade is rolled back if this limit is violated. If this is `None`, there is no limit.
+        /// See [`zeitgeist_primitives::traits::Swaps::swap_exact_amount_out`].
         ///
         /// # Weight
         ///
