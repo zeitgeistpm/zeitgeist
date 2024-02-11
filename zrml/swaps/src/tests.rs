@@ -2588,7 +2588,6 @@ fn pool_exit_burns_small_amounts() {
             total_weight: 200_000_000_000,
             weights,
         };
-
         Pools::<Runtime>::insert(pool_id, pool);
         let pool_shares_amount = 14_624_689;
         Currencies::deposit(Swaps::pool_shares_id(pool_id), &ALICE, pool_shares_amount).unwrap();
@@ -2596,9 +2595,8 @@ fn pool_exit_burns_small_amounts() {
         let balance = 445_496;
         Currencies::deposit(Asset::CategoricalOutcome(0, 3), &pool_account_id, balance).unwrap();
 
-        assert_ok!(Swaps::force_pool_exit(
-            RuntimeOrigin::signed(CHARLIE),
-            ALICE,
+        assert_ok!(Swaps::pool_exit(
+            RuntimeOrigin::signed(ALICE),
             pool_id,
             pool_shares_amount,
             vec![0; 2],
