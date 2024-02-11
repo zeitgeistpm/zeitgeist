@@ -624,7 +624,6 @@ mod pallet {
             min_assets_out: Vec<BalanceOf<T>>,
         ) -> DispatchResult {
             ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
-            let who_clone = who.clone();
             let pool = Self::pool_by_id(pool_id)?;
             // If the pool is still in use, prevent a pool drain.
             Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
@@ -659,7 +658,7 @@ mod pallet {
                     let exit_fee_amount = amount.bmul(Self::calc_exit_fee(&pool))?;
                     Ok(exit_fee_amount)
                 },
-                who: who_clone,
+                who: who.clone(),
             };
 
             crate::utils::pool::<_, _, _, _, T>(params)
@@ -676,7 +675,6 @@ mod pallet {
             ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let pool = Self::pool_by_id(pool_id)?;
             let pool_ref = &pool;
-            let who_clone = who.clone();
             Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
 
             let params = PoolExitWithExactAmountParams {
@@ -706,7 +704,7 @@ mod pallet {
                 bound: min_asset_amount,
                 ensure_balance: |_| Ok(()),
                 event: |evt| Self::deposit_event(Event::PoolExitWithExactPoolAmount(evt)),
-                who: who_clone,
+                who,
                 pool_amount: |_, _| Ok(pool_amount),
                 pool_id,
                 pool: pool_ref,
@@ -807,7 +805,6 @@ mod pallet {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_ref = &pool;
             let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
-            let who_clone = who.clone();
 
             let params = PoolJoinWithExactAmountParams {
                 asset: asset_in,
@@ -829,7 +826,7 @@ mod pallet {
                     Ok(pool_amount)
                 },
                 event: |evt| Self::deposit_event(Event::PoolJoinWithExactAssetAmount(evt)),
-                who: who_clone,
+                who,
                 pool_account_id: &pool_account_id,
                 pool_id,
                 pool: pool_ref,
