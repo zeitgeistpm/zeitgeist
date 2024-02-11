@@ -131,6 +131,10 @@ where
 
     for (asset, amount_bound) in p.pool.assets.iter().cloned().zip(p.asset_bounds.iter().cloned()) {
         let balance = T::AssetManager::free_balance(asset, p.pool_account_id);
+        // Dusting may result in zero balances in the pool; just ignore these.
+        if balance.is_zero() {
+            continue;
+        }
         let amount = ratio.bmul(balance)?;
         let fee = (p.fee)(amount)?;
         let amount_minus_fee = amount.checked_sub_res(&fee)?;

@@ -148,7 +148,7 @@ parameter_type_with_key! {
         match currency_id {
             &BASE_ASSET => ExistentialDeposit::get(),
             Asset::Ztg => ExistentialDeposit::get(),
-            _ => 0,
+            _ => 10_000_000,
         }
     };
 }

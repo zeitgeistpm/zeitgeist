@@ -626,14 +626,15 @@ mod pallet {
                 pool: &pool,
                 transfer_asset: |amount, amount_bound, asset| {
                     Self::ensure_minimum_balance(pool_id, &pool, asset, amount)?;
-                    ensure!(amount >= amount_bound, Error::<T>::LimitOut);
                     // If transferring to `who` triggers the existential deposit, burn the tokens
                     // instead.
                     let new_balance =
                         T::AssetManager::free_balance(asset, &who).checked_add_res(&amount)?;
                     if new_balance >= T::AssetManager::minimum_balance(asset) {
+                        ensure!(amount >= amount_bound, Error::<T>::LimitOut);
                         T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
                     } else {
+                        ensure!(amount_bound.is_zero(), Error::<T>::LimitOut);
                         T::AssetManager::withdraw(asset, &pool_account_id, amount)?;
                     }
                     Ok(())
