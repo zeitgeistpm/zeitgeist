@@ -546,7 +546,7 @@ mod pallet {
         /// A new pool has been created.
         #[codec(index = 1)]
         PoolCreate {
-            common: CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
+            common: CommonPoolEventParams<AccountIdOf<T>>,
             pool: PoolOf<T>,
             pool_amount: BalanceOf<T>,
             pool_account: T::AccountId,
@@ -562,43 +562,31 @@ mod pallet {
         PoolActive { pool_id: PoolId },
         /// Someone has exited a pool.
         #[codec(index = 5)]
-        PoolExit(PoolAssetsEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>),
+        PoolExit(PoolAssetsEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
         /// Exits a pool given an exact amount of an asset.
         #[codec(index = 6)]
-        PoolExitWithExactAssetAmount(
-            PoolAssetEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
-        ),
+        PoolExitWithExactAssetAmount(PoolAssetEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
         /// Exits a pool given an exact pool's amount.
         #[codec(index = 7)]
-        PoolExitWithExactPoolAmount(
-            PoolAssetEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
-        ),
+        PoolExitWithExactPoolAmount(PoolAssetEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
         /// Someone has joined a pool.
         #[codec(index = 8)]
-        PoolJoin(PoolAssetsEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>),
+        PoolJoin(PoolAssetsEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
         /// Joins a pool given an exact amount of an asset.
         #[codec(index = 9)]
-        PoolJoinWithExactAssetAmount(
-            PoolAssetEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
-        ),
+        PoolJoinWithExactAssetAmount(PoolAssetEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
         /// Joins a pool given an exact pool's amount.
         #[codec(index = 10)]
-        PoolJoinWithExactPoolAmount(
-            PoolAssetEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
-        ),
+        PoolJoinWithExactPoolAmount(PoolAssetEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
         /// Pool was manually destroyed.
         #[codec(index = 11)]
         PoolDestroyed { pool_id: PoolId },
-        /// An exact amount of an asset is entering the pool. \[SwapEvent\]
+        /// An exact amount of an asset is entering the pool.
         #[codec(index = 13)]
-        SwapExactAmountIn(
-            SwapEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
-        ),
-        /// An exact amount of an asset is leaving the pool. \[SwapEvent\]
+        SwapExactAmountIn(SwapEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
+        /// An exact amount of an asset is leaving the pool.
         #[codec(index = 14)]
-        SwapExactAmountOut(
-            SwapEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
-        ),
+        SwapExactAmountOut(SwapEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
     }
 
     #[pallet::pallet]
