@@ -72,7 +72,6 @@ function download_zombienet {
         exit 1
     fi
 
-    mkdir -p ./tmp/
     mkdir -p ./integration-tests/tmp/
 
     # Download the file
