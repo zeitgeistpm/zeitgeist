@@ -100,7 +100,7 @@ jobs:
           cd integration-tests
           ./scripts/download-polkadot.sh
           cd ../
-          ./integration-tests/scripts/deploy-zombienet.sh --test
+          ./integration-tests/scripts/deploy-zombienet.sh --no-build --test
 
   zombienet_zeitgeist_upgrade:
     name: Zeitgeist Zombienet Post-Upgrade Tests

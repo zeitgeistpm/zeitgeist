@@ -5,8 +5,6 @@ if [ ! -d "./integration-tests/scripts" ]; then
     exit 1
 fi;
 
-echo "Please make sure you executed 'cargo build --release --features parachain'."
-
 export ADDITIONAL_ZOMBIECONFIG="${ADDITIONAL_ZOMBIECONFIG:-}"
 export ZOMBIENET_CONFIG_FILE="${ZOMBIENET_CONFIG_FILE:-"./integration-tests/zombienet/produce-blocks.toml"}"
 export ZOMBIENET_DSL_FILE="${ZOMBIENET_CONFIG_FILE%.toml}.zndsl"
@@ -16,6 +14,7 @@ ZOMBIENET_BINARY="./integration-tests/tmp/zombienet"
 
 # Default values for flags
 RUN_TESTS=0  # This flag will be set to 1 if the -t or --test option is present
+BUILD=true  # This flag will be set to false if the --no-build option is present
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -26,6 +25,10 @@ while [[ $# -gt 0 ]]; do
             RUN_TESTS=1
             shift # Remove argument name from processing
             ;;
+        --no-build)
+            BUILD=false
+            shift # Remove argument name from processing
+            ;;
         *)
             # Unknown option
             shift # Remove generic argument from processing
@@ -33,6 +36,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if $BUILD ; then
+    ./integration-tests/scripts/build-node.sh
+fi
 
 function download_zombienet {
     # Get the appropriate download link based on the OS
