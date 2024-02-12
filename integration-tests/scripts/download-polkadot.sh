@@ -29,6 +29,7 @@ fi
 
 # TODO: Use following line instead of the one above once Zeitgeist uses >=polkadot-v1.1.0
 # Note: Version 1.4.0 of relaychain didn't allow the parachain to produce blocks
+# branch=$(egrep -o '/polkadot.*#([^\"]*)' $(dirname $0)/../../Cargo.lock | head -1 | sed 's/.*release-//#')
 # polkadot_release=$(echo $branch | sed 's/#.*//' | sed 's/\/polkadot-sdk?branch=polkadot-v//' | sed 's/-.*//')
 polkadot_release="1.1.0"
 
