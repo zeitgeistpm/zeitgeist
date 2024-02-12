@@ -38,6 +38,7 @@ cd $(dirname $0)/..
 if [[ -f tmp/polkadot ]]; then
 	POLKADOT_VERSION=$(tmp/polkadot --version)
 	if [[ $POLKADOT_VERSION == *$polkadot_release* ]]; then
+		echo "Polkadot binary has correct version"
 		exit 0
 	else
 		echo "Updating polkadot binary..."
