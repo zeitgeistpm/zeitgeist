@@ -7,4 +7,6 @@ fi;
 
 source ./integration-tests/scripts/build-node-configuration.sh
 
-cargo build --profile=$PROFILE --features=$FEATURES --bin=zeitgeist
+if [ -z "$CI" ]; then
+    cargo build --profile=$PROFILE --features=$FEATURES --bin=zeitgeist
+fi
