@@ -93,7 +93,7 @@ pub trait Swaps<AccountId> {
 
     /// Buy the `asset_out`/`asset_in` pair from the pool for an exact amount of `asset_in`.
     ///
-    /// This function will error is both `min_asset_amount_out` and `max_price` are `None`.
+    /// This function will error if both `min_asset_amount_out` and `max_price` are `None`.
     ///
     /// # Arguments
     ///
@@ -118,7 +118,7 @@ pub trait Swaps<AccountId> {
 
     /// Buy the `asset_out`/`asset_in` pair from the pool, receiving an exact amount of `asset_out`.
     ///
-    /// This function will error is both `min_asset_amount_out` and `max_price` are `None`.
+    /// This function will error if both `min_asset_amount_out` and `max_price` are `None`.
     ///
     /// # Arguments
     ///
