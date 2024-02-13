@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - '^v[0-9]+.[0-9]+.[0-9]+(-rc[0-9]+)?$'
-    # remove the following line after merge of chralt98-add-integration-tests
-    branches: [ chralt98-add-integration-tests ]
 
 env:
   CARGO_TERM_COLOR: always
