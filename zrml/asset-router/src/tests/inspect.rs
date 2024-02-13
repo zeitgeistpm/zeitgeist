@@ -21,12 +21,12 @@ use super::*;
 use frame_support::traits::tokens::fungibles::Inspect;
 
 fn test_helper(asset: Assets, initial_amount: <Runtime as crate::Config>::Balance) {
-    assert!(AssetRouter::asset_exists(asset));
     assert_ok!(<AssetRouter as orml_traits::MultiCurrency<AccountId>>::deposit(
         asset,
         &ALICE,
         initial_amount
     ));
+    assert!(AssetRouter::asset_exists(asset));
     assert_eq!(AssetRouter::total_issuance(asset), initial_amount);
     assert_eq!(AssetRouter::balance(asset, &ALICE), initial_amount);
     assert_eq!(AssetRouter::reducible_balance(asset, &ALICE, false), initial_amount);
