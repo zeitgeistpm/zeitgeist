@@ -1034,7 +1034,6 @@ mod pallet {
             Ok(())
         }
 
-        // TODO Fix the issue that clean pools can't be drained.
         fn ensure_minimum_balance(
             pool_id: PoolId,
             pool: &PoolOf<T>,
