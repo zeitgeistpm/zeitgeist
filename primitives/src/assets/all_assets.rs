@@ -73,50 +73,26 @@ pub enum Asset<MI: MaxEncodedLen + HasCompact> {
     #[codec(index = 6)]
     ParimutuelShare(MI, CategoryIndex),
 
-    // "New" outcomes will replace the previous outcome types after the lazy
-    // migration completed
     #[codec(index = 7)]
-    NewCategoricalOutcome(#[codec(compact)] MI, #[codec(compact)] CategoryIndex),
-
-    #[codec(index = 9)]
-    NewScalarOutcome(#[codec(compact)] MI, ScalarPosition),
-
-    #[codec(index = 10)]
-    NewParimutuelShare(#[codec(compact)] MI, #[codec(compact)] CategoryIndex),
-
-    #[codec(index = 11)]
-    NewPoolShare(#[codec(compact)] PoolId),
-
-    #[codec(index = 12)]
     CampaignAssetClass(#[codec(compact)] CampaignAssetId),
 
-    #[codec(index = 13)]
+    #[codec(index = 8)]
     CustomAssetClass(#[codec(compact)] CustomAssetId),
 }
 
 impl<MI: HasCompact + MaxEncodedLen> From<MarketAssetClass<MI>> for Asset<MI> {
     fn from(value: MarketAssetClass<MI>) -> Self {
         match value {
-            MarketAssetClass::<MI>::OldCategoricalOutcome(market_id, cat_id) => {
+            MarketAssetClass::<MI>::CategoricalOutcome(market_id, cat_id) => {
                 Self::CategoricalOutcome(market_id, cat_id)
             }
-            MarketAssetClass::<MI>::OldScalarOutcome(market_id, scalar_pos) => {
+            MarketAssetClass::<MI>::ScalarOutcome(market_id, scalar_pos) => {
                 Self::ScalarOutcome(market_id, scalar_pos)
             }
-            MarketAssetClass::<MI>::OldParimutuelShare(market_id, cat_id) => {
+            MarketAssetClass::<MI>::ParimutuelShare(market_id, cat_id) => {
                 Self::ParimutuelShare(market_id, cat_id)
             }
-            MarketAssetClass::<MI>::OldPoolShare(pool_id) => Self::PoolShare(pool_id),
-            MarketAssetClass::<MI>::CategoricalOutcome(market_id, cat_id) => {
-                Self::NewCategoricalOutcome(market_id, cat_id)
-            }
-            MarketAssetClass::<MI>::ScalarOutcome(market_id, scalar_pos) => {
-                Self::NewScalarOutcome(market_id, scalar_pos)
-            }
-            MarketAssetClass::<MI>::ParimutuelShare(market_id, cat_id) => {
-                Self::NewParimutuelShare(market_id, cat_id)
-            }
-            MarketAssetClass::<MI>::PoolShare(pool_id) => Self::NewPoolShare(pool_id),
+            MarketAssetClass::<MI>::PoolShare(pool_id) => Self::PoolShare(pool_id),
         }
     }
 }
@@ -136,16 +112,16 @@ impl<MI: HasCompact + MaxEncodedLen> From<CustomAssetClass> for Asset<MI> {
 impl<MI: HasCompact + MaxEncodedLen> From<CurrencyClass<MI>> for Asset<MI> {
     fn from(value: CurrencyClass<MI>) -> Self {
         match value {
-            CurrencyClass::<MI>::OldCategoricalOutcome(market_id, cat_id) => {
+            CurrencyClass::<MI>::CategoricalOutcome(market_id, cat_id) => {
                 Self::CategoricalOutcome(market_id, cat_id)
             }
-            CurrencyClass::<MI>::OldScalarOutcome(market_id, scalar_pos) => {
+            CurrencyClass::<MI>::ScalarOutcome(market_id, scalar_pos) => {
                 Self::ScalarOutcome(market_id, scalar_pos)
             }
-            CurrencyClass::<MI>::OldParimutuelShare(market_id, cat_id) => {
+            CurrencyClass::<MI>::ParimutuelShare(market_id, cat_id) => {
                 Self::ParimutuelShare(market_id, cat_id)
             }
-            CurrencyClass::<MI>::OldPoolShare(pool_id) => Self::PoolShare(pool_id),
+            CurrencyClass::<MI>::PoolShare(pool_id) => Self::PoolShare(pool_id),
             CurrencyClass::<MI>::ForeignAsset(asset_id) => Self::ForeignAsset(asset_id),
         }
     }
