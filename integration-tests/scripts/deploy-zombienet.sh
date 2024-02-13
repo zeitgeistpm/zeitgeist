@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 
-if [ ! -d "./integration-tests/scripts" ]; then
-    echo "Please execute this script from the root of the Zeitgeist project folder"
+if [ "$(dirname "$0")" != "./scripts" ]; then
+    echo "Please execute this script from the integration-tests directory."
     exit 1
 fi;
 
 export ADDITIONAL_ZOMBIECONFIG="${ADDITIONAL_ZOMBIECONFIG:-}"
-export ZOMBIENET_CONFIG_FILE="${ZOMBIENET_CONFIG_FILE:-"./integration-tests/zombienet/produce-blocks.toml"}"
+export ZOMBIENET_CONFIG_FILE="${ZOMBIENET_CONFIG_FILE:-"./zombienet/produce-blocks.toml"}"
 export ZOMBIENET_DSL_FILE="${ZOMBIENET_CONFIG_FILE%.toml}.zndsl"
 
 # Define destination path
-ZOMBIENET_BINARY="./integration-tests/tmp/zombienet"
+ZOMBIENET_BINARY="./tmp/zombienet"
 
 # Default values for flags
 RUN_TESTS=0  # This flag will be set to 1 if the -t or --test option is present
@@ -37,7 +37,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if $BUILD ; then
-    ./integration-tests/scripts/build-node.sh
+    ./scripts/build-node.sh
 fi
 
 function download_zombienet {
@@ -72,7 +72,7 @@ function download_zombienet {
         exit 1
     fi
 
-    mkdir -p ./integration-tests/tmp/
+    mkdir -p ./tmp/
 
     # Download the file
     echo "Downloading ${FILE_NAME} from ${DOWNLOAD_URL}"

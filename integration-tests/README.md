@@ -44,8 +44,7 @@ the relay and parachain from genesis.
 
 ```bash
 ./scripts/download-polkadot.sh
-cd ../
-./integration-tests/scripts/deploy-zombienet.sh
+./scripts/deploy-zombienet.sh
 ```
 
 It is expected to see the following output multiple times before the network is launched:
@@ -60,8 +59,7 @@ Using the additional `--test` flag, you can run the ZNDSL tests on the network.
 
 ```bash
 ./scripts/download-polkadot.sh
-cd ../
-./integration-tests/scripts/deploy-zombienet.sh --test
+./scripts/deploy-zombienet.sh --test
 ```
 
 #### Deploy a local, running relay-parachain fork network via chopsticks (e. g. to test XCM):

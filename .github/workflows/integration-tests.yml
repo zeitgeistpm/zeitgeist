@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - '^v[0-9]+.[0-9]+.[0-9]+(-rc[0-9]+)?$'
+    # remove the following line after merge of chralt98-add-integration-tests
+    branches: [ chralt98-add-integration-tests ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -100,8 +102,7 @@ jobs:
 
           cd integration-tests
           ./scripts/download-polkadot.sh
-          cd ../
-          ./integration-tests/scripts/deploy-zombienet.sh --no-build --test
+          ./scripts/deploy-zombienet.sh --no-build --test
 
   zombienet_zeitgeist_upgrade:
     name: Zeitgeist Zombienet Post-Upgrade Tests
