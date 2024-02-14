@@ -62,12 +62,10 @@ impl<T: Config> MultiCurrencyExtended<T::AccountId> for Pallet<T> {
             // Route "pre new asset system" market assets to `CurrencyType`
             if T::MarketAssets::asset_exists(asset) {
                 Self::update_balance_asset(currency_id, who, by_amount)
+            } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
+                T::Currencies::update_balance(currency, who, by_amount)
             } else {
-                if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
-                    T::Currencies::update_balance(currency, who, by_amount)
-                } else {
-                    Self::update_balance_asset(currency_id, who, by_amount)
-                }
+                Self::update_balance_asset(currency_id, who, by_amount)
             }
         } else if let Ok(_asset) = T::CampaignAssetType::try_from(currency_id) {
             Self::update_balance_asset(currency_id, who, by_amount)
