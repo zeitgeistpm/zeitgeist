@@ -46,7 +46,21 @@ macro_rules! route_call {
 /// it returns an error.
 macro_rules! only_currency {
     ($currency_id:expr, $error:expr, $currency_trait:ident, $currency_method:ident, $($args:expr),+) => {
-        if let Ok(currency) = T::CurrencyType::try_from($currency_id) {
+        if let Ok(asset) = T::MarketAssetType::try_from($currency_id) {
+            // Route "pre new asset system" market assets to `CurrencyType`
+            if T::MarketAssets::asset_exists(asset) {
+                Self::log_unsupported($currency_id, stringify!($currency_method));
+                $error
+            } else {
+                if let Ok(currency) = T::CurrencyType::try_from($currency_id) {
+                    <T::Currencies as $currency_trait<T::AccountId>>::$currency_method(currency, $($args),+)
+                } else {
+                    Self::log_unsupported($currency_id, stringify!($currency_method));
+                    $error
+                }
+            }
+        }
+        else if let Ok(currency) = T::CurrencyType::try_from($currency_id) {
             <T::Currencies as $currency_trait<T::AccountId>>::$currency_method(currency, $($args),+)
         } else {
             Self::log_unsupported($currency_id, stringify!($currency_method));

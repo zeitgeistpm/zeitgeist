@@ -17,6 +17,35 @@
 
 use crate::pallet::*;
 
+impl<T: Config> Pallet<T> {
+    fn update_balance_asset(
+        currency_id: <Self as MultiCurrency<T::AccountId>>::CurrencyId,
+        who: &T::AccountId,
+        by_amount: <Self as MultiCurrencyExtended<T::AccountId>>::Amount,
+    ) -> DispatchResult {
+        if by_amount.is_zero() {
+            return Ok(());
+        }
+
+        // Ensure that no overflows happen during abs().
+        let by_amount_abs =
+            if by_amount == <Self as MultiCurrencyExtended<T::AccountId>>::Amount::min_value() {
+                return Err(Error::<T>::AmountIntoBalanceFailed.into());
+            } else {
+                by_amount.abs()
+            };
+
+        let by_balance =
+            TryInto::<<Self as MultiCurrency<T::AccountId>>::Balance>::try_into(by_amount_abs)
+                .map_err(|_| Error::<T>::AmountIntoBalanceFailed)?;
+        if by_amount.is_positive() {
+            Self::deposit(currency_id, who, by_balance)
+        } else {
+            Self::withdraw(currency_id, who, by_balance).map(|_| ())
+        }
+    }
+}
+
 impl<T: Config> MultiCurrencyExtended<T::AccountId> for Pallet<T> {
     type Amount = <T::Currencies as MultiCurrencyExtended<T::AccountId>>::Amount;
 
@@ -25,29 +54,29 @@ impl<T: Config> MultiCurrencyExtended<T::AccountId> for Pallet<T> {
         who: &T::AccountId,
         by_amount: Self::Amount,
     ) -> DispatchResult {
-        if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
-            return <T::Currencies as MultiCurrencyExtended<T::AccountId>>::update_balance(
-                currency, who, by_amount,
-            );
-        }
-
         if by_amount.is_zero() {
             return Ok(());
         }
 
-        // Ensure that no overflows happen during abs().
-        let by_amount_abs = if by_amount == Self::Amount::min_value() {
-            return Err(Error::<T>::AmountIntoBalanceFailed.into());
+        if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
+            // Route "pre new asset system" market assets to `CurrencyType`
+            if T::MarketAssets::asset_exists(asset) {
+                Self::update_balance_asset(currency_id, who, by_amount)
+            } else {
+                if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
+                    T::Currencies::update_balance(currency, who, by_amount)
+                } else {
+                    Self::update_balance_asset(currency_id, who, by_amount)
+                }
+            }
+        } else if let Ok(_asset) = T::CampaignAssetType::try_from(currency_id) {
+            Self::update_balance_asset(currency_id, who, by_amount)
+        } else if let Ok(_asset) = T::CustomAssetType::try_from(currency_id) {
+            Self::update_balance_asset(currency_id, who, by_amount)
+        } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
+            T::Currencies::update_balance(currency, who, by_amount)
         } else {
-            by_amount.abs()
-        };
-
-        let by_balance = TryInto::<Self::Balance>::try_into(by_amount_abs)
-            .map_err(|_| Error::<T>::AmountIntoBalanceFailed)?;
-        if by_amount.is_positive() {
-            Self::deposit(currency_id, who, by_balance)
-        } else {
-            Self::withdraw(currency_id, who, by_balance).map(|_| ())
+            Err(Error::<T>::UnknownAsset.into())
         }
     }
 }
