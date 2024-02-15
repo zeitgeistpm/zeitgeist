@@ -30,13 +30,8 @@ impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
             if T::MarketAssets::asset_exists(asset) {
                 return Err(Error::<T>::Unsupported.into());
             }
-
-            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
-                return <T::Currencies as MultiLockableCurrency<T::AccountId>>::set_lock(
-                    lock_id, currency, who, amount,
-                );
-            }
-        } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
+        }
+        if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             return <T::Currencies as MultiLockableCurrency<T::AccountId>>::set_lock(
                 lock_id, currency, who, amount,
             );
@@ -55,13 +50,8 @@ impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
             if T::MarketAssets::asset_exists(asset) {
                 return Err(Error::<T>::Unsupported.into());
             }
-
-            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
-                return <T::Currencies as MultiLockableCurrency<T::AccountId>>::extend_lock(
-                    lock_id, currency, who, amount,
-                );
-            }
-        } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
+        }
+        if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             return <T::Currencies as MultiLockableCurrency<T::AccountId>>::extend_lock(
                 lock_id, currency, who, amount,
             );
@@ -79,13 +69,8 @@ impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
             if T::MarketAssets::asset_exists(asset) {
                 return Err(Error::<T>::Unsupported.into());
             }
-
-            if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
-                return <T::Currencies as MultiLockableCurrency<T::AccountId>>::remove_lock(
-                    lock_id, currency, who,
-                );
-            }
-        } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
+        }
+        if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             return <T::Currencies as MultiLockableCurrency<T::AccountId>>::remove_lock(
                 lock_id, currency, who,
             );
