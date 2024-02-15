@@ -17,6 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{AccountIdOf, AssetOf, BalanceOf, BlockNumberOf, Config, Markets, MomentOf, Pallet};
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use frame_support::{
     dispatch::Weight,
