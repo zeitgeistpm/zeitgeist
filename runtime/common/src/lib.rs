@@ -857,6 +857,7 @@ macro_rules! impl_config_traits {
                         RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::join { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::exit { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::deploy_pool { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::withdraw_fees { .. })
                     ),
                     ProxyType::BuySellCompleteSets => matches!(
                         c,
@@ -881,6 +882,7 @@ macro_rules! impl_config_traits {
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::sell { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::deploy_pool { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::withdraw_fees { .. })
                             | RuntimeCall::PredictionMarkets(
                                 zrml_prediction_markets::Call::buy_complete_set { .. }
                             )
