@@ -646,7 +646,7 @@ mod pallet {
                     ensure!(pool_amount <= mul, Error::<T>::MaxInRatio);
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_out_given_pool_in(
                         asset_balance.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset)?,
+                        Self::pool_weight_rslt(&pool, &asset)?.saturated_into(),
                         total_supply.saturated_into(),
                         pool.total_weight.saturated_into(),
                         pool_amount.saturated_into(),
@@ -733,7 +733,7 @@ mod pallet {
                 pool_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let pool_amount: BalanceOf<T> = crate::math::calc_pool_in_given_single_out(
                         asset_balance.saturated_into(),
-                        Self::pool_weight_rslt(pool_ref, &asset)?,
+                        Self::pool_weight_rslt(pool_ref, &asset)?.saturated_into(),
                         total_supply.saturated_into(),
                         pool_ref.total_weight.saturated_into(),
                         asset_amount.saturated_into(),
@@ -777,7 +777,7 @@ mod pallet {
                     ensure!(asset_amount <= mul, Error::<T>::MaxInRatio);
                     let pool_amount: BalanceOf<T> = crate::math::calc_pool_out_given_single_in(
                         asset_balance.saturated_into(),
-                        Self::pool_weight_rslt(pool_ref, &asset_in)?,
+                        Self::pool_weight_rslt(pool_ref, &asset_in)?.saturated_into(),
                         total_supply.saturated_into(),
                         pool_ref.total_weight.saturated_into(),
                         asset_amount.saturated_into(),
@@ -815,7 +815,7 @@ mod pallet {
                     ensure!(pool_amount <= mul, Error::<T>::MaxOutRatio);
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_in_given_pool_out(
                         asset_balance.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset)?,
+                        Self::pool_weight_rslt(&pool, &asset)?.saturated_into(),
                         total_supply.saturated_into(),
                         pool.total_weight.saturated_into(),
                         pool_amount.saturated_into(),
@@ -875,9 +875,9 @@ mod pallet {
                     );
                     let asset_amount_out: BalanceOf<T> = crate::math::calc_out_given_in(
                         balance_in.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_in)?,
+                        Self::pool_weight_rslt(&pool, &asset_in)?.saturated_into(),
                         balance_out.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_out)?,
+                        Self::pool_weight_rslt(&pool, &asset_out)?.saturated_into(),
                         asset_amount_in.saturated_into(),
                         pool.swap_fee.saturated_into(),
                     )?
@@ -931,9 +931,9 @@ mod pallet {
                     let balance_in = T::AssetManager::free_balance(asset_in, &pool_account_id);
                     let asset_amount_in: BalanceOf<T> = crate::math::calc_in_given_out(
                         balance_in.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_in)?,
+                        Self::pool_weight_rslt(&pool, &asset_in)?.saturated_into(),
                         balance_out.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_out)?,
+                        Self::pool_weight_rslt(&pool, &asset_out)?.saturated_into(),
                         asset_amount_out.saturated_into(),
                         pool.swap_fee.saturated_into(),
                     )?
@@ -974,18 +974,14 @@ mod pallet {
             let in_weight = Self::pool_weight_rslt(&pool, asset_in)?;
             let out_weight = Self::pool_weight_rslt(&pool, asset_out)?;
 
-            let swap_fee = if with_fees {
-                pool.swap_fee.saturated_into()
-            } else {
-                BalanceOf::<T>::zero().saturated_into()
-            };
+            let swap_fee = if with_fees { pool.swap_fee } else { BalanceOf::<T>::zero() };
 
             Ok(crate::math::calc_spot_price(
                 balance_in.saturated_into(),
-                in_weight,
+                in_weight.saturated_into(),
                 balance_out.saturated_into(),
-                out_weight,
-                swap_fee,
+                out_weight.saturated_into(),
+                swap_fee.saturated_into(),
             )?
             .saturated_into())
         }
@@ -1134,7 +1130,7 @@ mod pallet {
             pool: &PoolOf<T>,
             asset: &AssetOf<T>,
         ) -> Result<BalanceOf<T>, Error<T>> {
-            pool.weights.get(asset).cloned().ok_or(Error::<T>::AssetNotBound)
+            pool.weights.get(asset).cloned().ok_or(Error::<T>::AssetNotInPool)
         }
 
         /// Calculate the exit fee percentage for `pool`.
