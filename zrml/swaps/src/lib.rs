@@ -211,7 +211,7 @@ mod pallet {
                     ensure!(pool_amount <= mul, Error::<T>::MaxInRatio);
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_out_given_pool_in(
                         asset_balance.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset)?,
+                        Self::pool_weight_rslt(&pool, &asset)?.saturated_into(),
                         total_supply.saturated_into(),
                         pool.total_weight.saturated_into(),
                         pool_amount.saturated_into(),
@@ -372,7 +372,7 @@ mod pallet {
                     ensure!(pool_amount <= mul, Error::<T>::MaxOutRatio);
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_in_given_pool_out(
                         asset_balance.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset)?,
+                        Self::pool_weight_rslt(&pool, &asset)?.saturated_into(),
                         total_supply.saturated_into(),
                         pool.total_weight.saturated_into(),
                         pool_amount.saturated_into(),
@@ -537,17 +537,17 @@ mod pallet {
         type MaxSwapFee: Get<BalanceOf<Self>>;
 
         #[pallet::constant]
-        type MaxTotalWeight: Get<u128>;
+        type MaxTotalWeight: Get<BalanceOf<Self>>;
 
         #[pallet::constant]
-        type MaxWeight: Get<u128>;
+        type MaxWeight: Get<BalanceOf<Self>>;
 
         #[pallet::constant]
         /// The minimum amount of assets in a pool.
         type MinAssets: Get<u16>;
 
         #[pallet::constant]
-        type MinWeight: Get<u128>;
+        type MinWeight: Get<BalanceOf<Self>>;
 
         /// The module identifier.
         #[pallet::constant]
@@ -784,9 +784,9 @@ mod pallet {
 
             Ok(crate::math::calc_spot_price(
                 balance_in.saturated_into(),
-                in_weight,
+                in_weight.saturated_into(),
                 balance_out.saturated_into(),
-                out_weight,
+                out_weight.saturated_into(),
                 swap_fee,
             )?
             .saturated_into())
@@ -938,7 +938,10 @@ mod pallet {
             })
         }
 
-        fn pool_weight_rslt(pool: &PoolOf<T>, asset: &AssetOf<T>) -> Result<u128, Error<T>> {
+        fn pool_weight_rslt(
+            pool: &PoolOf<T>,
+            asset: &AssetOf<T>,
+        ) -> Result<BalanceOf<T>, Error<T>> {
             pool.weights.get(asset).cloned().ok_or(Error::<T>::AssetNotBound)
         }
 
@@ -980,7 +983,7 @@ mod pallet {
             assets: Vec<AssetOf<T>>,
             swap_fee: BalanceOf<T>,
             amount: BalanceOf<T>,
-            weights: Vec<u128>,
+            weights: Vec<BalanceOf<T>>,
         ) -> Result<PoolId, DispatchError> {
             ensure!(assets.len() <= usize::from(T::MaxAssets::get()), Error::<T>::TooManyAssets);
             ensure!(assets.len() >= usize::from(T::MinAssets::get()), Error::<T>::TooFewAssets);
@@ -988,7 +991,7 @@ mod pallet {
             let pool_shares_id = Self::pool_shares_id(next_pool_id);
             let pool_account = Self::pool_account_id(&next_pool_id);
             let mut map = BTreeMap::new();
-            let mut total_weight = 0;
+            let mut total_weight: BalanceOf<T> = Zero::zero();
             let mut sorted_assets = assets.clone();
             sorted_assets.sort();
             let has_duplicates = sorted_assets
@@ -1132,7 +1135,7 @@ mod pallet {
                 pool_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let pool_amount: BalanceOf<T> = crate::math::calc_pool_in_given_single_out(
                         asset_balance.saturated_into(),
-                        Self::pool_weight_rslt(pool_ref, &asset)?,
+                        Self::pool_weight_rslt(pool_ref, &asset)?.saturated_into(),
                         total_supply.saturated_into(),
                         pool_ref.total_weight.saturated_into(),
                         asset_amount.saturated_into(),
@@ -1190,7 +1193,7 @@ mod pallet {
                     ensure!(asset_amount <= mul, Error::<T>::MaxInRatio);
                     let pool_amount: BalanceOf<T> = crate::math::calc_pool_out_given_single_in(
                         asset_balance.saturated_into(),
-                        Self::pool_weight_rslt(pool_ref, &asset_in)?,
+                        Self::pool_weight_rslt(pool_ref, &asset_in)?.saturated_into(),
                         total_supply.saturated_into(),
                         pool_ref.total_weight.saturated_into(),
                         asset_amount.saturated_into(),
@@ -1258,9 +1261,9 @@ mod pallet {
                     );
                     let asset_amount_out: BalanceOf<T> = crate::math::calc_out_given_in(
                         balance_in.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_in)?,
+                        Self::pool_weight_rslt(&pool, &asset_in)?.saturated_into(),
                         balance_out.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_out)?,
+                        Self::pool_weight_rslt(&pool, &asset_out)?.saturated_into(),
                         asset_amount_in.saturated_into(),
                         pool.swap_fee.saturated_into(),
                     )?
@@ -1329,9 +1332,9 @@ mod pallet {
                     let balance_in = T::AssetManager::free_balance(asset_in, &pool_account_id);
                     let asset_amount_in: BalanceOf<T> = crate::math::calc_in_given_out(
                         balance_in.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_in)?,
+                        Self::pool_weight_rslt(&pool, &asset_in)?.saturated_into(),
                         balance_out.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_out)?,
+                        Self::pool_weight_rslt(&pool, &asset_out)?.saturated_into(),
                         asset_amount_out.saturated_into(),
                         pool.swap_fee.saturated_into(),
                     )?

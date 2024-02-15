@@ -72,7 +72,7 @@ fn bench_create_pool<T>(
     caller: T::AccountId,
     asset_count: usize,
     opt_asset_amount: Option<BalanceOf<T>>,
-    opt_weights: Option<Vec<u128>>,
+    opt_weights: Option<Vec<BalanceOf<T>>>,
     open: bool,
 ) -> (u128, Vec<AssetOf<T>>, BalanceOf<T>)
 where
@@ -169,7 +169,7 @@ benchmarks! {
         let balance: BalanceOf<T> = LIQUIDITY.saturated_into();
         let asset_amount_in: BalanceOf<T> = balance.bmul(T::MaxInRatio::get()).unwrap();
         let weight_in = T::MinWeight::get();
-        let weight_out = 2 * weight_in;
+        let weight_out = weight_in * 2u8.into();
         let mut weights = vec![weight_in; asset_count as usize];
         weights[asset_count as usize - 1] = weight_out;
         let caller: T::AccountId = whitelisted_caller();
@@ -205,7 +205,7 @@ benchmarks! {
         let balance: BalanceOf<T> = LIQUIDITY.saturated_into();
         let asset_amount_out: BalanceOf<T> = balance.bmul(T::MaxOutRatio::get()).unwrap();
         let weight_out = T::MinWeight::get();
-        let weight_in = 4 * weight_out;
+        let weight_in = weight_out * 4u8.into();
         let mut weights = vec![weight_out; asset_count as usize];
         weights[0] = weight_in;
         let caller: T::AccountId = whitelisted_caller();
