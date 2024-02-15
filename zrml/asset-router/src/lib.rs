@@ -67,9 +67,8 @@ pub mod pallet {
         },
         FixedPointOperand, SaturatedConversion,
     };
-    pub(crate) use zeitgeist_primitives::{
-        traits::CheckedDivPerComponent, unreachable_non_terminating,
-    };
+    use zeitgeist_macros::unreachable_non_terminating;
+    pub(crate) use zeitgeist_primitives::traits::CheckedDivPerComponent;
 
     pub(crate) const LOG_TARGET: &str = "runtime::asset-router";
     pub(crate) const MAX_ASSET_DESTRUCTIONS_PER_BLOCK: u8 = 128;
