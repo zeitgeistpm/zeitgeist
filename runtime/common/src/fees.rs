@@ -81,8 +81,7 @@ macro_rules! impl_foreign_fees {
         };
         use pallet_asset_tx_payment::HandleCredit;
         use sp_runtime::traits::{Convert, DispatchInfoOf, PostDispatchInfoOf};
-        use zeitgeist_primitives::types::TxPaymentAssetId;
-        use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
+        use zeitgeist_primitives::{math::fixed::FixedMul, types::TxPaymentAssetId};
 
         #[repr(u8)]
         pub enum CustomTxError {
@@ -108,7 +107,7 @@ macro_rules! impl_foreign_fees {
             // less DOT than ZTG is paid for fees.
             // Assume a fee_factor of 20_000_000_000, then the fee would result in
             // 20_000_000_000 / 10_000_000_000 = 2 units per ZTG
-            let converted_fee = zrml_swaps::fixed::bmul(native_fee, fee_factor).map_err(|_| {
+            let converted_fee = native_fee.bmul(fee_factor).map_err(|_| {
                 TransactionValidityError::Invalid(InvalidTransaction::Custom(
                     CustomTxError::FeeConversionArith as u8,
                 ))

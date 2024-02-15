@@ -80,6 +80,19 @@ pub enum Asset<MI: MaxEncodedLen + HasCompact> {
     CustomAssetClass(#[codec(compact)] CustomAssetId),
 }
 
+impl<MI: HasCompact + MaxEncodedLen> PoolSharesId<PoolId> for Asset<MI> {
+    fn pool_shares_id(pool_id: PoolId) -> Self {
+        Self::PoolShare(pool_id)
+    }
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<MI: HasCompact + MaxEncodedLen> ZeitgeistAssetEnumerator<MI> for Asset<MI> {
+    fn create_asset_id(t: MI) -> Self {
+        Asset::CategoricalOutcome(t, 0)
+    }
+}
+
 impl<MI: HasCompact + MaxEncodedLen> From<MarketAssetClass<MI>> for Asset<MI> {
     fn from(value: MarketAssetClass<MI>) -> Self {
         match value {

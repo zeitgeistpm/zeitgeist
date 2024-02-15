@@ -17,8 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 pub use crate::{
-    assets::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, pool::*,
-    pool_status::PoolStatus, proxy_type::*,
+    assets::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, proxy_type::*,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result, Unstructured};

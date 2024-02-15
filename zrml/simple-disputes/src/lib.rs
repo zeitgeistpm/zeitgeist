@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -55,7 +55,7 @@ mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use sp_runtime::{
-        traits::{CheckedDiv, Saturating},
+        traits::{CheckedDiv, Saturating, Zero},
         DispatchError, SaturatedConversion,
     };
 
@@ -375,18 +375,35 @@ mod pallet {
 
             for dispute in disputes.iter() {
                 if &dispute.outcome == resolved_outcome {
-                    T::Currency::unreserve_named(
+                    let missing = T::Currency::unreserve_named(
                         &Self::reserve_id(),
                         &dispute.by,
                         dispute.bond.saturated_into::<u128>().saturated_into(),
                     );
+                    debug_assert!(
+                        missing.is_zero(),
+                        "Could not unreserve all of the amount. reserve_id: {:?}, who: {:?}, \
+                         amount: {:?}, missing: {:?}",
+                        Self::reserve_id(),
+                        &dispute.by,
+                        dispute.bond.saturated_into::<u128>(),
+                        missing,
+                    );
 
                     correct_reporters.push(dispute.by.clone());
                 } else {
-                    let (imbalance, _) = T::Currency::slash_reserved_named(
+                    let (imbalance, missing) = T::Currency::slash_reserved_named(
                         &Self::reserve_id(),
                         &dispute.by,
                         dispute.bond.saturated_into::<u128>().saturated_into(),
+                    );
+                    debug_assert!(
+                        missing.is_zero(),
+                        "Could not slash all of the amount. reserve_id {:?}, who: {:?}, amount: \
+                         {:?}.",
+                        &Self::reserve_id(),
+                        &dispute.by,
+                        dispute.bond.saturated_into::<u128>(),
                     );
                     overall_imbalance.subsume(imbalance);
                 }
@@ -490,10 +507,19 @@ mod pallet {
             if market.status == MarketStatus::Disputed {
                 disputes_len = Disputes::<T>::decode_len(market_id).unwrap_or(0) as u32;
                 for dispute in Disputes::<T>::take(market_id).iter() {
-                    T::Currency::unreserve_named(
+                    let missing = T::Currency::unreserve_named(
                         &Self::reserve_id(),
                         &dispute.by,
                         dispute.bond.saturated_into::<u128>().saturated_into(),
+                    );
+                    debug_assert!(
+                        missing.is_zero(),
+                        "Could not unreserve all of the amount. reserve_id: {:?}, who: {:?}, \
+                         amount: {:?}, missing: {:?}",
+                        Self::reserve_id(),
+                        &dispute.by,
+                        dispute.bond.saturated_into::<u128>(),
+                        missing,
                     );
                 }
             }
@@ -550,7 +576,7 @@ where
             by: T::PalletId::get().into_account_truncating(),
         }),
         resolved_outcome: None,
-        scoring_rule: ScoringRule::CPMM,
+        scoring_rule: ScoringRule::Lmsr,
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
         bonds: MarketBonds::default(),
         early_close: None,

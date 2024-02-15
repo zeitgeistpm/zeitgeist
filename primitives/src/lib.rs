@@ -27,8 +27,6 @@ mod market;
 pub mod math;
 mod max_runtime_usize;
 mod outcome_report;
-mod pool;
-mod pool_status;
 mod proxy_type;
 pub mod traits;
 pub mod types;

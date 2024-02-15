@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -22,7 +22,11 @@ extern crate alloc;
 
 mod benchmarking;
 mod consts;
+mod helpers;
+mod liquidity_tree;
+mod macros;
 mod math;
+pub mod migration;
 mod mock;
 mod tests;
 pub mod traits;
@@ -34,10 +38,11 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        consts::MAX_ASSETS,
+        consts::{LN_NUMERICAL_LIMIT, MAX_ASSETS},
+        liquidity_tree::types::{BenchmarkInfo, LiquidityTree, LiquidityTreeError},
         math::{Math, MathOps},
         traits::{pool_operations::PoolOperations, LiquiditySharesManager},
-        types::{FeeDistribution, Pool, SoloLp},
+        types::{FeeDistribution, Pool},
         weights::*,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};
@@ -48,28 +53,43 @@ mod pallet {
         pallet_prelude::StorageMap,
         require_transactional,
         traits::{Get, IsType, StorageVersion},
-        transactional, PalletId, Twox64Concat,
+        transactional, PalletError, PalletId, RuntimeDebug, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
+    use parity_scale_codec::{Decode, Encode};
+    use scale_info::TypeInfo;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
-        math::fixed::{bdiv, bmul},
+        math::{
+            checked_ops_res::{CheckedAddRes, CheckedSubRes},
+            fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
+        },
         traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees},
         types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
+    pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
     // These should not be config parameters to avoid misconfigurations.
+    pub(crate) const EXIT_FEE: u128 = CENT / 10;
+    /// The minimum allowed swap fee. Hardcoded to avoid misconfigurations which may lead to
+    /// exploits.
     pub(crate) const MIN_SWAP_FEE: u128 = BASE / 1_000; // 0.1%.
-    pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    /// The maximum allowed spot price when creating a pool.
     pub(crate) const MAX_SPOT_PRICE: u128 = BASE - CENT / 2;
+    /// The minimum allowed spot price when creating a pool.
     pub(crate) const MIN_SPOT_PRICE: u128 = CENT / 2;
+    /// The minimum vallowed value of a pool's liquidity parameter.
     pub(crate) const MIN_LIQUIDITY: u128 = BASE;
+    /// The minimum percentage each new LP position must increase the liquidity by, represented as
+    /// fractional (0.0139098411 represents 1.39098411%).
+    pub(crate) const MIN_RELATIVE_LP_POSITION_VALUE: u128 = 139098411; // 1.39098411%
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
@@ -78,7 +98,8 @@ mod pallet {
     pub(crate) type AssetIndexType = u16;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type PoolOf<T> = Pool<T, SoloLp<T>>;
+    pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
+    pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -105,6 +126,11 @@ mod pallet {
 
         type WeightInfo: WeightInfoZeitgeist;
 
+        /// The maximum allowed liquidity tree depth per pool. Each pool can support
+        /// `2^(depth + 1) - 1` liquidity providers. **Must** be less than 16.
+        #[pallet::constant]
+        type MaxLiquidityTreeDepth: Get<u32>;
+
         #[pallet::constant]
         type MaxSwapFee: Get<BalanceOf<Self>>;
 
@@ -118,8 +144,7 @@ mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
-    #[pallet::getter(fn pools)]
-    pub type Pools<T: Config> = StorageMap<_, Twox64Concat, MarketIdOf<T>, PoolOf<T>>;
+    pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, MarketIdOf<T>, PoolOf<T>>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
@@ -139,7 +164,8 @@ mod pallet {
             external_fee_amount: BalanceOf<T>,
         },
         /// Informant sold a position. `amount_out` is the amount of collateral received by `who`,
-        /// including swap and external fees.
+        /// with swap and external fees not yet deducted. The actual amount received is
+        /// `amount_out - swap_fee_amount - external_fee_amount`.
         SellExecuted {
             who: T::AccountId,
             market_id: MarketIdOf<T>,
@@ -213,8 +239,6 @@ mod pallet {
         InvalidTradingMechanism,
         /// Pool can only be traded on if the market is active.
         MarketNotActive,
-        /// Deploying pools is only supported for scalar or binary markets.
-        MarketNotBinaryOrScalar,
         /// Some calculation failed. This shouldn't happen.
         MathError,
         /// The user is not allowed to execute this command.
@@ -222,7 +246,7 @@ mod pallet {
         /// This feature is not yet implemented.
         NotImplemented,
         /// Some value in the operation is too large or small.
-        NumericalLimits,
+        NumericalLimits(NumericalLimitsError),
         /// Outstanding fees prevent liquidity withdrawal.
         OutstandingFees,
         /// Specified market does not have a pool.
@@ -239,6 +263,22 @@ mod pallet {
         Unexpected,
         /// Specified monetary amount is zero.
         ZeroAmount,
+        /// An error occurred when handling the liquidty tree.
+        LiquidityTreeError(LiquidityTreeError),
+        /// The relative value of a new LP position is too low.
+        MinRelativeLiquidityThresholdViolated,
+    }
+
+    #[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
+    pub enum NumericalLimitsError {
+        /// Selling is not allowed at prices this low.
+        SpotPriceTooLow,
+        /// Sells which move the price below this threshold are not allowed.
+        SpotPriceSlippedTooLow,
+        /// The maximum buy or sell amount was exceeded.
+        MaxAmountExceeded,
+        /// The minimum buy or sell amount was exceeded.
+        MinAmountNotMet,
     }
 
     #[pallet::call]
@@ -248,6 +288,14 @@ mod pallet {
         /// The `amount_in` is paid in collateral. The transaction fails if the amount of outcome
         /// tokens received is smaller than `min_amount_out`. The user must correctly specify the
         /// number of outcomes for benchmarking reasons.
+        ///
+        /// The `amount_in` parameter must also satisfy lower and upper limits due to numerical
+        /// constraints. In fact, after `amount_in` has been adjusted for fees, the following must
+        /// hold:
+        ///
+        /// - `amount_in_minus_fees <= EXP_NUMERICAL_LIMIT * pool.liquidity_parameter`.
+        /// - `exp(amount_in_minus_fees/pool.liquidity_parameter) - 1 + p <= LN_NUMERICAL_LIMIT`,
+        ///   where `p` is the spot price of `asset_out`.
         ///
         /// # Parameters
         ///
@@ -263,7 +311,7 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(0)]
-        #[pallet::weight(T::WeightInfo::buy())]
+        #[pallet::weight(T::WeightInfo::buy(*asset_count as u32))]
         #[transactional]
         pub fn buy(
             origin: OriginFor<T>,
@@ -277,7 +325,7 @@ mod pallet {
             let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
             Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)?;
-            Ok(Some(T::WeightInfo::buy()).into())
+            Ok(Some(T::WeightInfo::buy(asset_count as u32)).into())
         }
 
         /// Sell outcome tokens to the specified market.
@@ -285,6 +333,13 @@ mod pallet {
         /// The `amount_in` is paid in outcome tokens. The transaction fails if the amount of outcome
         /// tokens received is smaller than `min_amount_out`. The user must correctly specify the
         /// number of outcomes for benchmarking reasons.
+        ///
+        /// The `amount_in` parameter must also satisfy lower and upper limits due to numerical
+        /// constraints. In fact, the following must hold:
+        ///
+        /// - `amount_in <= EXP_NUMERICAL_LIMIT * pool.liquidity_parameter`.
+        /// - The spot price of `asset_in` is greater than `exp(-EXP_NUMERICAL_LIMIT)` before and
+        ///   after execution
         ///
         /// # Parameters
         ///
@@ -300,7 +355,7 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(1)]
-        #[pallet::weight(T::WeightInfo::sell())]
+        #[pallet::weight(T::WeightInfo::sell(*asset_count as u32))]
         #[transactional]
         pub fn sell(
             origin: OriginFor<T>,
@@ -314,7 +369,7 @@ mod pallet {
             let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
             Self::do_sell(who, market_id, asset_in, amount_in, min_amount_out)?;
-            Ok(Some(T::WeightInfo::sell()).into())
+            Ok(Some(T::WeightInfo::sell(asset_count as u32)).into())
         }
 
         /// Join the liquidity pool for the specified market.
@@ -336,9 +391,15 @@ mod pallet {
         ///
         /// # Complexity
         ///
-        /// `O(n)` where `n` is the number of assets in the pool.
+        /// `O(n + d)` where `n` is the number of assets in the pool and `d` is the depth of the
+        /// pool's liquidity tree, or, equivalently, `log_2(m)` where `m` is the number of liquidity
+        /// providers in the pool.
         #[pallet::call_index(2)]
-        #[pallet::weight(T::WeightInfo::join())]
+        #[pallet::weight(
+            T::WeightInfo::join_in_place(max_amounts_in.len() as u32)
+                .max(T::WeightInfo::join_reassigned(max_amounts_in.len() as u32))
+                .max(T::WeightInfo::join_leaf(max_amounts_in.len() as u32))
+        )]
         #[transactional]
         pub fn join(
             origin: OriginFor<T>,
@@ -349,8 +410,7 @@ mod pallet {
             let who = ensure_signed(origin)?;
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(max_amounts_in.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
-            Self::do_join(who, market_id, pool_shares_amount, max_amounts_in)?;
-            Ok(Some(T::WeightInfo::join()).into())
+            Self::do_join(who, market_id, pool_shares_amount, max_amounts_in)
         }
 
         /// Exit the liquidity pool for the specified market.
@@ -365,7 +425,9 @@ mod pallet {
         /// batch transaction is very useful here.
         ///
         /// If the LP withdraws all pool shares that exist, then the pool is afterwards destroyed. A
-        /// new pool can be deployed at any time, provided that the market is still open.
+        /// new pool can be deployed at any time, provided that the market is still open. If there
+        /// are funds left in the pool account (this can happen due to exit fees), the remaining
+        /// funds are destroyed.
         ///
         /// The LP is not allowed to leave a positive but small amount liquidity in the pool. If the
         /// liquidity parameter drops below a certain threshold, the transaction will fail. The only
@@ -380,9 +442,11 @@ mod pallet {
         ///
         /// # Complexity
         ///
-        /// `O(n)` where `n` is the number of assets in the pool.
+        /// `O(n + d)` where `n` is the number of assets in the pool and `d` is the depth of the
+        /// pool's liquidity tree, or, equivalently, `log_2(m)` where `m` is the number of liquidity
+        /// providers in the pool.
         #[pallet::call_index(3)]
-        #[pallet::weight(T::WeightInfo::exit())]
+        #[pallet::weight(T::WeightInfo::exit(min_amounts_out.len() as u32))]
         #[transactional]
         pub fn exit(
             origin: OriginFor<T>,
@@ -394,7 +458,7 @@ mod pallet {
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(min_amounts_out.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
             Self::do_exit(who, market_id, pool_shares_amount_out, min_amounts_out)?;
-            Ok(Some(T::WeightInfo::exit()).into())
+            Ok(Some(T::WeightInfo::exit(asset_count as u32)).into())
         }
 
         /// Withdraw swap fees from the specified market.
@@ -444,9 +508,9 @@ mod pallet {
         ///
         /// # Complexity
         ///
-        /// `O(n)` where `n` is the number of outcomes in the specified market.
+        /// `O(n)` where `n` is the number of assets in the pool.
         #[pallet::call_index(5)]
-        #[pallet::weight(T::WeightInfo::deploy_pool())]
+        #[pallet::weight(T::WeightInfo::deploy_pool(spot_prices.len() as u32))]
         #[transactional]
         pub fn deploy_pool(
             origin: OriginFor<T>,
@@ -456,10 +520,10 @@ mod pallet {
             #[pallet::compact] swap_fee: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let asset_count = T::MarketCommons::market(&market_id)?.outcomes() as u32;
+            let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(spot_prices.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
             Self::do_deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
-            Ok(Some(T::WeightInfo::deploy_pool()).into())
+            Ok(Some(T::WeightInfo::deploy_pool(asset_count as u32)).into())
         }
     }
 
@@ -477,21 +541,24 @@ mod pallet {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             Self::try_mutate_pool(&market_id, |pool| {
                 ensure!(pool.contains(&asset_out), Error::<T>::AssetNotFound);
-                // Defensive check (shouldn't ever happen)!
-                ensure!(
-                    pool.calculate_spot_price(asset_out)? <= MAX_SPOT_PRICE.saturated_into(),
-                    Error::<T>::Unexpected
-                );
-                ensure!(amount_in <= pool.calculate_max_amount_in(), Error::<T>::NumericalLimits);
                 T::MultiCurrency::transfer(pool.collateral, &who, &pool.account_id, amount_in)?;
                 let FeeDistribution {
                     remaining: amount_in_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
                 } = Self::distribute_fees(market_id, pool, amount_in)?;
+                ensure!(
+                    amount_in_minus_fees <= pool.calculate_numerical_threshold(),
+                    Error::<T>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
+                );
+                ensure!(
+                    pool.calculate_buy_ln_argument(asset_out, amount_in_minus_fees)?
+                        >= LN_NUMERICAL_LIMIT.saturated_into(),
+                    Error::<T>::NumericalLimits(NumericalLimitsError::MinAmountNotMet),
+                );
                 let swap_amount_out =
                     pool.calculate_swap_amount_out_for_buy(asset_out, amount_in_minus_fees)?;
-                let amount_out = swap_amount_out.saturating_add(amount_in_minus_fees);
+                let amount_out = swap_amount_out.checked_add_res(&amount_in_minus_fees)?;
                 ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
                 // Instead of letting `who` buy the complete sets and then transfer almost all of
                 // the outcomes to the pool account, we prevent `(n-1)` storage reads by using the
@@ -508,11 +575,6 @@ mod pallet {
                         pool.decrease_reserve(asset, &amount_out)?;
                     }
                 }
-                let new_price = pool.calculate_spot_price(asset_out)?;
-                ensure!(
-                    new_price <= MAX_SPOT_PRICE.saturated_into(),
-                    Error::<T>::SpotPriceAboveMax
-                );
                 Self::deposit_event(Event::<T>::BuyExecuted {
                     who: who.clone(),
                     market_id,
@@ -539,12 +601,16 @@ mod pallet {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             Self::try_mutate_pool(&market_id, |pool| {
                 ensure!(pool.contains(&asset_in), Error::<T>::AssetNotFound);
-                // Defensive check (shouldn't ever happen)!
+                // Ensure that the price of `asset_in` is at least `exp(-EXP_NUMERICAL_LIMITS) =
+                // 4.5399...e-05`.
                 ensure!(
-                    pool.calculate_spot_price(asset_in)? >= MIN_SPOT_PRICE.saturated_into(),
-                    Error::<T>::Unexpected
+                    pool.reserve_of(&asset_in)? <= pool.calculate_numerical_threshold(),
+                    Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceTooLow),
                 );
-                ensure!(amount_in <= pool.calculate_max_amount_in(), Error::<T>::NumericalLimits);
+                ensure!(
+                    amount_in <= pool.calculate_numerical_threshold(),
+                    Error::<T>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
+                );
                 // Instead of first executing a swap with `(n-1)` transfers from the pool account to
                 // `who` and then selling complete sets, we prevent `(n-1)` storage reads: 1)
                 // Transfer `amount_in` units of `asset_in` to the pool account, 2) sell
@@ -552,7 +618,7 @@ mod pallet {
                 // `amount_out_minus_fees` units of collateral to `who`. The fees automatically end
                 // up in the pool.
                 let amount_out = pool.calculate_swap_amount_out_for_sell(asset_in, amount_in)?;
-                // Beware! This transfer happen _after_ calculating `amount_out`:
+                // Beware! This transfer **must** happen _after_ calculating `amount_out`:
                 T::MultiCurrency::transfer(asset_in, &who, &pool.account_id, amount_in)?;
                 T::CompleteSetOperations::sell_complete_set(
                     pool.account_id.clone(),
@@ -577,10 +643,11 @@ mod pallet {
                     }
                     pool.decrease_reserve(asset, &amount_out)?;
                 }
-                let new_price = pool.calculate_spot_price(asset_in)?;
+                // Ensure that the sell doesn't move the price below the minimum defined by
+                // `EXP_NUMERICAL_LIMITS` (see comment above).
                 ensure!(
-                    new_price >= MIN_SPOT_PRICE.saturated_into(),
-                    Error::<T>::SpotPriceBelowMin
+                    pool.reserve_of(&asset_in)? <= pool.calculate_numerical_threshold(),
+                    Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow),
                 );
                 Self::deposit_event(Event::<T>::SellExecuted {
                     who: who.clone(),
@@ -601,33 +668,39 @@ mod pallet {
             market_id: MarketIdOf<T>,
             pool_shares_amount: BalanceOf<T>,
             max_amounts_in: Vec<BalanceOf<T>>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-            Self::try_mutate_pool(&market_id, |pool| {
-                // FIXME Round up to avoid exploits.
-                let ratio = bdiv(
-                    pool_shares_amount.saturated_into(),
-                    pool.liquidity_shares_manager.total_shares()?.saturated_into(),
-                )?;
+            let asset_count = max_amounts_in.len() as u32;
+            ensure!(asset_count == market.outcomes() as u32, Error::<T>::IncorrectAssetCount);
+            let benchmark_info = Self::try_mutate_pool(&market_id, |pool| {
+                let ratio =
+                    pool_shares_amount.bdiv_ceil(pool.liquidity_shares_manager.total_shares()?)?;
+                // Ensure that new LPs contribute at least MIN_RELATIVE_LP_POSITION_VALUE. Note that
+                // this ensures that the ratio can never be zero.
+                if pool.liquidity_shares_manager.shares_of(&who).is_err() {
+                    ensure!(
+                        ratio >= MIN_RELATIVE_LP_POSITION_VALUE.saturated_into(),
+                        Error::<T>::MinRelativeLiquidityThresholdViolated,
+                    );
+                }
                 let mut amounts_in = vec![];
                 for (&asset, &max_amount_in) in pool.assets().iter().zip(max_amounts_in.iter()) {
                     let balance_in_pool = pool.reserve_of(&asset)?;
-                    // FIXME Round up to avoid exploits.
-                    let amount_in = bmul(ratio, balance_in_pool.saturated_into())?.saturated_into();
+                    let amount_in = ratio.bmul_ceil(balance_in_pool)?;
                     amounts_in.push(amount_in);
                     ensure!(amount_in <= max_amount_in, Error::<T>::AmountInAboveMax);
                     T::MultiCurrency::transfer(asset, &who, &pool.account_id, amount_in)?;
                 }
-                for ((_, balance), &amount_in) in pool.reserves.iter_mut().zip(amounts_in.iter()) {
-                    *balance = balance.saturating_add(amount_in);
+                for ((_, balance), amount_in) in pool.reserves.iter_mut().zip(amounts_in.iter()) {
+                    *balance = balance.checked_add_res(amount_in)?;
                 }
-                pool.liquidity_shares_manager.join(&who, pool_shares_amount)?;
-                let new_liquidity_parameter = pool.liquidity_parameter.saturating_add(
-                    bmul(ratio.saturated_into(), pool.liquidity_parameter.saturated_into())?
-                        .saturated_into(),
-                );
+                let benchmark_info =
+                    pool.liquidity_shares_manager.join(&who, pool_shares_amount)?;
+                let new_liquidity_parameter = pool
+                    .liquidity_parameter
+                    .checked_add_res(&ratio.bmul(pool.liquidity_parameter)?)?;
                 pool.liquidity_parameter = new_liquidity_parameter;
                 Self::deposit_event(Event::<T>::JoinExecuted {
                     who: who.clone(),
@@ -636,8 +709,14 @@ mod pallet {
                     amounts_in,
                     new_liquidity_parameter,
                 });
-                Ok(())
-            })
+                Ok(benchmark_info)
+            })?;
+            let weight = match benchmark_info {
+                BenchmarkInfo::InPlace => T::WeightInfo::join_in_place(asset_count),
+                BenchmarkInfo::Reassigned => T::WeightInfo::join_reassigned(asset_count),
+                BenchmarkInfo::Leaf => T::WeightInfo::join_leaf(asset_count),
+            };
+            Ok((Some(weight)).into())
         }
 
         #[require_transactional]
@@ -648,38 +727,45 @@ mod pallet {
             min_amounts_out: Vec<BalanceOf<T>>,
         ) -> DispatchResult {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
-            let _ = T::MarketCommons::market(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
             Pools::<T>::try_mutate_exists(market_id, |maybe_pool| {
                 let pool =
                     maybe_pool.as_mut().ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
-                ensure!(
-                    pool.liquidity_shares_manager.fees == Zero::zero(),
-                    Error::<T>::OutstandingFees
-                );
-                let ratio = bdiv(
-                    pool_shares_amount.saturated_into(),
-                    pool.liquidity_shares_manager.total_shares()?.saturated_into(),
-                )?;
+                let ratio = {
+                    let mut ratio = pool_shares_amount
+                        .bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
+                    if market.status == MarketStatus::Active {
+                        let multiplier = ZeitgeistBase::<BalanceOf<T>>::get()?
+                            .checked_sub_res(&EXIT_FEE.saturated_into())?;
+                        ratio = ratio.bmul_floor(multiplier)?;
+                    }
+                    ratio
+                };
                 let mut amounts_out = vec![];
                 for (&asset, &min_amount_out) in pool.assets().iter().zip(min_amounts_out.iter()) {
                     let balance_in_pool = pool.reserve_of(&asset)?;
-                    let amount_out: BalanceOf<T> =
-                        bmul(ratio, balance_in_pool.saturated_into())?.saturated_into();
+                    let amount_out = ratio.bmul_floor(balance_in_pool)?;
                     amounts_out.push(amount_out);
                     ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
                     T::MultiCurrency::transfer(asset, &pool.account_id, &who, amount_out)?;
                 }
-                for ((_, balance), &amount_out) in pool.reserves.iter_mut().zip(amounts_out.iter())
-                {
-                    *balance = balance.saturating_sub(amount_out);
+                for ((_, balance), amount_out) in pool.reserves.iter_mut().zip(amounts_out.iter()) {
+                    *balance = balance.checked_sub_res(amount_out)?;
                 }
                 pool.liquidity_shares_manager.exit(&who, pool_shares_amount)?;
                 if pool.liquidity_shares_manager.total_shares()? == Zero::zero() {
-                    // FIXME We will withdraw all remaining funds (the "buffer"). This is an ugly
-                    // hack and system should offer the option to whitelist accounts.
-                    let remaining =
-                        T::MultiCurrency::free_balance(pool.collateral, &pool.account_id);
-                    T::MultiCurrency::withdraw(pool.collateral, &pool.account_id, remaining)?;
+                    let withdraw_remaining = |&asset| -> DispatchResult {
+                        let remaining = T::MultiCurrency::free_balance(asset, &pool.account_id);
+                        T::MultiCurrency::withdraw(asset, &pool.account_id, remaining)?;
+                        Ok(())
+                    };
+                    // TODO(#1220): We will withdraw all remaining funds (the "buffer"). This is an
+                    // ugly hack and frame_system should offer the option to whitelist accounts.
+                    withdraw_remaining(&pool.collateral)?;
+                    // Clear left-over tokens. These naturally occur in the form of exit fees.
+                    for asset in pool.assets().iter() {
+                        withdraw_remaining(asset)?;
+                    }
                     *maybe_pool = None; // Delete the storage map entry.
                     Self::deposit_event(Event::<T>::PoolDestroyed {
                         who: who.clone(),
@@ -687,14 +773,26 @@ mod pallet {
                         amounts_out,
                     });
                 } else {
-                    let liq = pool.liquidity_parameter;
-                    let new_liquidity_parameter = liq.saturating_sub(
-                        bmul(ratio.saturated_into(), liq.saturated_into())?.saturated_into(),
-                    );
-                    ensure!(
-                        new_liquidity_parameter >= MIN_LIQUIDITY.saturated_into(),
-                        Error::<T>::LiquidityTooLow
-                    );
+                    let old_liquidity_parameter = pool.liquidity_parameter;
+                    let new_liquidity_parameter = old_liquidity_parameter
+                        .checked_sub_res(&ratio.bmul(old_liquidity_parameter)?)?;
+                    // If `who` still holds pool shares, check that their position has at least
+                    // minimum size.
+                    if let Ok(remaining_pool_shares_amount) =
+                        pool.liquidity_shares_manager.shares_of(&who)
+                    {
+                        ensure!(
+                            new_liquidity_parameter >= MIN_LIQUIDITY.saturated_into(),
+                            Error::<T>::LiquidityTooLow
+                        );
+                        let remaining_pool_shares_ratio = remaining_pool_shares_amount
+                            .bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
+                        ensure!(
+                            remaining_pool_shares_ratio
+                                >= MIN_RELATIVE_LP_POSITION_VALUE.saturated_into(),
+                            Error::<T>::MinRelativeLiquidityThresholdViolated
+                        );
+                    }
                     pool.liquidity_parameter = new_liquidity_parameter;
                     Self::deposit_event(Event::<T>::ExitExecuted {
                         who: who.clone(),
@@ -732,12 +830,10 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(!Pools::<T>::contains_key(market_id), Error::<T>::DuplicatePool);
             let market = T::MarketCommons::market(&market_id)?;
-            ensure!(market.creator == who, Error::<T>::NotAllowed);
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             ensure!(market.scoring_rule == ScoringRule::Lmsr, Error::<T>::InvalidTradingMechanism);
             let asset_count = spot_prices.len();
             ensure!(asset_count as u16 == market.outcomes(), Error::<T>::IncorrectVecLen);
-            ensure!(market.outcomes() == 2, Error::<T>::MarketNotBinaryOrScalar);
             ensure!(market.outcomes() <= MAX_ASSETS, Error::<T>::AssetCountAboveMax);
             ensure!(swap_fee >= MIN_SWAP_FEE.saturated_into(), Error::<T>::SwapFeeBelowMin);
             ensure!(swap_fee <= T::MaxSwapFee::get(), Error::<T>::SwapFeeAboveMax);
@@ -777,11 +873,11 @@ mod pallet {
                 reserves: reserves.clone(),
                 collateral,
                 liquidity_parameter,
-                liquidity_shares_manager: SoloLp::new(who.clone(), amount),
+                liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
                 swap_fee,
             };
-            // FIXME Ensure that the existential deposit doesn't kill fees. This is an ugly hack and
-            // system should offer the option to whitelist accounts.
+            // TODO(#1220): Ensure that the existential deposit doesn't kill fees. This is an ugly
+            // hack and system should offer the option to whitelist accounts.
             T::MultiCurrency::transfer(
                 pool.collateral,
                 &who,
@@ -823,8 +919,7 @@ mod pallet {
             pool: &mut PoolOf<T>,
             amount: BalanceOf<T>,
         ) -> Result<FeeDistribution<T>, DispatchError> {
-            let swap_fees_u128 = bmul(pool.swap_fee.saturated_into(), amount.saturated_into())?;
-            let swap_fees = swap_fees_u128.saturated_into();
+            let swap_fees = pool.swap_fee.bmul(amount)?;
             pool.liquidity_shares_manager.deposit_fees(swap_fees)?; // Should only error unexpectedly!
             let external_fees =
                 T::ExternalFees::distribute(market_id, pool.collateral, &pool.account_id, amount);
@@ -833,7 +928,7 @@ mod pallet {
             Ok(FeeDistribution { remaining, swap_fees, external_fees })
         }
 
-        // FIXME Carbon copy of a function in prediction-markets. To be removed later.
+        // TODO(#1218): Carbon copy of a function in prediction-markets. To be removed later.
         fn outcomes(market_id: MarketIdOf<T>) -> Result<Vec<AssetOf<T>>, DispatchError> {
             let market = T::MarketCommons::market(&market_id)?;
             Ok(match market.market_type {
@@ -853,9 +948,12 @@ mod pallet {
             })
         }
 
-        fn try_mutate_pool<F>(market_id: &MarketIdOf<T>, mutator: F) -> DispatchResult
+        pub(crate) fn try_mutate_pool<R, F>(
+            market_id: &MarketIdOf<T>,
+            mutator: F,
+        ) -> Result<R, DispatchError>
         where
-            F: FnMut(&mut PoolOf<T>) -> DispatchResult,
+            F: FnMut(&mut PoolOf<T>) -> Result<R, DispatchError>,
         {
             Pools::<T>::try_mutate(market_id, |maybe_pool| {
                 maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound.into()).and_then(mutator)

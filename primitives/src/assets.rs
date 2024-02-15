@@ -16,7 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::{CampaignAssetId, CategoryIndex, CustomAssetId, PoolId};
+#[cfg(feature = "runtime-benchmarks")]
+use crate::traits::ZeitgeistAssetEnumerator;
+use crate::{
+    traits::PoolSharesId,
+    types::{CampaignAssetId, CategoryIndex, CustomAssetId, PoolId},
+};
 use parity_scale_codec::{Compact, CompactAs, Decode, Encode, HasCompact, MaxEncodedLen};
 use scale_info::TypeInfo;
 

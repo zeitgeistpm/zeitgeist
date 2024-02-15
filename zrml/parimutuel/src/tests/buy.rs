@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -34,11 +34,11 @@ fn buy_emits_event() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
-        let amount = <Runtime as Config>::MinBetSize::get();
+        let amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
-        let amount_minus_fees = 9900000000;
-        let fees = 100000000;
+        let amount_minus_fees = 99000000000;
+        let fees = 1000000000;
         assert_eq!(amount, amount_minus_fees + fees);
 
         System::assert_last_event(
@@ -63,11 +63,11 @@ fn buy_balances_change_correctly() {
             AssetManager::free_balance(base_asset, &Parimutuel::pot_account(market_id));
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
-        let amount = <Runtime as Config>::MinBetSize::get();
+        let amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
-        let amount_minus_fees = 9900000000;
-        let fees = 100000000;
+        let amount_minus_fees = 99000000000;
+        let fees = 1000000000;
         assert_eq!(amount, amount_minus_fees + fees);
 
         assert_eq!(AssetManager::free_balance(base_asset, &ALICE), free_alice_before - amount);
@@ -101,10 +101,8 @@ fn buy_fails_if_asset_not_parimutuel_share() {
     });
 }
 
-#[test_case(ScoringRule::CPMM; "cpmm")]
 #[test_case(ScoringRule::Orderbook; "orderbook")]
 #[test_case(ScoringRule::Lmsr; "lmsr")]
-#[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "rikiddo sigmoid fee market ema")]
 fn buy_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
@@ -124,10 +122,7 @@ fn buy_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
 }
 
 #[test_case(MarketStatus::Proposed; "proposed")]
-#[test_case(MarketStatus::Suspended; "suspended")]
 #[test_case(MarketStatus::Closed; "closed")]
-#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
-#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
 #[test_case(MarketStatus::Reported; "reported")]
 #[test_case(MarketStatus::Disputed; "disputed")]
 fn buy_fails_if_market_status_is_not_active(status: MarketStatus) {
@@ -200,7 +195,7 @@ fn buy_fails_if_below_minimum_bet_size() {
         let amount = <Runtime as Config>::MinBetSize::get() - 1;
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),
-            Error::<Runtime>::AmountTooSmall
+            Error::<Runtime>::AmountBelowMinimumBetSize
         );
     });
 }

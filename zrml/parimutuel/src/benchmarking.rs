@@ -26,6 +26,7 @@ use frame_benchmarking::v2::*;
 use frame_support::traits::Get;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
+use sp_runtime::{SaturatedConversion, Saturating};
 use zeitgeist_primitives::types::{Asset, MarketStatus, MarketType, OutcomeReport};
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -60,7 +61,7 @@ mod benchmarks {
 
         let market_id = setup_market::<T>(MarketType::Categorical(64u16));
 
-        let amount = T::MinBetSize::get();
+        let amount = T::MinBetSize::get().saturating_mul(10u128.saturated_into::<BalanceOf<T>>());
         let asset = Asset::ParimutuelShare(market_id, 0u16);
 
         let market = T::MarketCommons::market(&market_id).unwrap();
@@ -77,12 +78,14 @@ mod benchmarks {
 
         let winner = whitelisted_caller();
         let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
-        let winner_amount = T::MinBetSize::get() + T::MinBetSize::get();
+        let winner_amount =
+            T::MinBetSize::get().saturating_mul(20u128.saturated_into::<BalanceOf<T>>());
         buy_asset::<T>(market_id, winner_asset, &winner, winner_amount);
 
         let loser = whitelisted_caller();
         let loser_asset = Asset::ParimutuelShare(market_id, 1u16);
-        let loser_amount = T::MinBetSize::get();
+        let loser_amount =
+            T::MinBetSize::get().saturating_mul(10u128.saturated_into::<BalanceOf<T>>());
         buy_asset::<T>(market_id, loser_asset, &loser, loser_amount);
 
         T::MarketCommons::mutate_market(&market_id, |market| {
@@ -103,13 +106,15 @@ mod benchmarks {
         let loser_0 = whitelisted_caller();
         let loser_0_index = 0u16;
         let loser_0_asset = Asset::ParimutuelShare(market_id, loser_0_index);
-        let loser_0_amount = T::MinBetSize::get() + T::MinBetSize::get();
+        let loser_0_amount =
+            T::MinBetSize::get().saturating_mul(20u128.saturated_into::<BalanceOf<T>>());
         buy_asset::<T>(market_id, loser_0_asset, &loser_0, loser_0_amount);
 
         let loser_1 = whitelisted_caller();
         let loser_1_index = 1u16;
         let loser_1_asset = Asset::ParimutuelShare(market_id, loser_1_index);
-        let loser_1_amount = T::MinBetSize::get();
+        let loser_1_amount =
+            T::MinBetSize::get().saturating_mul(10u128.saturated_into::<BalanceOf<T>>());
         buy_asset::<T>(market_id, loser_1_asset, &loser_1, loser_1_amount);
 
         T::MarketCommons::mutate_market(&market_id, |market| {

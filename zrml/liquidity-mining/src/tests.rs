@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -220,7 +220,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
             report: None,
             resolved_outcome: None,
             status: MarketStatus::Closed,
-            scoring_rule: ScoringRule::CPMM,
+            scoring_rule: ScoringRule::Lmsr,
             bonds: MarketBonds::default(),
             early_close: None,
         },

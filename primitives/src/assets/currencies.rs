@@ -36,7 +36,6 @@ pub enum CurrencyClass<MI> {
     #[codec(index = 3)]
     PoolShare(PoolId),
 
-    // Type can not be compacted as it is already used uncompacted in the storage
     #[codec(index = 5)]
     ForeignAsset(u32),
 

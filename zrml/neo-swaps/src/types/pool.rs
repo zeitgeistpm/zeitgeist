@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -30,7 +30,7 @@ use sp_runtime::{
     DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion, Saturating,
 };
 
-#[derive(TypeInfo, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
+#[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 #[scale_info(skip_type_params(T))]
 pub struct Pool<T: Config, LSM>
 where
@@ -103,12 +103,23 @@ where
         Math::<T>::calculate_spot_price(reserve, self.liquidity_parameter)
     }
 
-    fn calculate_max_amount_in(&self) -> BalanceOf<T> {
+    fn calculate_numerical_threshold(&self) -> BalanceOf<T> {
         // Saturation is OK. If this saturates, the maximum amount in is just the numerical limit.
         self.liquidity_parameter.saturating_mul(EXP_NUMERICAL_LIMIT.saturated_into())
     }
+
+    fn calculate_buy_ln_argument(
+        &self,
+        asset: AssetOf<T>,
+        amount_in: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        let reserve = self.reserve_of(&asset)?;
+        Math::<T>::calculate_buy_ln_argument(reserve, amount_in, self.liquidity_parameter)
+    }
 }
 
+// TODO(#1214): Replace BTreeMap with BoundedBTreeMap and remove the unnecessary `MaxEncodedLen`
+// implementation.
 impl<T: Config, LSM: LiquiditySharesManager<T>> MaxEncodedLen for Pool<T, LSM>
 where
     T::AccountId: MaxEncodedLen,

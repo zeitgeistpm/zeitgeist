@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -35,12 +35,11 @@ fn claim_rewards_emits_event() {
         Markets::<Runtime>::insert(market_id, market);
 
         let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
-        let winner_amount =
-            <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
+        let winner_amount = 20 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount));
 
         let loser_asset = Asset::ParimutuelShare(market_id, 1u16);
-        let loser_amount = <Runtime as Config>::MinBetSize::get();
+        let loser_amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(BOB), loser_asset, loser_amount));
 
         let mut market = Markets::<Runtime>::get(market_id).unwrap();
@@ -50,8 +49,8 @@ fn claim_rewards_emits_event() {
 
         assert_ok!(Parimutuel::claim_rewards(RuntimeOrigin::signed(ALICE), market_id));
 
-        let withdrawn_asset_balance = 19800000000;
-        let actual_payoff = 29700000000;
+        let withdrawn_asset_balance = 198000000000;
+        let actual_payoff = 297000000000;
 
         System::assert_last_event(
             Event::RewardsClaimed {
@@ -75,17 +74,14 @@ fn claim_rewards_categorical_changes_balances_correctly() {
         Markets::<Runtime>::insert(market_id, market);
 
         let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
-        let winner_amount_0 =
-            <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
+        let winner_amount_0 = 20 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount_0));
 
-        let winner_amount_1 = <Runtime as Config>::MinBetSize::get()
-            + <Runtime as Config>::MinBetSize::get()
-            + <Runtime as Config>::MinBetSize::get();
+        let winner_amount_1 = 30 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(CHARLIE), winner_asset, winner_amount_1));
 
         let loser_asset = Asset::ParimutuelShare(market_id, 1u16);
-        let loser_amount = <Runtime as Config>::MinBetSize::get();
+        let loser_amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(BOB), loser_asset, loser_amount));
 
         let mut market = Markets::<Runtime>::get(market_id).unwrap();
@@ -93,17 +89,17 @@ fn claim_rewards_categorical_changes_balances_correctly() {
         market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let actual_payoff = 59400000000;
+        let actual_payoff = 594000000000;
         let winner_amount = winner_amount_0 + winner_amount_1;
         let total_pot_amount = loser_amount + winner_amount;
         let total_fees = Percent::from_percent(1) * total_pot_amount;
         assert_eq!(actual_payoff, total_pot_amount - total_fees);
 
-        // 2/5 from 59400000000 = 23760000000
-        let actual_payoff_alice = 23760000000;
+        // 2/5 from 594000000000 = 237600000000
+        let actual_payoff_alice = 237600000000;
         assert_eq!(Percent::from_percent(40) * actual_payoff, actual_payoff_alice);
-        // 3/5 from 59400000000 = 35640000000
-        let actual_payoff_charlie = 35640000000;
+        // 3/5 from 594000000000 = 356400000000
+        let actual_payoff_charlie = 356400000000;
         assert_eq!(Percent::from_percent(60) * actual_payoff, actual_payoff_charlie);
         assert_eq!(actual_payoff_alice + actual_payoff_charlie, actual_payoff);
 
@@ -178,10 +174,7 @@ fn claim_rewards_fails_if_market_type_is_scalar() {
 
 #[test_case(MarketStatus::Active; "active")]
 #[test_case(MarketStatus::Proposed; "proposed")]
-#[test_case(MarketStatus::Suspended; "suspended")]
 #[test_case(MarketStatus::Closed; "closed")]
-#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
-#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
 #[test_case(MarketStatus::Reported; "reported")]
 #[test_case(MarketStatus::Disputed; "disputed")]
 fn claim_rewards_fails_if_not_resolved(status: MarketStatus) {
@@ -198,10 +191,8 @@ fn claim_rewards_fails_if_not_resolved(status: MarketStatus) {
     });
 }
 
-#[test_case(ScoringRule::CPMM; "cpmm")]
 #[test_case(ScoringRule::Orderbook; "orderbook")]
 #[test_case(ScoringRule::Lmsr; "lmsr")]
-#[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "rikiddo sigmoid fee market ema")]
 fn claim_rewards_fails_if_scoring_rule_not_parimutuel(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
@@ -255,12 +246,11 @@ fn claim_rewards_categorical_fails_if_no_winner() {
         Markets::<Runtime>::insert(market_id, market);
 
         let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
-        let winner_amount =
-            <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
+        let winner_amount = 20 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount));
 
         let loser_asset = Asset::ParimutuelShare(market_id, 1u16);
-        let loser_amount = <Runtime as Config>::MinBetSize::get();
+        let loser_amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(BOB), loser_asset, loser_amount));
 
         let mut market = Markets::<Runtime>::get(market_id).unwrap();
@@ -286,12 +276,11 @@ fn claim_rewards_categorical_fails_if_no_winning_shares() {
         Markets::<Runtime>::insert(market_id, market);
 
         let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
-        let winner_amount =
-            <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
+        let winner_amount = 20 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount));
 
         let loser_asset = Asset::ParimutuelShare(market_id, 1u16);
-        let loser_amount = <Runtime as Config>::MinBetSize::get();
+        let loser_amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(BOB), loser_asset, loser_amount));
 
         let mut market = Markets::<Runtime>::get(market_id).unwrap();
@@ -317,12 +306,11 @@ fn claim_refunds_works() {
         Markets::<Runtime>::insert(market_id, market);
 
         let alice_asset = Asset::ParimutuelShare(market_id, 0u16);
-        let alice_amount =
-            <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
+        let alice_amount = 20 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), alice_asset, alice_amount));
 
         let bob_asset = Asset::ParimutuelShare(market_id, 1u16);
-        let bob_amount = <Runtime as Config>::MinBetSize::get();
+        let bob_amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(BOB), bob_asset, bob_amount));
 
         let mut market = Markets::<Runtime>::get(market_id).unwrap();

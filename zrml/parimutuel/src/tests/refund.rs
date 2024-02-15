@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -46,10 +46,7 @@ fn refund_fails_if_not_parimutuel_outcome() {
 
 #[test_case(MarketStatus::Active; "active")]
 #[test_case(MarketStatus::Proposed; "proposed")]
-#[test_case(MarketStatus::Suspended; "suspended")]
 #[test_case(MarketStatus::Closed; "closed")]
-#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
-#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
 #[test_case(MarketStatus::Reported; "reported")]
 #[test_case(MarketStatus::Disputed; "disputed")]
 fn refund_fails_if_market_not_resolved(status: MarketStatus) {
@@ -68,10 +65,8 @@ fn refund_fails_if_market_not_resolved(status: MarketStatus) {
     });
 }
 
-#[test_case(ScoringRule::CPMM; "cpmm")]
 #[test_case(ScoringRule::Orderbook; "orderbook")]
 #[test_case(ScoringRule::Lmsr; "lmsr")]
-#[test_case(ScoringRule::RikiddoSigmoidFeeMarketEma; "rikiddo sigmoid fee market ema")]
 fn refund_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
@@ -137,7 +132,7 @@ fn refund_fails_if_refund_not_allowed() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
-        let amount = <Runtime as Config>::MinBetSize::get();
+        let amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
         let mut market = Markets::<Runtime>::get(market_id).unwrap();
@@ -163,7 +158,7 @@ fn refund_fails_if_refundable_balance_is_zero() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
-        let amount = <Runtime as Config>::MinBetSize::get();
+        let amount = 2 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
         let mut market = Markets::<Runtime>::get(market_id).unwrap();
@@ -192,7 +187,7 @@ fn refund_emits_event() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
-        let amount = <Runtime as Config>::MinBetSize::get();
+        let amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
         let mut market = Markets::<Runtime>::get(market_id).unwrap();

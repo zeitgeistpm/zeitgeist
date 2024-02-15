@@ -168,6 +168,8 @@ parameter_types! {
     pub const MaxSelectedDraws: u32 = 510;
     /// The maximum number of jurors / delegators that can be registered.
     pub const MaxCourtParticipants: u32 = 1_000;
+    /// The maximum yearly inflation for court incentivisation.
+    pub const MaxYearlyInflation: Perbill = Perbill::from_percent(10);
     /// The minimum stake a user needs to reserve to become a juror.
     pub const MinJurorStake: Balance = 500 * BASE;
     /// The interval for requesting multiple court votes at once.
@@ -232,6 +234,7 @@ parameter_types! {
     // NeoSwaps
     pub const NeoSwapsMaxSwapFee: Balance = 10 * CENT;
     pub const NeoSwapsPalletId: PalletId = NS_PALLET_ID;
+    pub const MaxLiquidityTreeDepth: u32 = 9u32;
 
     // ORML
     pub const GetNativeCurrencyId: Assets = Asset::Ztg;

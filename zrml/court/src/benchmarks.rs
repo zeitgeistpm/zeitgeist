@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -27,7 +27,7 @@ use crate::{
     types::{CourtParticipantInfo, CourtPoolItem, CourtStatus, Draw, Vote},
     AppealInfo, BalanceOf, Call, Config, CourtId, CourtPool, Courts, DelegatedStakesOf,
     MarketIdToCourtId, MarketOf, Pallet as Court, Pallet, Participants, RequestBlock,
-    SelectedDraws, VoteItem,
+    SelectedDraws, VoteItem, YearlyInflation,
 };
 use alloc::{vec, vec::Vec};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
@@ -77,7 +77,7 @@ where
         }),
         resolved_outcome: None,
         status: MarketStatus::Disputed,
-        scoring_rule: ScoringRule::CPMM,
+        scoring_rule: ScoringRule::Lmsr,
         bonds: MarketBonds {
             creation: None,
             oracle: None,
@@ -247,9 +247,30 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         join_with_min_stake::<T>(&caller)?;
 
+        // to check that we execute the worst case benchmark path
+        let joined_at_before = <frame_system::Pallet<T>>::block_number();
+        let pool = CourtPool::<T>::get();
+        assert_eq!(
+            pool.into_inner().iter().find(|i| i.court_participant == caller).unwrap().joined_at,
+            joined_at_before,
+        );
+        <frame_system::Pallet<T>>::set_block_number(
+            joined_at_before + 1u64.saturated_into::<T::BlockNumber>(),
+        );
+
         let new_stake = T::MinJurorStake::get()
             .saturating_add(1u128.saturated_into::<BalanceOf<T>>());
-    }: _(RawOrigin::Signed(caller), new_stake)
+    }: _(RawOrigin::Signed(caller.clone()), new_stake)
+    verify {
+        let now = <frame_system::Pallet<T>>::block_number();
+        let pool = CourtPool::<T>::get();
+        // joined_at did not change, because it was rewritten to the newly created pool item
+        assert_ne!(now, joined_at_before);
+        assert_eq!(
+            pool.into_inner().iter().find(|i| i.court_participant == caller).unwrap().joined_at,
+            joined_at_before,
+        );
+    }
 
     delegate {
         // jurors greater or equal to MaxDelegations,
@@ -262,6 +283,17 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         join_with_min_stake::<T>(&caller)?;
 
+        // to check that we execute the worst case benchmark path
+        let joined_at_before = <frame_system::Pallet<T>>::block_number();
+        let pool = CourtPool::<T>::get();
+        assert_eq!(
+            pool.into_inner().iter().find(|i| i.court_participant == caller).unwrap().joined_at,
+            joined_at_before,
+        );
+        <frame_system::Pallet<T>>::set_block_number(
+            joined_at_before + 1u64.saturated_into::<T::BlockNumber>(),
+        );
+
         let juror_pool = <CourtPool<T>>::get();
         let mut delegations = Vec::<T::AccountId>::new();
         juror_pool.iter()
@@ -270,7 +302,17 @@ benchmarks! {
 
         let new_stake = T::MinJurorStake::get()
             .saturating_add(1u128.saturated_into::<BalanceOf<T>>());
-    }: _(RawOrigin::Signed(caller), new_stake, delegations)
+    }: _(RawOrigin::Signed(caller.clone()), new_stake, delegations)
+    verify {
+        let now = <frame_system::Pallet<T>>::block_number();
+        let pool = CourtPool::<T>::get();
+        // joined_at did not change, because it was rewritten to the newly created pool item
+        assert_ne!(now, joined_at_before);
+        assert_eq!(
+            pool.into_inner().iter().find(|i| i.court_participant == caller).unwrap().joined_at,
+            joined_at_before,
+        );
+    }
 
     prepare_exit_court {
         let j in 0..(T::MaxCourtParticipants::get() - 1);
@@ -279,7 +321,23 @@ benchmarks! {
 
         let caller: T::AccountId = whitelisted_caller();
         join_with_min_stake::<T>(&caller)?;
+        // query pool participant to check that we execute the worst case benchmark path
+        let pool_participant = <CourtPool<T>>::get()
+            .into_inner()
+            .iter()
+            .find(|pool_item| pool_item.court_participant == caller)
+            .map(|pool_item| pool_item.court_participant.clone())
+            .unwrap();
     }: _(RawOrigin::Signed(caller))
+    verify {
+        // worst case: pool participant was actually removed
+        assert!(
+            !<CourtPool<T>>::get()
+                .into_inner()
+                .iter()
+                .any(|pool_item| pool_item.court_participant == pool_participant)
+        );
+    }
 
     exit_court_remove {
         let caller: T::AccountId = whitelisted_caller();
@@ -294,7 +352,10 @@ benchmarks! {
         });
 
         let juror = T::Lookup::unlookup(caller.clone());
-    }: exit_court(RawOrigin::Signed(caller), juror)
+    }: exit_court(RawOrigin::Signed(caller.clone()), juror)
+    verify {
+        assert!(!<Participants<T>>::contains_key(caller));
+    }
 
     exit_court_set {
         let caller: T::AccountId = whitelisted_caller();
@@ -309,7 +370,10 @@ benchmarks! {
         });
 
         let juror = T::Lookup::unlookup(caller.clone());
-    }: exit_court(RawOrigin::Signed(caller), juror)
+    }: exit_court(RawOrigin::Signed(caller.clone()), juror)
+    verify {
+        assert_eq!(<Participants<T>>::get(caller).unwrap().active_lock, T::MinJurorStake::get());
+    }
 
     vote {
         let d in 1..T::MaxSelectedDraws::get();
@@ -333,14 +397,23 @@ benchmarks! {
             weight: 1u32,
             slashable: BalanceOf::<T>::zero(),
         };
-        let index = draws.binary_search_by_key(&caller, |draw| draw.court_participant.clone()).unwrap_or_else(|j| j);
+        let index = draws
+                .binary_search_by_key(&caller, |draw| draw.court_participant.clone())
+                .unwrap_or_else(|j| j);
         draws.try_insert(index, draw).unwrap();
         <SelectedDraws<T>>::insert(court_id, draws);
 
-        <frame_system::Pallet<T>>::set_block_number(pre_vote + 1u64.saturated_into::<T::BlockNumber>());
+        <frame_system::Pallet<T>>::set_block_number(
+            pre_vote + 1u64.saturated_into::<T::BlockNumber>(),
+        );
 
         let commitment_vote = Default::default();
-    }: _(RawOrigin::Signed(caller), court_id, commitment_vote)
+    }: _(RawOrigin::Signed(caller.clone()), court_id, commitment_vote)
+    verify {
+        let draws = <SelectedDraws<T>>::get(court_id);
+        let draw = draws.iter().find(|draw| draw.court_participant == caller).unwrap();
+        assert_eq!(draw.vote, Vote::Secret { commitment: commitment_vote });
+    }
 
     denounce_vote {
         let d in 1..T::MaxSelectedDraws::get();
@@ -373,9 +446,11 @@ benchmarks! {
         let mut draws = <SelectedDraws<T>>::get(court_id);
         draws.remove(0);
         let draws_len = draws.len();
-        let index = draws.binary_search_by_key(&denounced_juror, |draw| draw.court_participant.clone()).unwrap_or_else(|j| j);
+        let index = draws
+                .binary_search_by_key(&denounced_juror, |draw| draw.court_participant.clone())
+                .unwrap_or_else(|j| j);
         let draw = Draw {
-            court_participant: denounced_juror,
+            court_participant: denounced_juror.clone(),
             vote: Vote::Secret { commitment },
             weight: 1u32,
             slashable: T::MinJurorStake::get(),
@@ -383,8 +458,15 @@ benchmarks! {
         draws.try_insert(index, draw).unwrap();
         <SelectedDraws<T>>::insert(court_id, draws);
 
-        <frame_system::Pallet<T>>::set_block_number(pre_vote + 1u64.saturated_into::<T::BlockNumber>());
-    }: _(RawOrigin::Signed(caller), court_id, denounced_juror_unlookup, vote_item, salt)
+        <frame_system::Pallet<T>>::set_block_number(
+            pre_vote + 1u64.saturated_into::<T::BlockNumber>(),
+        );
+    }: _(RawOrigin::Signed(caller), court_id, denounced_juror_unlookup, vote_item.clone(), salt)
+    verify {
+        let draws = <SelectedDraws<T>>::get(court_id);
+        let draw = draws.iter().find(|draw| draw.court_participant == denounced_juror).unwrap();
+        assert_eq!(draw.vote, Vote::Denounced { commitment, vote_item, salt });
+    }
 
     reveal_vote {
         let d in 1..T::MaxSelectedDraws::get();
@@ -414,7 +496,9 @@ benchmarks! {
         let mut draws = <SelectedDraws<T>>::get(court_id);
         let draws_len = draws.len();
         draws.remove(0);
-        let index = draws.binary_search_by_key(&caller, |draw| draw.court_participant.clone()).unwrap_or_else(|j| j);
+        let index = draws
+                .binary_search_by_key(&caller, |draw| draw.court_participant.clone())
+                .unwrap_or_else(|j| j);
         draws.try_insert(index, Draw {
             court_participant: caller.clone(),
             vote: Vote::Secret { commitment },
@@ -423,8 +507,15 @@ benchmarks! {
         }).unwrap();
         <SelectedDraws<T>>::insert(court_id, draws);
 
-        <frame_system::Pallet<T>>::set_block_number(vote_end + 1u64.saturated_into::<T::BlockNumber>());
-    }: _(RawOrigin::Signed(caller), court_id, vote_item, salt)
+        <frame_system::Pallet<T>>::set_block_number(
+            vote_end + 1u64.saturated_into::<T::BlockNumber>()
+        );
+    }: _(RawOrigin::Signed(caller.clone()), court_id, vote_item.clone(), salt)
+    verify {
+        let draws = <SelectedDraws<T>>::get(court_id);
+        let draw = draws.iter().find(|draw| draw.court_participant == caller).unwrap();
+        assert_eq!(draw.vote, Vote::Revealed { commitment, vote_item, salt });
+    }
 
     appeal {
         // from 255 because in the last appeal round we need at least 255 jurors
@@ -442,6 +533,7 @@ benchmarks! {
 
         let caller: T::AccountId = whitelisted_caller();
         deposit::<T>(&caller);
+        // adds resolve_at for the created market
         let (market_id, court_id) = setup_court::<T>()?;
 
         let mut court = <Courts<T>>::get(court_id).unwrap();
@@ -450,7 +542,6 @@ benchmarks! {
             let market_id_i = (i + 100).saturated_into::<crate::MarketIdOf<T>>();
             T::DisputeResolution::add_auto_resolve(&market_id_i, appeal_end).unwrap();
         }
-        T::DisputeResolution::add_auto_resolve(&market_id, appeal_end).unwrap();
 
         let aggregation = court.round_ends.aggregation;
         for i in 0..a {
@@ -505,6 +596,8 @@ benchmarks! {
     verify {
         let court = <Courts<T>>::get(court_id).unwrap();
         assert_eq!(court.round_ends.appeal, new_resolve_at);
+        assert!(T::DisputeResolution::auto_resolve_exists(&market_id, new_resolve_at));
+        assert!(!T::DisputeResolution::auto_resolve_exists(&market_id, appeal_end));
     }
 
     reassign_court_stakes {
@@ -579,6 +672,7 @@ benchmarks! {
 
         <frame_system::Pallet<T>>::set_block_number(T::InflationPeriod::get());
         let now = <frame_system::Pallet<T>>::block_number();
+        YearlyInflation::<T>::put(Perbill::from_percent(2));
     }: {
         Court::<T>::handle_inflation(now);
     }

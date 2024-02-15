@@ -31,7 +31,7 @@ pub use pallet::*;
 pub mod pallet {
     use frame_support::{pallet_prelude::*, traits::Currency};
     use frame_system::pallet_prelude::*;
-    use sp_runtime::SaturatedConversion;
+    use sp_runtime::{traits::Zero, SaturatedConversion};
     use zeitgeist_primitives::types::Balance;
 
     use crate::weights::WeightInfoZeitgeist;
@@ -101,7 +101,13 @@ pub mod pallet {
                 Err(Error::<T>::FundDoesNotHaveEnoughFreeBalance)?;
             }
 
-            T::Currency::slash(&who, amount);
+            let (_imb, missing) = T::Currency::slash(&who, amount);
+            debug_assert!(
+                missing.is_zero(),
+                "Could not slash all of the amount. who: {:?}, amount: {:?}.",
+                &who,
+                amount,
+            );
             Crossings::<T>::insert(&who, ());
 
             Self::deposit_event(Event::AccountCrossed(who, amount.saturated_into()));
