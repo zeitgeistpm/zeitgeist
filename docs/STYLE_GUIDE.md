@@ -120,13 +120,13 @@ duplicating documentation.
 
 - Exceed 70 lines of code per function only in exceptional circumstances. Aim
   for less.
-- No `while` in production. All `for` loops must have a maximum number of
-  passes.
+- Prefer `for` loops over `while` loops. All loops (of any kind) must have a
+  maximum number of passes.
 - Use depth checks when using recursion in production. Use recursion only if the
   algorithm is defined using recursion.
 - Avoid `mut` in production code if possible without much pain.
-- Mark all extrinsics `transactional`, even if they satisfy
-  the verify-first/write-later principle.
+- Mark all extrinsics `transactional`, even if they satisfy the
+  verify-first/write-later principle.
 - Avoid indentation over five levels; never go over seven levels.
 - All public functions must be documented. Documentation of `pub(crate)` and
   private functions is optional but encouraged.
@@ -156,3 +156,17 @@ duplicating documentation.
 - For larger modules, use one test file per extrinsic for unit tests. Make unit
   tests as decoupled as possible from other modules. Place end-to-end and
   integration tests in extra files.
+- If possible, test unreachable code and states thought to be impossible using
+  the following schema:
+
+  ```rust
+  // In code logic
+  zeitgeist_macros::unreachable_non_terminating!(condition, log_target, message)
+  ```
+  
+  ```rust
+  // In test
+  #[test]
+  #[should_panic(expected = message)]
+  // Cause assertion
+  ```

@@ -30,15 +30,13 @@ impl Get<u32> for MaxAssets {
     }
 }
 
-// TODO(#1213): Replace `u128` with `PoolWeight` type which implements `Into<Balance>` and
-// `From<Balance>`! Or just replace it with `Balance`.
 #[derive(TypeInfo, Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
 pub struct Pool<Asset, Balance> {
     pub assets: BoundedVec<Asset, MaxAssets>,
     pub status: PoolStatus,
     pub swap_fee: Balance,
-    pub total_weight: u128,
-    pub weights: BoundedBTreeMap<Asset, u128, MaxAssets>,
+    pub total_weight: Balance,
+    pub weights: BoundedBTreeMap<Asset, Balance, MaxAssets>,
 }
 
 impl<Asset, Balance> Pool<Asset, Balance>

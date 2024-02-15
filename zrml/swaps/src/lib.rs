@@ -388,11 +388,11 @@ mod pallet {
 
         /// The maximum total weight of assets in a pool.
         #[pallet::constant]
-        type MaxTotalWeight: Get<u128>;
+        type MaxTotalWeight: Get<BalanceOf<Self>>;
 
         /// The maximum weight of each individual asset in a pool.
         #[pallet::constant]
-        type MaxWeight: Get<u128>;
+        type MaxWeight: Get<BalanceOf<Self>>;
 
         /// The minimum number of assets allowed in a single pool.
         #[pallet::constant]
@@ -400,7 +400,7 @@ mod pallet {
 
         /// The minimum weight of each individual asset in a pool.
         #[pallet::constant]
-        type MinWeight: Get<u128>;
+        type MinWeight: Get<BalanceOf<Self>>;
 
         #[pallet::constant]
         type PalletId: Get<PalletId>;
@@ -1130,8 +1130,11 @@ mod pallet {
             })
         }
 
-        fn pool_weight_rslt(pool: &PoolOf<T>, asset: &AssetOf<T>) -> Result<u128, Error<T>> {
-            pool.weights.get(asset).cloned().ok_or(Error::<T>::AssetNotInPool)
+        fn pool_weight_rslt(
+            pool: &PoolOf<T>,
+            asset: &AssetOf<T>,
+        ) -> Result<BalanceOf<T>, Error<T>> {
+            pool.weights.get(asset).cloned().ok_or(Error::<T>::AssetNotBound)
         }
 
         /// Calculate the exit fee percentage for `pool`.
@@ -1158,7 +1161,7 @@ mod pallet {
             assets: Vec<AssetOf<T>>,
             swap_fee: BalanceOf<T>,
             amount: BalanceOf<T>,
-            weights: Vec<u128>,
+            weights: Vec<BalanceOf<T>>,
         ) -> Result<PoolId, DispatchError> {
             ensure!(assets.len() <= usize::from(T::MaxAssets::get()), Error::<T>::TooManyAssets);
             ensure!(assets.len() >= usize::from(T::MinAssets::get()), Error::<T>::TooFewAssets);
@@ -1166,7 +1169,7 @@ mod pallet {
             let pool_shares_id = Self::pool_shares_id(next_pool_id);
             let pool_account = Self::pool_account_id(&next_pool_id);
             let mut map = BTreeMap::new();
-            let mut total_weight = 0;
+            let mut total_weight: BalanceOf<T> = Zero::zero();
             let mut sorted_assets = assets.clone();
             sorted_assets.sort();
             let has_duplicates = sorted_assets
