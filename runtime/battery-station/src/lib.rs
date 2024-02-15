@@ -50,6 +50,7 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
 use orml_currencies::Call::transfer;
+use pallet_assets::Call::{destroy_accounts, destroy_approvals, finish_destroy};
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
 use parity_scale_codec::Compact;
 use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
@@ -172,6 +173,26 @@ impl Contains<RuntimeCall> for IsCallable {
     fn contains(call: &RuntimeCall) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match call {
+            // Asset destruction is managed. Instead of deleting those dispatchable calls, they are
+            // filtered here instead to allow root to interact in case of emergency.
+            RuntimeCall::CampaignAssets(inner_call) => match inner_call {
+                destroy_accounts { .. } => false,
+                destroy_approvals { .. } => false,
+                finish_destroy { .. } => false,
+                _ => true,
+            },
+            RuntimeCall::CustomAssets(inner_call) => match inner_call {
+                destroy_accounts { .. } => false,
+                destroy_approvals { .. } => false,
+                finish_destroy { .. } => false,
+                _ => true,
+            },
+            RuntimeCall::MarketAssets(inner_call) => match inner_call {
+                destroy_accounts { .. } => false,
+                destroy_approvals { .. } => false,
+                finish_destroy { .. } => false,
+                _ => true,
+            },
             RuntimeCall::SimpleDisputes(_) => false,
             RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => match inner_call {

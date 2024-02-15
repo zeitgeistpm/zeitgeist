@@ -116,6 +116,7 @@ impl Contains<RuntimeCall> for IsCallable {
             kill_prefix, kill_storage, set_code, set_code_without_checks, set_storage,
         };
         use orml_currencies::Call::update_balance;
+        use pallet_assets::Call::{destroy_accounts, destroy_approvals, finish_destroy};
         use pallet_balances::Call::{force_transfer, set_balance};
         use pallet_collective::Call::set_members;
         use pallet_contracts::Call::{
@@ -148,6 +149,26 @@ impl Contains<RuntimeCall> for IsCallable {
                     force_transfer { .. } => false,
                     _ => true,
                 }
+            }
+            // Asset destruction is managed. Instead of deleting those dispatchable calls, they are
+            // filtered here instead to allow root to interact in case of emergency.
+            RuntimeCall::CampaignAssets(inner_call) => match inner_call {
+                destroy_accounts { .. } => false,
+                destroy_approvals { .. } => false,
+                finish_destroy { .. } => false,
+                _ => true,
+            }
+            RuntimeCall::CustomAssets(inner_call) => match inner_call {
+                destroy_accounts { .. } => false,
+                destroy_approvals { .. } => false,
+                finish_destroy { .. } => false,
+                _ => true,
+            }
+            RuntimeCall::MarketAssets(inner_call) => match inner_call {
+                destroy_accounts { .. } => false,
+                destroy_approvals { .. } => false,
+                finish_destroy { .. } => false,
+                _ => true,
             }
             // Permissioned contracts: Only deployable via utility.dispatch_as(...)
             RuntimeCall::Contracts(inner_call) => match inner_call {
