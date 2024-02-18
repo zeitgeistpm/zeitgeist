@@ -38,7 +38,7 @@ use crate::MarketIdOf;
 #[cfg(feature = "try-runtime")]
 use alloc::collections::BTreeMap;
 #[cfg(feature = "try-runtime")]
-use alloc::{format};
+use alloc::format;
 #[cfg(feature = "try-runtime")]
 use frame_support::migration::storage_key_iter;
 
