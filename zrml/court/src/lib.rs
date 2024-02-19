@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -52,12 +52,16 @@ use frame_system::{
 };
 use rand::{seq::SliceRandom, Rng, RngCore, SeedableRng};
 use rand_chacha::ChaCha20Rng;
-use sp_arithmetic::{per_things::Perquintill, traits::One};
+use sp_arithmetic::{
+    per_things::Perquintill,
+    traits::{CheckedRem, One},
+};
 use sp_runtime::{
     traits::{AccountIdConversion, Hash, Saturating, StaticLookup, Zero},
     DispatchError, Perbill, SaturatedConversion,
 };
 use zeitgeist_primitives::{
+    math::checked_ops_res::CheckedRemRes,
     traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
     types::{
         Asset, GlobalDisputeItem, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
@@ -1299,9 +1303,10 @@ mod pallet {
         // Handle the external incentivisation of the court system.
         pub(crate) fn handle_inflation(now: T::BlockNumber) -> Weight {
             let inflation_period = T::InflationPeriod::get();
-            if !(now % inflation_period).is_zero() {
-                return Weight::zero();
-            }
+            match now.checked_rem(&inflation_period) {
+                Some(rem) if rem.is_zero() => (),
+                Some(_) | None => return Weight::zero(),
+            };
 
             let yearly_inflation_rate = <YearlyInflation<T>>::get();
             if yearly_inflation_rate.is_zero() {
@@ -1776,7 +1781,7 @@ mod pallet {
                     .stake
                     .saturating_sub(pool_item.consumed_stake)
                     .saturated_into::<u128>();
-                let remainder = unconsumed % min_juror_stake;
+                let remainder = unconsumed.checked_rem_res(&min_juror_stake)?;
                 let unconsumed = unconsumed.saturating_sub(remainder);
                 total_unconsumed = total_unconsumed.saturating_add(unconsumed);
                 running_total = running_total.saturating_add(unconsumed);
@@ -2394,7 +2399,9 @@ mod pallet {
                     .stake
                     .saturating_sub(pool_item.consumed_stake)
                     .saturated_into::<u128>();
-                let remainder = unconsumed % min_juror_stake;
+                // `unwrap_or_else` is infallible unless the module is misconfigured.
+                let remainder =
+                    unconsumed.checked_rem_res(&min_juror_stake).unwrap_or_else(|_| Zero::zero());
                 let unconsumed = unconsumed.saturating_sub(remainder);
                 acc.saturating_add(unconsumed)
             });
