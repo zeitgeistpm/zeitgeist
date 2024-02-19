@@ -65,7 +65,7 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{
             CompleteSetOperationsApi, DeployPoolApi, DisputeApi, DisputeMaxWeightApi,
-            DisputeResolutionApi, ZeitgeistAssetManager,
+            DisputeResolutionApi, MarketBuilderTrait, ZeitgeistAssetManager,
         },
         types::{
             Asset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem, Market,
@@ -76,7 +76,7 @@ mod pallet {
     };
     use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
-    use zrml_market_commons::MarketCommonsPalletApi;
+    use zrml_market_commons::{types::MarketBuilder, MarketCommonsPalletApi};
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
@@ -90,7 +90,9 @@ mod pallet {
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
+    pub(crate) type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
     pub(crate) type CacheSize = ConstU32<64>;
+    pub(crate) type DeadlinesOf<T> = Deadlines<BlockNumberOf<T>>;
     pub(crate) type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
     pub(crate) type InitialItemOf<T> = InitialItem<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type MarketBondsOf<T> = MarketBonds<AccountIdOf<T>, BalanceOf<T>>;
@@ -98,16 +100,18 @@ mod pallet {
     pub(crate) type MarketOf<T> = Market<
         AccountIdOf<T>,
         BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
+        BlockNumberOf<T>,
         MomentOf<T>,
         AssetOf<T>,
+        MarketIdOf<T>,
     >;
+    pub(crate) type MarketPeriodOf<T> = MarketPeriod<BlockNumberOf<T>, MomentOf<T>>;
     pub(crate) type MomentOf<T> =
         <<T as zrml_market_commons::Config>::Timestamp as frame_support::traits::Time>::Moment;
     pub(crate) type NegativeImbalanceOf<T> =
         <<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
     pub(crate) type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
-    pub(crate) type ReportOf<T> = Report<AccountIdOf<T>, <T as frame_system::Config>::BlockNumber>;
+    pub(crate) type ReportOf<T> = Report<AccountIdOf<T>, BlockNumberOf<T>>;
     pub(crate) type TimeFrame = u64;
 
     macro_rules! impl_unreserve_bond {
@@ -596,8 +600,8 @@ mod pallet {
             base_asset: AssetOf<T>,
             creator_fee: Perbill,
             oracle: T::AccountId,
-            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
-            deadlines: Deadlines<T::BlockNumber>,
+            period: MarketPeriodOf<T>,
+            deadlines: DeadlinesOf<T>,
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
@@ -648,8 +652,8 @@ mod pallet {
             base_asset: AssetOf<T>,
             market_id: MarketIdOf<T>,
             oracle: T::AccountId,
-            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
-            deadlines: Deadlines<T::BlockNumber>,
+            period: MarketPeriodOf<T>,
+            deadlines: DeadlinesOf<T>,
             metadata: MultiHash,
             market_type: MarketType,
             dispute_mechanism: Option<MarketDisputeMechanism>,
@@ -665,7 +669,8 @@ mod pallet {
             ensure!(old_market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
 
             Self::clear_auto_close(&market_id)?;
-            let edited_market = Self::construct_market(
+            let market_builder = Self::construct_market(
+                Some(market_id),
                 base_asset,
                 old_market.creator,
                 old_market.creator_fee,
@@ -681,6 +686,7 @@ mod pallet {
                 old_market.resolved_outcome,
                 old_market.bonds,
             )?;
+            let edited_market = market_builder.clone().build()?;
             <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
                 *market = edited_market.clone();
                 Ok(())
@@ -1061,8 +1067,8 @@ mod pallet {
             base_asset: AssetOf<T>,
             creator_fee: Perbill,
             oracle: T::AccountId,
-            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
-            deadlines: Deadlines<T::BlockNumber>,
+            period: MarketPeriodOf<T>,
+            deadlines: DeadlinesOf<T>,
             metadata: MultiHash,
             market_type: MarketType,
             dispute_mechanism: Option<MarketDisputeMechanism>,
@@ -1139,25 +1145,21 @@ mod pallet {
             let now_block = <frame_system::Pallet<T>>::block_number();
             let now_time = <zrml_market_commons::Pallet<T>>::now();
 
-            let get_new_period = |block_period,
-                                  time_frame_period|
-             -> Result<
-                MarketPeriod<T::BlockNumber, MomentOf<T>>,
-                DispatchError,
-            > {
-                match &market.period {
-                    MarketPeriod::Block(range) => {
-                        let close_time = now_block.saturating_add(block_period);
-                        ensure!(close_time < range.end, Error::<T>::EarlyCloseRequestTooLate);
-                        Ok(MarketPeriod::Block(range.start..close_time))
+            let get_new_period =
+                |block_period, time_frame_period| -> Result<MarketPeriodOf<T>, DispatchError> {
+                    match &market.period {
+                        MarketPeriod::Block(range) => {
+                            let close_time = now_block.saturating_add(block_period);
+                            ensure!(close_time < range.end, Error::<T>::EarlyCloseRequestTooLate);
+                            Ok(MarketPeriod::Block(range.start..close_time))
+                        }
+                        MarketPeriod::Timestamp(range) => {
+                            let close_time = now_time.saturating_add(time_frame_period);
+                            ensure!(close_time < range.end, Error::<T>::EarlyCloseRequestTooLate);
+                            Ok(MarketPeriod::Timestamp(range.start..close_time))
+                        }
                     }
-                    MarketPeriod::Timestamp(range) => {
-                        let close_time = now_time.saturating_add(time_frame_period);
-                        ensure!(close_time < range.end, Error::<T>::EarlyCloseRequestTooLate);
-                        Ok(MarketPeriod::Timestamp(range.start..close_time))
-                    }
-                }
-            };
+                };
             let new_period = if let Some(p) = &market.early_close {
                 ensure!(is_authorized, Error::<T>::OnlyAuthorizedCanScheduleEarlyClose);
 
@@ -2083,8 +2085,8 @@ mod pallet {
             base_asset: AssetOf<T>,
             creator_fee: Perbill,
             oracle: T::AccountId,
-            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
-            deadlines: Deadlines<T::BlockNumber>,
+            period: MarketPeriodOf<T>,
+            deadlines: DeadlinesOf<T>,
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
@@ -2104,7 +2106,8 @@ mod pallet {
                 },
             };
 
-            let market = Self::construct_market(
+            let market_builder = Self::construct_market(
+                None,
                 base_asset,
                 who.clone(),
                 creator_fee,
@@ -2128,7 +2131,8 @@ mod pallet {
                 bonds.total_amount_bonded(&who),
             )?;
 
-            let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
+            let (market_id, market) =
+                <zrml_market_commons::Pallet<T>>::build_market(market_builder)?;
             let market_account = Self::market_account(market_id);
 
             let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
@@ -2386,9 +2390,7 @@ mod pallet {
             Ok(())
         }
 
-        fn ensure_market_period_is_valid(
-            period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
-        ) -> DispatchResult {
+        fn ensure_market_period_is_valid(period: &MarketPeriodOf<T>) -> DispatchResult {
             // The start of the market is allowed to be in the past (this results in the market
             // being active immediately), but the market's end must be at least one block/time
             // frame in the future.
@@ -2423,7 +2425,7 @@ mod pallet {
         }
 
         fn ensure_market_deadlines_are_valid(
-            deadlines: &Deadlines<T::BlockNumber>,
+            deadlines: &DeadlinesOf<T>,
             trusted: bool,
         ) -> DispatchResult {
             ensure!(
@@ -2873,12 +2875,13 @@ mod pallet {
         }
 
         fn construct_market(
+            market_id: Option<MarketIdOf<T>>,
             base_asset: AssetOf<T>,
             creator: T::AccountId,
             creator_fee: Perbill,
             oracle: T::AccountId,
-            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
-            deadlines: Deadlines<T::BlockNumber>,
+            period: MarketPeriodOf<T>,
+            deadlines: DeadlinesOf<T>,
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
@@ -2887,7 +2890,7 @@ mod pallet {
             report: Option<ReportOf<T>>,
             resolved_outcome: Option<OutcomeReport>,
             bonds: MarketBondsOf<T>,
-        ) -> Result<MarketOf<T>, DispatchError> {
+        ) -> Result<MarketBuilder<T>, DispatchError> {
             let valid_base_asset = match base_asset {
                 Asset::Ztg => true,
                 #[cfg(feature = "parachain")]
@@ -2913,24 +2916,28 @@ mod pallet {
                 MarketCreation::Permissionless => MarketStatus::Active,
                 MarketCreation::Advised => MarketStatus::Proposed,
             };
-            Ok(Market {
-                base_asset,
-                creation,
-                creator_fee,
-                creator,
-                market_type,
-                dispute_mechanism,
-                metadata: Vec::from(multihash),
-                oracle,
-                period,
-                deadlines,
-                report,
-                resolved_outcome,
-                status,
-                scoring_rule,
-                bonds,
-                early_close: None,
-            })
+            let mut market_builder = MarketBuilder::new();
+            market_builder
+                .base_asset(base_asset)
+                .creator(creator)
+                .creator_fee(creator_fee)
+                .oracle(oracle)
+                .period(period)
+                .deadlines(deadlines)
+                .metadata(Vec::from(multihash))
+                .creation(creation)
+                .market_type(market_type)
+                .dispute_mechanism(dispute_mechanism)
+                .status(status)
+                .scoring_rule(scoring_rule)
+                .report(report)
+                .resolved_outcome(resolved_outcome)
+                .bonds(bonds)
+                .early_close(None);
+            if let Some(market_id) = market_id {
+                market_builder.market_id(market_id);
+            }
+            Ok(market_builder)
         }
 
         fn report_market_with_dispute_mechanism(

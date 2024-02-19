@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -29,12 +29,13 @@ use sp_runtime::DispatchError;
 
 // Abstraction of the market type, which is not a part of `DisputeApi` because Rust doesn't support
 // type aliases in traits.
-type MarketOfDisputeApi<T> = Market<
+pub type MarketOfDisputeApi<T> = Market<
     <T as DisputeApi>::AccountId,
     <T as DisputeApi>::Balance,
     <T as DisputeApi>::BlockNumber,
     <T as DisputeApi>::Moment,
     Asset<<T as DisputeApi>::MarketId>,
+    <T as DisputeApi>::MarketId,
 >;
 
 type GlobalDisputeItemOfDisputeApi<T> =
@@ -145,12 +146,13 @@ pub trait DisputeMaxWeightApi {
     fn clear_max_weight() -> Weight;
 }
 
-type MarketOfDisputeResolutionApi<T> = Market<
+pub type MarketOfDisputeResolutionApi<T> = Market<
     <T as DisputeResolutionApi>::AccountId,
     <T as DisputeResolutionApi>::Balance,
     <T as DisputeResolutionApi>::BlockNumber,
     <T as DisputeResolutionApi>::Moment,
     Asset<<T as DisputeResolutionApi>::MarketId>,
+    <T as DisputeResolutionApi>::MarketId,
 >;
 
 pub trait DisputeResolutionApi {

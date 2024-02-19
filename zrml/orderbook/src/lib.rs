@@ -111,6 +111,7 @@ mod pallet {
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
         AssetOf<T>,
+        MarketIdOf<T>,
     >;
 
     #[pallet::pallet]

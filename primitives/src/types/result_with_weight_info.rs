@@ -16,24 +16,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-mod complete_set_operations_api;
-mod deploy_pool_api;
-mod dispute_api;
-mod distribute_fees;
-mod market_builder;
-mod market_commons_pallet_api;
-mod market_id;
-mod swaps;
-mod zeitgeist_asset;
-mod zeitgeist_multi_reservable_currency;
+pub use crate::{
+    asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, proxy_type::*,
+    serde_wrapper::*,
+};
+use frame_support::dispatch::Weight;
+use parity_scale_codec::{Decode, Encode};
+use scale_info::TypeInfo;
 
-pub use complete_set_operations_api::*;
-pub use deploy_pool_api::*;
-pub use dispute_api::*;
-pub use distribute_fees::*;
-pub use market_builder::*;
-pub use market_commons_pallet_api::*;
-pub use market_id::*;
-pub use swaps::*;
-pub use zeitgeist_asset::*;
-pub use zeitgeist_multi_reservable_currency::*;
+#[derive(sp_runtime::RuntimeDebug, Clone, Decode, Encode, Eq, PartialEq, TypeInfo)]
+pub struct ResultWithWeightInfo<R> {
+    pub result: R,
+    pub weight: Weight,
+}

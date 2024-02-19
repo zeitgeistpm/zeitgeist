@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -220,6 +220,7 @@ mod pallet {
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
         Asset<MarketIdOf<T>>,
+        MarketIdOf<T>,
     >;
     pub(crate) type HashOf<T> = <T as frame_system::Config>::Hash;
     pub(crate) type AccountIdLookupOf<T> =

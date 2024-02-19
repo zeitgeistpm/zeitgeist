@@ -97,8 +97,14 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
-    pub(crate) type MarketOf<T> =
-        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
+    pub(crate) type MarketOf<T> = Market<
+        AccountIdOf<T>,
+        BalanceOf<T>,
+        BlockNumberFor<T>,
+        MomentOf<T>,
+        Asset<MarketIdOf<T>>,
+        MarketIdOf<T>,
+    >;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]

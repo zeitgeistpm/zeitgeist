@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -28,6 +28,7 @@ where
     };
 
     zeitgeist_primitives::types::Market {
+        market_id: Default::default(),
         base_asset: Asset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),

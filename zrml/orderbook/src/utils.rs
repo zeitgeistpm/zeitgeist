@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -24,19 +24,12 @@ use zeitgeist_primitives::types::{
     MarketType, ScoringRule,
 };
 
-type MarketOf<T> = Market<
-    <T as frame_system::Config>::AccountId,
-    BalanceOf<T>,
-    <T as frame_system::Config>::BlockNumber,
-    MomentOf<T>,
-    Asset<MarketIdOf<T>>,
->;
-
 pub(crate) fn market_mock<T>() -> MarketOf<T>
 where
     T: crate::Config,
 {
     Market {
+        market_id: Default::default(),
         base_asset: Asset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),
