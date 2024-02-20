@@ -20,6 +20,32 @@
 use super::*;
 use test_case::test_case;
 
+// Assets <> BaseAssetClass
+#[test_case(
+    Asset::<MarketId>::CampaignAsset(7),
+    BaseAssetClass::CampaignAsset(7);
+    "campaign_asset"
+)]
+#[test_case(
+    Asset::<MarketId>::ForeignAsset(7),
+    BaseAssetClass::ForeignAsset(7);
+    "foreign_asset"
+)]
+#[test_case(
+    Asset::<MarketId>::Ztg,
+    BaseAssetClass::Ztg;
+    "ztg"
+)]
+fn index_matching_works_for_base_assets(
+    old_asset: Asset<MarketId>,
+    new_asset: BaseAssetClass,
+) {
+    let old_asset_encoded: Vec<u8> = old_asset.encode();
+    let new_asset_decoded =
+        <BaseAssetClass as Decode>::decode(&mut old_asset_encoded.as_slice()).unwrap();
+    assert_eq!(new_asset_decoded, new_asset);
+}
+
 // Assets <> MarketAssetClass
 #[test_case(
     Asset::<MarketId>::CategoricalOutcome(7, 8),

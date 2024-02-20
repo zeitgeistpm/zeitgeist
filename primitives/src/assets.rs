@@ -30,12 +30,14 @@ pub use campaign_assets::CampaignAssetClass;
 pub use currencies::CurrencyClass;
 pub use custom_assets::CustomAssetClass;
 pub use market_assets::MarketAssetClass;
+pub use subsets::BaseAssetClass;
 
 mod all_assets;
 mod campaign_assets;
 mod currencies;
 mod custom_assets;
 mod market_assets;
+mod subsets;
 #[cfg(test)]
 mod tests;
 

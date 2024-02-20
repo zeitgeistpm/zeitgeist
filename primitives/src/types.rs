@@ -83,6 +83,9 @@ pub type BasicCurrencyAdapter<R, B> = orml_currencies::BasicCurrencyAdapter<R, B
 /// ID type for any asset class
 pub type Assets = Asset<MarketId>;
 
+/// Asset type representing base assets used by prediction markets
+pub type BaseAsset = BaseAssetClass;
+
 /// Asset type representing campaign assets
 pub type CampaignAsset = CampaignAssetClass;
 
