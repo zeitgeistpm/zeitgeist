@@ -42,9 +42,7 @@ mod schedule_early_close;
 mod sell_complete_set;
 mod start_global_dispute;
 
-use crate::{
-    mock::*, AccountIdOf, AssetOf, BalanceOf, Config, Error, Event, MarketIdsPerDisputeBlock,
-};
+use crate::{mock::*, AccountIdOf, BalanceOf, Config, Error, Event, MarketIdsPerDisputeBlock};
 use core::ops::Range;
 use frame_support::{assert_noop, assert_ok, traits::NamedReservableCurrency};
 use orml_traits::MultiCurrency;
@@ -53,8 +51,8 @@ use sp_runtime::traits::{BlakeTwo256, Hash, Zero};
 use zeitgeist_primitives::{
     constants::mock::{BASE, CENT},
     types::{
-        Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketId, MarketPeriod,
-        MarketStatus, MarketType, MultiHash, OutcomeReport, ScoringRule,
+        Asset, BaseAsset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketId,
+        MarketPeriod, MarketStatus, MarketType, MultiHash, OutcomeReport, ScoringRule,
     },
 };
 use zrml_court::types::VoteItem;
@@ -78,7 +76,7 @@ fn gen_metadata(byte: u8) -> MultiHash {
 }
 
 fn simple_create_categorical_market(
-    base_asset: AssetOf<Runtime>,
+    base_asset: BaseAsset,
     creation: MarketCreation,
     period: Range<u64>,
     scoring_rule: ScoringRule,
@@ -99,7 +97,7 @@ fn simple_create_categorical_market(
 }
 
 fn simple_create_scalar_market(
-    base_asset: AssetOf<Runtime>,
+    base_asset: BaseAsset,
     creation: MarketCreation,
     period: Range<u64>,
     scoring_rule: ScoringRule,

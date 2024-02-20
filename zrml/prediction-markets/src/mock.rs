@@ -28,7 +28,8 @@ use frame_support::{
     pallet_prelude::Weight,
     parameter_types,
     traits::{
-        AsEnsureOriginWithArg, Everything, NeverEnsureOrigin, OnFinalize, OnIdle, OnInitialize,
+        AsEnsureOriginWithArg, Everything, GenesisBuild, NeverEnsureOrigin, OnFinalize, OnIdle,
+        OnInitialize,
     },
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
@@ -64,8 +65,8 @@ use zeitgeist_primitives::{
     traits::DeployPoolApi,
     types::{
         AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CampaignAsset, CampaignAssetId, Currencies, CustomAsset, CustomAssetId, Hash, Index,
-        MarketAsset, MarketId, Moment, UncheckedExtrinsicTest,
+        CampaignAsset, CampaignAssetClass, CampaignAssetId, Currencies, CustomAsset, CustomAssetId,
+        Hash, Index, MarketAsset, MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 
@@ -569,11 +570,22 @@ impl ExtBuilder {
         // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
         let _ = env_logger::builder().is_test(true).try_init();
 
+        pallet_assets::GenesisConfig::<Runtime, CampaignAssetsInstance> {
+            assets: vec![(CampaignAssetClass(100), ALICE, true, 1)],
+            metadata: vec![],
+            accounts: self
+                .balances
+                .iter()
+                .map(|(account, balance)| (CampaignAssetClass(100), *account, *balance))
+                .collect(),
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
+
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
-        #[cfg(feature = "parachain")]
-        use frame_support::traits::GenesisBuild;
+
         #[cfg(feature = "parachain")]
         orml_tokens::GenesisConfig::<Runtime> {
             balances: (0..69)
@@ -582,11 +594,13 @@ impl ExtBuilder {
         }
         .assimilate_storage(&mut t)
         .unwrap();
+
         #[cfg(feature = "parachain")]
         let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
             allow_as_base_asset: true,
             ..Default::default()
         };
+
         #[cfg(feature = "parachain")]
         orml_asset_registry_mock::GenesisConfig {
             metadata: vec![

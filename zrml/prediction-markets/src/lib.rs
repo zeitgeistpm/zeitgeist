@@ -44,8 +44,10 @@ mod pallet {
         require_transactional,
         storage::{with_transaction, TransactionOutcome},
         traits::{
-            fungibles::Create, tokens::BalanceStatus, Currency, EnsureOrigin, Get, Hooks,
-            Imbalance, IsType, NamedReservableCurrency, OnUnbalanced, StorageVersion,
+            fungibles::{Create, Inspect},
+            tokens::BalanceStatus,
+            Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType, NamedReservableCurrency,
+            OnUnbalanced, StorageVersion,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
@@ -55,7 +57,7 @@ mod pallet {
 
     #[cfg(feature = "parachain")]
     use {
-        orml_traits::asset_registry::Inspect,
+        orml_traits::asset_registry::Inspect as RegistryInspect,
         zeitgeist_primitives::types::{CurrencyClass, CustomMetadata},
     };
 
@@ -72,10 +74,10 @@ mod pallet {
             DisputeResolutionApi,
         },
         types::{
-            Asset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem, Market,
-            MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-            MarketType, MultiHash, OutcomeReport, Report, ResultWithWeightInfo, ScalarPosition,
-            ScoringRule,
+            Asset, BaseAsset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem,
+            Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+            MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ResultWithWeightInfo,
+            ScalarPosition, ScoringRule,
         },
     };
     use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
@@ -90,7 +92,6 @@ mod pallet {
     /// the automatic market openings and closings from a chain stall.
     /// Currently 10 blocks is 2 minutes (assuming block time is 12 seconds).
     pub(crate) const MAX_RECOVERY_TIME_FRAMES: TimeFrame = 10;
-
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
@@ -104,7 +105,7 @@ mod pallet {
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
-        AssetOf<T>,
+        BaseAsset,
     >;
     pub(crate) type MomentOf<T> =
         <<T as zrml_market_commons::Config>::Timestamp as frame_support::traits::Time>::Moment;
@@ -597,7 +598,7 @@ mod pallet {
         #[transactional]
         pub fn create_market(
             origin: OriginFor<T>,
-            base_asset: AssetOf<T>,
+            base_asset: BaseAsset,
             creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -649,7 +650,7 @@ mod pallet {
         #[transactional]
         pub fn edit_market(
             origin: OriginFor<T>,
-            base_asset: AssetOf<T>,
+            base_asset: BaseAsset,
             market_id: MarketIdOf<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -735,7 +736,7 @@ mod pallet {
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        T::AssetManager::free_balance(market.base_asset, &market_account)
+                        T::AssetManager::free_balance(market.base_asset.into(), &market_account)
                             >= winning_balance,
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
@@ -789,7 +790,7 @@ mod pallet {
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        T::AssetManager::free_balance(market.base_asset, &market_account)
+                        T::AssetManager::free_balance(market.base_asset.into(), &market_account)
                             >= long_payout.saturating_add(short_payout),
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
@@ -815,11 +816,11 @@ mod pallet {
 
                 // Pay out the winner.
                 let remaining_bal =
-                    T::AssetManager::free_balance(market.base_asset, &market_account);
+                    T::AssetManager::free_balance(market.base_asset.into(), &market_account);
                 let actual_payout = payout.min(remaining_bal);
 
                 T::AssetManager::transfer(
-                    market.base_asset,
+                    market.base_asset.into(),
                     &market_account,
                     &sender,
                     actual_payout,
@@ -1069,7 +1070,7 @@ mod pallet {
         #[pallet::call_index(17)]
         pub fn create_market_and_deploy_pool(
             origin: OriginFor<T>,
-            base_asset: AssetOf<T>,
+            base_asset: BaseAsset,
             creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -1542,7 +1543,7 @@ mod pallet {
             >;
 
         #[cfg(feature = "parachain")]
-        type AssetRegistry: Inspect<
+        type AssetRegistry: RegistryInspect<
                 AssetId = CurrencyClass<MarketIdOf<Self>>,
                 Balance = BalanceOf<Self>,
                 CustomMetadata = CustomMetadata,
@@ -2097,7 +2098,7 @@ mod pallet {
         #[require_transactional]
         fn do_create_market(
             who: T::AccountId,
-            base_asset: AssetOf<T>,
+            base_asset: BaseAsset,
             creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -2294,7 +2295,7 @@ mod pallet {
 
             let market_account = Self::market_account(market_id);
             ensure!(
-                T::AssetManager::free_balance(market.base_asset, &market_account) >= amount,
+                T::AssetManager::free_balance(market.base_asset.into(), &market_account) >= amount,
                 "Market account does not have sufficient reserves.",
             );
 
@@ -2322,7 +2323,7 @@ mod pallet {
                 );
             }
 
-            T::AssetManager::transfer(market.base_asset, &market_account, &who, amount)?;
+            T::AssetManager::transfer(market.base_asset.into(), &market_account, &who, amount)?;
 
             Self::deposit_event(Event::SoldCompleteSet(market_id, amount, who));
 
@@ -2338,14 +2339,14 @@ mod pallet {
             ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(
-                T::AssetManager::free_balance(market.base_asset, &who) >= amount,
+                T::AssetManager::free_balance(market.base_asset.into(), &who) >= amount,
                 Error::<T>::NotEnoughBalance
             );
             ensure!(market.is_redeemable(), Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
 
             let market_account = Self::market_account(market_id);
-            T::AssetManager::transfer(market.base_asset, &who, &market_account, amount)?;
+            T::AssetManager::transfer(market.base_asset.into(), &who, &market_account, amount)?;
 
             let assets = Self::outcome_assets(market_id, &market);
             for asset in assets.iter() {
@@ -2914,7 +2915,7 @@ mod pallet {
         }
 
         fn construct_market(
-            base_asset: AssetOf<T>,
+            base_asset: BaseAsset,
             creator: T::AccountId,
             creator_fee: Perbill,
             oracle: T::AccountId,
@@ -2930,12 +2931,15 @@ mod pallet {
             bonds: MarketBondsOf<T>,
         ) -> Result<MarketOf<T>, DispatchError> {
             let valid_base_asset = match base_asset {
-                Asset::Ztg => true,
+                BaseAsset::CampaignAsset(idx) => {
+                    T::AssetCreator::asset_exists(BaseAsset::CampaignAsset(idx).into())
+                }
+                BaseAsset::Ztg => true,
                 #[cfg(feature = "parachain")]
-                Asset::ForeignAsset(fa) => {
+                BaseAsset::ForeignAsset(id) => {
                     if let Some(metadata) =
                         T::AssetRegistry::metadata(&CurrencyClass::<MarketIdOf<T>>::ForeignAsset(
-                            fa,
+                            id,
                         ))
                     {
                         metadata.additional.allow_as_base_asset
@@ -2943,7 +2947,8 @@ mod pallet {
                         return Err(Error::<T>::UnregisteredForeignAsset.into());
                     }
                 }
-                _ => false,
+                #[cfg(not(feature = "parachain"))]
+                BaseAsset::ForeignAsset(_) => false,
             };
 
             ensure!(creator_fee <= T::MaxCreatorFee::get(), Error::<T>::FeeTooHigh);

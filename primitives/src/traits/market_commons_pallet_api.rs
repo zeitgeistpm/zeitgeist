@@ -18,7 +18,7 @@
 
 #![allow(clippy::type_complexity)]
 
-use crate::types::{Asset, Market, PoolId};
+use crate::types::{BaseAsset, Market, PoolId};
 use frame_support::{
     dispatch::{fmt::Debug, DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
@@ -30,12 +30,12 @@ use sp_runtime::traits::{AtLeast32Bit, AtLeast32BitUnsigned};
 
 // Abstraction of the market type, which is not a part of `MarketCommonsPalletApi` because Rust
 // doesn't support type aliases in traits.
-type MarketOf<T> = Market<
+pub type MarketOf<T> = Market<
     <T as MarketCommonsPalletApi>::AccountId,
     <T as MarketCommonsPalletApi>::Balance,
     <T as MarketCommonsPalletApi>::BlockNumber,
     <T as MarketCommonsPalletApi>::Moment,
-    Asset<<T as MarketCommonsPalletApi>::MarketId>,
+    BaseAsset,
 >;
 
 /// Abstraction over storage operations for markets

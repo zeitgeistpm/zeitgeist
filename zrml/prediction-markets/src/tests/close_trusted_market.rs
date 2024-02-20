@@ -32,7 +32,7 @@ fn close_trusted_market_works() {
         let market_creator = ALICE;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(market_creator),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -87,7 +87,7 @@ fn close_trusted_market_fails_if_not_trusted() {
         let market_creator = ALICE;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(market_creator),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -133,7 +133,7 @@ fn close_trusted_market_fails_if_invalid_market_state(status: MarketStatus) {
         let market_creator = ALICE;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(market_creator),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
