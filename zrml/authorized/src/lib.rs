@@ -49,7 +49,7 @@ mod pallet {
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
         types::{
-            BaseAsset, AuthorityReport, GlobalDisputeItem, Market, MarketDisputeMechanism,
+            AuthorityReport, BaseAsset, GlobalDisputeItem, Market, MarketDisputeMechanism,
             MarketStatus, OutcomeReport, ResultWithWeightInfo,
         },
     };

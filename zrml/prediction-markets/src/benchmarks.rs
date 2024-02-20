@@ -46,8 +46,8 @@ use zeitgeist_primitives::{
     math::fixed::{BaseProvider, ZeitgeistBase},
     traits::DisputeApi,
     types::{
-        Asset, BaseAsset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, MultiHash, OutcomeReport, ScoringRule,
+        Asset, BaseAsset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+        MarketStatus, MarketType, MultiHash, OutcomeReport, ScoringRule,
     },
 };
 use zrml_authorized::Pallet as AuthorizedPallet;
