@@ -24,8 +24,12 @@
 
 use crate as prediction_markets;
 use frame_support::{
-    construct_runtime, ord_parameter_types, parameter_types,
-    traits::{AsEnsureOriginWithArg, Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
+    construct_runtime, ord_parameter_types,
+    pallet_prelude::Weight,
+    parameter_types,
+    traits::{
+        AsEnsureOriginWithArg, Everything, NeverEnsureOrigin, OnFinalize, OnIdle, OnInitialize,
+    },
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 #[cfg(feature = "parachain")]
@@ -192,6 +196,9 @@ impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type AssetCreator = AssetRouter;
+    type AssetDestroyer = AssetRouter;
+    type AssetManager = AssetManager;
     #[cfg(feature = "parachain")]
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
@@ -229,7 +236,6 @@ impl crate::Config for Runtime {
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type RequestEditOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
     type Slash = Treasury;
     type ValidityBond = ValidityBond;
@@ -628,6 +634,7 @@ pub fn run_to_block(n: BlockNumber) {
         PredictionMarkets::on_initialize(System::block_number());
         Court::on_initialize(System::block_number());
         Balances::on_initialize(System::block_number());
+        AssetRouter::on_idle(System::block_number(), Weight::MAX);
     }
 }
 

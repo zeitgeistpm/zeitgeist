@@ -67,12 +67,11 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         let share_b_bal = AssetManager::free_balance(share_b, &CHARLIE);
         assert_eq!(share_b_bal, CENT);
 
-        // TODO(#792): Remove other assets.
         let share_a = Asset::CategoricalOutcome(0, 0);
         let share_a_total = AssetManager::total_issuance(share_a);
-        assert_eq!(share_a_total, CENT);
+        assert_eq!(share_a_total, 0);
         let share_a_bal = AssetManager::free_balance(share_a, &CHARLIE);
-        assert_eq!(share_a_bal, CENT);
+        assert_eq!(share_a_bal, 0);
 
         let share_c = Asset::CategoricalOutcome(0, 2);
         let share_c_total = AssetManager::total_issuance(share_c);

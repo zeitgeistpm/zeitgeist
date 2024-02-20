@@ -35,7 +35,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::weights::*;
-    use alloc::{format, vec, vec::Vec};
+    use alloc::{collections::BTreeMap, format, vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Pays, Weight},
@@ -44,12 +44,13 @@ mod pallet {
         require_transactional,
         storage::{with_transaction, TransactionOutcome},
         traits::{
-            tokens::BalanceStatus, Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType,
-            NamedReservableCurrency, OnUnbalanced, StorageVersion,
+            fungibles::Create, tokens::BalanceStatus, Currency, EnsureOrigin, Get, Hooks,
+            Imbalance, IsType, NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use pallet_assets::ManagedDestroy;
     use sp_runtime::traits::AccountIdConversion;
 
     #[cfg(feature = "parachain")]
@@ -823,9 +824,16 @@ mod pallet {
                     &sender,
                     actual_payout,
                 )?;
+
                 // The if-check prevents scalar markets to emit events even if sender only owns one
                 // of the outcome tokens.
                 if balance != BalanceOf::<T>::zero() {
+                    if T::AssetManager::total_issuance(currency_id).is_zero() {
+                        // Ensure managed_destroy does not error during lazy migration because
+                        // it tried to delete an old outcome asset from orml-tokens
+                        let _ = T::AssetDestroyer::managed_destroy(currency_id, None);
+                    }
+
                     Self::deposit_event(Event::TokensRedeemed(
                         market_id,
                         currency_id,
@@ -1518,7 +1526,13 @@ mod pallet {
         /// The origin that is allowed to approve / reject pending advised markets.
         type ApproveOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        /// Shares of outcome assets and native currency
+        /// The module handling the creation of market assets.
+        type AssetCreator: Create<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
+
+        /// The module handling the destruction of market assets.
+        type AssetDestroyer: ManagedDestroy<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
+
+        /// The module managing collateral and market assets.
         type AssetManager: MultiCurrency<Self::AccountId, Balance = BalanceOf<Self>, CurrencyId = AssetOf<Self>>
             + NamedMultiReservableCurrency<
                 Self::AccountId,
@@ -1911,7 +1925,6 @@ mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
         fn on_initialize(now: T::BlockNumber) -> Weight {
             let mut total_weight: Weight = Weight::zero();
 
@@ -2134,6 +2147,13 @@ mod pallet {
 
             let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
             let market_account = Self::market_account(market_id);
+
+            for outcome in Self::outcome_assets(market_id, &market) {
+                let admin = market_account.clone();
+                let is_sufficient = true;
+                let min_balance = 1u8;
+                T::AssetCreator::create(outcome, admin, is_sufficient, min_balance.into())?;
+            }
 
             let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
 
@@ -2761,13 +2781,30 @@ mod pallet {
             // Following call should return weight consumed by it.
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
-            // NOTE: Currently we don't clean up outcome assets.
-            // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
             <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                 m.status = MarketStatus::Resolved;
                 m.resolved_outcome = Some(resolved_outcome.clone());
                 Ok(())
             })?;
+
+            match resolved_outcome {
+                OutcomeReport::Categorical(winning_idx) => {
+                    // Destroy losing categorical outcome assets.
+                    let assets_to_destroy = BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
+                        Self::outcome_assets(*market_id, market)
+                            .into_iter()
+                            .filter(|outcome| {
+                                *outcome
+                                    != AssetOf::<T>::CategoricalOutcome(*market_id, winning_idx)
+                            })
+                            .zip(vec![None]),
+                    );
+                    // Ensure managed_destroy_multi does not error during lazy migration because
+                    // it tried to delete an old outcome asset from orml-tokens
+                    let _ = T::AssetDestroyer::managed_destroy_multi(assets_to_destroy);
+                }
+                OutcomeReport::Scalar(_) => (),
+            }
 
             Self::deposit_event(Event::MarketResolved(
                 *market_id,
