@@ -29,7 +29,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use crate::{types::PoolStatus, AssetOf, Config, Event};
+use crate::{types::PoolStatus, AssetOf, Config, Event, MAX_IN_RATIO, MAX_OUT_RATIO};
 use frame_benchmarking::{benchmarks, vec, whitelisted_caller, Vec};
 use frame_support::traits::Get;
 use frame_system::RawOrigin;
@@ -159,7 +159,7 @@ benchmarks! {
         let max_asset_amount: BalanceOf<T> = u128::MAX.saturated_into();
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], pool_amount, max_asset_amount)
 
-    swap_exact_amount_in_cpmm {
+    swap_exact_amount_in {
         // We're trying to get as many iterations in `bpow_approx` as possible. Experiments have
         // shown that y = 3/4, weight_ratio=1/2 (almost) maximizes the number of iterations for
         // calculating y^r within the set of values allowed in `swap_exact_amount_in` (see
@@ -167,7 +167,7 @@ benchmarks! {
         // amount_in = 1/3 * balance_in, weight_in = 1, weight_out = 2.
         let asset_count = T::MaxAssets::get();
         let balance: BalanceOf<T> = LIQUIDITY.saturated_into();
-        let asset_amount_in: BalanceOf<T> = balance.bmul(T::MaxInRatio::get()).unwrap();
+        let asset_amount_in: BalanceOf<T> = balance.bmul(MAX_IN_RATIO.saturated_into()).unwrap();
         let weight_in = T::MinWeight::get();
         let weight_out = weight_in * 2u8.into();
         let mut weights = vec![weight_in; asset_count as usize];
@@ -195,7 +195,7 @@ benchmarks! {
         max_price
     )
 
-    swap_exact_amount_out_cpmm {
+    swap_exact_amount_out {
         // We're trying to get as many iterations in `bpow_approx` as possible. Experiments have
         // shown that y = 3/2, weight_ratio=1/4 (almost) maximizes the number of iterations for
         // calculating y^r within the set of values allowed in `swap_exact_amount_out` (see
@@ -203,7 +203,7 @@ benchmarks! {
         // amount_out = 1/3 * balance_out, weight_out = 1, weight_in = 4.
         let asset_count = T::MaxAssets::get();
         let balance: BalanceOf<T> = LIQUIDITY.saturated_into();
-        let asset_amount_out: BalanceOf<T> = balance.bmul(T::MaxOutRatio::get()).unwrap();
+        let asset_amount_out: BalanceOf<T> = balance.bmul(MAX_OUT_RATIO.saturated_into()).unwrap();
         let weight_out = T::MinWeight::get();
         let weight_in = weight_out * 4u8.into();
         let mut weights = vec![weight_out; asset_count as usize];
@@ -269,7 +269,7 @@ benchmarks! {
         Pallet::<T>::destroy_pool(pool_id).unwrap();
     } verify {
         assert!(Pallet::<T>::pool_by_id(pool_id).is_err());
-        assert_last_event::<T>(Event::PoolDestroyed::<T>(pool_id).into());
+        assert_last_event::<T>(Event::PoolDestroyed::<T>{ pool_id }.into());
     }
 
     impl_benchmark_test_suite!(

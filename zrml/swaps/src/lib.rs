@@ -58,9 +58,10 @@ mod pallet {
     use alloc::{collections::btree_map::BTreeMap, vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
-        dispatch::{DispatchResultWithPostInfo, Weight},
+        dispatch::Weight,
         ensure,
         pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
+        require_transactional,
         traits::{Get, IsType, StorageVersion},
         transactional, Blake2_128Concat, PalletError, PalletId, Parameter,
     };
@@ -74,7 +75,7 @@ mod pallet {
         DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        constants::CENT,
+        constants::{BASE, CENT},
         math::{
             checked_ops_res::{CheckedAddRes, CheckedMulRes},
             fixed::FixedMul,
@@ -94,32 +95,28 @@ mod pallet {
     pub(crate) type PoolOf<T> = Pool<AssetOf<T>, BalanceOf<T>>;
 
     const MIN_BALANCE: u128 = CENT;
+    pub(crate) const MAX_IN_RATIO: u128 = BASE / 3 + 1;
+    pub(crate) const MAX_OUT_RATIO: u128 = BASE / 3 + 1;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Pool - Exit
-        ///
-        /// Retrieves a given set of assets from `pool_id` to `origin`.
+        /// Exchanges an LP's (liquidity provider's) pool shares for a proportionate amount of each
+        /// of the pool's assets. The assets received are distributed according to the LP's
+        /// percentage ownership of the pool.
         ///
         /// # Arguments
         ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `pool_amount`: The amount of LP shares of this pool being burned based on the
-        /// retrieved assets.
-        /// * `min_assets_out`: List of asset lower bounds. No asset should be lower than the
-        /// provided values.
+        /// * `pool_id`: The ID of the pool to withdraw from.
+        /// * `pool_amount`: The amount of pool shares to burn.
+        /// * `min_assets_out`: List of lower bounds on the assets received. The transaction is
+        ///   rolled back if any of the specified lower bounds are violated.
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n)` where `n` is the number of assets in the specified pool
-        // Using `min_assets_out.len()` is fine because we don't iterate over the assets before
-        // verifying that `min_assets_out` has the correct length. We do limit the linear factor to
-        // the maximum number of assets to prevent unnecessary spending in case of erroneous input,
-        // though.
+        /// Complexity: `O(n)` where `n` is the number of assets in the specified pool.
         #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::pool_exit(
-            min_assets_out.len().min(T::MaxAssets::get().into()) as u32
+            min_assets_out.len().min(T::MaxAssets::get().into()) as u32,
         ))]
         #[transactional]
         pub fn pool_exit(
@@ -132,57 +129,43 @@ mod pallet {
             Self::do_pool_exit(who, pool_id, pool_amount, min_assets_out)
         }
 
-        /// Pool - Exit with exact pool amount
-        ///
-        /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
-        /// this method injects the exactly amount of `asset_amount` to `origin`.
-        ///
-        /// # Arguments
-        ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset`: Asset leaving the pool.
-        /// * `asset_amount`: Asset amount that is leaving the pool.
-        /// * `max_pool_amount`: The calculated amount of assets for the pool must be equal or
-        /// greater than the given value.
+        /// See [`zeitgeist_primitives::traits::Swaps::pool_exit_with_exact_asset_amount`].
         ///
         /// # Weight
         ///
         /// Complexity: `O(1)`
         #[pallet::call_index(3)]
         #[pallet::weight(T::WeightInfo::pool_exit_with_exact_asset_amount())]
-        // MARK(non-transactional): Immediately calls and returns a transactional.
+        #[transactional]
         pub fn pool_exit_with_exact_asset_amount(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
-            asset: AssetOf<T>,
+            asset_out: AssetOf<T>,
             #[pallet::compact] asset_amount: BalanceOf<T>,
             #[pallet::compact] max_pool_amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            <Self as Swaps<T::AccountId>>::pool_exit_with_exact_asset_amount(
+            Self::do_pool_exit_with_exact_asset_amount(
                 who,
                 pool_id,
-                asset,
+                asset_out,
                 asset_amount,
                 max_pool_amount,
             )
-            .map(|_| ())
         }
 
-        /// Pool - Exit with exact pool amount
-        ///
-        /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
-        /// this method injects the exactly amount of `pool_amount` to `pool_id`.
+        /// Exchanges an exact amount of an LP's (liquidity provider's) pool shares for a
+        /// proportionate amount of _one_ of the pool's assets. The assets received are distributed
+        /// according to the LP's percentage ownership of the pool.
         ///
         /// # Arguments
         ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset`: Asset leaving the pool.
+        /// * `pool_id`: The ID of the pool to withdraw from.
+        /// * `asset`: The asset received by the LP.
+        /// * `asset_amount`: The amount of `asset` leaving the pool.
         /// * `pool_amount`: Pool amount that is entering the pool.
-        /// * `min_asset_amount`: The calculated amount for the asset must the equal or less
-        /// than the given value.
+        /// * `min_asset_amount`: The minimum amount the LP asks to receive. The transaction is
+        ///   rolled back if this bound is violated.
         ///
         /// # Weight
         ///
@@ -197,17 +180,469 @@ mod pallet {
             #[pallet::compact] pool_amount: BalanceOf<T>,
             #[pallet::compact] min_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::do_pool_exit_with_exact_pool_amount(
+                who,
+                pool_id,
+                asset,
+                pool_amount,
+                min_asset_amount,
+            )
+        }
+
+        /// Exchanges a proportional amount of each asset of the pool for pool shares.
+        ///
+        /// # Arguments
+        ///
+        /// * `pool_id`: The ID of the pool to join.
+        /// * `pool_amount`: The amount of LP shares for this pool that should be minted to the
+        ///   provider.
+        /// * `max_assets_in`: List of upper bounds on the assets to move to the pool. The
+        ///   transaction is rolled back if any of the specified lower bounds are violated.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)` where `n` is the number of assets in the specified pool
+        #[pallet::call_index(5)]
+        #[pallet::weight(T::WeightInfo::pool_join(
+            max_assets_in.len().min(T::MaxAssets::get().into()) as u32,
+        ))]
+        #[transactional]
+        pub fn pool_join(
+            origin: OriginFor<T>,
+            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
+            max_assets_in: Vec<BalanceOf<T>>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::do_pool_join(who, pool_id, pool_amount, max_assets_in)
+        }
+
+        /// See [`zeitgeist_primitives::traits::Swaps::pool_join_with_exact_asset_amount`].
+        ///
+        /// # Weight
+        ///
+        /// Complexity: O(1)
+        #[pallet::call_index(7)]
+        #[pallet::weight(T::WeightInfo::pool_join_with_exact_asset_amount())]
+        #[transactional]
+        pub fn pool_join_with_exact_asset_amount(
+            origin: OriginFor<T>,
+            #[pallet::compact] pool_id: PoolId,
+            asset_in: AssetOf<T>,
+            #[pallet::compact] asset_amount: BalanceOf<T>,
+            #[pallet::compact] min_pool_amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::do_pool_join_with_exact_asset_amount(
+                who,
+                pool_id,
+                asset_in,
+                asset_amount,
+                min_pool_amount,
+            )
+        }
+
+        /// Exchanges an LP's (liquidity provider's) holdings of _one_ of the assets in the pool for
+        /// an exact amount of pool shares.
+        ///
+        /// # Arguments
+        ///
+        /// * `pool_id`: The ID of the pool to withdraw from.
+        /// * `asset`: The asset entering the pool.
+        /// * `pool_amount`: Asset amount that is entering the pool.
+        /// * `max_asset_amount`: The maximum amount of `asset` that the LP is willing to pay. The
+        ///   transaction is rolled back if this bound is violated.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
+        #[pallet::call_index(8)]
+        #[pallet::weight(T::WeightInfo::pool_join_with_exact_pool_amount())]
+        #[transactional]
+        pub fn pool_join_with_exact_pool_amount(
+            origin: OriginFor<T>,
+            #[pallet::compact] pool_id: PoolId,
+            asset: AssetOf<T>,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
+            #[pallet::compact] max_asset_amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::do_pool_join_with_exact_pool_amount(
+                who,
+                pool_id,
+                asset,
+                pool_amount,
+                max_asset_amount,
+            )
+        }
+
+        /// See [`zeitgeist_primitives::traits::Swaps::swap_exact_amount_in`].
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
+        #[pallet::call_index(9)]
+        #[pallet::weight(T::WeightInfo::swap_exact_amount_in())]
+        #[transactional]
+        pub fn swap_exact_amount_in(
+            origin: OriginFor<T>,
+            #[pallet::compact] pool_id: PoolId,
+            asset_in: AssetOf<T>,
+            #[pallet::compact] asset_amount_in: BalanceOf<T>,
+            asset_out: AssetOf<T>,
+            min_asset_amount_out: Option<BalanceOf<T>>,
+            max_price: Option<BalanceOf<T>>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::do_swap_exact_amount_in(
+                who,
+                pool_id,
+                asset_in,
+                asset_amount_in,
+                asset_out,
+                min_asset_amount_out,
+                max_price,
+            )
+        }
+
+        /// See [`zeitgeist_primitives::traits::Swaps::swap_exact_amount_out`].
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
+        #[pallet::call_index(10)]
+        #[pallet::weight(T::WeightInfo::swap_exact_amount_out())]
+        #[transactional]
+        pub fn swap_exact_amount_out(
+            origin: OriginFor<T>,
+            #[pallet::compact] pool_id: PoolId,
+            asset_in: AssetOf<T>,
+            max_asset_amount_in: Option<BalanceOf<T>>,
+            asset_out: AssetOf<T>,
+            #[pallet::compact] asset_amount_out: BalanceOf<T>,
+            max_price: Option<BalanceOf<T>>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::do_swap_exact_amount_out(
+                who,
+                pool_id,
+                asset_in,
+                max_asset_amount_in,
+                asset_out,
+                asset_amount_out,
+                max_price,
+            )
+        }
+
+        /// Forcibly withdraw an LPs share. All parameters as in `exit`, except that `who` is the LP
+        /// whose shares are withdrawn.
+        ///
+        /// Used in the migration from swaps to neo-swaps. Deprecated and scheduled for removal in
+        /// v0.5.3.
+        #[pallet::call_index(11)]
+        #[pallet::weight(T::WeightInfo::pool_exit(
+            min_assets_out.len().min(T::MaxAssets::get().into()) as u32,
+        ))]
+        #[transactional]
+        pub fn force_pool_exit(
+            origin: OriginFor<T>,
+            who: T::AccountId,
+            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
+            min_assets_out: Vec<BalanceOf<T>>,
+        ) -> DispatchResult {
+            let _ = ensure_signed(origin)?;
+            Self::do_pool_exit(who, pool_id, pool_amount, min_assets_out)
+        }
+    }
+
+    #[pallet::config]
+    pub trait Config: frame_system::Config {
+        type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Self::Asset>;
+
+        type Asset: Parameter
+            + Member
+            + Copy
+            + MaxEncodedLen
+            + MaybeSerializeDeserialize
+            + Ord
+            + TypeInfo
+            + PoolSharesId<SerdeWrapper<PoolId>>;
+
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+        type WeightInfo: WeightInfoZeitgeist;
+
+        /// The fee for exiting a pool.
+        #[pallet::constant]
+        type ExitFee: Get<BalanceOf<Self>>;
+
+        /// The maximum number of assets allowed in a single pool.
+        #[pallet::constant]
+        type MaxAssets: Get<u16>;
+
+        /// The maximum allowed swap fee.
+        #[pallet::constant]
+        type MaxSwapFee: Get<BalanceOf<Self>>;
+
+        /// The maximum total weight of assets in a pool.
+        #[pallet::constant]
+        type MaxTotalWeight: Get<BalanceOf<Self>>;
+
+        /// The maximum weight of each individual asset in a pool.
+        #[pallet::constant]
+        type MaxWeight: Get<BalanceOf<Self>>;
+
+        /// The minimum number of assets allowed in a single pool.
+        #[pallet::constant]
+        type MinAssets: Get<u16>;
+
+        /// The minimum weight of each individual asset in a pool.
+        #[pallet::constant]
+        type MinWeight: Get<BalanceOf<Self>>;
+
+        #[pallet::constant]
+        type PalletId: Get<PalletId>;
+    }
+
+    #[pallet::error]
+    pub enum Error<T> {
+        /// The weight of an asset in a CPMM swap pool is greater than the upper weight cap.
+        #[codec(index = 0)]
+        AboveMaximumWeight,
+        /// The asset in question could not be found within the pool.
+        #[codec(index = 2)]
+        AssetNotInPool,
+        /// The spot price of an asset pair was greater than the specified limit.
+        #[codec(index = 4)]
+        BadLimitPrice,
+        /// The weight of an asset in a CPMM swap pool is lower than the upper weight cap.
+        #[codec(index = 5)]
+        BelowMinimumWeight,
+        /// Some funds could not be transferred due to a too low balance.
+        #[codec(index = 6)]
+        InsufficientBalance,
+        /// Liquidity provided to new CPMM pool is less than the minimum allowed balance.
+        #[codec(index = 7)]
+        InsufficientLiquidity,
+        /// Dispatch called on pool with invalid status.
+        #[codec(index = 10)]
+        InvalidPoolStatus,
+        /// A function was called for a swaps pool that does not fulfill the state requirement.
+        #[codec(index = 11)]
+        InvalidStateTransition,
+        /// A transferal of funds into a swaps pool was above a threshold specified by the sender.
+        #[codec(index = 13)]
+        LimitIn,
+        /// No limit was specified for a swap.
+        #[codec(index = 15)]
+        LimitMissing,
+        /// A transferal of funds out of a swaps pool was below a threshold specified by the
+        /// receiver.
+        #[codec(index = 16)]
+        LimitOut,
+        /// The custom math library yielded an invalid result (most times unexpected zero value).
+        #[codec(index = 17)]
+        MathApproximation,
+        /// The proportion of an asset added into a pool in comparison to the amount
+        /// of that asset in the pool is above the threshold specified by a constant.
+        #[codec(index = 18)]
+        MaxInRatio,
+        /// The proportion of an asset taken from a pool in comparison to the amount
+        /// of that asset in the pool is above the threshold specified by a constant.
+        #[codec(index = 19)]
+        MaxOutRatio,
+        /// The total weight of all assets within a CPMM pool is above a threshold specified
+        /// by a constant.
+        #[codec(index = 20)]
+        MaxTotalWeight,
+        /// The pool in question does not exist.
+        #[codec(index = 21)]
+        PoolDoesNotExist,
+        /// A pool balance dropped below the allowed minimum.
+        #[codec(index = 22)]
+        PoolDrain,
+        /// The pool in question is inactive.
+        #[codec(index = 23)]
+        PoolIsNotActive,
+        /// Two vectors do not have the same length (usually CPMM pool assets and weights).
+        #[codec(index = 27)]
+        ProvidedValuesLenMustEqualAssetsLen,
+        /// The swap fee is higher than the allowed maximum.
+        #[codec(index = 29)]
+        SwapFeeTooHigh,
+        /// Tried to create a pool that has less assets than the lower threshold specified by
+        /// a constant.
+        #[codec(index = 30)]
+        TooFewAssets,
+        /// Tried to create a pool that has more assets than the upper threshold specified by
+        /// a constant.
+        #[codec(index = 31)]
+        TooManyAssets,
+        /// Tried to create a pool with at least two identical assets.
+        #[codec(index = 32)]
+        SomeIdenticalAssets,
+        /// Some amount in a transaction equals zero.
+        #[codec(index = 35)]
+        ZeroAmount,
+        /// An unexpected error occurred. This is the result of faulty pallet logic and should be
+        /// reported to the pallet maintainers.
+        #[codec(index = 36)]
+        Unexpected(UnexpectedError),
+    }
+
+    #[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
+    pub enum UnexpectedError {
+        StorageOverflow,
+    }
+
+    impl<T> From<UnexpectedError> for Error<T> {
+        fn from(error: UnexpectedError) -> Error<T> {
+            Error::<T>::Unexpected(error)
+        }
+    }
+
+    #[pallet::event]
+    #[pallet::generate_deposit(fn deposit_event)]
+    pub enum Event<T>
+    where
+        T: Config,
+    {
+        /// Share holder rewards were distributed.
+        #[codec(index = 0)]
+        DistributeShareHolderRewards {
+            pool_id: PoolId,
+            num_accounts_rewarded: u64,
+            amount: BalanceOf<T>,
+        },
+        /// A new pool has been created.
+        #[codec(index = 1)]
+        PoolCreate {
+            common: CommonPoolEventParams<AccountIdOf<T>>,
+            pool: PoolOf<T>,
+            pool_amount: BalanceOf<T>,
+            pool_account: T::AccountId,
+        },
+        /// A pool was closed.
+        #[codec(index = 2)]
+        PoolClosed { pool_id: PoolId },
+        /// A pool was cleaned up.
+        #[codec(index = 3)]
+        PoolCleanedUp { pool_id: PoolId },
+        /// A pool was opened.
+        #[codec(index = 4)]
+        PoolActive { pool_id: PoolId },
+        /// Someone has exited a pool.
+        #[codec(index = 5)]
+        PoolExit(PoolAssetsEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
+        /// Exits a pool given an exact amount of an asset.
+        #[codec(index = 6)]
+        PoolExitWithExactAssetAmount(PoolAssetEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
+        /// Exits a pool given an exact pool's amount.
+        #[codec(index = 7)]
+        PoolExitWithExactPoolAmount(PoolAssetEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
+        /// Someone has joined a pool.
+        #[codec(index = 8)]
+        PoolJoin(PoolAssetsEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
+        /// Joins a pool given an exact amount of an asset.
+        #[codec(index = 9)]
+        PoolJoinWithExactAssetAmount(PoolAssetEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
+        /// Joins a pool given an exact pool's amount.
+        #[codec(index = 10)]
+        PoolJoinWithExactPoolAmount(PoolAssetEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
+        /// Pool was manually destroyed.
+        #[codec(index = 11)]
+        PoolDestroyed { pool_id: PoolId },
+        /// An exact amount of an asset is entering the pool.
+        #[codec(index = 13)]
+        SwapExactAmountIn(SwapEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
+        /// An exact amount of an asset is leaving the pool.
+        #[codec(index = 14)]
+        SwapExactAmountOut(SwapEvent<AccountIdOf<T>, AssetOf<T>, BalanceOf<T>>),
+    }
+
+    #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
+    #[pallet::generate_store(pub(super) trait Store)]
+    pub struct Pallet<T>(PhantomData<T>);
+
+    #[pallet::storage]
+    #[pallet::getter(fn pools)]
+    pub(crate) type Pools<T: Config> =
+        StorageMap<_, Blake2_128Concat, PoolId, PoolOf<T>, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn next_pool_id)]
+    pub(crate) type NextPoolId<T> = StorageValue<_, PoolId, ValueQuery>;
+
+    impl<T: Config> Pallet<T> {
+        #[require_transactional]
+        fn do_pool_exit(
+            who: T::AccountId,
+            pool_id: PoolId,
+            pool_amount: BalanceOf<T>,
+            min_assets_out: Vec<BalanceOf<T>>,
+        ) -> DispatchResult {
+            ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
+            let pool = Self::pool_by_id(pool_id)?;
+            // If the pool is still in use, prevent a pool drain.
+            Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
+            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
+
+            let params = PoolParams {
+                asset_bounds: min_assets_out,
+                event: |evt| Self::deposit_event(Event::PoolExit(evt)),
+                pool_account_id: &pool_account_id,
+                pool_amount,
+                pool_id,
+                pool: &pool,
+                transfer_asset: |amount, amount_bound, asset| {
+                    Self::ensure_minimum_balance(pool_id, &pool, asset, amount)?;
+                    // If transferring to `who` triggers the existential deposit, burn the tokens
+                    // instead.
+                    let new_balance =
+                        T::AssetManager::free_balance(asset, &who).checked_add_res(&amount)?;
+                    if new_balance >= T::AssetManager::minimum_balance(asset) {
+                        ensure!(amount >= amount_bound, Error::<T>::LimitOut);
+                        T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
+                    } else {
+                        ensure!(amount_bound.is_zero(), Error::<T>::LimitOut);
+                        T::AssetManager::withdraw(asset, &pool_account_id, amount)?;
+                    }
+                    Ok(())
+                },
+                transfer_pool: || {
+                    Self::burn_pool_shares(pool_id, &who, pool_amount)?;
+                    Ok(())
+                },
+                fee: |amount: BalanceOf<T>| {
+                    let exit_fee_amount = amount.bmul(Self::calc_exit_fee(&pool))?;
+                    Ok(exit_fee_amount)
+                },
+                who: who.clone(),
+            };
+
+            crate::utils::pool::<_, _, _, _, T>(params)
+        }
+
+        #[require_transactional]
+        fn do_pool_exit_with_exact_pool_amount(
+            who: AccountIdOf<T>,
+            pool_id: PoolId,
+            asset: AssetOf<T>,
+            pool_amount: BalanceOf<T>,
+            min_asset_amount: BalanceOf<T>,
+        ) -> DispatchResult {
             ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let pool = Self::pool_by_id(pool_id)?;
             let pool_ref = &pool;
-            let who = ensure_signed(origin)?;
-            let who_clone = who.clone();
             Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
 
             let params = PoolExitWithExactAmountParams {
                 asset,
                 asset_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let mul: BalanceOf<T> = total_supply.bmul(T::MaxInRatio::get())?;
+                    let mul = total_supply.bmul(MAX_IN_RATIO.saturated_into())?;
                     ensure!(pool_amount <= mul, Error::<T>::MaxInRatio);
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_out_given_pool_in(
                         asset_balance.saturated_into(),
@@ -222,7 +657,7 @@ mod pallet {
                     ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(asset_amount >= min_asset_amount, Error::<T>::LimitOut);
                     ensure!(
-                        asset_amount <= asset_balance.bmul(T::MaxOutRatio::get())?,
+                        asset_amount <= asset_balance.bmul(MAX_OUT_RATIO.saturated_into())?,
                         Error::<T>::MaxOutRatio
                     );
                     Self::ensure_minimum_balance(pool_id, &pool, asset, asset_amount)?;
@@ -231,45 +666,22 @@ mod pallet {
                 bound: min_asset_amount,
                 ensure_balance: |_| Ok(()),
                 event: |evt| Self::deposit_event(Event::PoolExitWithExactPoolAmount(evt)),
-                who: who_clone,
+                who,
                 pool_amount: |_, _| Ok(pool_amount),
                 pool_id,
                 pool: pool_ref,
             };
+
             pool_exit_with_exact_amount::<_, _, _, _, T>(params)
         }
 
-        /// Pool - Join
-        ///
-        /// Joins a given set of assets provided from `origin` to `pool_id`.
-        ///
-        /// # Arguments
-        ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be transferred.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `pool_amount`: The amount of LP shares for this pool that should be minted to the provider.
-        /// * `max_assets_in`: List of asset upper bounds. No asset should be greater than the
-        /// provided values.
-        ///
-        /// # Weight
-        ///
-        /// Complexity: `O(n)` where `n` is the number of assets in the specified pool
-        // Using `min_assets_out.len()` is fine because we don't iterate over the assets before
-        // verifying that `min_assets_out` has the correct length. We do limit the linear factor to
-        // the maximum number of assets to prevent unnecessary spending in case of erroneous input,
-        // though.
-        #[pallet::call_index(5)]
-        #[pallet::weight(T::WeightInfo::pool_join(
-            max_assets_in.len().min(T::MaxAssets::get().into()) as u32,
-        ))]
-        #[transactional]
-        pub fn pool_join(
-            origin: OriginFor<T>,
-            #[pallet::compact] pool_id: PoolId,
-            #[pallet::compact] pool_amount: BalanceOf<T>,
+        #[require_transactional]
+        fn do_pool_join(
+            who: AccountIdOf<T>,
+            pool_id: PoolId,
+            pool_amount: BalanceOf<T>,
             max_assets_in: Vec<BalanceOf<T>>,
-        ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
+        ) -> DispatchResult {
             ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let pool = Self::pool_by_id(pool_id)?;
             ensure!(pool.status == PoolStatus::Open, Error::<T>::InvalidPoolStatus);
@@ -292,83 +704,114 @@ mod pallet {
                 who: who.clone(),
             };
 
-            crate::utils::pool::<_, _, _, _, T>(params)?;
-            Ok(Some(T::WeightInfo::pool_join(pool.assets.len().saturated_into())).into())
+            crate::utils::pool::<_, _, _, _, T>(params)
         }
 
-        /// Pool - Join with exact asset amount
-        ///
-        /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
-        /// this method transfers the exactly amount of `asset_amount` to `pool_id`.
-        ///
-        /// # Arguments
-        ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset_in`: Asset entering the pool.
-        /// * `asset_amount`: Asset amount that is entering the pool.
-        /// * `min_pool_amount`: The calculated amount for the pool must be equal or greater
-        /// than the given value.
-        ///
-        /// # Weight
-        ///
-        /// Complexity: O(1)
-        // MARK(non-transactional): Immediately calls and returns a transactional.
-        #[pallet::call_index(7)]
-        #[pallet::weight(T::WeightInfo::pool_join_with_exact_asset_amount())]
-        pub fn pool_join_with_exact_asset_amount(
-            origin: OriginFor<T>,
-            #[pallet::compact] pool_id: PoolId,
-            asset_in: AssetOf<T>,
-            #[pallet::compact] asset_amount: BalanceOf<T>,
-            #[pallet::compact] min_pool_amount: BalanceOf<T>,
+        #[require_transactional]
+        fn do_pool_exit_with_exact_asset_amount(
+            who: AccountIdOf<T>,
+            pool_id: PoolId,
+            asset: AssetOf<T>,
+            asset_amount: BalanceOf<T>,
+            max_pool_amount: BalanceOf<T>,
         ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            <Self as Swaps<T::AccountId>>::pool_join_with_exact_asset_amount(
+            let pool = Self::pool_by_id(pool_id)?;
+            Self::ensure_minimum_balance(pool_id, &pool, asset, asset_amount)?;
+            let pool_ref = &pool;
+
+            let params = PoolExitWithExactAmountParams {
+                asset,
+                asset_amount: |_, _| Ok(asset_amount),
+                bound: max_pool_amount,
+                ensure_balance: |asset_balance: BalanceOf<T>| {
+                    ensure!(
+                        asset_amount <= asset_balance.bmul(MAX_OUT_RATIO.saturated_into())?,
+                        Error::<T>::MaxOutRatio
+                    );
+                    Ok(())
+                },
+                pool_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                    let pool_amount: BalanceOf<T> = crate::math::calc_pool_in_given_single_out(
+                        asset_balance.saturated_into(),
+                        Self::pool_weight_rslt(pool_ref, &asset)?.saturated_into(),
+                        total_supply.saturated_into(),
+                        pool_ref.total_weight.saturated_into(),
+                        asset_amount.saturated_into(),
+                        pool_ref.swap_fee.saturated_into(),
+                        T::ExitFee::get().saturated_into(),
+                    )?
+                    .saturated_into();
+                    ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
+                    ensure!(pool_amount <= max_pool_amount, Error::<T>::LimitIn);
+                    Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
+                    Ok(pool_amount)
+                },
+                event: |evt| Self::deposit_event(Event::PoolExitWithExactAssetAmount(evt)),
                 who,
                 pool_id,
-                asset_in,
-                asset_amount,
-                min_pool_amount,
-            )
-            .map(|_| ())
+                pool: pool_ref,
+            };
+
+            pool_exit_with_exact_amount::<_, _, _, _, T>(params)
         }
 
-        /// Pool - Join with exact pool amount
-        ///
-        /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
-        /// this method injects the exactly amount of `pool_amount` to `origin`.
-        ///
-        /// # Arguments
-        ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset`: Asset entering the pool.
-        /// * `pool_amount`: Asset amount that is entering the pool.
-        /// * `max_asset_amount`: The calculated amount of assets for the pool must be equal or
-        /// less than the given value.
-        ///
-        /// # Weight
-        ///
-        /// Complexity: `O(1)`
-        #[pallet::call_index(8)]
-        #[pallet::weight(T::WeightInfo::pool_join_with_exact_pool_amount())]
-        #[transactional]
-        pub fn pool_join_with_exact_pool_amount(
-            origin: OriginFor<T>,
-            #[pallet::compact] pool_id: PoolId,
+        #[require_transactional]
+        fn do_pool_join_with_exact_asset_amount(
+            who: AccountIdOf<T>,
+            pool_id: PoolId,
+            asset_in: AssetOf<T>,
+            asset_amount: BalanceOf<T>,
+            min_pool_amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
+            let pool = Pallet::<T>::pool_by_id(pool_id)?;
+            let pool_ref = &pool;
+            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
+
+            let params = PoolJoinWithExactAmountParams {
+                asset: asset_in,
+                asset_amount: |_, _| Ok(asset_amount),
+                bound: min_pool_amount,
+                pool_amount: move |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                    let mul = asset_balance.bmul(MAX_IN_RATIO.saturated_into())?;
+                    ensure!(asset_amount <= mul, Error::<T>::MaxInRatio);
+                    let pool_amount: BalanceOf<T> = crate::math::calc_pool_out_given_single_in(
+                        asset_balance.saturated_into(),
+                        Self::pool_weight_rslt(pool_ref, &asset_in)?.saturated_into(),
+                        total_supply.saturated_into(),
+                        pool_ref.total_weight.saturated_into(),
+                        asset_amount.saturated_into(),
+                        pool_ref.swap_fee.saturated_into(),
+                    )?
+                    .saturated_into();
+                    ensure!(pool_amount >= min_pool_amount, Error::<T>::LimitOut);
+                    Ok(pool_amount)
+                },
+                event: |evt| Self::deposit_event(Event::PoolJoinWithExactAssetAmount(evt)),
+                who,
+                pool_account_id: &pool_account_id,
+                pool_id,
+                pool: pool_ref,
+            };
+
+            pool_join_with_exact_amount::<_, _, _, T>(params)
+        }
+
+        #[require_transactional]
+        fn do_pool_join_with_exact_pool_amount(
+            who: AccountIdOf<T>,
+            pool_id: PoolId,
             asset: AssetOf<T>,
-            #[pallet::compact] pool_amount: BalanceOf<T>,
-            #[pallet::compact] max_asset_amount: BalanceOf<T>,
+            pool_amount: BalanceOf<T>,
+            max_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
-            let who = ensure_signed(origin)?;
-            let who_clone = who.clone();
+
             let params = PoolJoinWithExactAmountParams {
                 asset,
                 asset_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let mul: BalanceOf<T> = total_supply.bmul(T::MaxOutRatio::get())?;
+                    let mul = total_supply.bmul(MAX_OUT_RATIO.saturated_into())?;
                     ensure!(pool_amount <= mul, Error::<T>::MaxOutRatio);
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_in_given_pool_out(
                         asset_balance.saturated_into(),
@@ -382,7 +825,8 @@ mod pallet {
                     ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(asset_amount <= max_asset_amount, Error::<T>::LimitIn);
                     ensure!(
-                        asset_amount <= asset_balance.checked_mul_res(&T::MaxInRatio::get())?,
+                        asset_amount
+                            <= asset_balance.checked_mul_res(&MAX_IN_RATIO.saturated_into())?,
                         Error::<T>::MaxInRatio
                     );
                     Ok(asset_amount)
@@ -393,372 +837,126 @@ mod pallet {
                 pool_amount: |_, _| Ok(pool_amount),
                 pool_id,
                 pool: &pool,
-                who: who_clone,
+                who,
             };
+
             pool_join_with_exact_amount::<_, _, _, T>(params)
         }
 
-        /// Swap - Exact amount in
-        ///
-        /// Swaps a given `asset_amount_in` of the `asset_in/asset_out` pair to `pool_id`.
-        ///
-        /// # Arguments
-        ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be transferred.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset_in`: Asset entering the pool.
-        /// * `asset_amount_in`: Amount that will be transferred from the provider to the pool.
-        /// * `asset_out`: Asset leaving the pool.
-        /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
-        /// * `max_price`: Market price must be equal or less than the provided value.
-        ///
-        /// # Weight
-        ///
-        /// Complexity: `O(1)` if the scoring rule is CPMM, `O(n)` where `n` is the amount of
-        /// assets if the scoring rule is Rikiddo.
-        #[pallet::call_index(9)]
-        #[pallet::weight(T::WeightInfo::swap_exact_amount_in_cpmm())]
-        #[transactional]
-        pub fn swap_exact_amount_in(
-            origin: OriginFor<T>,
-            #[pallet::compact] pool_id: PoolId,
+        #[require_transactional]
+        fn do_swap_exact_amount_in(
+            who: T::AccountId,
+            pool_id: PoolId,
             asset_in: AssetOf<T>,
-            #[pallet::compact] asset_amount_in: BalanceOf<T>,
+            asset_amount_in: BalanceOf<T>,
             asset_out: AssetOf<T>,
             min_asset_amount_out: Option<BalanceOf<T>>,
             max_price: Option<BalanceOf<T>>,
-        ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            let weight = <Self as Swaps<T::AccountId>>::swap_exact_amount_in(
-                who,
-                pool_id,
+        ) -> DispatchResult {
+            ensure!(
+                min_asset_amount_out.is_some() || max_price.is_some(),
+                Error::<T>::LimitMissing,
+            );
+            let pool = Pallet::<T>::pool_by_id(pool_id)?;
+            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
+            ensure!(
+                T::AssetManager::free_balance(asset_in, &who) >= asset_amount_in,
+                Error::<T>::InsufficientBalance
+            );
+
+            let params = SwapExactAmountParams {
+                // TODO(#1215): This probably doesn't need to be a closure.
+                asset_amounts: || {
+                    let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
+                    let balance_in = T::AssetManager::free_balance(asset_in, &pool_account_id);
+                    ensure!(
+                        asset_amount_in <= balance_in.bmul(MAX_IN_RATIO.saturated_into())?,
+                        Error::<T>::MaxInRatio
+                    );
+                    let asset_amount_out: BalanceOf<T> = crate::math::calc_out_given_in(
+                        balance_in.saturated_into(),
+                        Self::pool_weight_rslt(&pool, &asset_in)?.saturated_into(),
+                        balance_out.saturated_into(),
+                        Self::pool_weight_rslt(&pool, &asset_out)?.saturated_into(),
+                        asset_amount_in.saturated_into(),
+                        pool.swap_fee.saturated_into(),
+                    )?
+                    .saturated_into();
+
+                    if let Some(maao) = min_asset_amount_out {
+                        ensure!(asset_amount_out >= maao, Error::<T>::LimitOut);
+                    }
+
+                    Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
+
+                    Ok([asset_amount_in, asset_amount_out])
+                },
+                asset_bound: min_asset_amount_out,
                 asset_in,
-                asset_amount_in,
                 asset_out,
-                min_asset_amount_out,
+                event: |evt| Self::deposit_event(Event::SwapExactAmountIn(evt)),
                 max_price,
-            )?;
-            Ok(Some(weight).into())
+                pool_account_id: &pool_account_id,
+                pool_id,
+                pool: &pool,
+                who: who.clone(),
+            };
+
+            swap_exact_amount::<_, _, T>(params)
         }
 
-        /// Swap - Exact amount out
-        ///
-        /// Swaps a given `asset_amount_out` of the `asset_in/asset_out` pair to `origin`.
-        ///
-        /// # Arguments
-        ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset_in`: Asset entering the pool.
-        /// * `max_asset_amount_in`: Maximum asset amount that can enter the pool.
-        /// * `asset_out`: Asset leaving the pool.
-        /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
-        /// * `max_price`: Market price must be equal or less than the provided value.
-        ///
-        /// # Weight
-        ///
-        /// Complexity: `O(1)` if the scoring rule is CPMM, `O(n)` where `n` is the amount of
-        /// assets if the scoring rule is Rikiddo.
-        #[pallet::call_index(10)]
-        #[pallet::weight(T::WeightInfo::swap_exact_amount_out_cpmm())]
-        #[transactional]
-        pub fn swap_exact_amount_out(
-            origin: OriginFor<T>,
-            #[pallet::compact] pool_id: PoolId,
+        #[require_transactional]
+        fn do_swap_exact_amount_out(
+            who: AccountIdOf<T>,
+            pool_id: PoolId,
             asset_in: AssetOf<T>,
             max_asset_amount_in: Option<BalanceOf<T>>,
             asset_out: AssetOf<T>,
-            #[pallet::compact] asset_amount_out: BalanceOf<T>,
+            asset_amount_out: BalanceOf<T>,
             max_price: Option<BalanceOf<T>>,
-        ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            let weight = <Self as Swaps<T::AccountId>>::swap_exact_amount_out(
-                who,
-                pool_id,
-                asset_in,
-                max_asset_amount_in,
-                asset_out,
-                asset_amount_out,
-                max_price,
-            )?;
-            Ok(Some(weight).into())
-        }
-
-        #[pallet::call_index(11)]
-        #[pallet::weight(T::WeightInfo::pool_exit(
-            min_assets_out.len().min(T::MaxAssets::get().into()) as u32
-        ))]
-        #[transactional]
-        pub fn force_pool_exit(
-            origin: OriginFor<T>,
-            who: T::AccountId,
-            #[pallet::compact] pool_id: PoolId,
-            #[pallet::compact] pool_amount: BalanceOf<T>,
-            min_assets_out: Vec<BalanceOf<T>>,
         ) -> DispatchResult {
-            let _ = ensure_signed(origin)?;
-            Self::do_pool_exit(who, pool_id, pool_amount, min_assets_out)
-        }
-    }
-
-    #[pallet::config]
-    pub trait Config: frame_system::Config {
-        /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Self::Asset>;
-
-        type Asset: Parameter
-            + Member
-            + Copy
-            + MaxEncodedLen
-            + MaybeSerializeDeserialize
-            + Ord
-            + TypeInfo
-            + PoolSharesId<SerdeWrapper<PoolId>>;
-
-        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
-        /// The weight information for swap's dispatchable functions.
-        type WeightInfo: WeightInfoZeitgeist;
-
-        /// The fee for exiting a pool.
-        #[pallet::constant]
-        type ExitFee: Get<BalanceOf<Self>>;
-
-        #[pallet::constant]
-        type MaxAssets: Get<u16>;
-
-        #[pallet::constant]
-        type MaxInRatio: Get<BalanceOf<Self>>;
-
-        #[pallet::constant]
-        type MaxOutRatio: Get<BalanceOf<Self>>;
-
-        #[pallet::constant]
-        type MaxSwapFee: Get<BalanceOf<Self>>;
-
-        #[pallet::constant]
-        type MaxTotalWeight: Get<BalanceOf<Self>>;
-
-        #[pallet::constant]
-        type MaxWeight: Get<BalanceOf<Self>>;
-
-        #[pallet::constant]
-        /// The minimum amount of assets in a pool.
-        type MinAssets: Get<u16>;
-
-        #[pallet::constant]
-        type MinWeight: Get<BalanceOf<Self>>;
-
-        /// The module identifier.
-        #[pallet::constant]
-        type PalletId: Get<PalletId>;
-    }
-
-    #[pallet::error]
-    pub enum Error<T> {
-        /// The weight of an asset in a CPMM swap pool is greather than the upper weight cap.
-        AboveMaximumWeight,
-        /// The weight of an asset in a CPMM swap pool could not be found.
-        AssetNotBound,
-        /// The asset in question could not be found within the pool.
-        AssetNotInPool,
-        /// The base asset of the swaps pool was None although a value was expected.
-        BaseAssetNotFound,
-        /// The spot price of an asset pair was greater than the specified limit.
-        BadLimitPrice,
-        /// The weight of an asset in a CPMM swap pool is lower than the upper weight cap.
-        BelowMinimumWeight,
-        /// Some funds could not be transferred due to a too low balance.
-        InsufficientBalance,
-        /// Liquidity provided to new CPMM pool is less than the minimum allowed balance.
-        InsufficientLiquidity,
-        /// Could not create CPMM pool since no amount was specified.
-        InvalidAmountArgument,
-        /// Could not create CPMM pool since no fee was supplied.
-        InvalidFeeArgument,
-        /// Dispatch called on pool with invalid status.
-        InvalidPoolStatus,
-        /// A function was called for a swaps pool that does not fulfill the state requirement.
-        InvalidStateTransition,
-        /// Could not create CPMM pool since no weights were supplied.
-        InvalidWeightArgument,
-        /// A transferal of funds into a swaps pool was above a threshhold specified by the sender.
-        LimitIn,
-        /// Subsidy amount is too small.
-        InvalidSubsidyAmount,
-        /// No limit was specified for a swap.
-        LimitMissing,
-        /// A transferal of funds out of a swaps pool was below a threshhold specified by the
-        /// receiver.
-        LimitOut,
-        /// The custom math library yielded an invalid result (most times unexpected zero value).
-        MathApproximation,
-        /// The proportion of an asset added into a pool in comparison to the amount
-        /// of that asset in the pool is above the threshhold specified by a constant.
-        MaxInRatio,
-        /// The proportion of an asset taken from a pool in comparison to the amount
-        /// of that asset in the pool is above the threshhold specified by a constant.
-        MaxOutRatio,
-        /// The total weight of all assets within a CPMM pool is above a treshhold specified
-        /// by a constant.
-        MaxTotalWeight,
-        /// The pool in question does not exist.
-        PoolDoesNotExist,
-        /// A pool balance dropped below the allowed minimum.
-        PoolDrain,
-        /// The pool in question is inactive.
-        PoolIsNotActive,
-        /// The CPMM pool in question does not have a fee, although it should.
-        PoolMissingFee,
-        /// The Rikiddo pool in question does not have subsidy, although it should.
-        PoolMissingSubsidy,
-        /// The CPPM pool in question does not have weights, although it should.
-        PoolMissingWeight,
-        /// Two vectors do not have the same length (usually CPMM pool assets and weights).
-        ProvidedValuesLenMustEqualAssetsLen,
-        /// No swap fee information found for CPMM pool
-        SwapFeeMissing,
-        /// The swap fee is higher than the allowed maximum.
-        SwapFeeTooHigh,
-        /// Tried to create a pool that has less assets than the lower threshhold specified by
-        /// a constant.
-        TooFewAssets,
-        /// Tried to create a pool that has more assets than the upper threshhold specified by
-        /// a constant.
-        TooManyAssets,
-        /// Tried to create a pool with at least two identical assets.
-        SomeIdenticalAssets,
-        /// The pool does not support swapping the assets in question.
-        UnsupportedTrade,
-        /// The outcome asset specified as the winning asset was not found in the pool.
-        WinningAssetNotFound,
-        /// Some amount in a transaction equals zero.
-        ZeroAmount,
-        /// An unexpected error occurred. This is the result of faulty pallet logic and should be
-        /// reported to the pallet maintainers.
-        Unexpected(UnexpectedError),
-    }
-
-    #[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
-    pub enum UnexpectedError {
-        StorageOverflow,
-    }
-
-    impl<T> From<UnexpectedError> for Error<T> {
-        fn from(error: UnexpectedError) -> Error<T> {
-            Error::<T>::Unexpected(error)
-        }
-    }
-
-    #[pallet::event]
-    #[pallet::generate_deposit(fn deposit_event)]
-    pub enum Event<T>
-    where
-        T: Config,
-    {
-        /// Share holder rewards were distributed. \[pool_id, num_accounts_rewarded, amount\]
-        DistributeShareHolderRewards(PoolId, u64, BalanceOf<T>),
-        /// A new pool has been created. \[CommonPoolEventParams, pool, pool_amount, pool_account\]
-        PoolCreate(
-            CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
-            PoolOf<T>,
-            BalanceOf<T>,
-            T::AccountId,
-        ),
-        /// A pool was closed. \[pool_id\]
-        PoolClosed(PoolId),
-        /// A pool was cleaned up. \[pool_id\]
-        PoolCleanedUp(PoolId),
-        /// A pool was opened. \[pool_id\]
-        PoolActive(PoolId),
-        /// Someone has exited a pool. \[PoolAssetsEvent\]
-        PoolExit(PoolAssetsEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>),
-        /// Exits a pool given an exact amount of an asset. \[PoolAssetEvent\]
-        PoolExitWithExactAssetAmount(
-            PoolAssetEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
-        ),
-        /// Exits a pool given an exact pool's amount. \[PoolAssetEvent\]
-        PoolExitWithExactPoolAmount(
-            PoolAssetEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
-        ),
-        /// Someone has joined a pool. \[PoolAssetsEvent\]
-        PoolJoin(PoolAssetsEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>),
-        /// Joins a pool given an exact amount of an asset. \[PoolAssetEvent\]
-        PoolJoinWithExactAssetAmount(
-            PoolAssetEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
-        ),
-        /// Joins a pool given an exact pool's amount. \[PoolAssetEvent\]
-        PoolJoinWithExactPoolAmount(
-            PoolAssetEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
-        ),
-        /// Pool was manually destroyed. \[pool_id\]
-        PoolDestroyed(PoolId),
-        /// Pool destroyed due to insufficient subsidy. \[pool_id, \[(provider, subsidy), ...\]\]
-        PoolDestroyedInSubsidyPhase(
-            PoolId,
-            Vec<(<T as frame_system::Config>::AccountId, BalanceOf<T>)>,
-        ),
-        /// An exact amount of an asset is entering the pool. \[SwapEvent\]
-        SwapExactAmountIn(
-            SwapEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
-        ),
-        /// An exact amount of an asset is leaving the pool. \[SwapEvent\]
-        SwapExactAmountOut(
-            SwapEvent<<T as frame_system::Config>::AccountId, AssetOf<T>, BalanceOf<T>>,
-        ),
-    }
-
-    #[pallet::pallet]
-    #[pallet::storage_version(STORAGE_VERSION)]
-    #[pallet::generate_store(pub(super) trait Store)]
-    pub struct Pallet<T>(PhantomData<T>);
-
-    #[pallet::storage]
-    #[pallet::getter(fn pools)]
-    pub(crate) type Pools<T: Config> =
-        StorageMap<_, Blake2_128Concat, PoolId, PoolOf<T>, OptionQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn next_pool_id)]
-    pub(crate) type NextPoolId<T> = StorageValue<_, PoolId, ValueQuery>;
-
-    impl<T: Config> Pallet<T> {
-        fn do_pool_exit(
-            who: T::AccountId,
-            pool_id: PoolId,
-            pool_amount: BalanceOf<T>,
-            min_assets_out: Vec<BalanceOf<T>>,
-        ) -> DispatchResult {
-            ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
-            let who_clone = who.clone();
-            let pool = Self::pool_by_id(pool_id)?;
-            // If the pool is still in use, prevent a pool drain.
-            Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
+            let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
-            let params = PoolParams {
-                asset_bounds: min_assets_out,
-                event: |evt| Self::deposit_event(Event::PoolExit(evt)),
+            ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing);
+            Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
+
+            let params = SwapExactAmountParams {
+                asset_amounts: || {
+                    let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
+                    ensure!(
+                        asset_amount_out <= balance_out.bmul(MAX_OUT_RATIO.saturated_into())?,
+                        Error::<T>::MaxOutRatio,
+                    );
+
+                    let balance_in = T::AssetManager::free_balance(asset_in, &pool_account_id);
+                    let asset_amount_in: BalanceOf<T> = crate::math::calc_in_given_out(
+                        balance_in.saturated_into(),
+                        Self::pool_weight_rslt(&pool, &asset_in)?.saturated_into(),
+                        balance_out.saturated_into(),
+                        Self::pool_weight_rslt(&pool, &asset_out)?.saturated_into(),
+                        asset_amount_out.saturated_into(),
+                        pool.swap_fee.saturated_into(),
+                    )?
+                    .saturated_into();
+
+                    if let Some(maai) = max_asset_amount_in {
+                        ensure!(asset_amount_in <= maai, Error::<T>::LimitIn);
+                    }
+
+                    Ok([asset_amount_in, asset_amount_out])
+                },
+                asset_bound: max_asset_amount_in,
+                asset_in,
+                asset_out,
+                event: |evt| Self::deposit_event(Event::SwapExactAmountOut(evt)),
+                max_price,
                 pool_account_id: &pool_account_id,
-                pool_amount,
                 pool_id,
                 pool: &pool,
-                transfer_asset: |amount, amount_bound, asset| {
-                    Self::ensure_minimum_balance(pool_id, &pool, asset, amount)?;
-                    ensure!(amount >= amount_bound, Error::<T>::LimitOut);
-                    T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
-                    Ok(())
-                },
-                transfer_pool: || {
-                    Self::burn_pool_shares(pool_id, &who, pool_amount)?;
-                    Ok(())
-                },
-                fee: |amount: BalanceOf<T>| {
-                    let exit_fee_amount = amount.bmul(Self::calc_exit_fee(&pool))?;
-                    Ok(exit_fee_amount)
-                },
-                who: who_clone,
+                who,
             };
-            crate::utils::pool::<_, _, _, _, T>(params)
+
+            swap_exact_amount::<_, _, T>(params)
         }
 
         pub fn get_spot_price(
@@ -776,18 +974,14 @@ mod pallet {
             let in_weight = Self::pool_weight_rslt(&pool, asset_in)?;
             let out_weight = Self::pool_weight_rslt(&pool, asset_out)?;
 
-            let swap_fee = if with_fees {
-                pool.swap_fee.saturated_into()
-            } else {
-                BalanceOf::<T>::zero().saturated_into()
-            };
+            let swap_fee = if with_fees { pool.swap_fee } else { BalanceOf::<T>::zero() };
 
             Ok(crate::math::calc_spot_price(
                 balance_in.saturated_into(),
                 in_weight.saturated_into(),
                 balance_out.saturated_into(),
                 out_weight.saturated_into(),
-                swap_fee,
+                swap_fee.saturated_into(),
             )?
             .saturated_into())
         }
@@ -862,14 +1056,7 @@ mod pallet {
             // Check that the account has at least as many free shares as we wish to burn!
             T::AssetManager::ensure_can_withdraw(shares_id, from, amount)
                 .map_err(|_| Error::<T>::InsufficientBalance)?;
-            let missing = T::AssetManager::slash(shares_id, from, amount);
-            debug_assert!(
-                missing.is_zero(),
-                "Could not slash all of the amount. shares_id {:?}, who: {:?}, amount: {:?}.",
-                shares_id,
-                &from,
-                amount,
-            );
+            T::AssetManager::withdraw(shares_id, from, amount)?;
             Ok(())
         }
 
@@ -881,9 +1068,10 @@ mod pallet {
         where
             T: Config,
         {
-            if assets.len() != provided_values.len() {
-                return Err(Error::<T>::ProvidedValuesLenMustEqualAssetsLen);
-            }
+            ensure!(
+                assets.len() == provided_values.len(),
+                Error::<T>::ProvidedValuesLenMustEqualAssetsLen
+            );
             Ok(())
         }
 
@@ -923,7 +1111,7 @@ mod pallet {
             Ok(id)
         }
 
-        // Mutates a stored pool. Returns `Err` if `pool_id` does not exist.
+        /// Mutates a stored pool.
         pub(crate) fn mutate_pool<F>(pool_id: PoolId, mut cb: F) -> DispatchResult
         where
             F: FnMut(&mut PoolOf<T>) -> DispatchResult,
@@ -942,7 +1130,7 @@ mod pallet {
             pool: &PoolOf<T>,
             asset: &AssetOf<T>,
         ) -> Result<BalanceOf<T>, Error<T>> {
-            pool.weights.get(asset).cloned().ok_or(Error::<T>::AssetNotBound)
+            pool.weights.get(asset).cloned().ok_or(Error::<T>::AssetNotInPool)
         }
 
         /// Calculate the exit fee percentage for `pool`.
@@ -963,20 +1151,6 @@ mod pallet {
         type Asset = AssetOf<T>;
         type Balance = BalanceOf<T>;
 
-        /// Creates an initial active pool.
-        ///
-        /// # Arguments
-        ///
-        /// * `who`: The account that is the creator of the pool. Must have enough
-        ///     funds for each of the assets to cover the `amount`.
-        /// * `assets`: The assets that are used in the pool.
-        /// * `base_asset`: The base asset in a prediction market swap pool (usually a currency).
-        /// * `market_id`: The market id of the market the pool belongs to.
-        /// * `swap_fee`: The fee applied to each swap on a CPMM pool, specified as fixed-point
-        ///     ratio (0.1 equals 10% swap fee)
-        /// * `amount`: The amount of each asset added to the pool; **may** be `None` only if
-        ///     `scoring_rule` is `RikiddoSigmoidFeeMarketEma`.
-        /// * `weights`: These are the raw/denormalized weights (mandatory if scoring rule is CPMM).
         #[frame_support::transactional]
         fn create_pool(
             who: T::AccountId,
@@ -1038,12 +1212,12 @@ mod pallet {
 
             Pools::<T>::insert(next_pool_id, pool.clone());
 
-            Self::deposit_event(Event::PoolCreate(
-                CommonPoolEventParams { pool_id: next_pool_id, who },
+            Self::deposit_event(Event::PoolCreate {
+                common: CommonPoolEventParams { pool_id: next_pool_id, who },
                 pool,
-                amount,
+                pool_amount: amount,
                 pool_account,
-            ));
+            });
 
             Ok(next_pool_id)
         }
@@ -1056,7 +1230,7 @@ mod pallet {
                     pool.status = PoolStatus::Closed;
                     Ok(pool.assets.len() as u32)
                 })?;
-            Self::deposit_event(Event::PoolClosed(pool_id));
+            Self::deposit_event(Event::PoolClosed { pool_id });
             Ok(T::WeightInfo::close_pool(asset_len))
         }
 
@@ -1066,20 +1240,12 @@ mod pallet {
             let asset_len = pool.assets.len() as u32;
             for asset in pool.assets.into_iter() {
                 let amount = T::AssetManager::free_balance(asset, &pool_account);
-                let missing = T::AssetManager::slash(asset, &pool_account, amount);
-                debug_assert!(
-                    missing.is_zero(),
-                    "Could not slash all of the amount. asset {:?}, pool_account: {:?}, amount: \
-                     {:?}.",
-                    asset,
-                    &pool_account,
-                    amount,
-                );
+                T::AssetManager::withdraw(asset, &pool_account, amount)?;
             }
             // NOTE: Currently we don't clean up accounts with pool_share_id.
             // TODO(#792): Remove pool_share_id asset for accounts! It may require storage migration.
             Pools::<T>::remove(pool_id);
-            Self::deposit_event(Event::PoolDestroyed(pool_id));
+            Self::deposit_event(Event::PoolDestroyed { pool_id });
             Ok(T::WeightInfo::destroy_pool(asset_len))
         }
 
@@ -1091,143 +1257,42 @@ mod pallet {
             })?;
             let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolDoesNotExist)?;
             let asset_len = pool.assets.len() as u32;
-            Self::deposit_event(Event::PoolActive(pool_id));
+            Self::deposit_event(Event::PoolActive { pool_id });
             Ok(T::WeightInfo::open_pool(asset_len))
         }
 
-        /// Pool - Exit with exact pool amount
-        ///
-        /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
-        /// this method injects the exactly amount of `asset_amount` to `origin`.
-        ///
-        /// # Arguments
-        ///
-        /// * `who`: Liquidity Provider (LP). The account whose assets should be received.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset`: Asset leaving the pool.
-        /// * `asset_amount`: Asset amount that is leaving the pool.
-        /// * `max_pool_amount`: The calculated amount of assets for the pool must be equal or
-        /// greater than the given value.
-        #[frame_support::transactional]
         fn pool_exit_with_exact_asset_amount(
             who: T::AccountId,
             pool_id: PoolId,
             asset: AssetOf<T>,
             asset_amount: BalanceOf<T>,
             max_pool_amount: BalanceOf<T>,
-        ) -> Result<Weight, DispatchError> {
-            let pool = Self::pool_by_id(pool_id)?;
-            Self::ensure_minimum_balance(pool_id, &pool, asset, asset_amount)?;
-            let pool_ref = &pool;
-            let who_clone = who.clone();
-
-            let params = PoolExitWithExactAmountParams {
-                asset,
-                asset_amount: |_, _| Ok(asset_amount),
-                bound: max_pool_amount,
-                ensure_balance: |asset_balance: BalanceOf<T>| {
-                    ensure!(
-                        asset_amount <= asset_balance.bmul(T::MaxOutRatio::get())?,
-                        Error::<T>::MaxOutRatio
-                    );
-                    Ok(())
-                },
-                pool_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let pool_amount: BalanceOf<T> = crate::math::calc_pool_in_given_single_out(
-                        asset_balance.saturated_into(),
-                        Self::pool_weight_rslt(pool_ref, &asset)?.saturated_into(),
-                        total_supply.saturated_into(),
-                        pool_ref.total_weight.saturated_into(),
-                        asset_amount.saturated_into(),
-                        pool_ref.swap_fee.saturated_into(),
-                        T::ExitFee::get().saturated_into(),
-                    )?
-                    .saturated_into();
-                    ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
-                    ensure!(pool_amount <= max_pool_amount, Error::<T>::LimitIn);
-                    Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
-                    Ok(pool_amount)
-                },
-                event: |evt| Self::deposit_event(Event::PoolExitWithExactAssetAmount(evt)),
-                who: who_clone,
+        ) -> DispatchResult {
+            Self::do_pool_exit_with_exact_asset_amount(
+                who,
                 pool_id,
-                pool: pool_ref,
-            };
-            let weight = T::WeightInfo::pool_exit_with_exact_asset_amount();
-            pool_exit_with_exact_amount::<_, _, _, _, T>(params).map(|_| weight)
+                asset,
+                asset_amount,
+                max_pool_amount,
+            )
         }
 
-        /// Pool - Join with exact asset amount
-        ///
-        /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
-        /// this method transfers the exactly amount of `asset_amount` to `pool_id`.
-        ///
-        /// # Arguments
-        ///
-        /// * `who`: Liquidity Provider (LP). The account whose assets should be received.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset_in`: Asset entering the pool.
-        /// * `asset_amount`: Asset amount that is entering the pool.
-        /// * `min_pool_amount`: The calculated amount for the pool must be equal or greater
-        /// than the given value.
-        #[frame_support::transactional]
         fn pool_join_with_exact_asset_amount(
             who: T::AccountId,
             pool_id: PoolId,
             asset_in: AssetOf<T>,
             asset_amount: BalanceOf<T>,
             min_pool_amount: BalanceOf<T>,
-        ) -> Result<Weight, DispatchError> {
-            ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
-            let pool = Pallet::<T>::pool_by_id(pool_id)?;
-            let pool_ref = &pool;
-            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
-            let who_clone = who.clone();
-
-            let params = PoolJoinWithExactAmountParams {
-                asset: asset_in,
-                asset_amount: |_, _| Ok(asset_amount),
-                bound: min_pool_amount,
-                pool_amount: move |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let mul: BalanceOf<T> = asset_balance.bmul(T::MaxInRatio::get())?;
-                    ensure!(asset_amount <= mul, Error::<T>::MaxInRatio);
-                    let pool_amount: BalanceOf<T> = crate::math::calc_pool_out_given_single_in(
-                        asset_balance.saturated_into(),
-                        Self::pool_weight_rslt(pool_ref, &asset_in)?.saturated_into(),
-                        total_supply.saturated_into(),
-                        pool_ref.total_weight.saturated_into(),
-                        asset_amount.saturated_into(),
-                        pool_ref.swap_fee.saturated_into(),
-                    )?
-                    .saturated_into();
-                    ensure!(pool_amount >= min_pool_amount, Error::<T>::LimitOut);
-                    Ok(pool_amount)
-                },
-                event: |evt| Self::deposit_event(Event::PoolJoinWithExactAssetAmount(evt)),
-                who: who_clone,
-                pool_account_id: &pool_account_id,
+        ) -> DispatchResult {
+            Self::do_pool_join_with_exact_asset_amount(
+                who,
                 pool_id,
-                pool: pool_ref,
-            };
-            let weight = T::WeightInfo::pool_join_with_exact_asset_amount();
-            pool_join_with_exact_amount::<_, _, _, T>(params).map(|_| weight)
+                asset_in,
+                asset_amount,
+                min_pool_amount,
+            )
         }
 
-        /// Swap - Exact amount in
-        ///
-        /// Swaps a given `asset_amount_in` of the `asset_in/asset_out` pair to `pool_id`.
-        ///
-        /// # Arguments
-        ///
-        /// * `who`: The account whose assets should be transferred.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset_in`: Asset entering the pool.
-        /// * `asset_amount_in`: Amount that will be transferred from the provider to the pool.
-        /// * `asset_out`: Asset leaving the pool.
-        /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
-        /// * `max_price`: Market price must be equal or less than the provided value.
-        /// * `handle_fees`: Optional parameter to override the swap fee
-        #[allow(clippy::too_many_arguments)]
         fn swap_exact_amount_in(
             who: T::AccountId,
             pool_id: PoolId,
@@ -1236,77 +1301,18 @@ mod pallet {
             asset_out: AssetOf<T>,
             min_asset_amount_out: Option<BalanceOf<T>>,
             max_price: Option<BalanceOf<T>>,
-        ) -> Result<Weight, DispatchError> {
-            ensure!(
-                min_asset_amount_out.is_some() || max_price.is_some(),
-                Error::<T>::LimitMissing,
-            );
-
-            let pool = Pallet::<T>::pool_by_id(pool_id)?;
-            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
-
-            ensure!(
-                T::AssetManager::free_balance(asset_in, &who) >= asset_amount_in,
-                Error::<T>::InsufficientBalance
-            );
-
-            let params = SwapExactAmountParams {
-                // TODO(#1215): This probably doesn't need to be a closure.
-                asset_amounts: || {
-                    let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
-                    let balance_in = T::AssetManager::free_balance(asset_in, &pool_account_id);
-                    ensure!(
-                        asset_amount_in <= balance_in.bmul(T::MaxInRatio::get())?,
-                        Error::<T>::MaxInRatio
-                    );
-                    let asset_amount_out: BalanceOf<T> = crate::math::calc_out_given_in(
-                        balance_in.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_in)?.saturated_into(),
-                        balance_out.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_out)?.saturated_into(),
-                        asset_amount_in.saturated_into(),
-                        pool.swap_fee.saturated_into(),
-                    )?
-                    .saturated_into();
-
-                    if let Some(maao) = min_asset_amount_out {
-                        ensure!(asset_amount_out >= maao, Error::<T>::LimitOut);
-                    }
-
-                    Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
-
-                    Ok([asset_amount_in, asset_amount_out])
-                },
-                asset_bound: min_asset_amount_out,
-                asset_in,
-                asset_out,
-                event: |evt| Self::deposit_event(Event::SwapExactAmountIn(evt)),
-                max_price,
-                pool_account_id: &pool_account_id,
+        ) -> DispatchResult {
+            Self::do_swap_exact_amount_in(
+                who,
                 pool_id,
-                pool: &pool,
-                who: who.clone(),
-            };
-            swap_exact_amount::<_, _, T>(params)?;
-
-            Ok(T::WeightInfo::swap_exact_amount_in_cpmm())
+                asset_in,
+                asset_amount_in,
+                asset_out,
+                min_asset_amount_out,
+                max_price,
+            )
         }
 
-        /// Swap - Exact amount out
-        ///
-        /// Swaps a given `asset_amount_out` of the `asset_in/asset_out` pair to `origin`.
-        ///
-        /// # Arguments
-        ///
-        /// * `who`: The account whose assets should be transferred.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset_in`: Asset entering the pool.
-        /// * `max_amount_asset_in`: Maximum asset amount that can enter the pool.
-        /// * `asset_out`: Asset leaving the pool.
-        /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
-        /// * `max_price`: Market price must be equal or less than the provided value.
-        /// * `handle_fees`: Whether additional fees are handled or not (sets LP fee to 0)
-        #[allow(clippy::too_many_arguments)]
         fn swap_exact_amount_out(
             who: T::AccountId,
             pool_id: PoolId,
@@ -1315,50 +1321,16 @@ mod pallet {
             asset_out: AssetOf<T>,
             asset_amount_out: BalanceOf<T>,
             max_price: Option<BalanceOf<T>>,
-        ) -> Result<Weight, DispatchError> {
-            let pool = Pallet::<T>::pool_by_id(pool_id)?;
-            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
-            ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing);
-            Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
-
-            let params = SwapExactAmountParams {
-                asset_amounts: || {
-                    let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
-                    ensure!(
-                        asset_amount_out <= balance_out.bmul(T::MaxOutRatio::get(),)?,
-                        Error::<T>::MaxOutRatio,
-                    );
-
-                    let balance_in = T::AssetManager::free_balance(asset_in, &pool_account_id);
-                    let asset_amount_in: BalanceOf<T> = crate::math::calc_in_given_out(
-                        balance_in.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_in)?.saturated_into(),
-                        balance_out.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_out)?.saturated_into(),
-                        asset_amount_out.saturated_into(),
-                        pool.swap_fee.saturated_into(),
-                    )?
-                    .saturated_into();
-
-                    if let Some(maai) = max_asset_amount_in {
-                        ensure!(asset_amount_in <= maai, Error::<T>::LimitIn);
-                    }
-
-                    Ok([asset_amount_in, asset_amount_out])
-                },
-                asset_bound: max_asset_amount_in,
-                asset_in,
-                asset_out,
-                event: |evt| Self::deposit_event(Event::SwapExactAmountOut(evt)),
-                max_price,
-                pool_account_id: &pool_account_id,
+        ) -> DispatchResult {
+            Self::do_swap_exact_amount_out(
+                who,
                 pool_id,
-                pool: &pool,
-                who: who.clone(),
-            };
-            swap_exact_amount::<_, _, T>(params)?;
-
-            Ok(T::WeightInfo::swap_exact_amount_out_cpmm())
+                asset_in,
+                max_asset_amount_in,
+                asset_out,
+                asset_amount_out,
+                max_price,
+            )
         }
     }
 }

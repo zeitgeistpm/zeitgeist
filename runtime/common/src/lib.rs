@@ -1225,8 +1225,6 @@ macro_rules! impl_config_traits {
             type ExitFee = ExitFee;
             type MinAssets = MinAssets;
             type MaxAssets = MaxAssets;
-            type MaxInRatio = MaxInRatio;
-            type MaxOutRatio = MaxOutRatio;
             type MaxSwapFee = MaxSwapFee;
             type MaxTotalWeight = MaxTotalWeight;
             type MaxWeight = MaxWeight;

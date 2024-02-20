@@ -44,8 +44,7 @@
 //     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //     DEALINGS IN THE SOFTWARE.
 
-//! Helper functions for approximating preimages of increasing or decreasing functions used in
-//! [`crate::arbitrage`].
+//! Helper functions for approximating preimages of increasing or decreasing functions.
 
 use sp_runtime::traits::AtLeast32BitUnsigned;
 

@@ -19,27 +19,23 @@
 use crate::types::PoolId;
 use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, Weight};
+use sp_runtime::DispatchResult;
 
 pub trait Swaps<AccountId> {
     type Asset;
     type Balance;
 
-    /// Creates an initial active pool.
+    /// Creates a new pool.
     ///
     /// # Arguments
     ///
-    /// * `who`: The account that is the creator of the pool. Must have enough
-    /// funds for each of the assets to cover the minimum balance.
+    /// * `who`: The account that is the creator of the pool.
     /// * `assets`: The assets that are used in the pool.
-    /// * `base_asset`: The base asset in a prediction market swap pool (usually a currency).
-    /// * `market_id`: The market id of the market the pool belongs to.
-    /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
-    /// * `swap_fee`: The fee applied to each swap (in case the scoring rule doesn't provide fees).
-    /// * `amount`: The amount of each asset added to the pool; **may** be `None` only if
-    ///   `scoring_rule` is `RikiddoSigmoidFeeMarketEma`.
-    /// * `weights`: These are the denormalized weights (the raw weights).
+    /// * `swap_fee`: The fee applied to each swap.
+    /// * `amount`: The amount of each asset added to the pool.
+    /// * `weights`: The denormalized weights.
     fn create_pool(
-        creator: AccountId,
+        who: AccountId,
         assets: Vec<Self::Asset>,
         swap_fee: Self::Balance,
         amount: Self::Balance,
@@ -49,68 +45,66 @@ pub trait Swaps<AccountId> {
     /// Close the specified pool.
     fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
 
-    /// Destroy CPMM pool, slash pool account assets and destroy pool shares of the liquidity providers.
+    /// Destroy pool, slash pool account assets and destroy pool shares of the liquidity providers.
     fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
 
+    /// Open the specified pool.
     fn open_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
 
-    /// Pool - Exit with exact pool amount
-    ///
-    /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
-    /// this method injects the exactly amount of `asset_amount` to `origin`.
+    /// Exchanges an LP's (liquidity provider's) pool shares for a proportionate and exact
+    /// amount of _one_ of the pool's assets. The assets received are distributed according to
+    /// the LP's percentage ownership of the pool.
     ///
     /// # Arguments
     ///
-    /// * `who`: Liquidity Provider (LP). The account whose assets should be received.
-    /// * `pool_id`: Unique pool identifier.
-    /// * `asset`: Self::Asset leaving the pool.
-    /// * `asset_amount`: Self::Asset amount that is leaving the pool.
-    /// * `max_pool_amount`: The calculated amount of assets for the pool must be equal or
-    /// greater than the given value.
+    /// * `who`: The LP.
+    /// * `pool_id`: The ID of the pool to withdraw from.
+    /// * `asset`: The asset received by the LP.
+    /// * `asset_amount`: The amount of `asset` leaving the pool.
+    /// * `max_pool_amount`: The maximum amount of pool shares the LP is willing to burn. The
+    ///   transaction is rolled back if this bound is violated.
     fn pool_exit_with_exact_asset_amount(
         who: AccountId,
         pool_id: PoolId,
         asset: Self::Asset,
         asset_amount: Self::Balance,
         max_pool_amount: Self::Balance,
-    ) -> Result<Weight, DispatchError>;
+    ) -> DispatchResult;
 
-    /// Pool - Join with exact asset amount
-    ///
-    /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
-    /// this method transfers the exactly amount of `asset_amount` to `pool_id`.
+    /// Exchanges an exact amount of an LP's (liquidity provider's) holds of _one_ of the assets in
+    /// the pool for pool shares.
     ///
     /// # Arguments
     ///
-    /// * `who`: Liquidity Provider (LP). The account whose assets should be received.
-    /// * `pool_id`: Unique pool identifier.
-    /// * `asset_in`: Self::Asset entering the pool.
-    /// * `asset_amount`: Self::Asset amount that is entering the pool.
-    /// * `min_pool_amount`: The calculated amount for the pool must be equal or greater
-    /// than the given value.
+    /// * `who`: The LP.
+    /// * `pool_id`: The ID of the pool to withdraw from.
+    /// * `asset_in`: The asset entering the pool.
+    /// * `asset_amount`: Asset amount that is entering the pool.
+    /// * `min_pool_amount`: The minimum amount of pool shares the LP asks to receive. The
+    ///   transaction is rolled back if this bound is violated.
     fn pool_join_with_exact_asset_amount(
         who: AccountId,
         pool_id: PoolId,
         asset_in: Self::Asset,
         asset_amount: Self::Balance,
         min_pool_amount: Self::Balance,
-    ) -> Result<Weight, DispatchError>;
+    ) -> DispatchResult;
 
-    /// Swap - Exact amount in
+    /// Buy the `asset_out`/`asset_in` pair from the pool for an exact amount of `asset_in`.
     ///
-    /// Swaps a given `asset_amount_in` of the `asset_in/asset_out` pair to `pool_id`.
+    /// This function will error if both `min_asset_amount_out` and `max_price` are `None`.
     ///
     /// # Arguments
     ///
-    /// * `who`: The account whose assets should be transferred.
-    /// * `pool_id`: Unique pool identifier.
-    /// * `asset_in`: Self::Asset entering the pool.
-    /// * `asset_amount_in`: Amount that will be transferred from the provider to the pool.
-    /// * `asset_out`: Self::Asset leaving the pool.
-    /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
-    /// * `max_price`: Market price must be equal or less than the provided value.
-    /// * `handle_fees`: Whether additional fees are handled or not (sets LP fee to 0)
-    #[allow(clippy::too_many_arguments)]
+    /// * `who`: The user executing the trade.
+    /// * `pool_id`: The pool to execute the trade on.
+    /// * `asset_in`: Asset entering the pool.
+    /// * `asset_amount_in`: Exact mount that will be transferred from the user to the pool.
+    /// * `asset_out`: Asset leaving the pool.
+    /// * `min_asset_amount_out`: Minimum asset amount requested by the user. The trade is rolled
+    ///   back if this limit is violated. If this is `None`, there is no limit.
+    /// * `max_price`: The maximum price _after execution_ the user is willing to accept. The trade
+    ///   is rolled back if this limit is violated. If this is `None`, there is no limit.
     fn swap_exact_amount_in(
         who: AccountId,
         pool_id: PoolId,
@@ -119,23 +113,23 @@ pub trait Swaps<AccountId> {
         asset_out: Self::Asset,
         min_asset_amount_out: Option<Self::Balance>,
         max_price: Option<Self::Balance>,
-    ) -> Result<Weight, DispatchError>;
+    ) -> DispatchResult;
 
-    /// Swap - Exact amount out
+    /// Buy the `asset_out`/`asset_in` pair from the pool, receiving an exact amount of `asset_out`.
     ///
-    /// Swaps a given `asset_amount_out` of the `asset_in/asset_out` pair to `origin`.
+    /// This function will error if both `min_asset_amount_out` and `max_price` are `None`.
     ///
     /// # Arguments
     ///
-    /// * `who`: The account whose assets should be transferred.
-    /// * `pool_id`: Unique pool identifier.
-    /// * `asset_in`: Self::Asset entering the pool.
-    /// * `max_amount_asset_in`: Maximum asset amount that can enter the pool.
-    /// * `asset_out`: Self::Asset leaving the pool.
-    /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
-    /// * `max_price`: Market price must be equal or less than the provided value.
-    /// * `handle_fees`: Whether additional fees are handled or not (sets LP fee to 0)
-    #[allow(clippy::too_many_arguments)]
+    /// * `who`: The user executing the trade.
+    /// * `pool_id`: The pool to execute the trade on.
+    /// * `asset_in`: Asset entering the pool.
+    /// * `max_asset_amount_out`: Maximum asset amount the user is willing to pay. The trade is
+    ///   rolled back if this limit is violated.
+    /// * `asset_out`: Asset leaving the pool.
+    /// * `asset_amount_out`: Exact amount that will be transferred from the user to the pool.
+    /// * `max_price`: The maximum price _after execution_ the user is willing to accept. The trade
+    ///   is rolled back if this limit is violated. If this is `None`, there is no limit.
     fn swap_exact_amount_out(
         who: AccountId,
         pool_id: PoolId,
@@ -144,5 +138,5 @@ pub trait Swaps<AccountId> {
         asset_out: Self::Asset,
         asset_amount_out: Self::Balance,
         max_price: Option<Self::Balance>,
-    ) -> Result<Weight, DispatchError>;
+    ) -> DispatchResult;
 }
