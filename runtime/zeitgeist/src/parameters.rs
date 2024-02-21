@@ -506,10 +506,10 @@ parameter_type_with_key! {
     // Explicit match arms are used to ensure new asset types are respected.
     pub ExistentialDeposits: |currency_id: Currencies| -> Balance {
         match currency_id {
-            Currencies::CategoricalOutcome(_,_) => ExistentialDeposit::get(),
-            Currencies::ParimutuelShare(_,_)  => ExistentialDeposit::get(),
-            Currencies::PoolShare(_)  => ExistentialDeposit::get(),
-            Currencies::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
+            Currencies::CategoricalOutcome(_, _) => ExistentialDeposit::get(),
+            Currencies::ParimutuelShare(_, _) => ExistentialDeposit::get(),
+            Currencies::PoolShare(_) => ExistentialDeposit::get(),
+            Currencies::ScalarOutcome(_, _) => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]
             Currencies::ForeignAsset(id) => {
                 let maybe_metadata = <
