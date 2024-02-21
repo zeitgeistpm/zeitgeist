@@ -27,7 +27,9 @@ std = [
     "parity-scale-codec/std",
     "zeitgeist-primitives/std",
 ]
-try-runtime = []
+try-runtime = [
+    "frame-support/try-runtime",
+]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
