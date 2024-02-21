@@ -40,6 +40,7 @@ fn unroutable_test_helper(asset: Assets, initial_amount: <Runtime as crate::Conf
         Error::<Runtime>::Unsupported
     );
     assert_eq!(AssetRouter::unreserve_named(&Default::default(), asset, &ALICE, 1), 1);
+    assert_eq!(AssetRouter::reserved_balance_named(&Default::default(), asset, &ALICE), 0);
 }
 
 #[test_case(CURRENCY; "foreign")]
@@ -53,7 +54,10 @@ fn routes_currencies_correctly(currency_id: Assets) {
             &ALICE,
             CURRENCY_INITIAL_AMOUNT
         ));
-        assert_eq!(AssetRouter::reserved_balance(currency_id, &ALICE), CURRENCY_INITIAL_AMOUNT);
+        assert_eq!(
+            AssetRouter::reserved_balance_named(&Default::default(), currency_id, &ALICE),
+            CURRENCY_INITIAL_AMOUNT
+        );
         assert_eq!(
             AssetRouter::slash_reserved_named(&Default::default(), currency_id, &ALICE, 1),
             0
@@ -70,14 +74,17 @@ fn routes_currencies_correctly(currency_id: Assets) {
             .unwrap(),
             0
         );
-        assert_eq!(AssetRouter::reserved_balance(currency_id, &BOB), CURRENCY_MIN_BALANCE);
         assert_eq!(
-            AssetRouter::reserved_balance(currency_id, &ALICE),
+            AssetRouter::reserved_balance_named(&Default::default(), currency_id, &BOB),
+            CURRENCY_MIN_BALANCE
+        );
+        assert_eq!(
+            AssetRouter::reserved_balance_named(&Default::default(), currency_id, &ALICE),
             CURRENCY_INITIAL_AMOUNT - CURRENCY_MIN_BALANCE - 1
         );
         assert_eq!(AssetRouter::unreserve_named(&Default::default(), currency_id, &ALICE, 1), 0);
         assert_eq!(
-            AssetRouter::reserved_balance(currency_id, &ALICE),
+            AssetRouter::reserved_balance_named(&Default::default(), currency_id, &ALICE),
             CURRENCY_INITIAL_AMOUNT - CURRENCY_MIN_BALANCE - 2
         );
     });
