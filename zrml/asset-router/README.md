@@ -38,6 +38,5 @@ should be invoked in `Currencies` and when it should be invoked in
   - If it does, invoke the function in `MarketAssets`
   - If it does not, try to convert to `CurrencyType`.
     - On success, invoke `Currencies`
-    - On failure, invoke `MarketAssets` (which will error in that case since the
-      asset exists).
+    - On failure, invoke `MarketAssets`
 - On failure, continue trying to convert into other known asset types.
