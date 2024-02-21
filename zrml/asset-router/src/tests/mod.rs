@@ -43,5 +43,5 @@ mod inspect;
 mod managed_destroy;
 mod multi_lockable_currency;
 mod multi_reservable_currency;
-mod multicurrency;
+mod multi_currency;
 mod named_multi_reservable_currency;
