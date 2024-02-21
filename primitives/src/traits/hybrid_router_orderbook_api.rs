@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -59,11 +59,13 @@ pub trait HybridRouterOrderBookApi {
     /// - `who`: The account that fills the order.
     /// - `order_id`: The id of the order to fill.
     /// - `maker_partial_fill`: The amount to fill the order with.
+    ///
+    /// Returns the filled order amount.
     fn fill_order(
         who: Self::AccountId,
         order_id: Self::OrderId,
         maker_partial_fill: Option<Self::Balance>,
-    ) -> DispatchResult;
+    ) -> Result<Self::Balance, DispatchError>;
 
     /// Places an order on the order book.
     ///

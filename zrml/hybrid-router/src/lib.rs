@@ -29,7 +29,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::weights::WeightInfoZeitgeist;
+    use crate::{types::Strategy, weights::WeightInfoZeitgeist};
     use core::marker::PhantomData;
     use frame_support::{
         ensure,
@@ -43,12 +43,13 @@ mod pallet {
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
     use orml_traits::MultiCurrency;
+    use sp_arithmetic::ArithmetricError;
     use sp_runtime::{
         traits::{CheckedSub, Zero},
         DispatchResult,
     };
-    use types::Strategy;
     use zeitgeist_primitives::{
+        order_book::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderBookApi},
         types::{Asset, Market},
     };
@@ -78,7 +79,7 @@ mod pallet {
                 Balance = BalanceOf<Self>,
                 Asset = AssetOf<Self>,
                 Order = OrderOf<Self>,
-                OrderId = OrderIdOf<Self>,
+                OrderId = OrderId,
             >;
 
         #[pallet::constant]
@@ -98,9 +99,9 @@ mod pallet {
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::AssetManager as MultiCurrency<AccountIdOf<T>>>::Balance;
+    pub(crate) type OrderOf<T> = Order<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> =
         Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
 
@@ -126,6 +127,10 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// The price of an order is above the specified maximum price.
+        OrderPriceAboveMaxPrice,
+        /// The strategy "immediate or cancel" was applied.
+        CancelStrategyApplied,
         /// Action cannot be completed because an unexpected error has occurred. This should be
         /// reported to protocol maintainers.
         InconsistentState(InconsistentStateError),
@@ -175,7 +180,7 @@ mod pallet {
             asset: AssetOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             #[pallet::compact] max_price: BalanceOf<T>,
-            orders: Vec<OrderIdOf<T>>,
+            orders: Vec<OrderId>,
             strategy: Strategy,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -220,7 +225,7 @@ mod pallet {
             asset: AssetOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             #[pallet::compact] min_price: BalanceOf<T>,
-            orders: Vec<OrderIdOf<T>>,
+            orders: Vec<OrderId>,
             strategy: Strategy,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -241,8 +246,8 @@ mod pallet {
             asset: AssetOf<T>,
             amount: BalanceOf<T>,
             max_price: BalanceOf<T>,
-        ) -> DispatchResult {
-            // TODO does the AMM have the pool for market id?
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            // TODO does the AMM have the pool for market id? if not throw an error
 
             let mut remaining = amount;
             let amm_amount = T::Amm::calculate_buy_amount_until(market_id, asset, max_price)?;
@@ -250,12 +255,12 @@ mod pallet {
 
             if !amm_amount.is_zero() {
                 T::Amm::buy(who, market_id, asset, amm_amount, BalanceOf::<T>::zero())?;
-                remaining =
-                    remaining.checked_sub(&amm_amount).ok_or(Error::<T>::InconsistentState(
-                        InconsistentStateError::InsufficientFundsInPotAccount,
-                    ))?;
+                remaining = remaining
+                    .checked_sub(&amm_amount)
+                    .ok_or(DispatchError::Arithmetic(ArithmetricError::Underflow))?;
             }
-            Ok(())
+
+            Ok(remaining)
         }
 
         #[require_transactional]
@@ -266,9 +271,59 @@ mod pallet {
             asset: AssetOf<T>,
             amount: BalanceOf<T>,
             max_price: BalanceOf<T>,
-            orders: Vec<OrderIdOf<T>>,
+            orders: Vec<OrderId>,
             strategy: Strategy,
         ) -> DispatchResult {
+            let mut remaining = amount;
+
+            for order_id in orders {
+                if remaining.is_zero() {
+                    break;
+                }
+
+                let order = match T::OrderBook::order(order_id) {
+                    Ok(order) => order,
+                    Err(_) => continue,
+                };
+
+                let order_price: BalanceOf<T> = order.price();
+                ensure!(order_price <= max_price, Error::<T>::OrderPriceAboveMaxPrice);
+
+                remaining =
+                    Self::maybe_buy_from_amm(who, market_id, asset, remaining, order_price)?;
+
+                if remaining.is_zero() {
+                    break;
+                }
+
+                let filled = T::OrderBook::fill_order(who, order_id, Some(remaining))?;
+                remaining = remaining
+                    .checked_sub(&filled)
+                    .ok_or(DispatchError::Arithmetic(ArithmetricError::Underflow))?;
+            }
+
+            if !remaining.is_zero() {
+                remaining = Self::maybe_buy_from_amm(who, market_id, asset, remaining, max_price)?;
+            }
+
+            if !remaining.is_zero() {
+                match strategy {
+                    Strategy::ImmediateOrCancel => {
+                        return Err(Error::<T>::CancelStrategyApplied.into());
+                    }
+                    Strategy::LimitOrder => {
+                        T::OrderBook::place_order(
+                            who,
+                            market_id,
+                            maker_asset,
+                            maker_amount,
+                            taker_asset,
+                            taker_amount,
+                        )?;
+                    }
+                }
+            }
+
             // TODO emit event
 
             Ok(())
@@ -282,7 +337,7 @@ mod pallet {
             asset: AssetOf<T>,
             amount: BalanceOf<T>,
             min_price: BalanceOf<T>,
-            orders: Vec<OrderIdOf<T>>,
+            orders: Vec<OrderId>,
             strategy: Strategy,
         ) -> DispatchResult {
             // TODO emit event

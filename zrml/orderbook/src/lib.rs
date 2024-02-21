@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-use crate::{types::*, weights::*};
+use crate::weights::*;
 use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use frame_support::{
@@ -43,6 +43,7 @@ use zeitgeist_primitives::{
     },
     traits::{DistributeFees, MarketCommonsPalletApi},
     types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
+    order_book::{OrderId, Order},
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -51,7 +52,6 @@ pub mod migrations;
 pub mod mock;
 #[cfg(test)]
 mod tests;
-pub mod types;
 mod utils;
 pub mod weights;
 

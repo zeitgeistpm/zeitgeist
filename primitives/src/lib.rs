@@ -30,3 +30,4 @@ mod proxy_type;
 mod serde_wrapper;
 pub mod traits;
 pub mod types;
+pub mod order_book;
