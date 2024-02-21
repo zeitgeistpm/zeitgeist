@@ -34,7 +34,7 @@ mod pallet {
         ensure, log,
         pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
         require_transactional,
-        traits::{Get, IsType, StorageVersion},
+        traits::{fungibles::Create, Get, IsType, StorageVersion},
         PalletId, RuntimeDebug,
     };
     use frame_system::{
@@ -42,6 +42,7 @@ mod pallet {
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
     use orml_traits::MultiCurrency;
+    use pallet_assets::ManagedDestroy;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Zero},
         DispatchResult,
@@ -49,12 +50,18 @@ mod pallet {
     use zeitgeist_primitives::{
         math::fixed::FixedMulDiv,
         traits::DistributeFees,
-        types::{Asset, Market, MarketStatus, MarketType, OutcomeReport, ScoringRule},
+        types::{Asset, BaseAsset, Market, MarketStatus, MarketType, OutcomeReport, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// The module handling the creation of market assets.
+        type AssetCreator: Create<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
+
+        /// The module handling the destruction of market assets.
+        type AssetDestroyer: ManagedDestroy<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
+
         /// The api to handle different asset classes.
         type AssetManager: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 
@@ -98,7 +105,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> =
-        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
+        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, BaseAsset>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -313,7 +320,7 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             let base_asset = market.base_asset;
             ensure!(
-                T::AssetManager::ensure_can_withdraw(base_asset, &who, amount).is_ok(),
+                T::AssetManager::ensure_can_withdraw(base_asset.into(), &who, amount).is_ok(),
                 Error::<T>::InsufficientBalance
             );
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
@@ -324,7 +331,8 @@ mod pallet {
             );
             Self::market_assets_contains(&market, &asset)?;
 
-            let external_fees = T::ExternalFees::distribute(market_id, base_asset, &who, amount);
+            let external_fees =
+                T::ExternalFees::distribute(market_id, base_asset.into(), &who, amount);
             let amount_minus_fees =
                 amount.checked_sub(&external_fees).ok_or(Error::<T>::Unexpected)?;
             ensure!(
@@ -334,7 +342,7 @@ mod pallet {
 
             let pot_account = Self::pot_account(market_id);
 
-            T::AssetManager::transfer(market.base_asset, &who, &pot_account, amount_minus_fees)?;
+            T::AssetManager::transfer(base_asset.into(), &who, &pot_account, amount_minus_fees)?;
             T::AssetManager::deposit(asset, &who, amount_minus_fees)?;
 
             Self::deposit_event(Event::OutcomeBought {
@@ -396,7 +404,7 @@ mod pallet {
             }
 
             let pot_account = Self::pot_account(market_id);
-            let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
+            let pot_total = T::AssetManager::free_balance(market.base_asset.into(), &pot_account);
             let payoff = pot_total.bmul_bdiv(winning_balance, outcome_total)?;
 
             Self::check_values(winning_balance, pot_total, outcome_total, payoff)?;
@@ -405,10 +413,16 @@ mod pallet {
 
             T::AssetManager::withdraw(winning_asset, &who, withdrawn_asset_balance)?;
 
-            let remaining_bal = T::AssetManager::free_balance(market.base_asset, &pot_account);
+            let remaining_bal =
+                T::AssetManager::free_balance(market.base_asset.into(), &pot_account);
             let base_asset_payoff = payoff.min(remaining_bal);
 
-            T::AssetManager::transfer(market.base_asset, &pot_account, &who, base_asset_payoff)?;
+            T::AssetManager::transfer(
+                market.base_asset.into(),
+                &pot_account,
+                &who,
+                base_asset_payoff,
+            )?;
 
             Self::deposit_event(Event::RewardsClaimed {
                 market_id,
@@ -449,7 +463,7 @@ mod pallet {
             T::AssetManager::withdraw(refund_asset, &who, refund_balance)?;
 
             let pot_account = Self::pot_account(market_id);
-            let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
+            let pot_total = T::AssetManager::free_balance(market.base_asset.into(), &pot_account);
             if pot_total < refund_balance {
                 log::debug!(
                     target: LOG_TARGET,
@@ -459,7 +473,12 @@ mod pallet {
             }
             let refund_balance = refund_balance.min(pot_total);
 
-            T::AssetManager::transfer(market.base_asset, &pot_account, &who, refund_balance)?;
+            T::AssetManager::transfer(
+                market.base_asset.into(),
+                &pot_account,
+                &who,
+                refund_balance,
+            )?;
 
             Self::deposit_event(Event::BalanceRefunded {
                 market_id,
