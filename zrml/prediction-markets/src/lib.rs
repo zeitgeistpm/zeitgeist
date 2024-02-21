@@ -51,7 +51,6 @@ mod pallet {
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::traits::AccountIdConversion;
-    use zeitgeist_primitives::types::SubsidyUntil;
 
     #[cfg(feature = "parachain")]
     use {orml_traits::asset_registry::Inspect, zeitgeist_primitives::types::CustomMetadata};
@@ -88,26 +87,28 @@ mod pallet {
     /// Currently 10 blocks is 2 minutes (assuming block time is 12 seconds).
     pub(crate) const MAX_RECOVERY_TIME_FRAMES: TimeFrame = 10;
 
-    pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub(crate) type NegativeImbalanceOf<T> =
-        <<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
-    pub(crate) type TimeFrame = u64;
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
+    pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
+    pub(crate) type CacheSize = ConstU32<64>;
+    pub(crate) type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
+    pub(crate) type InitialItemOf<T> = InitialItem<AccountIdOf<T>, BalanceOf<T>>;
+    pub(crate) type MarketBondsOf<T> = MarketBonds<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type MarketIdOf<T> = <T as zrml_market_commons::Config>::MarketId;
-    pub(crate) type MomentOf<T> =
-        <<T as zrml_market_commons::Config>::Timestamp as frame_support::traits::Time>::Moment;
-    pub type MarketOf<T> = Market<
+    pub(crate) type MarketOf<T> = Market<
         AccountIdOf<T>,
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
-        Asset<MarketIdOf<T>>,
+        AssetOf<T>,
     >;
+    pub(crate) type MomentOf<T> =
+        <<T as zrml_market_commons::Config>::Timestamp as frame_support::traits::Time>::Moment;
+    pub(crate) type NegativeImbalanceOf<T> =
+        <<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
+    pub(crate) type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
     pub(crate) type ReportOf<T> = Report<AccountIdOf<T>, <T as frame_system::Config>::BlockNumber>;
-    pub type CacheSize = ConstU32<64>;
-    pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
-    pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
-    type InitialItemOf<T> = InitialItem<AccountIdOf<T>, BalanceOf<T>>;
+    pub(crate) type TimeFrame = u64;
 
     macro_rules! impl_unreserve_bond {
         ($fn_name:ident, $bond_type:ident) => {
@@ -339,7 +340,7 @@ mod pallet {
         // Within the same block, operations that interact with the activeness of the same
         // market will behave differently before and after this call.
         #[pallet::call_index(1)]
-        #[pallet::weight((T::WeightInfo::admin_move_market_to_closed(CacheSize::get()), Pays::No))]
+        #[pallet::weight(T::WeightInfo::admin_move_market_to_closed(CacheSize::get()))]
         #[transactional]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
@@ -363,7 +364,7 @@ mod pallet {
         /// Complexity: `O(n + m)`, where `n` is the number of market ids
         /// per dispute / report block, m is the number of disputes.
         #[pallet::call_index(2)]
-        #[pallet::weight((
+        #[pallet::weight(
             T::WeightInfo::admin_move_market_to_resolved_scalar_reported(CacheSize::get())
             .max(
                 T::WeightInfo::admin_move_market_to_resolved_categorical_reported(CacheSize::get())
@@ -371,9 +372,8 @@ mod pallet {
                 T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(CacheSize::get())
             ).max(
                 T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(CacheSize::get())
-            ),
-            Pays::No,
-        ))]
+            )
+        )]
         #[transactional]
         pub fn admin_move_market_to_resolved(
             origin: OriginFor<T>,
@@ -424,7 +424,7 @@ mod pallet {
         ///
         /// Complexity: `O(1)`
         #[pallet::call_index(3)]
-        #[pallet::weight((T::WeightInfo::approve_market(), Pays::No))]
+        #[pallet::weight(T::WeightInfo::approve_market())]
         #[transactional]
         pub fn approve_market(
             origin: OriginFor<T>,
@@ -447,7 +447,8 @@ mod pallet {
 
             Self::deposit_event(Event::MarketApproved(market_id, new_status));
             // The ApproveOrigin should not pay fees for providing this service
-            Ok((Some(T::WeightInfo::approve_market()), Pays::No).into())
+            let default_weight: Option<Weight> = None;
+            Ok((default_weight, Pays::No).into())
         }
 
         /// Request an edit to a proposed market.
@@ -463,16 +464,15 @@ mod pallet {
         ///
         /// Complexity: `O(edit_reason.len())`
         #[pallet::call_index(4)]
-        #[pallet::weight((
-            T::WeightInfo::request_edit(edit_reason.len() as u32),
-            Pays::No,
-        ))]
+        #[pallet::weight(
+            T::WeightInfo::request_edit(edit_reason.len() as u32)
+        )]
         #[transactional]
         pub fn request_edit(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             edit_reason: Vec<u8>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             T::RequestEditOrigin::ensure_origin(origin)?;
             let edit_reason: EditReason<T> = edit_reason
                 .try_into()
@@ -488,7 +488,8 @@ mod pallet {
                 }
             })?;
             Self::deposit_event(Event::MarketRequestedEdit(market_id, edit_reason));
-            Ok(())
+            let default_weight: Option<Weight> = None;
+            Ok((default_weight, Pays::No).into())
         }
 
         /// Buy a complete set of outcome shares of a market.
@@ -592,7 +593,7 @@ mod pallet {
         #[transactional]
         pub fn create_market(
             origin: OriginFor<T>,
-            base_asset: Asset<MarketIdOf<T>>,
+            base_asset: AssetOf<T>,
             creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -644,7 +645,7 @@ mod pallet {
         #[transactional]
         pub fn edit_market(
             origin: OriginFor<T>,
-            base_asset: Asset<MarketIdOf<T>>,
+            base_asset: AssetOf<T>,
             market_id: MarketIdOf<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -832,15 +833,11 @@ mod pallet {
                 }
             }
 
-            // Weight correction
-            if let OutcomeReport::Categorical(_) = resolved_outcome {
-                return Ok(Some(T::WeightInfo::redeem_shares_categorical()).into());
-            } else if let OutcomeReport::Scalar(_) = resolved_outcome {
-                return Ok(Some(T::WeightInfo::redeem_shares_scalar()).into());
-            }
-
-            let default_weight: Option<Weight> = None;
-            Ok((default_weight, Pays::No).into())
+            let weight = match resolved_outcome {
+                OutcomeReport::Categorical(_) => T::WeightInfo::redeem_shares_categorical(),
+                OutcomeReport::Scalar(_) => T::WeightInfo::redeem_shares_scalar(),
+            };
+            Ok(Some(weight).into())
         }
 
         /// Rejects a market that is waiting for approval from the advisory committee.
@@ -853,10 +850,8 @@ mod pallet {
         /// and `m` is the number of market ids,
         /// which close at the same time as the specified market.
         #[pallet::call_index(13)]
-        #[pallet::weight((
-            T::WeightInfo::reject_market(CacheSize::get(), reject_reason.len() as u32),
-            Pays::No,
-        ))]
+        #[pallet::weight(
+            T::WeightInfo::reject_market(CacheSize::get(), reject_reason.len() as u32))]
         #[transactional]
         pub fn reject_market(
             origin: OriginFor<T>,
@@ -1063,7 +1058,7 @@ mod pallet {
         #[pallet::call_index(17)]
         pub fn create_market_and_deploy_pool(
             origin: OriginFor<T>,
-            base_asset: Asset<MarketIdOf<T>>,
+            base_asset: AssetOf<T>,
             creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -1903,13 +1898,7 @@ mod pallet {
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, AccountIdOf<T>),
         /// An amount of winning outcomes have been redeemed.
         /// \[market_id, currency_id, amount_redeemed, payout, who\]
-        TokensRedeemed(
-            MarketIdOf<T>,
-            Asset<MarketIdOf<T>>,
-            BalanceOf<T>,
-            BalanceOf<T>,
-            AccountIdOf<T>,
-        ),
+        TokensRedeemed(MarketIdOf<T>, AssetOf<T>, BalanceOf<T>, BalanceOf<T>, AccountIdOf<T>),
         /// The global dispute was started. \[market_id\]
         GlobalDisputeStarted(MarketIdOf<T>),
         /// The recovery limit for timestamp based markets was reached due to a prolonged chain stall.
@@ -2011,26 +2000,6 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
-    // TODO(#1212): Remove in v0.5.1.
-    #[pallet::storage]
-    pub type MarketIdsPerOpenBlock<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, CacheSize>,
-        ValueQuery,
-    >;
-
-    // TODO(#1212): Remove in v0.5.1.
-    #[pallet::storage]
-    pub type MarketIdsPerOpenTimeFrame<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        TimeFrame,
-        BoundedVec<MarketIdOf<T>, CacheSize>,
-        ValueQuery,
-    >;
-
     /// A mapping of market identifiers to the block their market ends on.
     #[pallet::storage]
     pub type MarketIdsPerCloseBlock<T: Config> = StorageMap<
@@ -2082,17 +2051,6 @@ mod pallet {
     pub type MarketIdsForEdit<T: Config> =
         StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason<T>>;
 
-    // TODO(#1212): Remove in v0.5.1.
-    /// Contains a list of all markets that are currently collecting subsidy and the deadline.
-    // All the values are "cached" here. Results in data duplication, but speeds up the iteration
-    // over every market significantly (otherwise 25µs per relevant market per block).
-    #[pallet::storage]
-    pub type MarketsCollectingSubsidy<T: Config> = StorageValue<
-        _,
-        BoundedVec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>, ConstU32<16>>,
-        ValueQuery,
-    >;
-
     impl<T: Config> Pallet<T> {
         impl_unreserve_bond!(unreserve_creation_bond, creation);
         impl_unreserve_bond!(unreserve_oracle_bond, oracle);
@@ -2122,7 +2080,7 @@ mod pallet {
         #[require_transactional]
         fn do_create_market(
             who: T::AccountId,
-            base_asset: Asset<MarketIdOf<T>>,
+            base_asset: AssetOf<T>,
             creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -2180,10 +2138,7 @@ mod pallet {
             Ok((ids_amount, market_id))
         }
 
-        pub fn outcome_assets(
-            market_id: MarketIdOf<T>,
-            market: &MarketOf<T>,
-        ) -> Vec<Asset<MarketIdOf<T>>> {
+        pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
             match market.market_type {
                 MarketType::Categorical(categories) => {
                     let mut assets = Vec::new();
@@ -2918,7 +2873,7 @@ mod pallet {
         }
 
         fn construct_market(
-            base_asset: Asset<MarketIdOf<T>>,
+            base_asset: AssetOf<T>,
             creator: T::AccountId,
             creator_fee: Perbill,
             oracle: T::AccountId,
@@ -2931,7 +2886,7 @@ mod pallet {
             scoring_rule: ScoringRule,
             report: Option<ReportOf<T>>,
             resolved_outcome: Option<OutcomeReport>,
-            bonds: MarketBonds<T::AccountId, BalanceOf<T>>,
+            bonds: MarketBondsOf<T>,
         ) -> Result<MarketOf<T>, DispatchError> {
             let valid_base_asset = match base_asset {
                 Asset::Ztg => true,

@@ -263,7 +263,7 @@ arrayvec = { version = "0.7.4", default-features = false }
 cfg-if = { version = "1.0.0" }
 fixed = { version = "=1.15.0", default-features = false, features = ["num-traits"] }
 # Using math code directly from the HydraDX node repository as https://github.com/galacticcouncil/hydradx-math is outdated and has been archived in May 2023.
-hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-node", package = "hydra-dx-math", tag = "v18.0.0", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-node", package = "hydra-dx-math", tag = "v21.1.1", default-features = false }
 # Hashbrown works in no_std by default and default features are used in Rikiddo
 hashbrown = { version = "0.12.3", default-features = true }
 hex-literal = { version = "0.3.4", default-features = false }

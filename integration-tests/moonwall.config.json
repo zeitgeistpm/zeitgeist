@@ -1,0 +1,130 @@
+{
+  "label": "moonwall_config",
+  "defaultTestTimeout": 120000,
+  "scriptsDir": "scripts/",
+  "environments": [
+    {
+      "name": "zombienet_zeitgeist_upgrade",
+      "testFileDir": ["tests/rt-upgrade-zombienet"],
+      "runScripts": [
+        "build-node.sh",
+        "build-zeitgeist-spec.sh",
+        "download-polkadot.sh"
+      ],
+      "foundation": {
+        "launchSpec": [
+          {
+            "binPath": "../target/release/zeitgeist"
+          }
+        ],
+        "rtUpgradePath": "../target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
+        "type": "zombie",
+        "zombieSpec": {
+          "configPath": "./configs/zombieZeitgeist.json"
+        }
+      },
+      "connections": [
+        {
+          "name": "Relay",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:9947"]
+        },
+        {
+          "name": "parachain",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:9944"]
+        }
+      ]
+    },
+    {
+      "name": "chopsticks_zeitgeist_upgrade",
+      "testFileDir": ["tests/rt-upgrade-zeitgeist-chopsticks"],
+      "runScripts": ["build-node.sh"],
+      "foundation": {
+        "type": "chopsticks",
+        "rtUpgradePath": "../target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
+        "launchSpec": [
+          {
+            "name": "ZeitgeistDB",
+            "type": "parachain",
+            "configPath": "./configs/zeitgeist.yml"
+          },
+          {
+            "name": "HydraDXDB",
+            "type": "parachain",
+            "configPath": "./configs/hydradx.yml"
+          },
+          {
+            "name": "PolkadotDB",
+            "type": "relaychain",
+            "configPath": "polkadot"
+          }
+        ]
+      },
+      "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
+      "buildBlockMode": "manual",
+      "connections": [
+        {
+          "name": "ZeitgeistPara",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:8000"]
+        },
+        {
+          "name": "HydraDXPara",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:8001"]
+        },
+        {
+          "name": "PolkadotRelay",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:8002"]
+        }
+      ]
+    },
+    {
+      "name": "chopsticks_battery_station_upgrade",
+      "testFileDir": ["tests/rt-upgrade-battery-station-chopsticks"],
+      "runScripts": ["build-node.sh"],
+      "foundation": {
+        "type": "chopsticks",
+        "rtUpgradePath": "../target/release/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm",
+        "launchSpec": [
+          {
+            "name": "BatteryStationDB",
+            "type": "parachain",
+            "configPath": "./configs/battery-station.yml"
+          },
+          {
+            "name": "BasiliskDB",
+            "type": "parachain",
+            "configPath": "./configs/basilisk.yml"
+          },
+          {
+            "name": "RococoDB",
+            "type": "relaychain",
+            "configPath": "rococo"
+          }
+        ]
+      },
+      "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
+      "buildBlockMode": "manual",
+      "connections": [
+        {
+          "name": "BatteryStationPara",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:8000"]
+        },
+        {
+          "name": "BasiliskPara",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:8001"]
+        },
+        {
+          "name": "RococoRelay",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:8002"]
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -70,3 +70,4 @@ pub(crate) const _1_10: u128 = _1 / 10;
 pub(crate) const _2_10: u128 = _2 / 10;
 pub(crate) const _3_10: u128 = _3 / 10;
 pub(crate) const _4_10: u128 = _4 / 10;
+pub(crate) const _9_10: u128 = _9 / 10;

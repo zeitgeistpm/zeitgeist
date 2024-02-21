@@ -32,3 +32,61 @@ macro_rules! create_b_tree_map {
         [$(($key, $value),)*].iter().cloned().collect::<alloc::collections::BTreeMap<_, _>>()
     }
 }
+
+/// This macro does ensure that a condition `$condition` is met, and if it is not met
+/// it will log a message `$message` with optional message arguments `message_args` to
+/// an optional log target `$log_target`, cause an assertion in a test environment
+/// and execute some optional extra code.
+///
+/// ```ignore
+/// // Examples:
+/// unreachable_non_terminating!(a == b, "a does not equal b");
+/// unreachable_non_terminating!(a == b, log_target, "a does not equal b");
+/// unreachable_non_terminating!(a == b, "{:?} != {:?}", a, b);
+/// unreachable_non_terminating!(a == b, log_target, "{:?} != {:?}", a, b);
+/// ```
+#[macro_export]
+macro_rules! unreachable_non_terminating {
+    ($condition: expr, $message: literal, $($message_args: tt)*) => {
+        let message = format!($message, $($message_args)*);
+
+        #[cfg(test)]
+        assert!($condition, "{}", message);
+
+        if !$condition {
+            log::warn!("{}", message);
+        }
+    };
+    ($condition: expr, $log_target: ident, $message: literal, $($message_args: tt)*) => {
+        let message = format!($message, $($message_args)*);
+
+        #[cfg(test)]
+        assert!($condition, "{}", message);
+
+        if !$condition {
+            log::warn!(target: $log_target, "{}", message);
+        }
+    };
+    ($condition: expr, $extra_code: expr, $message: literal, $($message_args: tt)*) => {
+        let message = format!($message, $($message_args)*);
+
+        #[cfg(test)]
+        assert!($condition, "{}", message);
+
+        if !$condition {
+            log::warn!("{}", message);
+            $extra_code;
+        }
+    };
+    ($condition: expr, $log_target: ident, $extra_code: expr, $message: literal, $($message_args: tt)*) => {
+        let message = format!($message, $($message_args)*);
+
+        #[cfg(test)]
+        assert!($condition, "{}", message);
+
+        if !$condition {
+            log::warn!(target: $log_target, "{}", message);
+            $extra_code;
+        }
+    };
+}

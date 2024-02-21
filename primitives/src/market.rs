@@ -343,19 +343,6 @@ pub enum ResolutionMechanism {
     Noop,
 }
 
-/// Contains a market id and the market period.
-///
-/// * `BN`: Block Number
-/// * `MO`: Moment (Time moment)
-/// * `MI`: Market Id
-#[derive(TypeInfo, Clone, Eq, PartialEq, Decode, Encode, MaxEncodedLen, RuntimeDebug)]
-pub struct SubsidyUntil<BN, MO, MI> {
-    /// Market id of associated market.
-    pub market_id: MI,
-    /// Market start and end.
-    pub period: MarketPeriod<BN, MO>,
-}
-
 #[cfg(test)]
 mod tests {
     use crate::{market::*, types::Asset};

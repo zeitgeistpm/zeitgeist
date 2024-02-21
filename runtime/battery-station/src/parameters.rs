@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -309,10 +309,6 @@ parameter_types! {
     pub const MinAssets: u16 = 2;
     /// Maximum number of assets. `MaxCategories` plus one base asset.
     pub const MaxAssets: u16 = MAX_ASSETS;
-    /// Mathematical constraint set by the Balancer algorithm. DO NOT CHANGE.
-    pub const MaxInRatio: Balance = (BASE / 3) + 1;
-    /// Mathematical constraint set by the Balancer algorithm. DO NOT CHANGE.
-    pub const MaxOutRatio: Balance = (BASE / 3) + 1;
     /// The maximum fee that is charged for swaps and single asset LP operations.
     pub const MaxSwapFee: Balance = BASE / 10; // 10%
     /// The sum of all weights of the assets within the pool is limited by `MaxTotalWeight`.

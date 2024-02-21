@@ -55,8 +55,8 @@ pub trait WeightInfoZeitgeist {
     fn pool_join(a: u32) -> Weight;
     fn pool_join_with_exact_asset_amount() -> Weight;
     fn pool_join_with_exact_pool_amount() -> Weight;
-    fn swap_exact_amount_in_cpmm() -> Weight;
-    fn swap_exact_amount_out_cpmm() -> Weight;
+    fn swap_exact_amount_in() -> Weight;
+    fn swap_exact_amount_out() -> Weight;
     fn open_pool(a: u32) -> Weight;
     fn close_pool(a: u32) -> Weight;
     fn destroy_pool(a: u32) -> Weight;
@@ -179,7 +179,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    fn swap_exact_amount_in_cpmm() -> Weight {
+    fn swap_exact_amount_in() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `5144`
         //  Estimated: `19053`
@@ -194,7 +194,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    fn swap_exact_amount_out_cpmm() -> Weight {
+    fn swap_exact_amount_out() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `5144`
         //  Estimated: `19053`
