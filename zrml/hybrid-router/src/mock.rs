@@ -20,7 +20,6 @@
 extern crate alloc;
 
 use crate as zrml_parimutuel;
-use crate::{AssetOf, BalanceOf, MarketIdOf};
 use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use frame_support::{construct_runtime, pallet_prelude::Get, parameter_types, traits::Everything};
@@ -50,34 +49,6 @@ pub const MARKET_CREATOR: AccountIdTest = 42;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
-parameter_types! {
-    pub const FeeAccount: AccountIdTest = MARKET_CREATOR;
-}
-
-pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
-
-impl<T: crate::Config, F> DistributeFees for ExternalFees<T, F>
-where
-    F: Get<T::AccountId>,
-{
-    type Asset = AssetOf<T>;
-    type AccountId = T::AccountId;
-    type Balance = BalanceOf<T>;
-    type MarketId = MarketIdOf<T>;
-
-    fn distribute(
-        _market_id: Self::MarketId,
-        asset: Self::Asset,
-        account: &Self::AccountId,
-        amount: Self::Balance,
-    ) -> Self::Balance {
-        let fees =
-            Perbill::from_rational(1u64, 100u64).mul_floor(amount.saturated_into::<BalanceOf<T>>());
-        let _ = T::AssetManager::transfer(asset, account, &F::get(), fees);
-        fees
-    }
-}
-
 construct_runtime!(
     pub enum Runtime
     where
@@ -85,7 +56,6 @@ construct_runtime!(
         NodeBlock = BlockTest<Runtime>,
         UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
-        Parimutuel: zrml_parimutuel::{Event<T>, Pallet, Storage},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         AssetManager: orml_currencies::{Call, Pallet, Storage},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
@@ -96,7 +66,6 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
-    type ExternalFees = ExternalFees<Runtime, FeeAccount>;
     type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type AssetManager = AssetManager;

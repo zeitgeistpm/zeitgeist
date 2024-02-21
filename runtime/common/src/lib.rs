@@ -314,6 +314,7 @@ macro_rules! create_runtime {
                 NeoSwaps: zrml_neo_swaps::{Call, Event<T>, Pallet, Storage} = 60,
                 Orderbook: zrml_orderbook::{Call, Event<T>, Pallet, Storage} = 61,
                 Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
+                HybridRouter: zrml_hybrid_router::{Call, Event<T>, Pallet, Storage} = 63,
 
                 $($additional_pallets)*
             }

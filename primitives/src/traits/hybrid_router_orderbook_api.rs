@@ -15,28 +15,35 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use frame_support::{
+    dispatch::{fmt::Debug, DispatchError, DispatchResult},
+    pallet_prelude::{MaybeSerializeDeserialize, Member},
+    Parameter,
+};
+use parity_scale_codec::{FullCodec, MaxEncodedLen};
+use sp_runtime::traits::{AtLeast32Bit, AtLeast32BitUnsigned};
+
 /// Trait for handling the Order Book part of the hybrid router.
-pub trait HybridRouterOrderbookApi {
+pub trait HybridRouterOrderBookApi {
     type AccountId;
-    type MarketId;
-    type Balance;
+    type MarketId: AtLeast32Bit
+        + Copy
+        + Default
+        + MaybeSerializeDeserialize
+        + MaxEncodedLen
+        + Member
+        + Parameter;
+    type Balance: AtLeast32BitUnsigned
+        + FullCodec
+        + Copy
+        + MaybeSerializeDeserialize
+        + Debug
+        + Default
+        + scale_info::TypeInfo
+        + MaxEncodedLen;
     type Asset;
     type Order;
     type OrderId;
-
-    /// Returns the amount a user has to buy to move the price of `asset` to `until`; zero if the
-    /// current spot price is above `until`.
-    ///
-    /// # Arguments
-    ///
-    /// - `market_id`: The market for which to get the buy amount.
-    /// - `asset`: The asset to calculate the buy amount for.
-    /// - `until`: At most until this maximum price.
-    fn calculate_buy_amount_until(
-        market_id: Self::MarketId,
-        asset: Self::Asset,
-        until: Self::Balance
-    ) -> Result<Self::Balance, DispatchError>;
 
     /// Returns the order with the specified `order_id`.
     ///
@@ -55,7 +62,7 @@ pub trait HybridRouterOrderbookApi {
     fn fill_order(
         who: Self::AccountId,
         order_id: Self::OrderId,
-        maker_partial_fill: Option<Self::Balance>
+        maker_partial_fill: Option<Self::Balance>,
     ) -> DispatchResult;
 
     /// Places an order on the order book.
@@ -71,9 +78,9 @@ pub trait HybridRouterOrderbookApi {
     fn place_order(
         who: Self::AccountId,
         market_id: Self::MarketId,
-        maker_asset: AssetOf<Self>,
+        maker_asset: Self::Asset,
         maker_amount: Self::Balance,
-        taker_asset: AssetOf<Self>,
-        taker_amount: Self::Balance
+        taker_asset: Self::Asset,
+        taker_amount: Self::Balance,
     ) -> DispatchResult;
 }

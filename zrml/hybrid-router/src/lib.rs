@@ -21,8 +21,8 @@
 mod benchmarking;
 mod mock;
 mod tests;
-mod utils;
 mod types;
+mod utils;
 pub mod weights;
 
 pub use pallet::*;
@@ -32,7 +32,7 @@ mod pallet {
     use crate::weights::WeightInfoZeitgeist;
     use core::marker::PhantomData;
     use frame_support::{
-        ensure, log,
+        ensure,
         pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
         require_transactional,
         traits::{Get, IsType, StorageVersion},
@@ -44,15 +44,14 @@ mod pallet {
     };
     use orml_traits::MultiCurrency;
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedSub, Zero},
+        traits::{CheckedSub, Zero},
         DispatchResult,
     };
-    use zeitgeist_primitives::{
-        math::fixed::FixedMulDiv,
-        traits::{HybridRouterAmmApi, HybridRouterOrderBookApi},
-        types::{Asset, Market, MarketStatus, MarketType, OutcomeReport, ScoringRule},
-    };
     use types::Strategy;
+    use zeitgeist_primitives::{
+        traits::{HybridRouterAmmApi, HybridRouterOrderBookApi},
+        types::{Asset, Market},
+    };
     use zrml_market_commons::MarketCommonsPalletApi;
 
     #[pallet::config]
@@ -66,9 +65,21 @@ mod pallet {
                 Balance = BalanceOf<Self>,
             >;
 
-        type Amm: HybridRouterAmmApi<Self::AccountId, AssetOf<Self>, BalanceOf<Self>>;
+        type Amm: HybridRouterAmmApi<
+                AccountId = AccountIdOf<Self>,
+                MarketId = MarketIdOf<Self>,
+                Asset = AssetOf<Self>,
+                Balance = BalanceOf<Self>,
+            >;
 
-        type OrderBook: HybridRouterOrderBookApi<Self::AccountId, AssetOf<Self>, BalanceOf<Self>>;
+        type OrderBook: HybridRouterOrderBookApi<
+                AccountId = AccountIdOf<Self>,
+                MarketId = MarketIdOf<Self>,
+                Balance = BalanceOf<Self>,
+                Asset = AssetOf<Self>,
+                Order = OrderOf<Self>,
+                OrderId = OrderIdOf<Self>,
+            >;
 
         #[pallet::constant]
         type PalletId: Get<PalletId>;
@@ -199,7 +210,7 @@ mod pallet {
         /// remaining amount is placed (`Strategy::LimitOrder`).
         ///
         /// Complexity: `O(n)`
-        #[pallet::call_index(0)]
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::buy())]
         #[frame_support::transactional]
         pub fn sell(
@@ -224,9 +235,32 @@ mod pallet {
     where
         T: Config,
     {
+        fn maybe_buy_from_amm(
+            who: AccountIdOf<T>,
+            market_id: MarketIdOf<T>,
+            asset: AssetOf<T>,
+            amount: BalanceOf<T>,
+            max_price: BalanceOf<T>,
+        ) -> DispatchResult {
+            // TODO does the AMM have the pool for market id?
+
+            let mut remaining = amount;
+            let amm_amount = T::Amm::calculate_buy_amount_until(market_id, asset, max_price)?;
+            let amm_amount = amm_amount.min(remaining);
+
+            if !amm_amount.is_zero() {
+                T::Amm::buy(who, market_id, asset, amm_amount, BalanceOf::<T>::zero())?;
+                remaining =
+                    remaining.checked_sub(&amm_amount).ok_or(Error::<T>::InconsistentState(
+                        InconsistentStateError::InsufficientFundsInPotAccount,
+                    ))?;
+            }
+            Ok(())
+        }
+
         #[require_transactional]
         fn do_buy(
-            who: T::AccountId,
+            who: AccountIdOf<T>,
             market_id: MarketIdOf<T>,
             asset_count: u16,
             asset: AssetOf<T>,
@@ -235,29 +269,23 @@ mod pallet {
             orders: Vec<OrderIdOf<T>>,
             strategy: Strategy,
         ) -> DispatchResult {
-            
-
-            Self::deposit_event(Event::OutcomeBought {
-                market_id,
-                buyer: who,
-                asset,
-                amount_minus_fees,
-                fees: external_fees,
-            });
+            // TODO emit event
 
             Ok(())
         }
 
         #[require_transactional]
         fn do_sell(
-            who: T::AccountId,
+            who: AccountIdOf<T>,
             market_id: MarketIdOf<T>,
             asset_count: u16,
+            asset: AssetOf<T>,
             amount: BalanceOf<T>,
             min_price: BalanceOf<T>,
             orders: Vec<OrderIdOf<T>>,
             strategy: Strategy,
         ) -> DispatchResult {
+            // TODO emit event
 
             Ok(())
         }

@@ -15,11 +15,32 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use frame_support::{
+    dispatch::{fmt::Debug, DispatchError, DispatchResult},
+    pallet_prelude::{MaybeSerializeDeserialize, Member},
+    Parameter,
+};
+use parity_scale_codec::{FullCodec, MaxEncodedLen};
+use sp_runtime::traits::{AtLeast32Bit, AtLeast32BitUnsigned};
+
 /// Trait for handling the AMM part of the hybrid router.
 pub trait HybridRouterAmmApi {
     type AccountId;
-    type MarketId;
-    type Balance;
+    type MarketId: AtLeast32Bit
+        + Copy
+        + Default
+        + MaybeSerializeDeserialize
+        + MaxEncodedLen
+        + Member
+        + Parameter;
+    type Balance: AtLeast32BitUnsigned
+        + FullCodec
+        + Copy
+        + MaybeSerializeDeserialize
+        + Debug
+        + Default
+        + scale_info::TypeInfo
+        + MaxEncodedLen;
     type Asset;
 
     /// Returns the amount a user has to buy to move the price of `asset` to `until`; zero if the
@@ -33,9 +54,8 @@ pub trait HybridRouterAmmApi {
     fn calculate_buy_amount_until(
         market_id: Self::MarketId,
         asset: Self::Asset,
-        until: Self::Balance
+        until: Self::Balance,
     ) -> Result<Self::Balance, DispatchError>;
-
 
     fn buy(
         who: Self::AccountId,
@@ -56,7 +76,7 @@ pub trait HybridRouterAmmApi {
     fn calculate_sell_amount_until(
         market_id: Self::MarketId,
         asset: Self::Asset,
-        until: Self::Balance
+        until: Self::Balance,
     ) -> Result<Self::Balance, DispatchError>;
 
     fn sell(
