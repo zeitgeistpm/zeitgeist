@@ -19,6 +19,7 @@
 
 use super::*;
 use orml_traits::MultiCurrency;
+use test_case::test_case;
 
 fn unroutable_test_helper(asset: Assets) {
     assert_noop!(
@@ -35,34 +36,35 @@ fn unroutable_test_helper(asset: Assets) {
     );
 }
 
-#[test]
-fn routes_currencies_correctly() {
+#[test_case(CURRENCY; "foreign")]
+#[test_case(CURRENCY_OLD_OUTCOME; "old_outcome")]
+fn routes_currencies_correctly(currency_id: Assets) {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(AssetRouter::deposit(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT));
-        assert_ok!(AssetRouter::set_lock(Default::default(), CURRENCY, &ALICE, 1));
+        assert_ok!(AssetRouter::deposit(currency_id, &ALICE, CURRENCY_INITIAL_AMOUNT));
+        assert_ok!(AssetRouter::set_lock(Default::default(), currency_id, &ALICE, 1));
         assert_eq!(
             orml_tokens::Accounts::<Runtime>::get::<
                 u128,
                 <Runtime as orml_tokens::Config>::CurrencyId,
-            >(ALICE, Default::default())
+            >(ALICE, currency_id.try_into().unwrap())
             .frozen,
             1
         );
-        assert_ok!(AssetRouter::extend_lock(Default::default(), CURRENCY, &ALICE, 2));
+        assert_ok!(AssetRouter::extend_lock(Default::default(), currency_id, &ALICE, 2));
         assert_eq!(
             orml_tokens::Accounts::<Runtime>::get::<
                 u128,
                 <Runtime as orml_tokens::Config>::CurrencyId,
-            >(ALICE, Default::default())
+            >(ALICE, currency_id.try_into().unwrap())
             .frozen,
             2
         );
-        assert_ok!(AssetRouter::remove_lock(Default::default(), CURRENCY, &ALICE));
+        assert_ok!(AssetRouter::remove_lock(Default::default(), currency_id, &ALICE));
         assert_eq!(
             orml_tokens::Accounts::<Runtime>::get::<
                 u128,
                 <Runtime as orml_tokens::Config>::CurrencyId,
-            >(ALICE, Default::default())
+            >(ALICE, currency_id.try_into().unwrap())
             .frozen,
             0
         );
