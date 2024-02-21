@@ -24,3 +24,20 @@ destruction, i.e. that is invoked by the managed destruction routine to destroy
 a specific asset (using the `Destroy` interface), throws an error. In that case
 an asset is considered as `Indestructible` and stored in the
 `IndestructibleAssets` storage, while also logging the incident.
+
+## Routing support for duplicate asset types in `CurrencyType` and `MarketAssetType`
+
+As some asset types within `CurrencyType` and `MarketAssetType` map to the same
+asset type in the overarching `AssetType`, it is necessary to apply some
+additional logic to determine when a function call with an asset of `AssetType`
+should be invoked in `Currencies` and when it should be invoked in
+`MarketAssets`. The approach this pallet uses is as follows:
+
+- Try to convert `AssetType` into `MarketAssetType`
+- On success, check if `MarketAssetType` exists.
+  - If it does, invoke the function in `MarketAssets`
+  - If it does not, try to convert to `CurrencyType`.
+    - On success, invoke `Currencies`
+    - On failure, invoke `MarketAssets` (which will error in that case since the
+      asset exists).
+- On failure, continue trying to convert into other known asset types.
