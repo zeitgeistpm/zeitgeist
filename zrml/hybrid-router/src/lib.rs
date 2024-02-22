@@ -293,6 +293,13 @@ mod pallet {
         ) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
 
+            let required_base_asset_amount = amount.bmul_ceil(max_price)?;
+            T::AssetManager::ensure_can_withdraw(
+                market.base_asset,
+                &who,
+                required_base_asset_amount,
+            )?;
+
             let mut remaining = amount;
 
             for order_id in orders {
@@ -399,6 +406,8 @@ mod pallet {
             strategy: Strategy,
         ) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
+
+            T::AssetManager::ensure_can_withdraw(asset, &who, amount)?;
 
             let mut remaining = amount;
 
