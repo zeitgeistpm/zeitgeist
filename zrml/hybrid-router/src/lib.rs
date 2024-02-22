@@ -43,12 +43,12 @@ mod pallet {
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
     use orml_traits::MultiCurrency;
-    use sp_arithmetic::ArithmetricError;
     use sp_runtime::{
         traits::{CheckedSub, Zero},
-        DispatchResult,
+        ArithmeticError, DispatchResult,
     };
     use zeitgeist_primitives::{
+        math::fixed::FixedMul,
         order_book::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderBookApi},
         types::{Asset, Market},
@@ -102,6 +102,7 @@ mod pallet {
     pub(crate) type OrderOf<T> = Order<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> =
         Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
 
@@ -115,13 +116,21 @@ mod pallet {
     where
         T: Config,
     {
-        /// An outcome was bought.
-        OutcomeBought {
+        /// A buy order was executed.
+        HybridRouterBuyExecuted {
+            who: AccountIdOf<T>,
             market_id: MarketIdOf<T>,
-            buyer: AccountIdOf<T>,
             asset: AssetOf<T>,
-            amount_minus_fees: BalanceOf<T>,
-            fees: BalanceOf<T>,
+            amount: BalanceOf<T>,
+            max_price: BalanceOf<T>,
+        },
+        /// A sell order was executed.
+        HybridRouterSellExecuted {
+            who: AccountIdOf<T>,
+            market_id: MarketIdOf<T>,
+            asset: AssetOf<T>,
+            amount: BalanceOf<T>,
+            min_price: BalanceOf<T>,
         },
     }
 
@@ -129,6 +138,12 @@ mod pallet {
     pub enum Error<T> {
         /// The price of an order is above the specified maximum price.
         OrderPriceAboveMaxPrice,
+        /// The price of an order is below the specified minimum price.
+        OrderPriceBelowMinPrice,
+        /// The asset of an order is not equal to the maker asset of the order book.
+        AssetNotEqualToOrderBookMakerAsset,
+        /// The asset of an order is not equal to the taker asset of the order book.
+        AssetNotEqualToOrderBookTakerAsset,
         /// The strategy "immediate or cancel" was applied.
         CancelStrategyApplied,
         /// Action cannot be completed because an unexpected error has occurred. This should be
@@ -241,23 +256,25 @@ mod pallet {
         T: Config,
     {
         fn maybe_buy_from_amm(
-            who: AccountIdOf<T>,
+            who: &AccountIdOf<T>,
             market_id: MarketIdOf<T>,
             asset: AssetOf<T>,
             amount: BalanceOf<T>,
             max_price: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
-            // TODO does the AMM have the pool for market id? if not throw an error
+            if !T::Amm::pool_exists(market_id) {
+                return Ok(amount);
+            }
 
             let mut remaining = amount;
             let amm_amount = T::Amm::calculate_buy_amount_until(market_id, asset, max_price)?;
             let amm_amount = amm_amount.min(remaining);
 
             if !amm_amount.is_zero() {
-                T::Amm::buy(who, market_id, asset, amm_amount, BalanceOf::<T>::zero())?;
+                T::Amm::buy(&who, market_id, asset, amm_amount, BalanceOf::<T>::zero())?;
                 remaining = remaining
                     .checked_sub(&amm_amount)
-                    .ok_or(DispatchError::Arithmetic(ArithmetricError::Underflow))?;
+                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
             }
 
             Ok(remaining)
@@ -274,6 +291,8 @@ mod pallet {
             orders: Vec<OrderId>,
             strategy: Strategy,
         ) -> DispatchResult {
+            let market = T::MarketCommons::market(&market_id)?;
+
             let mut remaining = amount;
 
             for order_id in orders {
@@ -286,24 +305,26 @@ mod pallet {
                     Err(_) => continue,
                 };
 
-                let order_price: BalanceOf<T> = order.price();
+                ensure!(asset == order.maker_asset, Error::<T>::AssetNotEqualToOrderBookMakerAsset);
+
+                let order_price = order.price(market.base_asset)?;
                 ensure!(order_price <= max_price, Error::<T>::OrderPriceAboveMaxPrice);
 
                 remaining =
-                    Self::maybe_buy_from_amm(who, market_id, asset, remaining, order_price)?;
+                    Self::maybe_buy_from_amm(&who, market_id, asset, remaining, order_price)?;
 
                 if remaining.is_zero() {
                     break;
                 }
 
-                let filled = T::OrderBook::fill_order(who, order_id, Some(remaining))?;
+                let filled = T::OrderBook::fill_order(&who, order_id, Some(remaining))?;
                 remaining = remaining
                     .checked_sub(&filled)
-                    .ok_or(DispatchError::Arithmetic(ArithmetricError::Underflow))?;
+                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
             }
 
             if !remaining.is_zero() {
-                remaining = Self::maybe_buy_from_amm(who, market_id, asset, remaining, max_price)?;
+                remaining = Self::maybe_buy_from_amm(&who, market_id, asset, remaining, max_price)?;
             }
 
             if !remaining.is_zero() {
@@ -312,21 +333,53 @@ mod pallet {
                         return Err(Error::<T>::CancelStrategyApplied.into());
                     }
                     Strategy::LimitOrder => {
+                        let maker_amount = max_price.bmul_floor(remaining)?;
                         T::OrderBook::place_order(
-                            who,
+                            &who,
                             market_id,
-                            maker_asset,
+                            market.base_asset,
                             maker_amount,
-                            taker_asset,
-                            taker_amount,
+                            asset,
+                            remaining,
                         )?;
                     }
                 }
             }
 
-            // TODO emit event
+            Self::deposit_event(Event::HybridRouterBuyExecuted {
+                who: who.clone(),
+                market_id,
+                asset,
+                amount,
+                max_price,
+            });
 
             Ok(())
+        }
+
+        fn maybe_sell_from_amm(
+            who: &AccountIdOf<T>,
+            market_id: MarketIdOf<T>,
+            asset: AssetOf<T>,
+            amount: BalanceOf<T>,
+            min_price: BalanceOf<T>,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            if !T::Amm::pool_exists(market_id) {
+                return Ok(amount);
+            }
+
+            let mut remaining = amount;
+            let amm_amount = T::Amm::calculate_sell_amount_until(market_id, asset, min_price)?;
+            let amm_amount = amm_amount.min(remaining);
+
+            if !amm_amount.is_zero() {
+                T::Amm::sell(&who, market_id, asset, amm_amount, BalanceOf::<T>::zero())?;
+                remaining = remaining
+                    .checked_sub(&amm_amount)
+                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
+            }
+
+            Ok(remaining)
         }
 
         #[require_transactional]
@@ -340,7 +393,69 @@ mod pallet {
             orders: Vec<OrderId>,
             strategy: Strategy,
         ) -> DispatchResult {
-            // TODO emit event
+            let market = T::MarketCommons::market(&market_id)?;
+
+            let mut remaining = amount;
+
+            for order_id in orders {
+                if remaining.is_zero() {
+                    break;
+                }
+
+                let order = match T::OrderBook::order(order_id) {
+                    Ok(order) => order,
+                    Err(_) => continue,
+                };
+
+                ensure!(asset == order.taker_asset, Error::<T>::AssetNotEqualToOrderBookTakerAsset);
+
+                let order_price = order.price(market.base_asset)?;
+                ensure!(order_price >= min_price, Error::<T>::OrderPriceBelowMinPrice);
+
+                remaining =
+                    Self::maybe_sell_from_amm(&who, market_id, asset, remaining, order_price)?;
+
+                if remaining.is_zero() {
+                    break;
+                }
+
+                let filled = T::OrderBook::fill_order(&who, order_id, Some(remaining))?;
+                remaining = remaining
+                    .checked_sub(&filled)
+                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
+            }
+
+            if !remaining.is_zero() {
+                remaining =
+                    Self::maybe_sell_from_amm(&who, market_id, asset, remaining, min_price)?;
+            }
+
+            if !remaining.is_zero() {
+                match strategy {
+                    Strategy::ImmediateOrCancel => {
+                        return Err(Error::<T>::CancelStrategyApplied.into());
+                    }
+                    Strategy::LimitOrder => {
+                        let maker_amount = min_price.bmul_floor(remaining)?;
+                        T::OrderBook::place_order(
+                            &who,
+                            market_id,
+                            asset,
+                            maker_amount,
+                            market.base_asset,
+                            remaining,
+                        )?;
+                    }
+                }
+            }
+
+            Self::deposit_event(Event::HybridRouterSellExecuted {
+                who: who.clone(),
+                market_id,
+                asset,
+                amount,
+                min_price,
+            });
 
             Ok(())
         }

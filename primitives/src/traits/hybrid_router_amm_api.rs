@@ -43,6 +43,8 @@ pub trait HybridRouterAmmApi {
         + MaxEncodedLen;
     type Asset;
 
+    fn pool_exists(market_id: Self::MarketId) -> bool;
+
     /// Returns the amount a user has to buy to move the price of `asset` to `until`; zero if the
     /// current spot price is above `until`.
     ///
@@ -58,7 +60,7 @@ pub trait HybridRouterAmmApi {
     ) -> Result<Self::Balance, DispatchError>;
 
     fn buy(
-        who: Self::AccountId,
+        who: &Self::AccountId,
         market_id: Self::MarketId,
         asset_out: Self::Asset,
         amount_in: Self::Balance,
@@ -80,7 +82,7 @@ pub trait HybridRouterAmmApi {
     ) -> Result<Self::Balance, DispatchError>;
 
     fn sell(
-        who: Self::AccountId,
+        who: &Self::AccountId,
         market_id: Self::MarketId,
         asset_out: Self::Asset,
         amount_in: Self::Balance,

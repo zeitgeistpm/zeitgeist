@@ -62,7 +62,7 @@ pub trait HybridRouterOrderBookApi {
     ///
     /// Returns the filled order amount.
     fn fill_order(
-        who: Self::AccountId,
+        who: &Self::AccountId,
         order_id: Self::OrderId,
         maker_partial_fill: Option<Self::Balance>,
     ) -> Result<Self::Balance, DispatchError>;
@@ -78,7 +78,7 @@ pub trait HybridRouterOrderBookApi {
     /// - `taker_asset`: The asset the maker wants to receive.
     /// - `taker_amount`: The amount the maker wants to receive.
     fn place_order(
-        who: Self::AccountId,
+        who: &Self::AccountId,
         market_id: Self::MarketId,
         maker_asset: Self::Asset,
         maker_amount: Self::Balance,
