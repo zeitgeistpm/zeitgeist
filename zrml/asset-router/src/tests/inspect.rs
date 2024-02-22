@@ -21,12 +21,12 @@ use super::*;
 use frame_support::traits::tokens::fungibles::Inspect;
 
 fn test_helper(asset: Assets, initial_amount: <Runtime as crate::Config>::Balance) {
-    assert!(AssetRouter::asset_exists(asset));
     assert_ok!(<AssetRouter as orml_traits::MultiCurrency<AccountId>>::deposit(
         asset,
         &ALICE,
         initial_amount
     ));
+    assert!(AssetRouter::asset_exists(asset));
     assert_eq!(AssetRouter::total_issuance(asset), initial_amount);
     assert_eq!(AssetRouter::balance(asset, &ALICE), initial_amount);
     assert_eq!(AssetRouter::reducible_balance(asset, &ALICE, false), initial_amount);
@@ -98,7 +98,11 @@ fn routes_market_assets_correctly() {
 fn routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_eq!(AssetRouter::minimum_balance(CURRENCY), CURRENCY_MIN_BALANCE);
+        assert_eq!(AssetRouter::minimum_balance(CURRENCY_OLD_OUTCOME), CURRENCY_MIN_BALANCE);
+
         test_helper(CURRENCY, CURRENCY_INITIAL_AMOUNT);
+        test_helper(CURRENCY_OLD_OUTCOME, CURRENCY_INITIAL_AMOUNT);
+
         assert_eq!(
             <CampaignAssets as Inspect<AccountId>>::total_issuance(CAMPAIGN_ASSET_INTERNAL),
             0

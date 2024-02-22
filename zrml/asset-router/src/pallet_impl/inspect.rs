@@ -109,8 +109,12 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
     }
 
     fn asset_exists(asset: Self::AssetId) -> bool {
-        if T::CurrencyType::try_from(asset).is_ok() {
-            true
+        if let Ok(currency) = T::CurrencyType::try_from(asset) {
+            if T::Currencies::total_issuance(currency) > Zero::zero() {
+                true
+            } else {
+                only_asset!(asset, false, Inspect, asset_exists,)
+            }
         } else {
             only_asset!(asset, false, Inspect, asset_exists,)
         }

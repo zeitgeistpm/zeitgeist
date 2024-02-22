@@ -19,6 +19,7 @@
 
 use super::*;
 use orml_traits::MultiCurrency;
+use test_case::test_case;
 
 fn unroutable_test_helper(asset: Assets, initial_amount: <Runtime as crate::Config>::Balance) {
     assert_ok!(AssetRouter::deposit(asset, &ALICE, initial_amount));
@@ -36,19 +37,20 @@ fn unroutable_test_helper(asset: Assets, initial_amount: <Runtime as crate::Conf
     assert_eq!(AssetRouter::unreserve(asset, &ALICE, 1), 1);
 }
 
-#[test]
-fn routes_currencies_correctly() {
+#[test_case(CURRENCY; "foreign")]
+#[test_case(CURRENCY_OLD_OUTCOME; "old_outcome")]
+fn routes_currencies_correctly(currency_id: Assets) {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(AssetRouter::deposit(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT));
+        assert_ok!(AssetRouter::deposit(currency_id, &ALICE, CURRENCY_INITIAL_AMOUNT));
 
-        assert!(AssetRouter::can_reserve(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT));
-        assert!(!AssetRouter::can_reserve(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT + 1));
-        assert_ok!(AssetRouter::reserve(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT));
-        assert_eq!(AssetRouter::reserved_balance(CURRENCY, &ALICE), CURRENCY_INITIAL_AMOUNT);
-        assert_eq!(AssetRouter::slash_reserved(CURRENCY, &ALICE, 1), 0);
+        assert!(AssetRouter::can_reserve(currency_id, &ALICE, CURRENCY_INITIAL_AMOUNT));
+        assert!(!AssetRouter::can_reserve(currency_id, &ALICE, CURRENCY_INITIAL_AMOUNT + 1));
+        assert_ok!(AssetRouter::reserve(currency_id, &ALICE, CURRENCY_INITIAL_AMOUNT));
+        assert_eq!(AssetRouter::reserved_balance(currency_id, &ALICE), CURRENCY_INITIAL_AMOUNT);
+        assert_eq!(AssetRouter::slash_reserved(currency_id, &ALICE, 1), 0);
         assert_eq!(
             AssetRouter::repatriate_reserved(
-                CURRENCY,
+                currency_id,
                 &ALICE,
                 &BOB,
                 CURRENCY_MIN_BALANCE,
@@ -57,14 +59,14 @@ fn routes_currencies_correctly() {
             .unwrap(),
             0
         );
-        assert_eq!(AssetRouter::reserved_balance(CURRENCY, &BOB), CURRENCY_MIN_BALANCE);
+        assert_eq!(AssetRouter::reserved_balance(currency_id, &BOB), CURRENCY_MIN_BALANCE);
         assert_eq!(
-            AssetRouter::reserved_balance(CURRENCY, &ALICE),
+            AssetRouter::reserved_balance(currency_id, &ALICE),
             CURRENCY_INITIAL_AMOUNT - CURRENCY_MIN_BALANCE - 1
         );
-        assert_eq!(AssetRouter::unreserve(CURRENCY, &ALICE, 1), 0);
+        assert_eq!(AssetRouter::unreserve(currency_id, &ALICE, 1), 0);
         assert_eq!(
-            AssetRouter::reserved_balance(CURRENCY, &ALICE),
+            AssetRouter::reserved_balance(currency_id, &ALICE),
             CURRENCY_INITIAL_AMOUNT - CURRENCY_MIN_BALANCE - 2
         );
     });

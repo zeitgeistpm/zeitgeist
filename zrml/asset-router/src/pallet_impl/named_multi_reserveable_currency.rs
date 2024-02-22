@@ -26,6 +26,12 @@ impl<T: Config> NamedMultiReservableCurrency<T::AccountId> for Pallet<T> {
         currency_id: Self::CurrencyId,
         who: &T::AccountId,
     ) -> Self::Balance {
+        if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
+            if T::MarketAssets::asset_exists(asset) {
+                Self::log_unsupported(currency_id, "reserved_balance_named");
+                return Zero::zero();
+            }
+        }
         if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::reserved_balance_named(
                 id, currency, who,
@@ -42,6 +48,11 @@ impl<T: Config> NamedMultiReservableCurrency<T::AccountId> for Pallet<T> {
         who: &T::AccountId,
         value: Self::Balance,
     ) -> DispatchResult {
+        if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
+            if T::MarketAssets::asset_exists(asset) {
+                return Err(Error::<T>::Unsupported.into());
+            }
+        }
         if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::reserve_named(
                 id, currency, who, value,
@@ -57,6 +68,12 @@ impl<T: Config> NamedMultiReservableCurrency<T::AccountId> for Pallet<T> {
         who: &T::AccountId,
         value: Self::Balance,
     ) -> Self::Balance {
+        if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
+            if T::MarketAssets::asset_exists(asset) {
+                Self::log_unsupported(currency_id, "unreserve_named");
+                return value;
+            }
+        }
         if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::unreserve_named(
                 id, currency, who, value,
@@ -73,6 +90,12 @@ impl<T: Config> NamedMultiReservableCurrency<T::AccountId> for Pallet<T> {
         who: &T::AccountId,
         value: Self::Balance,
     ) -> Self::Balance {
+        if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
+            if T::MarketAssets::asset_exists(asset) {
+                Self::log_unsupported(currency_id, "slash_reserved_named");
+                return value;
+            }
+        }
         if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::slash_reserved_named(
                 id, currency, who, value
@@ -91,6 +114,11 @@ impl<T: Config> NamedMultiReservableCurrency<T::AccountId> for Pallet<T> {
         value: Self::Balance,
         status: Status,
     ) -> Result<Self::Balance, DispatchError> {
+        if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
+            if T::MarketAssets::asset_exists(asset) {
+                return Err(Error::<T>::Unsupported.into());
+            }
+        }
         if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             return <T::Currencies as NamedMultiReservableCurrency<T::AccountId>>::repatriate_reserved_named(
                 id, currency, slashed, beneficiary, value, status

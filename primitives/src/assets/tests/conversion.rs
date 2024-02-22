@@ -23,43 +23,23 @@ use test_case::test_case;
 // Assets <> MarketAssetClass
 #[test_case(
     Asset::<MarketId>::CategoricalOutcome(7, 8),
-    MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 8);
+    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
     Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long),
-    MarketAssetClass::<MarketId>::OldScalarOutcome(7, ScalarPosition::Long);
+    MarketAssetClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
     "scalar_outcome"
 )]
 #[test_case(
     Asset::<MarketId>::PoolShare(7),
-    MarketAssetClass::<MarketId>::OldPoolShare(7);
+    MarketAssetClass::<MarketId>::PoolShare(7);
     "pool_share"
 )]
 #[test_case(
     Asset::<MarketId>::ParimutuelShare(7, 8),
-    MarketAssetClass::<MarketId>::OldParimutuelShare(7, 8);
-    "parimutuel_share"
-)]
-#[test_case(
-    Asset::<MarketId>::NewCategoricalOutcome(7, 8),
-    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 8);
-    "new_categorical_outcome"
-)]
-#[test_case(
-    Asset::<MarketId>::NewScalarOutcome(7, ScalarPosition::Long),
-    MarketAssetClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
-    "new_calar_outcome"
-)]
-#[test_case(
-    Asset::<MarketId>::NewPoolShare(7),
-    MarketAssetClass::<MarketId>::PoolShare(7);
-    "new_pool_share"
-)]
-#[test_case(
-    Asset::<MarketId>::NewParimutuelShare(7, 8),
     MarketAssetClass::<MarketId>::ParimutuelShare(7, 8);
-    "new_parimutuel_share"
+    "parimutuel_share"
 )]
 fn from_all_assets_to_market_assets(
     old_asset: Asset<MarketId>,
@@ -70,44 +50,24 @@ fn from_all_assets_to_market_assets(
 }
 
 #[test_case(
-    MarketAssetClass::<MarketId>::OldCategoricalOutcome(7, 8),
+    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 8),
     Asset::<MarketId>::CategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
-    MarketAssetClass::<MarketId>::OldScalarOutcome(7, ScalarPosition::Long),
+    MarketAssetClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long),
     Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
     "scalar_outcome"
 )]
 #[test_case(
-    MarketAssetClass::<MarketId>::OldPoolShare(7),
+    MarketAssetClass::<MarketId>::PoolShare(7),
     Asset::<MarketId>::PoolShare(7);
     "pool_share"
 )]
 #[test_case(
-    MarketAssetClass::<MarketId>::OldParimutuelShare(7, 8),
+    MarketAssetClass::<MarketId>::ParimutuelShare(7, 8),
     Asset::<MarketId>::ParimutuelShare(7, 8);
     "parimutuel_share"
-)]
-#[test_case(
-    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 8),
-    Asset::<MarketId>::NewCategoricalOutcome(7, 8);
-    "new_categorical_outcome"
-)]
-#[test_case(
-    MarketAssetClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long),
-    Asset::<MarketId>::NewScalarOutcome(7, ScalarPosition::Long);
-    "new_calar_outcome"
-)]
-#[test_case(
-    MarketAssetClass::<MarketId>::PoolShare(7),
-    Asset::<MarketId>::NewPoolShare(7);
-    "new_pool_share"
-)]
-#[test_case(
-    MarketAssetClass::<MarketId>::ParimutuelShare(7, 8),
-    Asset::<MarketId>::NewParimutuelShare(7, 8);
-    "new_parimutuel_share"
 )]
 fn from_market_assets_to_all_assets(
     old_asset: MarketAssetClass<MarketId>,
@@ -120,22 +80,22 @@ fn from_market_assets_to_all_assets(
 // Assets <> CurrencyClass
 #[test_case(
     Asset::<MarketId>::CategoricalOutcome(7, 8),
-    CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 8);
+    CurrencyClass::<MarketId>::CategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
     Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long),
-    CurrencyClass::<MarketId>::OldScalarOutcome(7, ScalarPosition::Long);
+    CurrencyClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
     "scalar_outcome"
 )]
 #[test_case(
     Asset::<MarketId>::PoolShare(7),
-    CurrencyClass::<MarketId>::OldPoolShare(7);
+    CurrencyClass::<MarketId>::PoolShare(7);
     "pool_share"
 )]
 #[test_case(
     Asset::<MarketId>::ParimutuelShare(7, 8),
-    CurrencyClass::<MarketId>::OldParimutuelShare(7, 8);
+    CurrencyClass::<MarketId>::ParimutuelShare(7, 8);
     "parimutuel_share"
 )]
 #[test_case(
@@ -149,22 +109,22 @@ fn from_all_assets_to_currencies(old_asset: Asset<MarketId>, new_asset: Currency
 }
 
 #[test_case(
-    CurrencyClass::<MarketId>::OldCategoricalOutcome(7, 8),
+    CurrencyClass::<MarketId>::CategoricalOutcome(7, 8),
     Asset::<MarketId>::CategoricalOutcome(7, 8);
     "categorical_outcome"
 )]
 #[test_case(
-    CurrencyClass::<MarketId>::OldScalarOutcome(7, ScalarPosition::Long),
+    CurrencyClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long),
     Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
     "scalar_outcome"
 )]
 #[test_case(
-    CurrencyClass::<MarketId>::OldPoolShare(7),
+    CurrencyClass::<MarketId>::PoolShare(7),
     Asset::<MarketId>::PoolShare(7);
     "pool_share"
 )]
 #[test_case(
-    CurrencyClass::<MarketId>::OldParimutuelShare(7, 8),
+    CurrencyClass::<MarketId>::ParimutuelShare(7, 8),
     Asset::<MarketId>::ParimutuelShare(7, 8);
     "parimutuel_share"
 )]
