@@ -98,7 +98,11 @@ fn routes_market_assets_correctly() {
 fn routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_eq!(AssetRouter::minimum_balance(CURRENCY), CURRENCY_MIN_BALANCE);
+        assert_eq!(AssetRouter::minimum_balance(CURRENCY_OLD_OUTCOME), CURRENCY_MIN_BALANCE);
+
         test_helper(CURRENCY, CURRENCY_INITIAL_AMOUNT);
+        test_helper(CURRENCY_OLD_OUTCOME, CURRENCY_INITIAL_AMOUNT);
+
         assert_eq!(
             <CampaignAssets as Inspect<AccountId>>::total_issuance(CAMPAIGN_ASSET_INTERNAL),
             0

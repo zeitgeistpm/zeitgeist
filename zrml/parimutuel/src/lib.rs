@@ -330,7 +330,6 @@ mod pallet {
                 Error::<T>::NotCategorical
             );
             Self::market_assets_contains(&market, &asset)?;
-            let pot_account = Self::pot_account(market_id);
 
             let external_fees =
                 T::ExternalFees::distribute(market_id, base_asset.into(), &who, amount);
@@ -340,6 +339,7 @@ mod pallet {
                 amount_minus_fees >= T::MinBetSize::get(),
                 Error::<T>::AmountBelowMinimumBetSize
             );
+            let pot_account = Self::pot_account(market_id);
 
             T::AssetManager::transfer(base_asset.into(), &who, &pot_account, amount_minus_fees)?;
             T::AssetManager::deposit(asset, &who, amount_minus_fees)?;
@@ -403,7 +403,11 @@ mod pallet {
             }
 
             let pot_account = Self::pot_account(market_id);
+<<<<<<< HEAD
             let pot_total = T::AssetManager::free_balance(market.base_asset.into(), &pot_account);
+=======
+            let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
+>>>>>>> sea212-new-asset-system
             let payoff = pot_total.bmul_bdiv(winning_balance, outcome_total)?;
 
             Self::check_values(winning_balance, pot_total, outcome_total, payoff)?;
