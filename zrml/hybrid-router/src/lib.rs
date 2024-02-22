@@ -48,7 +48,7 @@ mod pallet {
         ArithmeticError, DispatchResult,
     };
     use zeitgeist_primitives::{
-        math::fixed::FixedMul,
+        math::fixed::{FixedMul, FixedMulDiv},
         order_book::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderBookApi},
         types::{Asset, Market},
@@ -305,6 +305,7 @@ mod pallet {
                     Err(_) => continue,
                 };
 
+                // existing order is willing to give the required `asset` as the `maker_asset`
                 ensure!(asset == order.maker_asset, Error::<T>::AssetNotEqualToOrderBookMakerAsset);
 
                 let order_price = order.price(market.base_asset)?;
@@ -317,9 +318,13 @@ mod pallet {
                     break;
                 }
 
-                let filled = T::OrderBook::fill_order(&who, order_id, Some(remaining))?;
+                // `remaining` is denominated in `asset`, so the `maker_asset`
+                // but `maker_partial_fill` of `fill_order` is specified in `taker_asset`
+                let (taker_fill, maker_fill) =
+                    order.taker_and_maker_fill_from_maker_amount(remaining)?;
+                T::OrderBook::fill_order(&who, order_id, Some(maker_fill))?;
                 remaining = remaining
-                    .checked_sub(&filled)
+                    .checked_sub(&taker_fill)
                     .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
             }
 
@@ -419,9 +424,13 @@ mod pallet {
                     break;
                 }
 
-                let filled = T::OrderBook::fill_order(&who, order_id, Some(remaining))?;
+                // `remaining` is denominated in `asset`, so the `taker_asset`
+                // and the `maker_partial_fill` of `fill_order` is specified in `taker_asset`
+                let (taker_fill, maker_fill) =
+                    order.taker_and_maker_fill_from_taker_amount(remaining)?;
+                T::OrderBook::fill_order(&who, order_id, Some(maker_fill))?;
                 remaining = remaining
-                    .checked_sub(&filled)
+                    .checked_sub(&taker_fill)
                     .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
             }
 
