@@ -34,7 +34,7 @@ mod pallet {
         ensure, log,
         pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
         require_transactional,
-        traits::{fungibles::Create, Get, IsType, StorageVersion},
+        traits::{fungibles::{Inspect, Create}, Get, IsType, StorageVersion},
         PalletId, RuntimeDebug,
     };
     use frame_system::{
@@ -330,6 +330,14 @@ mod pallet {
                 Error::<T>::NotCategorical
             );
             Self::market_assets_contains(&market, &asset)?;
+            let pot_account = Self::pot_account(market_id);
+
+            if !T::AssetCreator::asset_exists(asset) {
+                let admin = pot_account.clone();
+                let is_sufficient = true;
+                let min_balance = 1u8;
+                T::AssetCreator::create(asset, admin, is_sufficient, min_balance.into())?;
+            }
 
             let external_fees =
                 T::ExternalFees::distribute(market_id, base_asset.into(), &who, amount);
@@ -339,8 +347,6 @@ mod pallet {
                 amount_minus_fees >= T::MinBetSize::get(),
                 Error::<T>::AmountBelowMinimumBetSize
             );
-
-            let pot_account = Self::pot_account(market_id);
 
             T::AssetManager::transfer(base_asset.into(), &who, &pot_account, amount_minus_fees)?;
             T::AssetManager::deposit(asset, &who, amount_minus_fees)?;

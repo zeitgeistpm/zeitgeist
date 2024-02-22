@@ -525,7 +525,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
             Self::do_buy_complete_set(sender, market_id, amount)?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            let assets = Self::outcome_assets(market_id, &market);
+            let assets = market.outcome_assets(market_id);
             let assets_len: u32 = assets.len().saturated_into();
             Ok(Some(T::WeightInfo::buy_complete_set(assets_len)).into())
         }
@@ -945,7 +945,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
             Self::do_sell_complete_set(sender, market_id, amount)?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            let assets = Self::outcome_assets(market_id, &market);
+            let assets = market.outcome_assets(market_id);
             let assets_len: u32 = assets.len().saturated_into();
             Ok(Some(T::WeightInfo::sell_complete_set(assets_len)).into())
         }
@@ -2149,11 +2149,11 @@ mod pallet {
             let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
             let market_account = Self::market_account(market_id);
 
-            for outcome in Self::outcome_assets(market_id, &market) {
+            for outcome in market.outcome_assets(market_id) {
                 let admin = market_account.clone();
                 let is_sufficient = true;
                 let min_balance = 1u8;
-                T::AssetCreator::create(outcome, admin, is_sufficient, min_balance.into())?;
+                T::AssetCreator::create(outcome.into(), admin, is_sufficient, min_balance.into())?;
             }
 
             let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
@@ -2161,24 +2161,6 @@ mod pallet {
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
             Ok((ids_amount, market_id))
-        }
-
-        pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
-            match market.market_type {
-                MarketType::Categorical(categories) => {
-                    let mut assets = Vec::new();
-                    for i in 0..categories {
-                        assets.push(Asset::CategoricalOutcome(market_id, i));
-                    }
-                    assets
-                }
-                MarketType::Scalar(_) => {
-                    vec![
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
-                    ]
-                }
-            }
         }
 
         fn insert_auto_close(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
@@ -2299,21 +2281,21 @@ mod pallet {
                 "Market account does not have sufficient reserves.",
             );
 
-            let assets = Self::outcome_assets(market_id, &market);
+            let assets = market.outcome_assets(market_id);
 
             // verify first.
             for asset in assets.iter() {
                 // Ensures that the sender has sufficient amount of each
                 // share in the set.
                 ensure!(
-                    T::AssetManager::free_balance(*asset, &who) >= amount,
+                    T::AssetManager::free_balance((*asset).into(), &who) >= amount,
                     Error::<T>::InsufficientShareBalance,
                 );
             }
 
             // write last.
             for asset in assets.iter() {
-                let missing = T::AssetManager::slash(*asset, &who, amount);
+                let missing = T::AssetManager::slash((*asset).into(), &who, amount);
                 debug_assert!(
                     missing.is_zero(),
                     "Could not slash all of the amount. asset {:?}, who: {:?}, amount: {:?}.",
@@ -2348,9 +2330,9 @@ mod pallet {
             let market_account = Self::market_account(market_id);
             T::AssetManager::transfer(market.base_asset.into(), &who, &market_account, amount)?;
 
-            let assets = Self::outcome_assets(market_id, &market);
+            let assets = market.outcome_assets(market_id);
             for asset in assets.iter() {
-                T::AssetManager::deposit(*asset, &who, amount)?;
+                T::AssetManager::deposit((*asset).into(), &who, amount)?;
             }
 
             Self::deposit_event(Event::BoughtCompleteSet(market_id, amount, who));
@@ -2782,29 +2764,29 @@ mod pallet {
             // Following call should return weight consumed by it.
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
+            let mut updated_market = market.clone();
+
             <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                 m.status = MarketStatus::Resolved;
                 m.resolved_outcome = Some(resolved_outcome.clone());
+                updated_market = m.clone();
                 Ok(())
             })?;
 
-            match resolved_outcome {
-                OutcomeReport::Categorical(winning_idx) => {
-                    // Destroy losing categorical outcome assets.
-                    let assets_to_destroy = BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
-                        Self::outcome_assets(*market_id, market)
-                            .into_iter()
-                            .filter(|outcome| {
-                                *outcome
-                                    != AssetOf::<T>::CategoricalOutcome(*market_id, winning_idx)
-                            })
-                            .zip(vec![None]),
-                    );
-                    // Ensure managed_destroy_multi does not error during lazy migration because
-                    // it tried to delete an old outcome asset from orml-tokens
-                    let _ = T::AssetDestroyer::managed_destroy_multi(assets_to_destroy);
-                }
-                OutcomeReport::Scalar(_) => (),
+            let winning_outcome = updated_market.resolved_outcome_into_outcome(*market_id);
+            if let Some(winning_outcome_inner) = winning_outcome {
+                // Destroy losing assets.
+                let assets_to_destroy = BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
+                    updated_market
+                        .outcome_assets(*market_id)
+                        .into_iter()
+                        .filter(|outcome| *outcome != winning_outcome_inner)
+                        .map(|asset| AssetOf::<T>::from(asset))
+                        .zip(vec![None]),
+                );
+                // Ensure managed_destroy_multi does not error during lazy migration because
+                // it tried to delete an old outcome asset from orml-tokens
+                let _ = T::AssetDestroyer::managed_destroy_multi(assets_to_destroy);
             }
 
             Self::deposit_event(Event::MarketResolved(

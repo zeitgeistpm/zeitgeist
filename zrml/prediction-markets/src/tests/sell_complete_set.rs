@@ -50,9 +50,9 @@ fn sell_complete_set_works(scoring_rule: ScoringRule) {
         ));
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let assets = PredictionMarkets::outcome_assets(market_id, &market);
+        let assets = market.outcome_assets(market_id);
         for asset in assets.iter() {
-            let bal = AssetManager::free_balance(*asset, &who);
+            let bal = AssetManager::free_balance((*asset).into(), &who);
             assert_eq!(bal, expected_amount);
         }
 

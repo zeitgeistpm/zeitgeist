@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-pub use base_assets::BaseAssetClass;
 use super::*;
+pub use base_assets::BaseAssetClass;
 
 mod base_assets;

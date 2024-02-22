@@ -36,10 +36,7 @@ use test_case::test_case;
     BaseAssetClass::Ztg;
     "ztg"
 )]
-fn index_matching_works_for_base_assets(
-    old_asset: Asset<MarketId>,
-    new_asset: BaseAssetClass,
-) {
+fn index_matching_works_for_base_assets(old_asset: Asset<MarketId>, new_asset: BaseAssetClass) {
     let old_asset_encoded: Vec<u8> = old_asset.encode();
     let new_asset_decoded =
         <BaseAssetClass as Decode>::decode(&mut old_asset_encoded.as_slice()).unwrap();

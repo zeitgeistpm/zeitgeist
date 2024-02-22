@@ -202,10 +202,11 @@ fn full_scalar_market_lifecycle() {
         ));
 
         // check balances
-        let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
+        let market = &MarketCommons::market(&0).unwrap();
+        let assets = market.outcome_assets(0);
         assert_eq!(assets.len(), 2);
         for asset in assets.iter() {
-            let bal = AssetManager::free_balance(*asset, &CHARLIE);
+            let bal = AssetManager::free_balance((*asset).into(), &CHARLIE);
             assert_eq!(bal, 100 * BASE);
         }
         let market = MarketCommons::market(&0).unwrap();
@@ -262,7 +263,7 @@ fn full_scalar_market_lifecycle() {
 
         assert_ok!(PredictionMarkets::redeem_shares(RuntimeOrigin::signed(CHARLIE), 0));
         for asset in assets.iter() {
-            let bal = AssetManager::free_balance(*asset, &CHARLIE);
+            let bal = AssetManager::free_balance((*asset).into(), &CHARLIE);
             assert_eq!(bal, 0);
         }
 
