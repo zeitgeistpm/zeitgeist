@@ -19,13 +19,9 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_scale_codec::{Codec, Decode, HasCompact, MaxEncodedLen};
-use sp_runtime::{
-    traits::{MaybeDisplay, MaybeFromStr},
-    DispatchError,
-};
-use sp_std::vec::Vec;
-use zeitgeist_primitives::types::{Asset, Pool};
+use parity_scale_codec::{Codec, HasCompact, MaxEncodedLen};
+use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
+use zeitgeist_primitives::types::Asset;
 
 sp_api::decl_runtime_apis! {
     pub trait SwapsApi<PoolId, AccountId, Balance, MarketId> where
@@ -33,7 +29,6 @@ sp_api::decl_runtime_apis! {
         AccountId: Codec,
         Balance: Codec + MaybeDisplay + MaybeFromStr + HasCompact + MaxEncodedLen,
         MarketId: Codec + HasCompact + MaxEncodedLen,
-        Pool<Balance, MarketId>: Decode,
     {
         fn pool_shares_id(pool_id: PoolId) -> Asset<MarketId>;
         fn pool_account_id(pool_id: &PoolId) -> AccountId;
@@ -43,9 +38,5 @@ sp_api::decl_runtime_apis! {
             asset_out: &Asset<MarketId>,
             with_fees: bool,
         ) -> Balance;
-        fn get_all_spot_prices(
-            pool_id: &PoolId,
-            with_fees: bool
-        ) -> Result<Vec<(Asset<MarketId>, Balance)>, DispatchError>;
     }
 }

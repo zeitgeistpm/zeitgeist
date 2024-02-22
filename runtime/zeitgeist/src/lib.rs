@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -94,10 +94,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 50,
+    spec_version: 52,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 25,
+    transaction_version: 26,
     state_version: 1,
 };
 
@@ -106,7 +106,7 @@ pub type ContractsCallfilter = Nothing;
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-// Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
+// Currently disables Rikiddo and creation of markets using SimpleDisputes
 // dispute mechanism.
 impl Contains<RuntimeCall> for IsCallable {
     fn contains(runtime_call: &RuntimeCall) -> bool {
@@ -123,14 +123,11 @@ impl Contains<RuntimeCall> for IsCallable {
             set_code as set_code_contracts,
         };
         use pallet_vesting::Call::force_vested_transfer;
-
-        use zeitgeist_primitives::types::{
-            MarketDisputeMechanism::{Court, SimpleDisputes},
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
-        };
+        use zeitgeist_primitives::types::MarketDisputeMechanism::SimpleDisputes;
         use zrml_prediction_markets::Call::{
-            create_cpmm_market_and_deploy_assets, create_market, edit_market,
+            admin_move_market_to_closed, admin_move_market_to_resolved, create_market, edit_market,
         };
+        use zrml_swaps::Call::force_pool_exit;
 
         #[allow(clippy::match_like_matches_macro)]
         match runtime_call {
@@ -164,27 +161,24 @@ impl Contains<RuntimeCall> for IsCallable {
             },
             // Membership is managed by the respective Membership instance
             RuntimeCall::Council(set_members { .. }) => false,
-            RuntimeCall::Court(_) => false,
             #[cfg(feature = "parachain")]
             RuntimeCall::DmpQueue(service_overweight { .. }) => false,
-            RuntimeCall::GlobalDisputes(_) => false,
             RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => {
                 match inner_call {
-                    // Disable Rikiddo markets
-                    create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    edit_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    // Disable Court & SimpleDisputes dispute resolution mechanism
-                    create_market { dispute_mechanism: Some(Court | SimpleDisputes), .. } => false,
-                    edit_market { dispute_mechanism: Some(Court | SimpleDisputes), .. } => false,
-                    create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: Some(Court | SimpleDisputes),
-                        ..
-                    } => false,
+                    // Disable SimpleDisputes dispute resolution mechanism
+                    create_market { dispute_mechanism: Some(SimpleDisputes), .. } => false,
+                    edit_market { dispute_mechanism: Some(SimpleDisputes), .. } => false,
+                    admin_move_market_to_closed { .. } => false,
+                    admin_move_market_to_resolved { .. } => false,
                     _ => true,
                 }
             }
             RuntimeCall::SimpleDisputes(_) => false,
+            RuntimeCall::Swaps(inner_call) => match inner_call {
+                force_pool_exit { .. } => true,
+                _ => false,
+            },
             RuntimeCall::System(inner_call) => {
                 match inner_call {
                     // Some "waste" storage will never impact proper operation.

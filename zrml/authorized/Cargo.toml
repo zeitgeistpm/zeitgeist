@@ -9,6 +9,7 @@ zeitgeist-primitives = { workspace = true }
 zrml-market-commons = { workspace = true }
 
 [dev-dependencies]
+env_logger = { workspace = true }
 pallet-balances = { workspace = true, features = ["default"] }
 pallet-timestamp = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
@@ -38,4 +39,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-authorized"
-version = "0.4.1"
+version = "0.4.3"

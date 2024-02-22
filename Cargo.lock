@@ -532,7 +532,7 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
 name = "battery-station-runtime"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
  "cfg-if",
  "common-runtime",
@@ -602,6 +602,7 @@ dependencies = [
  "sp-block-builder",
  "sp-consensus-aura",
  "sp-core",
+ "sp-debug-derive",
  "sp-finality-grandpa",
  "sp-inherents",
  "sp-io",
@@ -1207,7 +1208,7 @@ dependencies = [
 
 [[package]]
 name = "common-runtime"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
  "cfg-if",
  "cumulus-pallet-xcmp-queue",
@@ -2553,9 +2554,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85cdab6a89accf66733ad5a1693a4dcced6aeff64602b634530dd73c1f3ee9f0"
+checksum = "95b3f3e67048839cb0d0781f445682a35113da7121f7c949db0e2be96a4fbece"
 dependencies = [
  "humantime",
  "is-terminal",
@@ -2731,7 +2732,7 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84f2e425d9790201ba4af4630191feac6dcc98765b118d4d18e91d23c2353866"
 dependencies = [
- "env_logger 0.10.0",
+ "env_logger 0.10.1",
  "log",
 ]
 
@@ -3608,8 +3609,8 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "hydra-dx-math"
-version = "7.4.3"
-source = "git+https://github.com/galacticcouncil/HydraDX-node?tag=v18.0.0#6173a8b0661582247eed774330aa8fa6d99d524d"
+version = "7.7.0"
+source = "git+https://github.com/galacticcouncil/HydraDX-node?tag=v21.1.1#564553c30caa1eccfa1b6504ec8d5130201c8765"
 dependencies = [
  "fixed",
  "num-traits",
@@ -14295,8 +14296,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "zeitgeist-macros"
+version = "0.4.3"
+
+[[package]]
 name = "zeitgeist-node"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
  "battery-station-runtime",
  "cfg-if",
@@ -14388,13 +14393,14 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-primitives"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
  "arbitrary",
  "fixed",
  "frame-support",
  "frame-system",
  "more-asserts",
+ "num-traits",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -14410,7 +14416,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-runtime"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
  "cfg-if",
  "common-runtime",
@@ -14479,6 +14485,7 @@ dependencies = [
  "sp-block-builder",
  "sp-consensus-aura",
  "sp-core",
+ "sp-debug-derive",
  "sp-finality-grandpa",
  "sp-inherents",
  "sp-io",
@@ -14549,13 +14556,15 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "test-case",
+ "zeitgeist-macros",
  "zeitgeist-primitives",
 ]
 
 [[package]]
 name = "zrml-authorized"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14571,9 +14580,10 @@ dependencies = [
 
 [[package]]
 name = "zrml-court"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
  "arrayvec 0.7.4",
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14595,8 +14605,9 @@ dependencies = [
 
 [[package]]
 name = "zrml-global-disputes"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14615,8 +14626,9 @@ dependencies = [
 
 [[package]]
 name = "zrml-liquidity-mining"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14633,8 +14645,9 @@ dependencies = [
 
 [[package]]
 name = "zrml-market-commons"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -14644,13 +14657,16 @@ dependencies = [
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
+ "test-case",
  "zeitgeist-primitives",
 ]
 
 [[package]]
 name = "zrml-neo-swaps"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
+ "cfg-if",
+ "env_logger 0.10.1",
  "fixed",
  "frame-benchmarking",
  "frame-support",
@@ -14672,7 +14688,6 @@ dependencies = [
  "sp-api",
  "sp-io",
  "sp-runtime",
- "substrate-fixed",
  "test-case",
  "typenum 1.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "xcm",
@@ -14693,11 +14708,13 @@ dependencies = [
 
 [[package]]
 name = "zrml-orderbook"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -14726,8 +14743,9 @@ dependencies = [
 
 [[package]]
 name = "zrml-parimutuel"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14747,8 +14765,9 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14769,7 +14788,6 @@ dependencies = [
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
- "substrate-fixed",
  "test-case",
  "xcm",
  "zeitgeist-primitives",
@@ -14801,7 +14819,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-runtime-api"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -14810,10 +14828,11 @@ dependencies = [
 
 [[package]]
 name = "zrml-rikiddo"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
  "arbitrary",
  "cfg-if",
+ "env_logger 0.10.1",
  "frame-support",
  "frame-system",
  "hashbrown 0.12.3",
@@ -14843,8 +14862,9 @@ dependencies = [
 
 [[package]]
 name = "zrml-simple-disputes"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14863,8 +14883,9 @@ dependencies = [
 
 [[package]]
 name = "zrml-styx"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14879,8 +14900,9 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
+ "env_logger 0.10.1",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -14892,16 +14914,16 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-api",
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
- "substrate-fixed",
  "test-case",
+ "zeitgeist-macros",
  "zeitgeist-primitives",
  "zrml-liquidity-mining",
  "zrml-market-commons",
- "zrml-rikiddo",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
 ]
@@ -14922,7 +14944,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-rpc"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -14935,7 +14957,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-runtime-api"
-version = "0.4.1"
+version = "0.4.3"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

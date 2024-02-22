@@ -1,3 +1,4 @@
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -14,6 +15,40 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
+use frame_support::storage::{bounded_btree_map::BoundedBTreeMap, bounded_vec::BoundedVec};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
+use sp_runtime::{traits::Get, RuntimeDebug};
+use zeitgeist_primitives::constants::MAX_ASSETS;
+
+pub struct MaxAssets;
+
+impl Get<u32> for MaxAssets {
+    fn get() -> u32 {
+        MAX_ASSETS as u32
+    }
+}
+
+// TODO(#1213): Replace `u128` with `PoolWeight` type which implements `Into<Balance>` and
+// `From<Balance>`! Or just replace it with `Balance`.
+#[derive(TypeInfo, Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
+pub struct Pool<Asset, Balance> {
+    pub assets: BoundedVec<Asset, MaxAssets>,
+    pub status: PoolStatus,
+    pub swap_fee: Balance,
+    pub total_weight: u128,
+    pub weights: BoundedBTreeMap<Asset, u128, MaxAssets>,
+}
+
+impl<Asset, Balance> Pool<Asset, Balance>
+where
+    Asset: Ord,
+{
+    pub fn bound(&self, asset: &Asset) -> bool {
+        self.weights.get(asset).is_some()
+    }
+}
 
 /// The status of a pool. Closely related to the lifecycle of a market.
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
@@ -33,13 +68,7 @@
 )]
 pub enum PoolStatus {
     /// Shares can be normally negotiated.
-    Active,
-    /// No trading is allowed. The pool is waiting to be subsidized.
-    CollectingSubsidy,
+    Open,
     /// No trading/adding liquidity is allowed.
     Closed,
-    /// The pool has been cleaned up, usually after the corresponding market has been resolved.
-    Clean,
-    /// The pool has just been created.
-    Initialized,
 }

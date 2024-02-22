@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -21,7 +21,6 @@ use test_case::test_case;
 #[test]
 fn sell_works() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         let liquidity = _10;
         let spot_prices = vec![_1_4, _3_4];
         let swap_fee = CENT;
@@ -35,15 +34,8 @@ fn sell_works() {
         );
         let pool = Pools::<Runtime>::get(market_id).unwrap();
         let amount_in = _10;
-        let pool_outcomes_before: Vec<_> =
-            pool.assets().iter().map(|a| pool.reserve_of(a).unwrap()).collect();
-        let pool_liquidity_before = pool.liquidity_parameter;
-        AssetManager::deposit(BASE_ASSET, &BOB, amount_in).unwrap();
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(BOB),
-            market_id,
-            amount_in,
-        ));
+        let liquidity_parameter_before = pool.liquidity_parameter;
+        deposit_complete_set(market_id, BOB, amount_in);
         let asset_in = pool.assets()[1];
         assert_ok!(NeoSwaps::sell(
             RuntimeOrigin::signed(BOB),
@@ -54,35 +46,27 @@ fn sell_works() {
             0,
         ));
         let total_fee_percentage = swap_fee + EXTERNAL_FEES;
-        let expected_amount_out = 59632253897u128;
-        let expected_fees = bmul(total_fee_percentage, expected_amount_out).unwrap();
+        let expected_amount_out = 59632253897;
+        let expected_fees = total_fee_percentage.bmul(expected_amount_out).unwrap();
         let expected_swap_fee_amount = expected_fees / 2;
         let expected_external_fee_amount = expected_fees - expected_swap_fee_amount;
         let expected_amount_out_minus_fees = expected_amount_out - expected_fees;
-        assert_eq!(AssetManager::free_balance(BASE_ASSET, &BOB), expected_amount_out_minus_fees);
-        assert_eq!(AssetManager::free_balance(asset_in, &BOB), 0);
-        let pool = Pools::<Runtime>::get(market_id).unwrap();
-        assert_eq!(pool.liquidity_parameter, pool_liquidity_before);
-        assert_eq!(pool.liquidity_shares_manager.owner, ALICE);
-        assert_eq!(pool.liquidity_shares_manager.total_shares, liquidity);
-        assert_eq!(pool.liquidity_shares_manager.fees, expected_swap_fee_amount);
-        let pool_outcomes_after: Vec<_> =
-            pool.assets().iter().map(|a| pool.reserve_of(a).unwrap()).collect();
-        assert_eq!(pool_outcomes_after[0], pool_outcomes_before[0] - expected_amount_out);
-        assert_eq!(
-            pool_outcomes_after[1],
-            pool_outcomes_before[1] + (amount_in - expected_amount_out)
+        assert_balance!(BOB, BASE_ASSET, expected_amount_out_minus_fees);
+        assert_balance!(BOB, asset_in, 0);
+        assert_pool_state!(
+            market_id,
+            vec![40367746103, 61119621067],
+            [5_714_285_714, 4_285_714_286],
+            liquidity_parameter_before,
+            create_b_tree_map!({ ALICE => liquidity }),
+            expected_swap_fee_amount,
         );
-        let expected_pool_account_balance =
-            expected_swap_fee_amount + AssetManager::minimum_balance(pool.collateral);
-        assert_eq!(
-            AssetManager::free_balance(BASE_ASSET, &pool.account_id),
-            expected_pool_account_balance
+        assert_balance!(
+            pool.account_id,
+            BASE_ASSET,
+            expected_swap_fee_amount + AssetManager::minimum_balance(pool.collateral)
         );
-        assert_eq!(
-            AssetManager::free_balance(BASE_ASSET, &FEE_ACCOUNT),
-            expected_external_fee_amount
-        );
+        assert_balance!(FEE_ACCOUNT, BASE_ASSET, expected_external_fee_amount);
         assert_eq!(
             AssetManager::total_issuance(pool.assets()[0]),
             liquidity + amount_in - expected_amount_out
@@ -91,9 +75,6 @@ fn sell_works() {
             AssetManager::total_issuance(pool.assets()[1]),
             liquidity + amount_in - expected_amount_out
         );
-        let price_sum =
-            pool.assets().iter().map(|&a| pool.calculate_spot_price(a).unwrap()).sum::<u128>();
-        assert_eq!(price_sum, _1);
         System::assert_last_event(
             Event::SellExecuted {
                 who: BOB,
@@ -161,10 +142,7 @@ fn sell_fails_on_market_not_found() {
 }
 
 #[test_case(MarketStatus::Proposed)]
-#[test_case(MarketStatus::Suspended)]
 #[test_case(MarketStatus::Closed)]
-#[test_case(MarketStatus::CollectingSubsidy)]
-#[test_case(MarketStatus::InsufficientSubsidy)]
 #[test_case(MarketStatus::Reported)]
 #[test_case(MarketStatus::Disputed)]
 #[test_case(MarketStatus::Resolved)]
@@ -243,23 +221,110 @@ fn sell_fails_on_asset_not_found(market_type: MarketType) {
 }
 
 #[test]
-fn sell_fails_on_numerical_limits() {
+fn sell_fails_if_amount_in_is_greater_than_numerical_threshold() {
     ExtBuilder::default().build().execute_with(|| {
+        let asset_count = 4;
         let market_id = create_market_and_deploy_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Scalar(0..=1),
+            MarketType::Categorical(asset_count),
             _10,
-            vec![_1_2, _1_2],
+            vec![_1_4, _1_4, _1_4, _1_4],
             CENT,
         );
         let pool = Pools::<Runtime>::get(market_id).unwrap();
-        let asset_in = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
-        let amount_in = 100 * pool.liquidity_parameter;
+        let asset_in = Asset::CategoricalOutcome(market_id, asset_count - 1);
+        let amount_in = pool.calculate_numerical_threshold() + 1;
         assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
         assert_noop!(
-            NeoSwaps::buy(RuntimeOrigin::signed(BOB), market_id, 2, asset_in, amount_in, 0),
-            Error::<Runtime>::NumericalLimits,
+            NeoSwaps::sell(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                asset_count,
+                asset_in,
+                amount_in,
+                0
+            ),
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
+        );
+    });
+}
+
+#[test]
+fn sell_fails_if_price_is_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        let asset_count = 4;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            _10,
+            vec![_1_4, _1_4, _1_4, _1_4],
+            CENT,
+        );
+        let asset_in = Asset::CategoricalOutcome(market_id, asset_count - 1);
+        // Force the price below the threshold by changing the reserve of the pool. Strictly
+        // speaking this leaves the pool in an inconsistent state (reserve recorded in the `Pool`
+        // struct is smaller than actual reserve), but this doesn't matter in this test.
+        NeoSwaps::try_mutate_pool(&market_id, |pool| {
+            pool.reserves.insert(asset_in, 11 * pool.liquidity_parameter);
+            Ok(())
+        })
+        .unwrap();
+        let amount_in = _1;
+        assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
+        assert_noop!(
+            NeoSwaps::sell(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                asset_count,
+                asset_in,
+                amount_in,
+                0
+            ),
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::SpotPriceTooLow),
+        );
+    });
+}
+
+#[test]
+fn sell_fails_if_price_is_pushed_below_threshold() {
+    ExtBuilder::default().build().execute_with(|| {
+        let asset_count = 4;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            _10,
+            vec![_1_4, _1_4, _1_4, _1_4],
+            CENT,
+        );
+        let asset_in = Asset::CategoricalOutcome(market_id, asset_count - 1);
+        // Force the price below the threshold by changing the reserve of the pool. Strictly
+        // speaking this leaves the pool in an inconsistent state (reserve recorded in the `Pool`
+        // struct is smaller than actual reserve), but this doesn't matter in this test.
+        NeoSwaps::try_mutate_pool(&market_id, |pool| {
+            // The price is right at the brink here. Any further shift and sells won't be accepted
+            // anymore.
+            pool.reserves.insert(asset_in, 10 * pool.liquidity_parameter);
+            Ok(())
+        })
+        .unwrap();
+        let amount_in = _10;
+        assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
+        // The received amount is so small that it triggers an ED error if we don't "pad out" Bob's
+        // account with some funds.
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, _1));
+        assert_noop!(
+            NeoSwaps::sell(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                asset_count,
+                asset_in,
+                amount_in,
+                0
+            ),
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow),
         );
     });
 }
@@ -310,27 +375,6 @@ fn sell_fails_on_amount_out_below_min() {
         assert_noop!(
             NeoSwaps::sell(RuntimeOrigin::signed(BOB), market_id, 2, asset_in, amount_in, _10),
             Error::<Runtime>::AmountOutBelowMin,
-        );
-    });
-}
-
-#[test]
-fn sell_fails_on_spot_price_below_min() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
-            ALICE,
-            BASE_ASSET,
-            MarketType::Categorical(2),
-            _10,
-            vec![_1_2, _1_2],
-            CENT,
-        );
-        let asset_in = Asset::CategoricalOutcome(market_id, 0);
-        let amount_in = _80;
-        assert_ok!(AssetManager::deposit(asset_in, &BOB, amount_in));
-        assert_noop!(
-            NeoSwaps::sell(RuntimeOrigin::signed(BOB), market_id, 2, asset_in, amount_in, 0),
-            Error::<Runtime>::SpotPriceBelowMin
         );
     });
 }

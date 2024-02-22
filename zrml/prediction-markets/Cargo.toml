@@ -18,6 +18,7 @@ zrml-simple-disputes = { workspace = true }
 
 # Mock
 
+env_logger = { workspace = true, optional = true }
 orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
@@ -28,7 +29,6 @@ pallet-timestamp = { workspace = true, optional = true }
 pallet-treasury = { workspace = true, optional = true }
 sp-api = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
-substrate-fixed = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 zrml-asset-router = { workspace = true, optional = true }
 zrml-prediction-markets-runtime-api = { workspace = true, optional = true }
@@ -43,6 +43,7 @@ zrml-prediction-markets = { workspace = true, features = ["mock", "default"] }
 [features]
 default = ["std"]
 mock = [
+    "env_logger/default",
     "orml-asset-registry/default",
     "orml-currencies/default",
     "orml-tokens/default",
@@ -54,7 +55,6 @@ mock = [
     "serde/default",
     "sp-api/default",
     "sp-io/default",
-    "substrate-fixed",
     "zeitgeist-primitives/mock",
     "zrml-asset-router/default",
     "zrml-prediction-markets-runtime-api/default",
@@ -100,4 +100,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-prediction-markets"
-version = "0.4.1"
+version = "0.4.3"

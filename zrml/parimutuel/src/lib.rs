@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -33,6 +33,7 @@ mod pallet {
     use frame_support::{
         ensure, log,
         pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
+        require_transactional,
         traits::{Get, IsType, StorageVersion},
         PalletId, RuntimeDebug,
     };
@@ -43,11 +44,10 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Zero},
-        DispatchResult, SaturatedConversion,
+        DispatchResult,
     };
     use zeitgeist_primitives::{
-        constants::BASE,
-        math::fixed::*,
+        math::fixed::FixedMulDiv,
         traits::DistributeFees,
         types::{Asset, Market, MarketStatus, MarketType, OutcomeReport, ScoringRule},
     };
@@ -144,7 +144,7 @@ mod pallet {
         /// The market is not active.
         MarketIsNotActive,
         /// The specified amount is below the minimum bet size.
-        AmountTooSmall,
+        AmountBelowMinimumBetSize,
         /// The specified asset is not a parimutuel share.
         NotParimutuelOutcome,
         /// The specified asset was not found in the market assets.
@@ -259,7 +259,6 @@ mod pallet {
             winning_balance: BalanceOf<T>,
             pot_total: BalanceOf<T>,
             outcome_total: BalanceOf<T>,
-            payoff_ratio_mul_base: BalanceOf<T>,
             payoff: BalanceOf<T>,
         ) -> DispatchResult {
             ensure!(
@@ -274,13 +273,6 @@ mod pallet {
                     InconsistentStateError::OutcomeIssuanceGreaterCollateral
                 )
             );
-            if payoff_ratio_mul_base < BASE.saturated_into() {
-                log::debug!(
-                    target: LOG_TARGET,
-                    "The payoff ratio should be greater than or equal to BASE!"
-                );
-                debug_assert!(false);
-            }
             if payoff < winning_balance {
                 log::debug!(
                     target: LOG_TARGET,
@@ -312,9 +304,8 @@ mod pallet {
             Err(Error::<T>::NotParimutuelOutcome.into())
         }
 
+        #[require_transactional]
         fn do_buy(who: T::AccountId, asset: AssetOf<T>, amount: BalanceOf<T>) -> DispatchResult {
-            ensure!(amount >= T::MinBetSize::get(), Error::<T>::AmountTooSmall);
-
             let market_id = match asset {
                 Asset::ParimutuelShare(market_id, _) => market_id,
                 _ => return Err(Error::<T>::NotParimutuelOutcome.into()),
@@ -336,6 +327,11 @@ mod pallet {
             let external_fees = T::ExternalFees::distribute(market_id, base_asset, &who, amount);
             let amount_minus_fees =
                 amount.checked_sub(&external_fees).ok_or(Error::<T>::Unexpected)?;
+            ensure!(
+                amount_minus_fees >= T::MinBetSize::get(),
+                Error::<T>::AmountBelowMinimumBetSize
+            );
+
             let pot_account = Self::pot_account(market_id);
 
             T::AssetManager::transfer(market.base_asset, &who, &pot_account, amount_minus_fees)?;
@@ -377,6 +373,7 @@ mod pallet {
             Ok(winning_asset)
         }
 
+        #[require_transactional]
         fn do_claim_rewards(who: T::AccountId, market_id: MarketIdOf<T>) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
             Self::ensure_parimutuel_market_resolved(&market)?;
@@ -400,22 +397,9 @@ mod pallet {
 
             let pot_account = Self::pot_account(market_id);
             let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
-            let payoff_ratio_mul_base: BalanceOf<T> =
-                bdiv_floor(pot_total.saturated_into(), outcome_total.saturated_into())?
-                    .saturated_into();
-            let payoff: BalanceOf<T> = bmul_floor(
-                payoff_ratio_mul_base.saturated_into(),
-                winning_balance.saturated_into(),
-            )?
-            .saturated_into();
+            let payoff = pot_total.bmul_bdiv(winning_balance, outcome_total)?;
 
-            Self::check_values(
-                winning_balance,
-                pot_total,
-                outcome_total,
-                payoff_ratio_mul_base,
-                payoff,
-            )?;
+            Self::check_values(winning_balance, pot_total, outcome_total, payoff)?;
 
             let withdrawn_asset_balance = winning_balance;
 
@@ -437,6 +421,7 @@ mod pallet {
             Ok(())
         }
 
+        #[require_transactional]
         fn do_claim_refunds(who: T::AccountId, refund_asset: AssetOf<T>) -> DispatchResult {
             let market_id = match refund_asset {
                 Asset::ParimutuelShare(market_id, _) => market_id,

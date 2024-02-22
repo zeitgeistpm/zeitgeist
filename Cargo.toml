@@ -1,5 +1,6 @@
 [workspace]
 default-members = [
+    "macros",
     "node",
     "primitives",
     "runtime/common",
@@ -24,6 +25,7 @@ default-members = [
     "zrml/styx",
 ]
 members = [
+    "macros",
     "node",
     "primitives",
     "runtime/common",
@@ -193,6 +195,7 @@ sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "pol
 sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
+sp-debug-derive = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-inherents = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -230,6 +233,7 @@ zrml-swaps-rpc = { path = "zrml/swaps/rpc" }
 
 # Zeitgeist (wasm)
 common-runtime = { path = "runtime/common", default-features = false }
+zeitgeist-macros = { path = "macros", default-features = false }
 zeitgeist-primitives = { path = "primitives", default-features = false }
 zrml-asset-router = { path = "zrml/asset-router", default-features = false }
 zrml-authorized = { path = "zrml/authorized", default-features = false }
@@ -250,6 +254,7 @@ zrml-swaps-runtime-api = { path = "zrml/swaps/runtime-api", default-features = f
 
 # Other (client)
 clap = "4.0.32"
+env_logger = "0.10.1"
 jsonrpsee = "0.16.2"
 libfuzzer-sys = "0.4.7"
 more-asserts = "0.3.1"
@@ -262,7 +267,7 @@ arrayvec = { version = "0.7.4", default-features = false }
 cfg-if = { version = "1.0.0" }
 fixed = { version = "=1.15.0", default-features = false, features = ["num-traits"] }
 # Using math code directly from the HydraDX node repository as https://github.com/galacticcouncil/hydradx-math is outdated and has been archived in May 2023.
-hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-node", package = "hydra-dx-math", tag = "v18.0.0", default-features = false }
+hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-node", package = "hydra-dx-math", tag = "v21.1.1", default-features = false }
 # Hashbrown works in no_std by default and default features are used in Rikiddo
 hashbrown = { version = "0.12.3", default-features = true }
 hex-literal = { version = "0.3.4", default-features = false }

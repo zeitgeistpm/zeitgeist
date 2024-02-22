@@ -24,6 +24,7 @@ mod market_commons_pallet_api;
 mod market_id;
 mod swaps;
 mod weights;
+mod zeitgeist_asset;
 mod zeitgeist_multi_reservable_currency;
 
 pub use complete_set_operations_api::CompleteSetOperationsApi;
@@ -34,4 +35,5 @@ pub use market_commons_pallet_api::MarketCommonsPalletApi;
 pub use market_id::MarketId;
 pub use swaps::Swaps;
 pub use weights::CheckedDivPerComponent;
+pub use zeitgeist_asset::*;
 pub use zeitgeist_multi_reservable_currency::ZeitgeistAssetManager;

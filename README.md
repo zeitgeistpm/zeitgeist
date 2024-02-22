@@ -4,9 +4,9 @@
 
 # Zeitgeist: An Evolving Blockchain for Prediction Markets and Futarchy
 
-![Rust](https://github.com/zeitgeistpm/zeitgeist/workflows/Rust/badge.svg)
+![Rust](https://github.com/zeitgeistpm/zeitgeist/actions/workflows/rust.yml/badge.svg)
 [![Codecov](https://codecov.io/gh/zeitgeistpm/zeitgeist/branch/main/graph/badge.svg)](https://codecov.io/gh/zeitgeistpm/zeitgeist)
-[![Discord](https://img.shields.io/badge/discord-https%3A%2F%2Fdiscord.gg%2FMD3TbH3ctv-purple)](https://discord.gg/MD3TbH3ctv)
+[![Discord](https://img.shields.io/badge/discord-https%3A%2F%2Fdiscord.gg%2FMD3TbH3ctv-purple)](https://discord.gg/XhAcFWYUej)
 [![Telegram](https://img.shields.io/badge/telegram-https%3A%2F%2Ft.me%2Fzeitgeist__official-blue)](https://t.me/zeitgeist_official)
 
 Zeitgeist is a decentralized network for creating, betting on, and resolving
@@ -35,9 +35,7 @@ _anything_.
 - [neo-swaps](./zrml/neo-swaps) - An implementation of the Logarithmic Market
   Scoring Rule as constant function market maker, tailor-made for decentralized
   combinatorial markets and Futarchy.
-- [orderbook](./zrml/orderbook) - A naive orderbook implementation that's only
-  part of Zeitgeist's PoC. Will be replaced by a v2 orderbook that uses 0x-style
-  hybrid on-chain and off-chain trading.
+- [orderbook](./zrml/orderbook) - An order book implementation.
 - [parimutuel](./zrml/parimutuel) - A straightforward parimutuel market maker
   for categorical markets.
 - [prediction-markets](./zrml/prediction-markets) - The core implementation of

@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -45,7 +45,7 @@ const DEFAULT_MARKET: MarketOf<Runtime> = Market {
     deadlines: Deadlines { grace_period: 1_u64, oracle_duration: 1_u64, dispute_duration: 1_u64 },
     report: None,
     resolved_outcome: None,
-    scoring_rule: ScoringRule::CPMM,
+    scoring_rule: ScoringRule::Lmsr,
     status: MarketStatus::Disputed,
     bonds: MarketBonds {
         creation: None,
