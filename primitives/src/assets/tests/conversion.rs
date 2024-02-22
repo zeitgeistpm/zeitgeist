@@ -215,6 +215,33 @@ fn from_base_assets_to_all_assets(old_asset: BaseAssetClass, new_asset: Asset<Ma
     assert_eq!(new_asset, new_asset_converted);
 }
 
+// Assets <> ParimutuelAssetClass
+#[test_case(
+    Asset::<MarketId>::ParimutuelShare(7, 8),
+    ParimutuelAssetClass::<MarketId>::Share(7, 8);
+    "parimutuel_share"
+)]
+fn from_all_assets_to_parimutuel_assets(
+    old_asset: Asset<MarketId>,
+    new_asset: ParimutuelAssetClass<MarketId>,
+) {
+    let new_asset_converted: ParimutuelAssetClass<MarketId> = old_asset.try_into().unwrap();
+    assert_eq!(new_asset, new_asset_converted);
+}
+
+#[test_case(
+    ParimutuelAssetClass::<MarketId>::Share(7, 8),
+    Asset::<MarketId>::ParimutuelShare(7, 8);
+    "parimutuel_share"
+)]
+fn from_parimutuel_assets_to_all_assets(
+    old_asset: ParimutuelAssetClass<MarketId>,
+    new_asset: Asset<MarketId>,
+) {
+    let new_asset_converted: Asset<MarketId> = old_asset.into();
+    assert_eq!(new_asset, new_asset_converted);
+}
+
 // CampaignAssetId <> CampaignAssetClass
 #[test]
 fn from_campaign_asset_id_to_campaign_asset() {

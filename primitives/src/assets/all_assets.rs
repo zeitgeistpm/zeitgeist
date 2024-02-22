@@ -149,3 +149,13 @@ impl<MI: HasCompact + MaxEncodedLen> From<BaseAssetClass> for Asset<MI> {
         }
     }
 }
+
+impl<MI: HasCompact + MaxEncodedLen> From<ParimutuelAssetClass<MI>> for Asset<MI> {
+    fn from(value: ParimutuelAssetClass<MI>) -> Self {
+        match value {
+            ParimutuelAssetClass::<MI>::Share(market_id, cat_id) => {
+                Self::ParimutuelShare(market_id, cat_id)
+            }
+        }
+    }
+}

@@ -43,37 +43,6 @@ fn index_matching_works_for_base_assets(old_asset: Asset<MarketId>, new_asset: B
     assert_eq!(new_asset_decoded, new_asset);
 }
 
-// Assets <> MarketAssetClass
-#[test_case(
-    Asset::<MarketId>::CategoricalOutcome(7, 8),
-    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 8);
-    "categorical_outcome"
-)]
-#[test_case(
-    Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long),
-    MarketAssetClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
-    "scalar_outcome"
-)]
-#[test_case(
-    Asset::<MarketId>::PoolShare(7),
-    MarketAssetClass::<MarketId>::PoolShare(7);
-    "pool_share"
-)]
-#[test_case(
-    Asset::<MarketId>::ParimutuelShare(7, 8),
-    MarketAssetClass::<MarketId>::ParimutuelShare(7, 8);
-    "parimutuel_share"
-)]
-fn index_matching_works_for_market_assets(
-    old_asset: Asset<MarketId>,
-    new_asset: MarketAssetClass<MarketId>,
-) {
-    let old_asset_encoded: Vec<u8> = old_asset.encode();
-    let new_asset_decoded =
-        <MarketAssetClass<MarketId> as Decode>::decode(&mut old_asset_encoded.as_slice()).unwrap();
-    assert_eq!(new_asset_decoded, new_asset);
-}
-
 // Assets <> CurrencyClass
 #[test_case(
     Asset::<MarketId>::CategoricalOutcome(7, 8),
@@ -107,5 +76,53 @@ fn index_matching_works_for_currencies(
     let old_asset_encoded: Vec<u8> = old_asset.encode();
     let new_asset_decoded =
         <CurrencyClass<MarketId> as Decode>::decode(&mut old_asset_encoded.as_slice()).unwrap();
+    assert_eq!(new_asset_decoded, new_asset);
+}
+
+// Assets <> MarketAssetClass
+#[test_case(
+    Asset::<MarketId>::CategoricalOutcome(7, 8),
+    MarketAssetClass::<MarketId>::CategoricalOutcome(7, 8);
+    "categorical_outcome"
+)]
+#[test_case(
+    Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long),
+    MarketAssetClass::<MarketId>::ScalarOutcome(7, ScalarPosition::Long);
+    "scalar_outcome"
+)]
+#[test_case(
+    Asset::<MarketId>::PoolShare(7),
+    MarketAssetClass::<MarketId>::PoolShare(7);
+    "pool_share"
+)]
+#[test_case(
+    Asset::<MarketId>::ParimutuelShare(7, 8),
+    MarketAssetClass::<MarketId>::ParimutuelShare(7, 8);
+    "parimutuel_share"
+)]
+fn index_matching_works_for_market_assets(
+    old_asset: Asset<MarketId>,
+    new_asset: MarketAssetClass<MarketId>,
+) {
+    let old_asset_encoded: Vec<u8> = old_asset.encode();
+    let new_asset_decoded =
+        <MarketAssetClass<MarketId> as Decode>::decode(&mut old_asset_encoded.as_slice()).unwrap();
+    assert_eq!(new_asset_decoded, new_asset);
+}
+
+// Assets <> ParimutuelAssetClass
+#[test_case(
+    Asset::<MarketId>::ParimutuelShare(7, 8),
+    ParimutuelAssetClass::Share(7, 8);
+    "parimutuel_share"
+)]
+fn index_matching_works_for_parimutuel_assets(
+    old_asset: Asset<MarketId>,
+    new_asset: ParimutuelAssetClass<MarketId>,
+) {
+    let old_asset_encoded: Vec<u8> = old_asset.encode();
+    let new_asset_decoded =
+        <ParimutuelAssetClass<MarketId> as Decode>::decode(&mut old_asset_encoded.as_slice())
+            .unwrap();
     assert_eq!(new_asset_decoded, new_asset);
 }

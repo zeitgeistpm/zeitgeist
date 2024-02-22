@@ -332,13 +332,6 @@ mod pallet {
             Self::market_assets_contains(&market, &asset)?;
             let pot_account = Self::pot_account(market_id);
 
-            if !T::AssetCreator::asset_exists(asset) {
-                let admin = pot_account.clone();
-                let is_sufficient = true;
-                let min_balance = 1u8;
-                T::AssetCreator::create(asset, admin, is_sufficient, min_balance.into())?;
-            }
-
             let external_fees =
                 T::ExternalFees::distribute(market_id, base_asset.into(), &who, amount);
             let amount_minus_fees =

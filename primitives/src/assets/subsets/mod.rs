@@ -16,6 +16,9 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+
 pub use base_assets::BaseAssetClass;
+pub use parimutuel::ParimutuelAssetClass;
 
 mod base_assets;
+mod parimutuel;

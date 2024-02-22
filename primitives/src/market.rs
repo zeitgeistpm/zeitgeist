@@ -121,7 +121,7 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
                             assets.push(MarketAssetClass::<MI>::CategoricalOutcome(market_id, i))
                         }
                         ScoringRule::Parimutuel => {
-                            assets.push(MarketAssetClass::<MI>::CategoricalOutcome(market_id, i))
+                            assets.push(MarketAssetClass::<MI>::ParimutuelShare(market_id, i))
                         }
                     };
                 }
@@ -177,7 +177,7 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
                     Some(MarketAssetClass::<MI>::CategoricalOutcome(market_id, *idx))
                 }
                 ScoringRule::Parimutuel => {
-                    Some(MarketAssetClass::<MI>::CategoricalOutcome(market_id, *idx))
+                    Some(MarketAssetClass::<MI>::ParimutuelShare(market_id, *idx))
                 }
             },
             OutcomeReport::Scalar(_) => None,
@@ -523,7 +523,7 @@ mod tests {
     #[test_case(
         MarketType::Categorical(2),
         ScoringRule::Parimutuel,
-        vec![MarketAsset::CategoricalOutcome(0, 0), MarketAsset::CategoricalOutcome(0, 1)];
+        vec![MarketAsset::ParimutuelShare(0, 0), MarketAsset::ParimutuelShare(0, 1)];
         "categorical_market_parimutuel"
     )]
     #[test_case(
@@ -580,7 +580,7 @@ mod tests {
         MarketType::Categorical(2),
         ScoringRule::Parimutuel,
         OutcomeReport::Categorical(2),
-        Some(MarketAsset::CategoricalOutcome(0, 2));
+        Some(MarketAsset::ParimutuelShare(0, 2));
         "categorical_market_parimutuel"
     )]
     #[test_case(
