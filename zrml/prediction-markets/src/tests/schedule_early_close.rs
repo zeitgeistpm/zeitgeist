@@ -44,7 +44,10 @@ fn schedule_early_close_emits_event() {
 
         let market_id = 0;
 
-        assert_ok!(PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id));
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+            market_id
+        ));
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
         let new_end = now + <Runtime as Config>::CloseEarlyProtectionBlockPeriod::get();
@@ -89,9 +92,10 @@ fn sudo_schedule_early_close_at_block_works() {
         assert_eq!(market_ids_to_close.1.into_inner(), vec![market_id]);
         assert!(market.early_close.is_none());
 
-        assert_ok!(
-            PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
-        );
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+            market_id
+        ));
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
         let new_end = now + <Runtime as Config>::CloseEarlyProtectionBlockPeriod::get();
@@ -162,9 +166,10 @@ fn sudo_schedule_early_close_at_timeframe_works() {
         assert_eq!(first.1.clone().into_inner(), vec![market_id]);
         assert!(market.early_close.is_none());
 
-        assert_ok!(
-            PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
-        );
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+            market_id
+        ));
 
         let now = <zrml_market_commons::Pallet<Runtime>>::now();
         let new_end = now + <Runtime as Config>::CloseEarlyProtectionTimeFramePeriod::get();

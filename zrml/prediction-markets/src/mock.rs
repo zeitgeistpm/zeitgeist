@@ -70,6 +70,7 @@ pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
 pub const APPROVE_ORIGIN: AccountIdTest = 70;
 pub const REJECT_ORIGIN: AccountIdTest = 71;
+pub const CLOSE_MARKET_EARLY_ORIGIN: AccountIdTest = 72;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
@@ -147,6 +148,7 @@ ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
     pub const ApproveOrigin: AccountIdTest = APPROVE_ORIGIN;
     pub const RejectOrigin: AccountIdTest = REJECT_ORIGIN;
+    pub const CloseMarketEarlyOrigin: AccountIdTest = CLOSE_MARKET_EARLY_ORIGIN;
 }
 parameter_types! {
     pub const AdvisoryBond: Balance = 11 * CENT;
@@ -188,7 +190,7 @@ impl crate::Config for Runtime {
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
     type CloseEarlyDisputeBond = CloseEarlyDisputeBond;
-    type CloseMarketEarlyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type CloseMarketEarlyOrigin = EnsureSignedBy<CloseMarketEarlyOrigin, AccountIdTest>;
     type CloseEarlyProtectionTimeFramePeriod = CloseEarlyProtectionTimeFramePeriod;
     type CloseEarlyProtectionBlockPeriod = CloseEarlyProtectionBlockPeriod;
     type CloseEarlyRequestBond = CloseEarlyRequestBond;
