@@ -34,7 +34,7 @@ mod pallet {
         ensure, log,
         pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
         require_transactional,
-        traits::{fungibles::{Inspect, Create}, Get, IsType, StorageVersion},
+        traits::{Get, IsType, StorageVersion},
         PalletId, RuntimeDebug,
     };
     use frame_system::{
@@ -47,18 +47,19 @@ mod pallet {
         traits::{AccountIdConversion, CheckedSub, Zero},
         DispatchResult,
     };
+    use zeitgeist_macros::unreachable_non_terminating;
     use zeitgeist_primitives::{
         math::fixed::FixedMulDiv,
         traits::DistributeFees,
-        types::{Asset, BaseAsset, Market, MarketStatus, MarketType, OutcomeReport, ScoringRule},
+        types::{
+            Asset, BaseAsset, Market, MarketStatus, MarketType, OutcomeReport,
+            ParimutuelAssetClass, ScoringRule,
+        },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// The module handling the creation of market assets.
-        type AssetCreator: Create<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
-
         /// The module handling the destruction of market assets.
         type AssetDestroyer: ManagedDestroy<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
 
@@ -67,7 +68,7 @@ mod pallet {
 
         /// The way how fees are taken from the market base asset.
         type ExternalFees: DistributeFees<
-                Asset = Asset<MarketIdOf<Self>>,
+                Asset = AssetOf<Self>,
                 AccountId = AccountIdOf<Self>,
                 Balance = BalanceOf<Self>,
                 MarketId = MarketIdOf<Self>,
@@ -98,6 +99,7 @@ mod pallet {
     const LOG_TARGET: &str = "runtime::zrml-parimutuel";
 
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
+    pub(crate) type ParimutuelShareOf<T> = ParimutuelAssetClass<MarketIdOf<T>>;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::AssetManager as MultiCurrency<AccountIdOf<T>>>::Balance;
@@ -147,38 +149,51 @@ mod pallet {
         /// There was no buyer for the winning outcome or all winners already claimed their rewards.
         /// Use the `refund` extrinsic to get the initial bet back,
         /// in case there was no buyer for the winning outcome.
+        #[codec(index = 0)]
         NoRewardShareOutstanding,
         /// The market is not active.
+        #[codec(index = 1)]
         MarketIsNotActive,
         /// The specified amount is below the minimum bet size.
+        #[codec(index = 2)]
         AmountBelowMinimumBetSize,
-        /// The specified asset is not a parimutuel share.
-        NotParimutuelOutcome,
         /// The specified asset was not found in the market assets.
+        #[codec(index = 4)]
         InvalidOutcomeAsset,
         /// The scoring rule is not parimutuel.
+        #[codec(index = 5)]
         InvalidScoringRule,
         /// The specified amount can not be transferred.
+        #[codec(index = 6)]
         InsufficientBalance,
         /// The market is not resolved yet.
+        #[codec(index = 7)]
         MarketIsNotResolvedYet,
         /// An unexpected error occured. This should never happen!
         /// There was an internal coding mistake.
+        #[codec(index = 8)]
         Unexpected,
         /// There is no resolved outcome present for the market.
+        #[codec(index = 9)]
         NoResolvedOutcome,
         /// The refund is not allowed.
+        #[codec(index = 10)]
         RefundNotAllowed,
         /// There is no balance to refund.
+        #[codec(index = 11)]
         RefundableBalanceIsZero,
         /// There is no reward, because there are no winning shares.
+        #[codec(index = 12)]
         NoWinningShares,
         /// Only categorical markets are allowed for parimutuels.
+        #[codec(index = 13)]
         NotCategorical,
         /// There is no reward to distribute.
+        #[codec(index = 14)]
         NoRewardToDistribute,
         /// Action cannot be completed because an unexpected error has occurred. This should be
         /// reported to protocol maintainers.
+        #[codec(index = 15)]
         InconsistentState(InconsistentStateError),
     }
 
@@ -208,7 +223,7 @@ mod pallet {
         #[frame_support::transactional]
         pub fn buy(
             origin: OriginFor<T>,
-            asset: Asset<MarketIdOf<T>>,
+            asset: ParimutuelShareOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -243,7 +258,10 @@ mod pallet {
         #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::claim_refunds())]
         #[frame_support::transactional]
-        pub fn claim_refunds(origin: OriginFor<T>, refund_asset: AssetOf<T>) -> DispatchResult {
+        pub fn claim_refunds(
+            origin: OriginFor<T>,
+            refund_asset: ParimutuelShareOf<T>,
+        ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             Self::do_claim_refunds(who, refund_asset)?;
@@ -298,24 +316,31 @@ mod pallet {
             Ok(())
         }
 
-        pub fn market_assets_contains(market: &MarketOf<T>, asset: &AssetOf<T>) -> DispatchResult {
-            if let Asset::ParimutuelShare(_, i) = asset {
-                match market.market_type {
-                    MarketType::Categorical(categories) => {
-                        ensure!(*i < categories, Error::<T>::InvalidOutcomeAsset);
-                        return Ok(());
-                    }
-                    MarketType::Scalar(_) => return Err(Error::<T>::NotCategorical.into()),
+        pub fn market_assets_contains(
+            market: &MarketOf<T>,
+            asset: &ParimutuelShareOf<T>,
+        ) -> DispatchResult {
+            let index = match asset {
+                ParimutuelShareOf::<T>::Share(_, idx) => *idx,
+            };
+
+            match market.market_type {
+                MarketType::Categorical(categories) => {
+                    ensure!(index < categories, Error::<T>::InvalidOutcomeAsset);
+                    return Ok(());
                 }
+                MarketType::Scalar(_) => return Err(Error::<T>::NotCategorical.into()),
             }
-            Err(Error::<T>::NotParimutuelOutcome.into())
         }
 
         #[require_transactional]
-        fn do_buy(who: T::AccountId, asset: AssetOf<T>, amount: BalanceOf<T>) -> DispatchResult {
+        fn do_buy(
+            who: T::AccountId,
+            asset: ParimutuelShareOf<T>,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
             let market_id = match asset {
-                Asset::ParimutuelShare(market_id, _) => market_id,
-                _ => return Err(Error::<T>::NotParimutuelOutcome.into()),
+                ParimutuelShareOf::<T>::Share(market_id, _) => market_id,
             };
             let market = T::MarketCommons::market(&market_id)?;
             let base_asset = market.base_asset;
@@ -342,12 +367,12 @@ mod pallet {
             let pot_account = Self::pot_account(market_id);
 
             T::AssetManager::transfer(base_asset.into(), &who, &pot_account, amount_minus_fees)?;
-            T::AssetManager::deposit(asset, &who, amount_minus_fees)?;
+            T::AssetManager::deposit(asset.into(), &who, amount_minus_fees)?;
 
             Self::deposit_event(Event::OutcomeBought {
                 market_id,
                 buyer: who,
-                asset,
+                asset: asset.into(),
                 amount_minus_fees,
                 fees: external_fees,
             });
@@ -403,11 +428,7 @@ mod pallet {
             }
 
             let pot_account = Self::pot_account(market_id);
-<<<<<<< HEAD
             let pot_total = T::AssetManager::free_balance(market.base_asset.into(), &pot_account);
-=======
-            let pot_total = T::AssetManager::free_balance(market.base_asset, &pot_account);
->>>>>>> sea212-new-asset-system
             let payoff = pot_total.bmul_bdiv(winning_balance, outcome_total)?;
 
             Self::check_values(winning_balance, pot_total, outcome_total, payoff)?;
@@ -427,6 +448,16 @@ mod pallet {
                 base_asset_payoff,
             )?;
 
+            if outcome_total == winning_balance {
+                let res = T::AssetDestroyer::managed_destroy(winning_asset, None);
+                unreachable_non_terminating!(
+                    res.is_ok(),
+                    LOG_TARGET,
+                    "Can't destroy winning outcome asset: {:?}",
+                    res.err()
+                );
+            }
+
             Self::deposit_event(Event::RewardsClaimed {
                 market_id,
                 asset: winning_asset,
@@ -439,10 +470,12 @@ mod pallet {
         }
 
         #[require_transactional]
-        fn do_claim_refunds(who: T::AccountId, refund_asset: AssetOf<T>) -> DispatchResult {
+        fn do_claim_refunds(
+            who: T::AccountId,
+            refund_asset: ParimutuelShareOf<T>,
+        ) -> DispatchResult {
             let market_id = match refund_asset {
-                Asset::ParimutuelShare(market_id, _) => market_id,
-                _ => return Err(Error::<T>::NotParimutuelOutcome.into()),
+                ParimutuelShareOf::<T>::Share(market_id, _) => market_id,
             };
             let market = T::MarketCommons::market(&market_id)?;
             Self::ensure_parimutuel_market_resolved(&market)?;
@@ -451,9 +484,10 @@ mod pallet {
             let outcome_total = T::AssetManager::total_issuance(winning_asset);
             ensure!(outcome_total == <BalanceOf<T>>::zero(), Error::<T>::RefundNotAllowed);
 
-            let refund_balance = T::AssetManager::free_balance(refund_asset, &who);
+            let refund_asset_general: AssetOf<T> = refund_asset.into();
+            let refund_balance = T::AssetManager::free_balance(refund_asset_general, &who);
             ensure!(!refund_balance.is_zero(), Error::<T>::RefundableBalanceIsZero);
-            if refund_asset == winning_asset {
+            if refund_asset_general == winning_asset {
                 log::debug!(
                     target: LOG_TARGET,
                     "Since we were checking the total issuance of the winning asset to be zero, if \
@@ -463,7 +497,7 @@ mod pallet {
                 debug_assert!(false);
             }
 
-            T::AssetManager::withdraw(refund_asset, &who, refund_balance)?;
+            T::AssetManager::withdraw(refund_asset_general, &who, refund_balance)?;
 
             let pot_account = Self::pot_account(market_id);
             let pot_total = T::AssetManager::free_balance(market.base_asset.into(), &pot_account);
@@ -485,7 +519,7 @@ mod pallet {
 
             Self::deposit_event(Event::BalanceRefunded {
                 market_id,
-                asset: refund_asset,
+                asset: refund_asset.into(),
                 refunded_balance: refund_balance,
                 sender: who.clone(),
             });

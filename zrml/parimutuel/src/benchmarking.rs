@@ -47,7 +47,7 @@ fn buy_asset<T: Config>(
     amount: BalanceOf<T>,
 ) {
     let market = T::MarketCommons::market(&market_id).unwrap();
-    T::AssetManager::deposit(market.base_asset, buyer, amount).unwrap();
+    T::AssetManager::deposit(market.base_asset.into(), buyer, amount).unwrap();
     Parimutuel::<T>::buy(RawOrigin::Signed(buyer.clone()).into(), asset, amount).unwrap();
 }
 
@@ -65,7 +65,7 @@ mod benchmarks {
         let asset = Asset::ParimutuelShare(market_id, 0u16);
 
         let market = T::MarketCommons::market(&market_id).unwrap();
-        T::AssetManager::deposit(market.base_asset, &buyer, amount).unwrap();
+        T::AssetManager::deposit(market.base_asset.into(), &buyer, amount).unwrap();
 
         #[extrinsic_call]
         buy(RawOrigin::Signed(buyer), asset, amount);
