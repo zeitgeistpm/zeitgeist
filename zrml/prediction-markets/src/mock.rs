@@ -69,6 +69,7 @@ pub const EVE: AccountIdTest = 4;
 pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
 pub const APPROVE_ORIGIN: AccountIdTest = 70;
+pub const REJECT_ORIGIN: AccountIdTest = 71;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
@@ -145,6 +146,7 @@ impl DeployPoolMock {
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
     pub const ApproveOrigin: AccountIdTest = APPROVE_ORIGIN;
+    pub const RejectOrigin: AccountIdTest = REJECT_ORIGIN;
 }
 parameter_types! {
     pub const AdvisoryBond: Balance = 11 * CENT;
@@ -216,7 +218,7 @@ impl crate::Config for Runtime {
     type PalletId = PmPalletId;
     type CloseEarlyBlockPeriod = CloseEarlyBlockPeriod;
     type CloseEarlyTimeFramePeriod = CloseEarlyTimeFramePeriod;
-    type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type RejectOrigin = EnsureSignedBy<RejectOrigin, AccountIdTest>;
     type RequestEditOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type AssetManager = AssetManager;
