@@ -66,7 +66,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         });
 
         assert_ok!(PredictionMarkets::report(
-            RuntimeOrigin::signed(SUDO),
+            RuntimeOrigin::signed(ResolveOrigin::get()),
             0,
             OutcomeReport::Categorical(1)
         ));

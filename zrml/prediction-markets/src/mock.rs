@@ -73,6 +73,7 @@ pub const REJECT_ORIGIN: AccountIdTest = 71;
 pub const CLOSE_MARKET_EARLY_ORIGIN: AccountIdTest = 72;
 pub const CLOSE_ORIGIN: AccountIdTest = 73;
 pub const REQUEST_EDIT_ORIGIN: AccountIdTest = 74;
+pub const RESOLVE_ORIGIN: AccountIdTest = 75;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
@@ -153,6 +154,7 @@ ord_parameter_types! {
     pub const CloseMarketEarlyOrigin: AccountIdTest = CLOSE_MARKET_EARLY_ORIGIN;
     pub const CloseOrigin: AccountIdTest = CLOSE_ORIGIN;
     pub const RequestEditOrigin: AccountIdTest = REQUEST_EDIT_ORIGIN;
+    pub const ResolveOrigin: AccountIdTest = RESOLVE_ORIGIN;
 }
 parameter_types! {
     pub const AdvisoryBond: Balance = 11 * CENT;
@@ -225,7 +227,7 @@ impl crate::Config for Runtime {
     type CloseEarlyTimeFramePeriod = CloseEarlyTimeFramePeriod;
     type RejectOrigin = EnsureSignedBy<RejectOrigin, AccountIdTest>;
     type RequestEditOrigin = EnsureSignedBy<RequestEditOrigin, AccountIdTest>;
-    type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type ResolveOrigin = EnsureSignedBy<ResolveOrigin, AccountIdTest>;
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
     type Slash = Treasury;

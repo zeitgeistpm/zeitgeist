@@ -57,7 +57,7 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
             outcome_report.clone()
         ));
         assert_ok!(PredictionMarkets::admin_move_market_to_resolved(
-            RuntimeOrigin::signed(SUDO),
+            RuntimeOrigin::signed(ResolveOrigin::get()),
             market_id
         ));
 
@@ -133,7 +133,7 @@ fn admin_move_market_to_resolved_resolves_disputed_market() {
             outcome_report.clone(),
         ));
         assert_ok!(PredictionMarkets::admin_move_market_to_resolved(
-            RuntimeOrigin::signed(SUDO),
+            RuntimeOrigin::signed(ResolveOrigin::get()),
             market_id
         ));
 
@@ -184,7 +184,7 @@ fn admin_move_market_to_resolved_fails_if_market_is_not_reported_or_disputed(
         }));
         assert_noop!(
             PredictionMarkets::admin_move_market_to_resolved(
-                RuntimeOrigin::signed(SUDO),
+                RuntimeOrigin::signed(ResolveOrigin::get()),
                 market_id,
             ),
             Error::<Runtime>::InvalidMarketStatus,
