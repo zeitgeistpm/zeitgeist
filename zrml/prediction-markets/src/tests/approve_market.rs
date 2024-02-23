@@ -71,7 +71,10 @@ fn it_allows_advisory_origin_to_approve_markets() {
             DispatchError::BadOrigin
         );
 
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(ApproveOrigin::get()), 0));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            0
+        ));
 
         let after_market = MarketCommons::market(&0);
         assert_eq!(after_market.unwrap().status, MarketStatus::Active);
@@ -126,7 +129,10 @@ fn approve_market_correctly_unreserves_advisory_bond() {
         let market_id = 0;
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, AdvisoryBond::get() + OracleBond::get());
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(ApproveOrigin::get()), market_id));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            market_id
+        ));
         check_reserve(&ALICE, OracleBond::get());
         assert_eq!(Balances::free_balance(ALICE), alice_balance_before + AdvisoryBond::get());
         let market = MarketCommons::market(&market_id).unwrap();
