@@ -71,6 +71,7 @@ pub const SUDO: AccountIdTest = 69;
 pub const APPROVE_ORIGIN: AccountIdTest = 70;
 pub const REJECT_ORIGIN: AccountIdTest = 71;
 pub const CLOSE_MARKET_EARLY_ORIGIN: AccountIdTest = 72;
+pub const CLOSE_ORIGIN: AccountIdTest = 73;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
@@ -149,6 +150,7 @@ ord_parameter_types! {
     pub const ApproveOrigin: AccountIdTest = APPROVE_ORIGIN;
     pub const RejectOrigin: AccountIdTest = REJECT_ORIGIN;
     pub const CloseMarketEarlyOrigin: AccountIdTest = CLOSE_MARKET_EARLY_ORIGIN;
+    pub const CloseOrigin: AccountIdTest = CLOSE_ORIGIN;
 }
 parameter_types! {
     pub const AdvisoryBond: Balance = 11 * CENT;
@@ -194,7 +196,7 @@ impl crate::Config for Runtime {
     type CloseEarlyProtectionTimeFramePeriod = CloseEarlyProtectionTimeFramePeriod;
     type CloseEarlyProtectionBlockPeriod = CloseEarlyProtectionBlockPeriod;
     type CloseEarlyRequestBond = CloseEarlyRequestBond;
-    type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type CloseOrigin = EnsureSignedBy<CloseOrigin, AccountIdTest>;
     type Currency = Balances;
     type MaxCreatorFee = MaxCreatorFee;
     type Court = Court;
