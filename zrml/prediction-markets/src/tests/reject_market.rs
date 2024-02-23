@@ -233,7 +233,10 @@ fn reject_market_fails_on_approved_market() {
             0..2,
             ScoringRule::Lmsr,
         );
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            0
+        ));
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
         assert_noop!(

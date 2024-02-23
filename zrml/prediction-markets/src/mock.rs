@@ -68,6 +68,7 @@ pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
 pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
+pub const APPROVE_ORIGIN: AccountIdTest = 70;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
@@ -143,6 +144,7 @@ impl DeployPoolMock {
 
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
+    pub const ApproveOrigin: AccountIdTest = APPROVE_ORIGIN;
 }
 parameter_types! {
     pub const AdvisoryBond: Balance = 11 * CENT;
@@ -179,7 +181,7 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
-    type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type ApproveOrigin = EnsureSignedBy<ApproveOrigin, AccountIdTest>;
     #[cfg(feature = "parachain")]
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;

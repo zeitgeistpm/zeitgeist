@@ -43,7 +43,10 @@ fn fails_if_market_status_is_not_proposed(market_status: MarketStatus) {
             Ok(())
         }));
         assert_noop!(
-            PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), market_id),
+            PredictionMarkets::approve_market(
+                RuntimeOrigin::signed(ApproveOrigin::get()),
+                market_id
+            ),
             Error::<Runtime>::MarketIsNotProposed
         );
     });
@@ -68,8 +71,7 @@ fn it_allows_advisory_origin_to_approve_markets() {
             DispatchError::BadOrigin
         );
 
-        // Now it should work from SUDO
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(ApproveOrigin::get()), 0));
 
         let after_market = MarketCommons::market(&0);
         assert_eq!(after_market.unwrap().status, MarketStatus::Active);
@@ -97,7 +99,7 @@ fn market_with_edit_request_cannot_be_approved() {
 
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
         assert_noop!(
-            PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0),
+            PredictionMarkets::approve_market(RuntimeOrigin::signed(ApproveOrigin::get()), 0),
             Error::<Runtime>::MarketEditRequestAlreadyInProgress
         );
     });
@@ -124,7 +126,7 @@ fn approve_market_correctly_unreserves_advisory_bond() {
         let market_id = 0;
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, AdvisoryBond::get() + OracleBond::get());
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), market_id));
+        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(ApproveOrigin::get()), market_id));
         check_reserve(&ALICE, OracleBond::get());
         assert_eq!(Balances::free_balance(ALICE), alice_balance_before + AdvisoryBond::get());
         let market = MarketCommons::market(&market_id).unwrap();

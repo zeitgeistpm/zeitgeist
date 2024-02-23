@@ -101,7 +101,10 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::Lmsr,
         ));
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            0
+        ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
@@ -147,7 +150,10 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::Lmsr,
         ));
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            0
+        ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
@@ -245,7 +251,10 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::Lmsr,
         ));
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            0
+        ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
@@ -357,7 +366,10 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::Lmsr,
         ));
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            0
+        ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
@@ -490,7 +502,10 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
 
         let outsider = CHARLIE;
 
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            0
+        ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
