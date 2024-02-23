@@ -14399,6 +14399,7 @@ dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
+ "impl-trait-for-tuples",
  "more-asserts",
  "num-traits",
  "orml-currencies",
