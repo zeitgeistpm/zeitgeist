@@ -98,7 +98,11 @@ fn market_with_edit_request_cannot_be_approved() {
 
         let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
-        assert_ok!(PredictionMarkets::request_edit(RuntimeOrigin::signed(SUDO), 0, edit_reason));
+        assert_ok!(PredictionMarkets::request_edit(
+            RuntimeOrigin::signed(RequestEditOrigin::get()),
+            0,
+            edit_reason
+        ));
 
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
         assert_noop!(

@@ -99,7 +99,11 @@ fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
         let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
         let reject_reason = vec![0_u8; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
-        assert_ok!(PredictionMarkets::request_edit(RuntimeOrigin::signed(SUDO), 0, edit_reason));
+        assert_ok!(PredictionMarkets::request_edit(
+            RuntimeOrigin::signed(RequestEditOrigin::get()),
+            0,
+            edit_reason
+        ));
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
         assert_ok!(PredictionMarkets::reject_market(
             RuntimeOrigin::signed(RejectOrigin::get()),

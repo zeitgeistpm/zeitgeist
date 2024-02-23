@@ -46,7 +46,7 @@ fn it_allows_request_edit_origin_to_request_edits_for_markets() {
 
         // Now it should work from SUDO
         assert_ok!(PredictionMarkets::request_edit(
-            RuntimeOrigin::signed(SUDO),
+            RuntimeOrigin::signed(RequestEditOrigin::get()),
             0,
             edit_reason.clone()
         ));
@@ -104,7 +104,11 @@ fn edit_request_fails_if_edit_reason_is_too_long() {
         let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize + 1];
 
         assert_noop!(
-            PredictionMarkets::request_edit(RuntimeOrigin::signed(SUDO), 0, edit_reason),
+            PredictionMarkets::request_edit(
+                RuntimeOrigin::signed(RequestEditOrigin::get()),
+                0,
+                edit_reason
+            ),
             Error::<Runtime>::EditReasonLengthExceedsMaxEditReasonLen
         );
     });
