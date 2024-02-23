@@ -200,7 +200,6 @@ impl crate::Config for Runtime {
     type Currency = Balances;
     type MaxCreatorFee = MaxCreatorFee;
     type Court = Court;
-    type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DeployPool = DeployPoolMock;
     type DisputeBond = DisputeBond;
     type RuntimeEvent = RuntimeEvent;
