@@ -152,8 +152,7 @@ fn admin_move_market_to_resolved_resolves_disputed_market() {
         );
         assert_eq!(
             Balances::free_balance(ALICE),
-            balance_free_before
-                + <Runtime as Config>::ValidityBond::get()
+            balance_free_before + <Runtime as Config>::ValidityBond::get()
         );
     };
     ExtBuilder::default().build().execute_with(|| {
