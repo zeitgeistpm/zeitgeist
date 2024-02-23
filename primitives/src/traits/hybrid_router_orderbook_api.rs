@@ -65,7 +65,7 @@ pub trait HybridRouterOrderBookApi {
         who: &Self::AccountId,
         order_id: Self::OrderId,
         maker_partial_fill: Option<Self::Balance>,
-    ) -> Result<Self::Balance, DispatchError>;
+    ) -> DispatchResult;
 
     /// Places an order on the order book.
     ///

@@ -48,7 +48,7 @@ mod pallet {
         ArithmeticError, DispatchResult,
     };
     use zeitgeist_primitives::{
-        math::fixed::{FixedMul, FixedMulDiv},
+        math::fixed::FixedMul,
         order_book::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderBookApi},
         types::{Asset, Market},

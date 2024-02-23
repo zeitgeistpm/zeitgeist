@@ -41,9 +41,9 @@ use zeitgeist_primitives::{
         checked_ops_res::{CheckedAddRes, CheckedSubRes},
         fixed::FixedMulDiv,
     },
-    traits::{DistributeFees, MarketCommonsPalletApi},
+    order_book::{Order, OrderId},
+    traits::{DistributeFees, HybridRouterOrderBookApi, MarketCommonsPalletApi},
     types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
-    order_book::{OrderId, Order},
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -505,6 +505,45 @@ mod pallet {
             Self::deposit_event(Event::OrderPlaced { order_id, order });
 
             Ok(())
+        }
+    }
+
+    impl<T: Config> HybridRouterOrderBookApi for Pallet<T> {
+        type AccountId = AccountIdOf<T>;
+        type MarketId = MarketIdOf<T>;
+        type Balance = BalanceOf<T>;
+        type Asset = AssetOf<T>;
+        type Order = OrderOf<T>;
+        type OrderId = OrderId;
+
+        fn order(order_id: Self::OrderId) -> Result<Self::Order, DispatchError> {
+            <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist.into())
+        }
+
+        fn fill_order(
+            who: &Self::AccountId,
+            order_id: Self::OrderId,
+            maker_partial_fill: Option<Self::Balance>,
+        ) -> DispatchResult {
+            Self::do_fill_order(order_id, who.clone(), maker_partial_fill)
+        }
+
+        fn place_order(
+            who: &Self::AccountId,
+            market_id: Self::MarketId,
+            maker_asset: Self::Asset,
+            maker_amount: Self::Balance,
+            taker_asset: Self::Asset,
+            taker_amount: Self::Balance,
+        ) -> Result<(), DispatchError> {
+            Self::do_place_order(
+                who.clone(),
+                market_id,
+                maker_asset,
+                maker_amount,
+                taker_asset,
+                taker_amount,
+            )
         }
     }
 }

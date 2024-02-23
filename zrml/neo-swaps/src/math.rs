@@ -81,6 +81,20 @@ pub(crate) trait MathOps<T: Config> {
         amount: BalanceOf<T>,
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
+
+    fn calculate_buy_amount_until(
+        reserve: BalanceOf<T>,
+        until: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
+        spot_price: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError>;
+
+    fn calculate_sell_amount_until(
+        reserve: BalanceOf<T>,
+        until: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
+        spot_price: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError>;
 }
 
 pub(crate) struct Math<T>(PhantomData<T>);
@@ -146,6 +160,36 @@ impl<T: Config> MathOps<T> for Math<T> {
         let amount_in = amount_in.saturated_into();
         let liquidity = liquidity.saturated_into();
         detail::calculate_buy_ln_argument(reserve, amount_in, liquidity)
+            .map(|result| result.saturated_into())
+            .ok_or_else(|| Error::<T>::MathError.into())
+    }
+
+    fn calculate_buy_amount_until(
+        reserve: BalanceOf<T>,
+        until: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
+        spot_price: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        let reserve = reserve.saturated_into();
+        let until = until.saturated_into();
+        let liquidity = liquidity.saturated_into();
+        let spot_price = spot_price.saturated_into();
+        detail::calculate_buy_amount_until(reserve, until, liquidity, spot_price)
+            .map(|result| result.saturated_into())
+            .ok_or_else(|| Error::<T>::MathError.into())
+    }
+
+    fn calculate_sell_amount_until(
+        reserve: BalanceOf<T>,
+        until: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
+        spot_price: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        let reserve = reserve.saturated_into();
+        let until = until.saturated_into();
+        let liquidity = liquidity.saturated_into();
+        let spot_price = spot_price.saturated_into();
+        detail::calculate_sell_amount_until(reserve, until, liquidity, spot_price)
             .map(|result| result.saturated_into())
             .ok_or_else(|| Error::<T>::MathError.into())
     }
@@ -307,6 +351,34 @@ mod detail {
             FixedType::checked_from_num(0)? // Underflow to zero.
         };
         exp_x_over_b.checked_add(exp_neg_r_over_b)?.checked_sub(FixedType::checked_from_num(1)?)
+    }
+
+    pub(super) fn calculate_buy_amount_until(
+        reserve: u128,
+        until: u128,
+        liquidity: u128,
+        spot_price: u128,
+    ) -> Option<u128> {
+        // TODO: update to correctness
+        let ln_arg = until.checked_div(spot_price)?;
+        let (ln_result, ln_neg) = ln(ln_arg).ok()?;
+        let blob = liquidity.checked_mul(ln_result)?;
+        let reserve_plus_blob =
+            if ln_neg { reserve.checked_sub(blob)? } else { reserve.checked_add(blob)? };
+        reserve_plus_blob.checked_sub(until)
+    }
+
+    pub(super) fn calculate_sell_amount_until(
+        reserve: u128,
+        until: u128,
+        liquidity: u128,
+        spot_price: u128,
+    ) -> Option<u128> {
+        // TODO: update to correctness
+        let ln_arg = until.checked_div(spot_price)?;
+        let (ln_result, ln_neg) = ln(ln_arg).ok()?;
+        let blob = liquidity.checked_mul(ln_result)?;
+        if ln_neg { reserve.checked_add(blob) } else { reserve.checked_sub(blob) }
     }
 }
 
