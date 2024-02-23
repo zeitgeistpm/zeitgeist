@@ -15,15 +15,60 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use parity_scale_codec::{HasCompact, MaxEncodedLen};
+use frame_support::{pallet_prelude::DispatchResult, require_transactional};
 
 /// API that provides a signal on each market state transition
+pub trait MarketTransitionApi<MI> {
+    #[require_transactional]
+    fn on_proposal(_market_id: &MI) -> DispatchResult {
+        Ok(())
+    }
+    #[require_transactional]
+    fn on_activation(_market_id: &MI) -> DispatchResult {
+        Ok(())
+    }
+    #[require_transactional]
+    fn on_closure(_market_id: &MI) -> DispatchResult {
+        Ok(())
+    }
+    #[require_transactional]
+    fn on_report(_market_id: &MI) -> DispatchResult {
+        Ok(())
+    }
+    #[require_transactional]
+    fn on_dispute(_market_id: &MI) -> DispatchResult {
+        Ok(())
+    }
+    #[require_transactional]
+    fn on_resolution(_market_id: &MI) -> DispatchResult {
+        Ok(())
+    }
+}
+
 #[impl_trait_for_tuples::impl_for_tuples(8)]
-pub trait MarketTransitionApi<MI: HasCompact + MaxEncodedLen> {
-    fn on_proposal(_market_id: &MI) {}
-    fn on_activation(_market_id: &MI) {}
-    fn on_closure(_market_id: &MI) {}
-    fn on_report(_market_id: &MI) {}
-    fn on_dispute(_market_id: &MI) {}
-    fn on_resolution(_market_id: &MI) {}
+impl<MI> MarketTransitionApi<MI> for Tuple {
+    fn on_proposal(market_id: &MI) -> DispatchResult {
+        for_tuples!( #( Tuple::on_proposal(market_id)?; )* );
+        Ok(())
+    }
+    fn on_activation(market_id: &MI) -> DispatchResult {
+        for_tuples!( #( Tuple::on_activation(market_id)?; )* );
+        Ok(())
+    }
+    fn on_closure(market_id: &MI) -> DispatchResult {
+        for_tuples!( #( Tuple::on_closure(market_id)?; )* );
+        Ok(())
+    }
+    fn on_report(market_id: &MI) -> DispatchResult {
+        for_tuples!( #( Tuple::on_report(market_id)?; )* );
+        Ok(())
+    }
+    fn on_dispute(market_id: &MI) -> DispatchResult {
+        for_tuples!( #( Tuple::on_dispute(market_id)?; )* );
+        Ok(())
+    }
+    fn on_resolution(market_id: &MI) -> DispatchResult {
+        for_tuples!( #( Tuple::on_resolution(market_id)?; )* );
+        Ok(())
+    }
 }
