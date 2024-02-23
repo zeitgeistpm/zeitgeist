@@ -18,6 +18,8 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 mod benchmarking;
 mod mock;
 mod tests;
@@ -29,12 +31,13 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::weights::WeightInfoZeitgeist;
+    use alloc::collections::BTreeMap;
     use core::marker::PhantomData;
     use frame_support::{
         ensure, log,
         pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
         require_transactional,
-        traits::{Get, IsType, StorageVersion},
+        traits::{fungibles::Create, Get, IsType, StorageVersion},
         PalletId, RuntimeDebug,
     };
     use frame_system::{
@@ -50,7 +53,7 @@ mod pallet {
     use zeitgeist_macros::unreachable_non_terminating;
     use zeitgeist_primitives::{
         math::fixed::FixedMulDiv,
-        traits::DistributeFees,
+        traits::{DistributeFees, MarketTransitionApi},
         types::{
             Asset, BaseAsset, Market, MarketStatus, MarketType, OutcomeReport,
             ParimutuelAssetClass, ScoringRule,
@@ -60,11 +63,14 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// The module handling the destruction of market assets.
-        type AssetDestroyer: ManagedDestroy<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
+        /// The module handling the creation of market assets.
+        type AssetCreator: Create<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
 
         /// The api to handle different asset classes.
         type AssetManager: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
+
+        /// The module handling the destruction of market assets.
+        type AssetDestroyer: ManagedDestroy<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
 
         /// The way how fees are taken from the market base asset.
         type ExternalFees: DistributeFees<
@@ -449,12 +455,12 @@ mod pallet {
             )?;
 
             if outcome_total == winning_balance {
-                let res = T::AssetDestroyer::managed_destroy(winning_asset, None);
+                let destroy_result = T::AssetDestroyer::managed_destroy(winning_asset, None);
                 unreachable_non_terminating!(
-                    res.is_ok(),
+                    destroy_result.is_ok(),
                     LOG_TARGET,
                     "Can't destroy winning outcome asset: {:?}",
-                    res.err()
+                    destroy_result.err()
                 );
             }
 
@@ -523,6 +529,63 @@ mod pallet {
                 refunded_balance: refund_balance,
                 sender: who.clone(),
             });
+
+            Ok(())
+        }
+    }
+
+    impl<T: Config> MarketTransitionApi<MarketIdOf<T>> for Pallet<T> {
+        fn on_activation(market_id: &MarketIdOf<T>) -> DispatchResult {
+            let market = T::MarketCommons::market(market_id)?;
+            if market.scoring_rule != ScoringRule::Parimutuel { return Ok(()) };
+
+            for outcome in market.outcome_assets(*market_id) {
+                let admin = Self::pot_account(*market_id);
+                let is_sufficient = true;
+                let min_balance = 1u8;
+                T::AssetCreator::create(outcome.into(), admin, is_sufficient, min_balance.into())?;
+            }
+
+            Ok(())
+        }
+        fn on_resolution(market_id: &MarketIdOf<T>) -> DispatchResult {
+            let market = T::MarketCommons::market(market_id)?;
+            if market.scoring_rule != ScoringRule::Parimutuel { return Ok(()) };
+            
+            let winning_asset = Self::get_winning_asset(*market_id, &market)?;
+            let outcome_total = T::AssetManager::total_issuance(winning_asset);
+            // Allow to refund shares.
+            if outcome_total.is_zero() {
+                return Ok(());
+            }
+
+            let winning_outcome = market.resolved_outcome_into_outcome(*market_id);
+            if let Some(winning_outcome_inner) = winning_outcome {
+                // Destroy losing assets.
+                let assets_to_destroy = BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
+                    market
+                        .outcome_assets(*market_id)
+                        .into_iter()
+                        .filter(|outcome| *outcome != winning_outcome_inner)
+                        .map(|asset| AssetOf::<T>::from(asset))
+                        .zip(vec![None]),
+                );
+
+                let destroy_result = T::AssetDestroyer::managed_destroy_multi(assets_to_destroy);
+                unreachable_non_terminating!(
+                    destroy_result.is_ok(),
+                    LOG_TARGET,
+                    "Can't destroy losing outcome asset: {:?}",
+                    destroy_result
+                );
+            } else {
+                unreachable_non_terminating!(
+                    winning_outcome.is_some(),
+                    LOG_TARGET,
+                    "Resolved market with id {:?} does not have a resolved outcome",
+                    market_id,
+                );
+            }
 
             Ok(())
         }

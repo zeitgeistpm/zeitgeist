@@ -114,6 +114,7 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
+    type AssetCreator = AssetRouter;
     type AssetDestroyer = AssetRouter;
     type AssetManager = AssetManager;
     type ExternalFees = ExternalFees<Runtime, FeeAccount>;
