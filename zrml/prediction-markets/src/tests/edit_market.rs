@@ -134,8 +134,12 @@ fn edit_market_with_foreign_asset() {
 
         let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
-        // Now it should work from SUDO
-        assert_ok!(PredictionMarkets::request_edit(RuntimeOrigin::signed(SUDO), 0, edit_reason));
+        // Now it should work for the designated origin.
+        assert_ok!(PredictionMarkets::request_edit(
+            RuntimeOrigin::signed(RequestEditOrigin::get()),
+            0,
+            edit_reason
+        ));
 
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
 

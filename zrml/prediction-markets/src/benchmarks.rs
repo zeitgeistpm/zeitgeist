@@ -280,7 +280,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        let close_origin = T::ResolveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
         call.dispatch_bypass_filter(close_origin)?
@@ -316,7 +316,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        let close_origin = T::ResolveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
         call.dispatch_bypass_filter(close_origin)?
@@ -368,7 +368,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        let close_origin = T::ResolveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
         call.dispatch_bypass_filter(close_origin)?
@@ -421,7 +421,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        let close_origin = T::ResolveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
         call.dispatch_bypass_filter(close_origin)?
@@ -456,7 +456,7 @@ benchmarks! {
             Some(MarketDisputeMechanism::Court),
         )?;
 
-        let approve_origin = T::ApproveOrigin::try_successful_origin().unwrap();
+        let approve_origin = T::RequestEditOrigin::try_successful_origin().unwrap();
         let edit_reason = vec![0_u8; r as usize];
         let call = Call::<T>::request_edit{ market_id, edit_reason };
     }: { call.dispatch_bypass_filter(approve_origin)? } verify {}
@@ -529,7 +529,7 @@ benchmarks! {
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         let market_id = zrml_market_commons::Pallet::<T>::latest_market_id()?;
 
-        let approve_origin = T::ApproveOrigin::try_successful_origin().unwrap();
+        let approve_origin = T::RequestEditOrigin::try_successful_origin().unwrap();
         let edit_reason = vec![0_u8; 1024];
         Call::<T>::request_edit{ market_id, edit_reason }
         .dispatch_bypass_filter(approve_origin)?;

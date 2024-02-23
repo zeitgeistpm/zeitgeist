@@ -44,7 +44,7 @@ fn it_allows_request_edit_origin_to_request_edits_for_markets() {
             DispatchError::BadOrigin
         );
 
-        // Now it should work from SUDO
+        // Now it should work for the designated origin.
         assert_ok!(PredictionMarkets::request_edit(
             RuntimeOrigin::signed(RequestEditOrigin::get()),
             0,
