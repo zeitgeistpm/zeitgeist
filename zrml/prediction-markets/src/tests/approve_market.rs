@@ -17,12 +17,37 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use test_case::test_case;
 
 use crate::MarketIdsForEdit;
 use sp_runtime::DispatchError;
 
 // TODO(#1239) Be more granular with regards to origins
-// TODO(#1239) Approve fails if market status is not proposed
+
+#[test_case(MarketStatus::Active)]
+#[test_case(MarketStatus::Closed)]
+#[test_case(MarketStatus::Reported)]
+#[test_case(MarketStatus::Disputed)]
+#[test_case(MarketStatus::Resolved)]
+fn fails_if_market_status_is_not_proposed(market_status: MarketStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market(
+            Asset::Ztg,
+            MarketCreation::Advised,
+            0..2,
+            ScoringRule::Lmsr,
+        );
+        let market_id = 0;
+        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
+            market.status = market_status;
+            Ok(())
+        }));
+        assert_noop!(
+            PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), market_id),
+            Error::<Runtime>::MarketIsNotProposed
+        );
+    });
+}
 
 #[test]
 fn it_allows_advisory_origin_to_approve_markets() {
