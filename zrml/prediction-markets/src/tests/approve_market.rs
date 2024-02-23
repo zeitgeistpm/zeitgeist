@@ -22,8 +22,6 @@ use test_case::test_case;
 use crate::MarketIdsForEdit;
 use sp_runtime::DispatchError;
 
-// TODO(#1239) Be more granular with regards to origins
-
 #[test_case(MarketStatus::Active)]
 #[test_case(MarketStatus::Closed)]
 #[test_case(MarketStatus::Reported)]
