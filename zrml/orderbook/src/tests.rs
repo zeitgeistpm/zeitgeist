@@ -375,7 +375,7 @@ fn place_order_fails_if_market_base_asset_not_present() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, market.clone());
+        Markets::<Runtime>::insert(market_id, market);
 
         let maker_asset = Asset::CategoricalOutcome(0, 1);
         let taker_asset = Asset::CategoricalOutcome(0, 2);

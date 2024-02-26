@@ -90,7 +90,7 @@ fn buy_fails_if_asset_not_parimutuel_share() {
         let market_id = 0;
         let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market.clone());
+        Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::CategoricalOutcome(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
@@ -110,7 +110,7 @@ fn buy_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
         market.status = MarketStatus::Active;
         market.scoring_rule = scoring_rule;
 
-        Markets::<Runtime>::insert(market_id, market.clone());
+        Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
@@ -132,7 +132,7 @@ fn buy_fails_if_market_status_is_not_active(status: MarketStatus) {
         market.status = status;
         market.scoring_rule = ScoringRule::Parimutuel;
 
-        Markets::<Runtime>::insert(market_id, market.clone());
+        Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
@@ -189,7 +189,7 @@ fn buy_fails_if_below_minimum_bet_size() {
         let market_id = 0;
         let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market.clone());
+        Markets::<Runtime>::insert(market_id, market);
 
         let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get() - 1;

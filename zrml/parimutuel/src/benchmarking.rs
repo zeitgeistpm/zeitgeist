@@ -36,7 +36,7 @@ fn setup_market<T: Config>(market_type: MarketType) -> MarketIdOf<T> {
     let mut market = market_mock::<T>(market_creator);
     market.market_type = market_type;
     market.status = MarketStatus::Active;
-    T::MarketCommons::push_market(market.clone()).unwrap();
+    T::MarketCommons::push_market(market).unwrap();
     market_id
 }
 

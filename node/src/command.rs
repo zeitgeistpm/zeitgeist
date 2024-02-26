@@ -299,7 +299,7 @@ pub fn run() -> sc_cli::Result<()> {
                     BlockId::Number(number) => match client.block_hash(number) {
                         Ok(Some(hash)) => hash,
                         Ok(None) => return Err("Unknown block".into()),
-                        Err(e) => return Err(format!("Error reading block: {:?}", e).into()),
+                        Err(e) => return Err(format!("Error reading block: {e:?}").into()),
                     },
                 };
 
@@ -309,7 +309,7 @@ pub fn run() -> sc_cli::Result<()> {
                         Ok(())
                     }
                     Ok(None) => Err("Unknown block".into()),
-                    Err(e) => Err(format!("Error reading block: {:?}", e).into()),
+                    Err(e) => Err(format!("Error reading block: {e:?}").into()),
                 }
             })
         }
@@ -414,7 +414,7 @@ pub fn run() -> sc_cli::Result<()> {
                     &polkadot_cli,
                     config.tokio_handle.clone(),
                 )
-                .map_err(|err| format!("Relay chain argument error: {}", err))?;
+                .map_err(|err| format!("Relay chain argument error: {err}"))?;
 
                 cmd.run(config, polkadot_config)
             })
@@ -521,13 +521,13 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
         let state_version = Cli::native_runtime_version(chain_spec).state_version();
         let block: zeitgeist_runtime::Block =
             cumulus_client_cli::generate_genesis_block(&**chain_spec, state_version)
-                .map_err(|e| format!("{:?}", e))?;
+                .map_err(|e| format!("{e:?}"))?;
         let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
         let tokio_handle = parachain_config.tokio_handle.clone();
         let polkadot_config =
             SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, tokio_handle)
-                .map_err(|err| format!("Relay chain argument error: {}", err))?;
+                .map_err(|err| format!("Relay chain argument error: {err}"))?;
 
         log::info!("Parachain id: {:?}", parachain_id);
         log::info!("Parachain Account: {}", parachain_account);

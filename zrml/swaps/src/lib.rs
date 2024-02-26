@@ -899,7 +899,7 @@ mod pallet {
                 pool_account_id: &pool_account_id,
                 pool_id,
                 pool: &pool,
-                who: who.clone(),
+                who,
             };
 
             swap_exact_amount::<_, _, T>(params)

@@ -27,7 +27,7 @@ fn withdraw_fees_interacts_correctly_with_join() {
             BASE_ASSET,
             MarketType::Categorical(category_count),
             _10,
-            spot_prices.clone(),
+            spot_prices,
             CENT,
         );
 

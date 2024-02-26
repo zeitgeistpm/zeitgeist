@@ -443,7 +443,7 @@ mod pallet {
             Self::deposit_event(Event::OrderFilled {
                 order_id,
                 maker,
-                taker: taker.clone(),
+                taker,
                 filled_maker_amount: taker_fill,
                 filled_taker_amount: maker_fill,
                 unfilled_maker_amount: order_data.maker_amount,

@@ -276,15 +276,16 @@ mod pallet {
             if payoff < winning_balance {
                 log::debug!(
                     target: LOG_TARGET,
-                    "The payoff in base asset should be greater than or equal to the winning outcome \
-                    balance."
+                    "The payoff in base asset should be greater than or equal to the winning \
+                     outcome balance."
                 );
                 debug_assert!(false);
             }
             if pot_total < payoff {
                 log::debug!(
                     target: LOG_TARGET,
-                    "The payoff in base asset should not exceed the total amount of the base asset!"
+                    "The payoff in base asset should not exceed the total amount of the base \
+                     asset!"
                 );
                 debug_assert!(false);
             }
@@ -415,7 +416,7 @@ mod pallet {
                 asset: winning_asset,
                 withdrawn_asset_balance,
                 base_asset_payoff,
-                sender: who.clone(),
+                sender: who,
             });
 
             Ok(())
@@ -439,9 +440,9 @@ mod pallet {
             if refund_asset == winning_asset {
                 log::debug!(
                     target: LOG_TARGET,
-                    "Since we were checking the total issuance of the winning asset to be zero, if \
-                     the refund balance is non-zero, then the winning asset can't be the refund \
-                     asset!"
+                    "Since we were checking the total issuance of the winning asset to be zero, \
+                     if the refund balance is non-zero, then the winning asset can't be the \
+                     refund asset!"
                 );
                 debug_assert!(false);
             }
@@ -465,7 +466,7 @@ mod pallet {
                 market_id,
                 asset: refund_asset,
                 refunded_balance: refund_balance,
-                sender: who.clone(),
+                sender: who,
             });
 
             Ok(())

@@ -303,7 +303,7 @@ impl<F: Fixed + ToString, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
             Ordering::Equal => frac_part.to_string(),
         };
 
-        let mut fixed_decimal: u128 = format!("{}{}", int_part, new_frac_part)
+        let mut fixed_decimal: u128 = format!("{int_part}{new_frac_part}")
             .parse::<u128>()
             .map_err(|_| "Failed to parse the fixed decimal representation into u128")?;
         if increment_int_part {

@@ -159,12 +159,9 @@ fn rikiddo_pallet_fee_return_correct_result() {
         let max_difference = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs <= max_difference,
-            "\nReference fee result (Balance): {}\nRikiddo pallet fee result (Balance): \
-             {}\nDifference: {}\nMax_Allowed_Difference: {}",
-            fee_reference_balance,
-            fee_pallet_balance,
-            difference_abs,
-            max_difference,
+            "\nReference fee result (Balance): {fee_reference_balance}\nRikiddo pallet fee result \
+             (Balance): {fee_pallet_balance}\nDifference: \
+             {difference_abs}\nMax_Allowed_Difference: {max_difference}",
         );
 
         // Now we check if the fee has changed, since enough volume data was collected
@@ -193,12 +190,9 @@ fn rikiddo_pallet_cost_returns_correct_result() {
         let max_difference = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs <= max_difference,
-            "\nReference cost result (Balance): {}\nRikiddo pallet cost result (Balance): \
-             {}\nDifference: {}\nMax_Allowed_Difference: {}",
-            cost_reference_balance,
-            cost_pallet_balance,
-            difference_abs,
-            max_difference,
+            "\nReference cost result (Balance): {cost_reference_balance}\nRikiddo pallet cost \
+             result (Balance): {cost_pallet_balance}\nDifference: \
+             {difference_abs}\nMax_Allowed_Difference: {difference_abs}",
         );
 
         // The second part also compares the cost results, but uses the sigmoid fee.
@@ -213,12 +207,9 @@ fn rikiddo_pallet_cost_returns_correct_result() {
         let max_difference_with_fee = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs_with_fee <= max_difference_with_fee,
-            "\nReference cost result (Balance): {}\nRikiddo pallet cost result (Balance): \
-             {}\nDifference: {}\nMax_Allowed_Difference: {}",
-            cost_reference_balance_with_fee,
-            cost_pallet_balance_with_fee,
-            difference_abs_with_fee,
-            max_difference_with_fee,
+            "\nReference cost result (Balance): {cost_reference_balance_with_fee}\nRikiddo pallet \
+             cost result (Balance): {cost_pallet_balance_with_fee}\nDifference: \
+             {difference_abs_with_fee}\nMax_Allowed_Difference: {max_difference_with_fee}",
         );
     });
 }
@@ -266,12 +257,9 @@ fn rikiddo_pallet_price_returns_correct_result() {
         let max_difference = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs <= max_difference,
-            "\nReference price result (Balance): {}\nRikiddo pallet price result (Balance): \
-             {}\nDifference: {}\nMax_Allowed_Difference: {}",
-            price_reference_balance,
-            price_pallet_balance,
-            difference_abs,
-            max_difference,
+            "\nReference price result (Balance): {price_reference_balance}\nRikiddo pallet price \
+             result (Balance): {price_pallet_balance}\nDifference: \
+             {difference_abs}\nMax_Allowed_Difference: {max_difference}",
         );
 
         // The second part also compares the price results, but uses the sigmoid fee.
@@ -286,12 +274,9 @@ fn rikiddo_pallet_price_returns_correct_result() {
         let max_difference_fee = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs_fee <= max_difference_fee,
-            "\nReference price result (Balance): {}\nRikiddo pallet price result (Balance): \
-             {}\nDifference: {}\nMax_Allowed_Difference: {}",
-            price_reference_balance_fee,
-            price_pallet_balance_fee,
-            difference_abs_fee,
-            max_difference_fee,
+            "\nReference price result (Balance): {price_reference_balance_fee}\nRikiddo pallet \
+             price result (Balance): {price_pallet_balance_fee}\nDifference: \
+             {difference_abs_fee}\nMax_Allowed_Difference: {max_difference_fee}",
         );
     });
 }
@@ -321,12 +306,9 @@ fn rikiddo_pallet_all_prices_returns_correct_result() {
             asset_balances.len() as u128 * max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs <= max_difference,
-            "\nReference all_prices result (Balance): {:?}\nRikiddo all_prices result (Balance): \
-             {:?}\nDifference: {}\nMax_Allowed_Difference: {}",
-            all_prices_reference_balance,
-            all_prices_pallet_balance,
-            difference_abs,
-            max_difference,
+            "\nReference all_prices result (Balance): {all_prices_reference_balance:?}\nRikiddo \
+             all_prices result (Balance): {all_prices_pallet_balance:?}\nDifference: \
+             {difference_abs}\nMax_Allowed_Difference: {max_difference}",
         );
 
         // The second part also compares the price results for all prices, but uses
@@ -350,12 +332,10 @@ fn rikiddo_pallet_all_prices_returns_correct_result() {
             asset_balances.len() as u128 * max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs_fee <= max_difference_fee,
-            "\nReference all_prices result (Balance): {:?}\nRikiddo pallet all_prices result \
-             (Balance): {:?}\nDifference: {}\nMax_Allowed_Difference: {}",
-            all_prices_reference_balance_fee,
-            all_prices_pallet_balance_fee,
-            difference_abs_fee,
-            max_difference_fee,
+            "\nReference all_prices result (Balance): \
+             {all_prices_reference_balance_fee:?}\nRikiddo pallet all_prices result (Balance): \
+             {all_prices_pallet_balance_fee:?}\nDifference: \
+             {difference_abs_fee}\nMax_Allowed_Difference: {max_difference_fee}",
         );
     });
 }

@@ -268,7 +268,7 @@ where
         complete_set_amount,
     ));
     assert_ok!(NeoSwaps::<T>::join(
-        RawOrigin::Signed(caller.clone()).into(),
+        RawOrigin::Signed(caller).into(),
         market_id,
         pool_shares_amount,
         vec![u128::MAX.saturated_into(); pool.assets().len()]
@@ -334,7 +334,7 @@ mod benchmarks {
         let base_asset = Asset::Ztg;
         let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
-            alice.clone(),
+            alice,
             base_asset,
             asset_count,
             _10.saturated_into(),
@@ -366,7 +366,7 @@ mod benchmarks {
         let base_asset = Asset::Ztg;
         let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
-            alice.clone(),
+            alice,
             base_asset,
             asset_count,
             _10.saturated_into(),
@@ -398,7 +398,7 @@ mod benchmarks {
         let base_asset = Asset::Ztg;
         let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
-            alice.clone(),
+            alice,
             base_asset,
             asset_count,
             _10.saturated_into(),
@@ -436,7 +436,7 @@ mod benchmarks {
         let base_asset = Asset::Ztg;
         let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
-            alice.clone(),
+            alice,
             base_asset,
             asset_count,
             _10.saturated_into(),
@@ -460,12 +460,8 @@ mod benchmarks {
     #[benchmark]
     fn withdraw_fees() {
         let alice: T::AccountId = whitelisted_caller();
-        let market_id = create_market_and_deploy_pool::<T>(
-            alice.clone(),
-            Asset::Ztg,
-            2u16,
-            _10.saturated_into(),
-        );
+        let market_id =
+            create_market_and_deploy_pool::<T>(alice, Asset::Ztg, 2u16, _10.saturated_into());
         let helper = BenchmarkHelper::<T>::new();
         let bob = helper.accounts().next().unwrap();
         helper.populate_liquidity_tree_until_full(market_id, bob.clone());
