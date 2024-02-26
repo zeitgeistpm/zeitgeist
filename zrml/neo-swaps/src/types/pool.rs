@@ -29,6 +29,7 @@ use sp_runtime::{
     traits::{CheckedAdd, CheckedSub},
     DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion, Saturating,
 };
+use zeitgeist_primitives::math::fixed::{BaseProvider, ZeitgeistBase};
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 #[scale_info(skip_type_params(T))]
@@ -124,7 +125,14 @@ where
     ) -> Result<BalanceOf<T>, DispatchError> {
         let reserve = self.reserve_of(&asset)?;
         let spot_price = Math::<T>::calculate_spot_price(reserve, self.liquidity_parameter)?;
-        Math::<T>::calculate_buy_amount_until(reserve, until, self.liquidity_parameter, spot_price)
+        let zeitgeist_base = ZeitgeistBase::<BalanceOf<T>>::get()?;
+        Math::<T>::calculate_buy_amount_until(
+            reserve,
+            until,
+            self.liquidity_parameter,
+            spot_price,
+            zeitgeist_base,
+        )
     }
 
     fn calculate_sell_amount_until(
@@ -134,7 +142,14 @@ where
     ) -> Result<BalanceOf<T>, DispatchError> {
         let reserve = self.reserve_of(&asset)?;
         let spot_price = Math::<T>::calculate_spot_price(reserve, self.liquidity_parameter)?;
-        Math::<T>::calculate_sell_amount_until(reserve, until, self.liquidity_parameter, spot_price)
+        let zeitgeist_base = ZeitgeistBase::<BalanceOf<T>>::get()?;
+        Math::<T>::calculate_sell_amount_until(
+            reserve,
+            until,
+            self.liquidity_parameter,
+            spot_price,
+            zeitgeist_base,
+        )
     }
 }
 

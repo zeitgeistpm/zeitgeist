@@ -287,6 +287,8 @@ pub struct Deadlines<BN> {
 pub enum ScoringRule {
     Lmsr,
     Orderbook,
+    // TODO: migrate from LMSR, Order Book enum fields to AMM-CDA hybrid field
+    // AmmCdaHybrid,
     Parimutuel,
 }
 

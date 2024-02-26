@@ -87,6 +87,7 @@ pub(crate) trait MathOps<T: Config> {
         until: BalanceOf<T>,
         liquidity: BalanceOf<T>,
         spot_price: BalanceOf<T>,
+        zeitgeist_base: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
     fn calculate_sell_amount_until(
@@ -94,6 +95,7 @@ pub(crate) trait MathOps<T: Config> {
         until: BalanceOf<T>,
         liquidity: BalanceOf<T>,
         spot_price: BalanceOf<T>,
+        zeitgeist_base: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 }
 
@@ -169,12 +171,14 @@ impl<T: Config> MathOps<T> for Math<T> {
         until: BalanceOf<T>,
         liquidity: BalanceOf<T>,
         spot_price: BalanceOf<T>,
+        zeitgeist_base: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError> {
         let reserve = reserve.saturated_into();
         let until = until.saturated_into();
         let liquidity = liquidity.saturated_into();
         let spot_price = spot_price.saturated_into();
-        detail::calculate_buy_amount_until(reserve, until, liquidity, spot_price)
+        let zeitgeist_base = zeitgeist_base.saturated_into();
+        detail::calculate_buy_amount_until(reserve, until, liquidity, spot_price, zeitgeist_base)
             .map(|result| result.saturated_into())
             .ok_or_else(|| Error::<T>::MathError.into())
     }
@@ -184,12 +188,14 @@ impl<T: Config> MathOps<T> for Math<T> {
         until: BalanceOf<T>,
         liquidity: BalanceOf<T>,
         spot_price: BalanceOf<T>,
+        zeitgeist_base: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError> {
         let reserve = reserve.saturated_into();
         let until = until.saturated_into();
         let liquidity = liquidity.saturated_into();
         let spot_price = spot_price.saturated_into();
-        detail::calculate_sell_amount_until(reserve, until, liquidity, spot_price)
+        let zeitgeist_base = zeitgeist_base.saturated_into();
+        detail::calculate_sell_amount_until(reserve, until, liquidity, spot_price, zeitgeist_base)
             .map(|result| result.saturated_into())
             .ok_or_else(|| Error::<T>::MathError.into())
     }
@@ -259,6 +265,40 @@ mod detail {
             to_fixed(reserve)?,
             to_fixed(amount_in)?,
             to_fixed(liquidity)?,
+        )?;
+        from_fixed(result_fixed)
+    }
+
+    pub(super) fn calculate_buy_amount_until(
+        reserve: u128,
+        until: u128,
+        liquidity: u128,
+        spot_price: u128,
+        base: u128,
+    ) -> Option<u128> {
+        let result_fixed = calculate_buy_amount_until_fixed(
+            to_fixed(reserve)?,
+            to_fixed(until)?,
+            to_fixed(liquidity)?,
+            to_fixed(spot_price)?,
+            to_fixed(base)?,
+        )?;
+        from_fixed(result_fixed)
+    }
+
+    pub(super) fn calculate_sell_amount_until(
+        reserve: u128,
+        until: u128,
+        liquidity: u128,
+        spot_price: u128,
+        base: u128,
+    ) -> Option<u128> {
+        let result_fixed = calculate_sell_amount_until_fixed(
+            to_fixed(reserve)?,
+            to_fixed(until)?,
+            to_fixed(liquidity)?,
+            to_fixed(spot_price)?,
+            to_fixed(base)?,
         )?;
         from_fixed(result_fixed)
     }
@@ -353,32 +393,40 @@ mod detail {
         exp_x_over_b.checked_add(exp_neg_r_over_b)?.checked_sub(FixedType::checked_from_num(1)?)
     }
 
-    pub(super) fn calculate_buy_amount_until(
-        reserve: u128,
-        until: u128,
-        liquidity: u128,
-        spot_price: u128,
-    ) -> Option<u128> {
-        // TODO: update to correctness
-        let ln_arg = until.checked_div(spot_price)?;
+    /// Calculate -b ln( (1 - q) / (1 - p_i(r)) )
+    pub(super) fn calculate_buy_amount_until_fixed(
+        reserve: FixedType,
+        until: FixedType,
+        liquidity: FixedType,
+        spot_price: FixedType,
+        base: FixedType,
+    ) -> Option<FixedType> {
+        let numerator = base.checked_sub(until)?;
+        let denominator = base.checked_sub(spot_price)?;
+        let ln_arg = numerator.checked_div(denominator)?;
+        // TODO: What to do with the bool ln_neg?
         let (ln_result, ln_neg) = ln(ln_arg).ok()?;
-        let blob = liquidity.checked_mul(ln_result)?;
-        let reserve_plus_blob =
-            if ln_neg { reserve.checked_sub(blob)? } else { reserve.checked_add(blob)? };
-        reserve_plus_blob.checked_sub(until)
+        Some(liquidity.checked_mul(ln_result)?)
     }
 
-    pub(super) fn calculate_sell_amount_until(
-        reserve: u128,
-        until: u128,
-        liquidity: u128,
-        spot_price: u128,
-    ) -> Option<u128> {
-        // TODO: update to correctness
-        let ln_arg = until.checked_div(spot_price)?;
+    /// Calculate b ln( (1 / (1 / p_i(r) - 1)) - (1 / q) )
+    pub(super) fn calculate_sell_amount_until_fixed(
+        reserve: FixedType,
+        until: FixedType,
+        liquidity: FixedType,
+        spot_price: FixedType,
+        base: FixedType,
+    ) -> Option<FixedType> {
+        let first_numerator = base;
+        let first_denominator = (base.checked_div(spot_price)?).checked_sub(base)?;
+        let second_numerator = base;
+        let second_denominator = until;
+        let first_term = first_numerator.checked_div(first_denominator)?;
+        let second_term = second_numerator.checked_div(second_denominator)?;
+        let ln_arg = second_term.checked_sub(first_term)?;
+        // TODO: What to do with the bool ln_neg?
         let (ln_result, ln_neg) = ln(ln_arg).ok()?;
-        let blob = liquidity.checked_mul(ln_result)?;
-        if ln_neg { reserve.checked_add(blob) } else { reserve.checked_sub(blob) }
+        Some(liquidity.checked_mul(ln_result)?)
     }
 }
 
