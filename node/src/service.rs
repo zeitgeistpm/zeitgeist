@@ -30,9 +30,7 @@ use sc_service::{
     error::Error as ServiceError, ChainSpec, Configuration, PartialComponents, TaskManager,
 };
 #[cfg(feature = "parachain")]
-pub use service_parachain::{
-    new_full, new_partial, FullBackend, FullClient, ParachainPartialComponents,
-};
+pub use service_parachain::{new_full, new_partial, FullBackend, FullClient};
 #[cfg(not(feature = "parachain"))]
 pub use service_standalone::{new_full, new_partial, FullBackend, FullClient};
 use sp_api::ConstructRuntimeApi;

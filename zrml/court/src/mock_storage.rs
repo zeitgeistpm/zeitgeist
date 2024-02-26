@@ -17,6 +17,7 @@
 
 #![cfg(test)]
 #![allow(dead_code)]
+#![allow(unused_imports)]
 
 pub use pallet::*;
 use parity_scale_codec::Encode;

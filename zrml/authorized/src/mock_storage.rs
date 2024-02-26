@@ -18,6 +18,7 @@
 
 #![cfg(test)]
 #![allow(dead_code)]
+#![allow(unused_imports)]
 
 #[frame_support::pallet]
 pub(crate) mod pallet {

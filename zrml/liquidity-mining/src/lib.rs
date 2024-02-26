@@ -145,7 +145,10 @@ mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            T::Currency::deposit_creating(&Pallet::<T>::pallet_account_id(), self.initial_balance);
+            let _ = T::Currency::deposit_creating(
+                &Pallet::<T>::pallet_account_id(),
+                self.initial_balance,
+            );
             <PerBlockIncentive<T>>::put(self.per_block_distribution);
         }
     }
