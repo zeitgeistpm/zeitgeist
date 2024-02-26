@@ -20,7 +20,6 @@ pub(crate) fn market_mock<T>(creator: T::AccountId) -> crate::MarketOf<T>
 where
     T: crate::Config,
 {
-    use frame_support::traits::Get;
     use sp_runtime::{traits::AccountIdConversion, Perbill};
     use zeitgeist_primitives::{
         constants::mock::PmPalletId,

@@ -17,12 +17,11 @@
 
 #![cfg(test)]
 
-use crate::{mock::*, utils::*, *};
+use crate::{mock::*, utils::*};
 use frame_support::{assert_noop, assert_ok};
-use orml_traits::MultiCurrency;
 use test_case::test_case;
-use zeitgeist_primitives::types::{Asset, MarketStatus, MarketType, ScoringRule};
-use zrml_market_commons::{Error as MError, Markets};
+use zeitgeist_primitives::types::MarketStatus;
+use zrml_market_commons::Markets;
 
 #[test]
 fn buy_works() {

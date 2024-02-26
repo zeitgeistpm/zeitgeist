@@ -44,7 +44,7 @@ use crate::{
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use fixed::FixedU128;
-use sp_runtime::{DispatchError, SaturatedConversion};
+use sp_runtime::{traits::One, DispatchError, SaturatedConversion};
 use typenum::U80;
 
 type Fractional = U80;
@@ -83,19 +83,15 @@ pub(crate) trait MathOps<T: Config> {
     ) -> Result<BalanceOf<T>, DispatchError>;
 
     fn calculate_buy_amount_until(
-        reserve: BalanceOf<T>,
         until: BalanceOf<T>,
         liquidity: BalanceOf<T>,
         spot_price: BalanceOf<T>,
-        zeitgeist_base: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
     fn calculate_sell_amount_until(
-        reserve: BalanceOf<T>,
         until: BalanceOf<T>,
         liquidity: BalanceOf<T>,
         spot_price: BalanceOf<T>,
-        zeitgeist_base: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 }
 
@@ -167,35 +163,27 @@ impl<T: Config> MathOps<T> for Math<T> {
     }
 
     fn calculate_buy_amount_until(
-        reserve: BalanceOf<T>,
         until: BalanceOf<T>,
         liquidity: BalanceOf<T>,
         spot_price: BalanceOf<T>,
-        zeitgeist_base: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError> {
-        let reserve = reserve.saturated_into();
         let until = until.saturated_into();
         let liquidity = liquidity.saturated_into();
         let spot_price = spot_price.saturated_into();
-        let zeitgeist_base = zeitgeist_base.saturated_into();
-        detail::calculate_buy_amount_until(reserve, until, liquidity, spot_price, zeitgeist_base)
+        detail::calculate_buy_amount_until(until, liquidity, spot_price)
             .map(|result| result.saturated_into())
             .ok_or_else(|| Error::<T>::MathError.into())
     }
 
     fn calculate_sell_amount_until(
-        reserve: BalanceOf<T>,
         until: BalanceOf<T>,
         liquidity: BalanceOf<T>,
         spot_price: BalanceOf<T>,
-        zeitgeist_base: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError> {
-        let reserve = reserve.saturated_into();
         let until = until.saturated_into();
         let liquidity = liquidity.saturated_into();
         let spot_price = spot_price.saturated_into();
-        let zeitgeist_base = zeitgeist_base.saturated_into();
-        detail::calculate_sell_amount_until(reserve, until, liquidity, spot_price, zeitgeist_base)
+        detail::calculate_sell_amount_until(until, liquidity, spot_price)
             .map(|result| result.saturated_into())
             .ok_or_else(|| Error::<T>::MathError.into())
     }
@@ -270,35 +258,27 @@ mod detail {
     }
 
     pub(super) fn calculate_buy_amount_until(
-        reserve: u128,
         until: u128,
         liquidity: u128,
         spot_price: u128,
-        base: u128,
     ) -> Option<u128> {
         let result_fixed = calculate_buy_amount_until_fixed(
-            to_fixed(reserve)?,
             to_fixed(until)?,
             to_fixed(liquidity)?,
             to_fixed(spot_price)?,
-            to_fixed(base)?,
         )?;
         from_fixed(result_fixed)
     }
 
     pub(super) fn calculate_sell_amount_until(
-        reserve: u128,
         until: u128,
         liquidity: u128,
         spot_price: u128,
-        base: u128,
     ) -> Option<u128> {
         let result_fixed = calculate_sell_amount_until_fixed(
-            to_fixed(reserve)?,
             to_fixed(until)?,
             to_fixed(liquidity)?,
             to_fixed(spot_price)?,
-            to_fixed(base)?,
         )?;
         from_fixed(result_fixed)
     }
@@ -393,39 +373,53 @@ mod detail {
         exp_x_over_b.checked_add(exp_neg_r_over_b)?.checked_sub(FixedType::checked_from_num(1)?)
     }
 
-    /// Calculate -b ln( (1 - q) / (1 - p_i(r)) )
+    // TODO: test this function
+    /// Calculate -b * ln( (1 - q) / (1 - p_i(r)) )
+    /// Expect result of ln to be negative. Otherwise, return None.
     pub(super) fn calculate_buy_amount_until_fixed(
-        reserve: FixedType,
         until: FixedType,
         liquidity: FixedType,
         spot_price: FixedType,
-        base: FixedType,
     ) -> Option<FixedType> {
-        let numerator = base.checked_sub(until)?;
-        let denominator = base.checked_sub(spot_price)?;
+        let numerator = FixedType::one().checked_sub(until)?;
+        let denominator = FixedType::one().checked_sub(spot_price)?;
         let ln_arg = numerator.checked_div(denominator)?;
-        // TODO: What to do with the bool ln_neg?
         let (ln_result, ln_neg) = ln(ln_arg).ok()?;
+        // since q > p_i(r) results in (1 - q) / (1 - p_i(r)) < 1, ln will be negative
+        if !ln_neg {
+            // TODO remove this debug assert after testing
+            debug_assert!(false, "ln unexpectedly positive");
+            // None, if the logarithm is unexpectedly positive
+            return None;
+        }
         Some(liquidity.checked_mul(ln_result)?)
     }
 
-    /// Calculate b ln( (1 / (1 / p_i(r) - 1)) - (1 / q) )
+    // TODO: test this function
+    /// Calculate b * ln( (1 / (1 / p_i(r) - 1)) - (1 / q * (1 / p_i(r) - 1)) )
     pub(super) fn calculate_sell_amount_until_fixed(
-        reserve: FixedType,
         until: FixedType,
         liquidity: FixedType,
         spot_price: FixedType,
-        base: FixedType,
     ) -> Option<FixedType> {
-        let first_numerator = base;
-        let first_denominator = (base.checked_div(spot_price)?).checked_sub(base)?;
-        let second_numerator = base;
-        let second_denominator = until;
+        let first_numerator = FixedType::one();
+        let first_denominator =
+            (FixedType::one().checked_div(spot_price)?).checked_sub(FixedType::one())?;
+        let second_numerator = FixedType::one();
+        let second_denominator = until.checked_mul(
+            FixedType::one().checked_div(spot_price)?.checked_sub(FixedType::one())?,
+        )?;
         let first_term = first_numerator.checked_div(first_denominator)?;
         let second_term = second_numerator.checked_div(second_denominator)?;
         let ln_arg = second_term.checked_sub(first_term)?;
-        // TODO: What to do with the bool ln_neg?
         let (ln_result, ln_neg) = ln(ln_arg).ok()?;
+        // because of q < p_i(r) the logarithm will be positive
+        if ln_neg {
+            // TODO remove this debug assert after testing
+            debug_assert!(false, "ln unexpectedly negative");
+            // None, if the logarithm is unexpectedly negative
+            return None;
+        }
         Some(liquidity.checked_mul(ln_result)?)
     }
 }

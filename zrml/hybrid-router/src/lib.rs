@@ -47,13 +47,13 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{CheckedSub, Zero},
-        ArithmeticError, DispatchResult,
+        ArithmeticError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         math::fixed::FixedMul,
         order_book::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderBookApi},
-        types::{Asset, Market},
+        types::{Asset, Market, MarketType, ScalarPosition},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -145,6 +145,8 @@ mod pallet {
         AssetNotEqualToOrderBookTakerAsset,
         /// The strategy "immediate or cancel" was applied.
         CancelStrategyApplied,
+        /// The asset count does not match the markets asset count.
+        AssetCountMismatch,
         /// Action cannot be completed because an unexpected error has occurred. This should be
         /// reported to protocol maintainers.
         InconsistentState(InconsistentStateError),
@@ -152,10 +154,7 @@ mod pallet {
 
     // NOTE: these errors should never happen.
     #[derive(Encode, Decode, Eq, PartialEq, TypeInfo, frame_support::PalletError, RuntimeDebug)]
-    pub enum InconsistentStateError {
-        /// There are not enough funds in the pot to reward the calculated amount.
-        InsufficientFundsInPotAccount,
-    }
+    pub enum InconsistentStateError {}
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -190,7 +189,7 @@ mod pallet {
         pub fn buy(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
-            #[pallet::compact] asset_count: u16,
+            #[pallet::compact] asset_count: u32,
             asset: AssetOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             #[pallet::compact] max_price: BalanceOf<T>,
@@ -235,7 +234,7 @@ mod pallet {
         pub fn sell(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
-            #[pallet::compact] asset_count: u16,
+            #[pallet::compact] asset_count: u32,
             asset: AssetOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             #[pallet::compact] min_price: BalanceOf<T>,
@@ -254,6 +253,24 @@ mod pallet {
     where
         T: Config,
     {
+        pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
+            match market.market_type {
+                MarketType::Categorical(categories) => {
+                    let mut assets = Vec::new();
+                    for i in 0..categories {
+                        assets.push(Asset::CategoricalOutcome(market_id, i));
+                    }
+                    assets
+                }
+                MarketType::Scalar(_) => {
+                    vec![
+                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
+                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
+                    ]
+                }
+            }
+        }
+
         fn maybe_buy_from_amm(
             who: &AccountIdOf<T>,
             market_id: MarketIdOf<T>,
@@ -283,7 +300,7 @@ mod pallet {
         fn do_buy(
             who: AccountIdOf<T>,
             market_id: MarketIdOf<T>,
-            asset_count: u16,
+            asset_count: u32,
             asset: AssetOf<T>,
             amount: BalanceOf<T>,
             max_price: BalanceOf<T>,
@@ -291,6 +308,9 @@ mod pallet {
             strategy: Strategy,
         ) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
+            let assets = Self::outcome_assets(market_id, &market);
+            let assets_len: u32 = assets.len().saturated_into();
+            ensure!(asset_count == assets_len, Error::<T>::AssetCountMismatch);
 
             let required_base_asset_amount = amount.bmul_ceil(max_price)?;
             T::AssetManager::ensure_can_withdraw(
@@ -398,7 +418,7 @@ mod pallet {
         fn do_sell(
             who: AccountIdOf<T>,
             market_id: MarketIdOf<T>,
-            asset_count: u16,
+            asset_count: u32,
             asset: AssetOf<T>,
             amount: BalanceOf<T>,
             min_price: BalanceOf<T>,
@@ -406,6 +426,9 @@ mod pallet {
             strategy: Strategy,
         ) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
+            let assets = Self::outcome_assets(market_id, &market);
+            let assets_len: u32 = assets.len().saturated_into();
+            ensure!(asset_count == assets_len, Error::<T>::AssetCountMismatch);
 
             T::AssetManager::ensure_can_withdraw(asset, &who, amount)?;
 
