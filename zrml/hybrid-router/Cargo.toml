@@ -14,9 +14,22 @@ env_logger = { workspace = true }
 orml-currencies = { workspace = true, features = ["default"] }
 orml-tokens = { workspace = true, features = ["default"] }
 pallet-balances = { workspace = true, features = ["default"] }
+pallet-randomness-collective-flip = { workspace = true, features = ["default"] }
 pallet-timestamp = { workspace = true, features = ["default"] }
+pallet-treasury = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
+zrml-authorized = { workspace = true, features = ["default"] }
+zrml-court = { workspace = true, features = ["default"] }
+zrml-global-disputes = { workspace = true, features = ["default"] }
+zrml-liquidity-mining = { workspace = true, features = ["default"] }
+zrml-market-commons = { workspace = true, features = ["default"] }
+zrml-neo-swaps = { workspace = true, features = ["default"] }
+zrml-orderbook = { workspace = true, features = ["default"] }
+zrml-prediction-markets = { workspace = true, features = ["default"] }
+zrml-rikiddo = { workspace = true, features = ["default"] }
+zrml-simple-disputes = { workspace = true, features = ["default"] }
+zrml-swaps = { workspace = true, features = ["default"] }
 
 test-case = { workspace = true }
 

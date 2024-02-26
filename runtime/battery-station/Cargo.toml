@@ -110,8 +110,8 @@ common-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 zrml-authorized = { workspace = true }
 zrml-court = { workspace = true }
-zrml-hybrid-router = { workspace = true }
 zrml-global-disputes = { workspace = true, optional = true }
+zrml-hybrid-router = { workspace = true }
 zrml-liquidity-mining = { workspace = true }
 zrml-market-commons = { workspace = true }
 zrml-neo-swaps = { workspace = true }

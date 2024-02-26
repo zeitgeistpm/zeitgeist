@@ -18,7 +18,6 @@
 #![cfg(test)]
 
 use crate::{mock::*, utils::*, *};
-use core::ops::RangeInclusive;
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
 use test_case::test_case;
@@ -26,7 +25,7 @@ use zeitgeist_primitives::types::{Asset, MarketStatus, MarketType, ScoringRule};
 use zrml_market_commons::{Error as MError, Markets};
 
 #[test]
-fn buy_emits_event() {
+fn buy_works() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>(MARKET_CREATOR);

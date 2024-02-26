@@ -18,7 +18,9 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+#[cfg(test)]
 mod mock;
 mod tests;
 mod types;
@@ -35,8 +37,8 @@ mod pallet {
         ensure,
         pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
         require_transactional,
-        traits::{Get, IsType, StorageVersion},
-        PalletId, RuntimeDebug,
+        traits::{IsType, StorageVersion},
+        RuntimeDebug,
     };
     use frame_system::{
         ensure_signed,
@@ -81,9 +83,6 @@ mod pallet {
                 Order = OrderOf<Self>,
                 OrderId = OrderId,
             >;
-
-        #[pallet::constant]
-        type PalletId: Get<PalletId>;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -358,6 +357,7 @@ mod pallet {
                 }
             }
 
+            // TODO: Do we want to emit an event for the Hybrid Router at all if Order Book and AMM do already?
             Self::deposit_event(Event::HybridRouterBuyExecuted {
                 who: who.clone(),
                 market_id,

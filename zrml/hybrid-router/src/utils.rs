@@ -22,9 +22,12 @@ where
 {
     use frame_support::traits::Get;
     use sp_runtime::{traits::AccountIdConversion, Perbill};
-    use zeitgeist_primitives::types::{
-        Asset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-        MarketStatus, MarketType, ScoringRule,
+    use zeitgeist_primitives::{
+        constants::mock::PmPalletId,
+        types::{
+            Asset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+            MarketStatus, MarketType, ScoringRule,
+        },
     };
 
     zeitgeist_primitives::types::Market {
@@ -35,7 +38,7 @@ where
         market_type: MarketType::Categorical(10u16),
         dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
         metadata: Default::default(),
-        oracle: T::PalletId::get().into_account_truncating(),
+        oracle: PmPalletId::get().into_account_truncating(),
         period: MarketPeriod::Block(Default::default()),
         deadlines: Deadlines {
             grace_period: 1_u32.into(),
