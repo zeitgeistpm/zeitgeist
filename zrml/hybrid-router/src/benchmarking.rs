@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -27,7 +27,7 @@ use frame_support::traits::Get;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::{SaturatedConversion, Saturating};
-use zeitgeist_primitives::types::{Asset, MarketStatus, MarketType, OutcomeReport};
+use zeitgeist_primitives::types::{Asset, MarketStatus, MarketType};
 use zrml_market_commons::MarketCommonsPalletApi;
 
 fn setup_market<T: Config>(market_type: MarketType) -> MarketIdOf<T> {
@@ -48,7 +48,7 @@ fn buy_asset<T: Config>(
 ) {
     let market = T::MarketCommons::market(&market_id).unwrap();
     T::AssetManager::deposit(market.base_asset, buyer, amount).unwrap();
-    Parimutuel::<T>::buy(RawOrigin::Signed(buyer.clone()).into(), asset, amount).unwrap();
+    HybridRouter::<T>::buy(RawOrigin::Signed(buyer.clone()).into(), asset, amount).unwrap();
 }
 
 #[benchmarks]

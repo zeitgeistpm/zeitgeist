@@ -71,7 +71,7 @@ pub struct Market<AI, BA, BN, M, A> {
 impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
     pub fn resolution_mechanism(&self) -> ResolutionMechanism {
         match self.scoring_rule {
-            ScoringRule::Lmsr | ScoringRule::Orderbook => ResolutionMechanism::RedeemTokens,
+            ScoringRule::AmmCdaHybrid => ResolutionMechanism::RedeemTokens,
             ScoringRule::Parimutuel => ResolutionMechanism::Noop,
         }
     }
@@ -285,10 +285,8 @@ pub struct Deadlines<BN> {
 
 #[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
 pub enum ScoringRule {
-    Lmsr,
-    Orderbook,
-    // TODO: migrate from LMSR, Order Book enum fields to AMM-CDA hybrid field
-    // AmmCdaHybrid,
+    // TODO: Do migration: migrate from LMSR, Order Book enum fields to AMM-CDA hybrid field
+    AmmCdaHybrid,
     Parimutuel,
 }
 

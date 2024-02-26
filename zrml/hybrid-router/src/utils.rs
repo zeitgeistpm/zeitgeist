@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -35,7 +35,7 @@ where
         creator_fee: Perbill::zero(),
         creator,
         market_type: MarketType::Categorical(10u16),
-        dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
+        dispute_mechanism: Some(MarketDisputeMechanism::Court),
         metadata: Default::default(),
         oracle: PmPalletId::get().into_account_truncating(),
         period: MarketPeriod::Block(Default::default()),
@@ -46,7 +46,7 @@ where
         },
         report: None,
         resolved_outcome: None,
-        scoring_rule: ScoringRule::Parimutuel,
+        scoring_rule: ScoringRule::AmmCdaHybrid,
         status: MarketStatus::Active,
         bonds: MarketBonds::default(),
         early_close: None,
