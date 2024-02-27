@@ -1398,7 +1398,7 @@ mod pallet {
                     remainder
                 );
 
-                T::Currency::burn(remainder);
+                let _ = T::Currency::burn(remainder);
             }
 
             T::WeightInfo::handle_inflation(pool_len)

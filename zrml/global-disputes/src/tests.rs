@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -241,7 +241,7 @@ fn start_global_dispute_fails_if_max_owner_reached() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, &market);
+        Markets::<Runtime>::insert(market_id, market);
 
         let mut initial_items = Vec::new();
         initial_items.push(InitialItem {
@@ -269,7 +269,7 @@ fn start_global_dispute_fails_if_shared_possession_required() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, &market);
+        Markets::<Runtime>::insert(market_id, market);
 
         let outcome_info = OutcomeInfo {
             outcome_sum: SETUP_AMOUNT,
@@ -303,7 +303,7 @@ fn start_global_dispute_adds_owners_for_existing_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, &market);
+        Markets::<Runtime>::insert(market_id, market);
 
         let mut initial_items = Vec::new();
         initial_items.push(InitialItem {
@@ -334,7 +334,7 @@ fn start_global_dispute_updates_to_highest_winner() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, &market);
+        Markets::<Runtime>::insert(market_id, market);
 
         let mut initial_items = Vec::new();
         initial_items.push(InitialItem {
@@ -1153,7 +1153,7 @@ fn purge_outcomes_partially_cleaned_works() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, &market);
+        Markets::<Runtime>::insert(market_id, market);
 
         let mut initial_items = Vec::new();
         for i in 0..(2 * RemoveKeysLimit::get()) {
@@ -1187,7 +1187,7 @@ fn refund_vote_fees_works() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, &market);
+        Markets::<Runtime>::insert(market_id, market);
 
         let pushed_outcome_1 = 0;
         let pushed_outcome_2 = 20;
