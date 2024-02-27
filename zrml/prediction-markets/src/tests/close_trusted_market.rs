@@ -45,7 +45,7 @@ fn close_trusted_market_works() {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             None,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
 
         let market_id = 0;
@@ -100,7 +100,7 @@ fn close_trusted_market_fails_if_not_trusted() {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
 
         let market_id = 0;
@@ -146,7 +146,7 @@ fn close_trusted_market_fails_if_invalid_market_state(status: MarketStatus) {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             None,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
 
         let market_id = 0;

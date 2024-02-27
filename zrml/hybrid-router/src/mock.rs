@@ -55,7 +55,7 @@ use zeitgeist_primitives::{
         MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod,
         NeoMaxSwapFee, NeoSwapsPalletId, OrderbookPalletId, OutcomeBond, OutcomeFactor,
         OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId,
-        TreasuryPalletId, VotePeriod, VotingOutcomeFee, CENT, MAX_ASSETS, BASE,
+        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT, MAX_ASSETS,
     },
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},

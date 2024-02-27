@@ -58,7 +58,7 @@ fn buy_places_limit_order() {
         ));
 
         let last_events = System::events();
-        assert_eq!(last_events.len(), 2);
+        assert_eq!(last_events.len(), 3);
     });
 }
 

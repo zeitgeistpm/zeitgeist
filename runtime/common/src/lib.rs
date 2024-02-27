@@ -1274,6 +1274,15 @@ macro_rules! impl_config_traits {
             type PalletId = ParimutuelPalletId;
             type WeightInfo = zrml_parimutuel::weights::WeightInfo<Runtime>;
         }
+
+        impl zrml_hybrid_router::Config for Runtime {
+            type AssetManager = AssetManager;
+            type MarketCommons = MarketCommons;
+            type Amm = NeoSwaps;
+            type OrderBook = Orderbook;
+            type RuntimeEvent = RuntimeEvent;
+            type WeightInfo = zrml_hybrid_router::weights::WeightInfo<Runtime>;
+        }
     };
 }
 

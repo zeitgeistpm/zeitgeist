@@ -18,6 +18,8 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 #[cfg(test)]
@@ -32,6 +34,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{types::Strategy, weights::WeightInfoZeitgeist};
+    use alloc::{vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
         ensure,
@@ -46,8 +49,8 @@ mod pallet {
     };
     use orml_traits::MultiCurrency;
     use sp_runtime::{
-        traits::{CheckedSub, Zero},
-        ArithmeticError, DispatchResult, SaturatedConversion,
+        traits::{CheckedSub, SaturatedConversion, Zero},
+        ArithmeticError, DispatchResult,
     };
     use zeitgeist_primitives::{
         math::fixed::FixedMul,

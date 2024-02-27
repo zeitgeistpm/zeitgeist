@@ -831,7 +831,10 @@ mod pallet {
             ensure!(!Pools::<T>::contains_key(market_id), Error::<T>::DuplicatePool);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-            ensure!(market.scoring_rule == ScoringRule::Lmsr, Error::<T>::InvalidTradingMechanism);
+            ensure!(
+                market.scoring_rule == ScoringRule::AmmCdaHybrid,
+                Error::<T>::InvalidTradingMechanism
+            );
             let asset_count = spot_prices.len();
             ensure!(asset_count as u16 == market.outcomes(), Error::<T>::IncorrectVecLen);
             ensure!(market.outcomes() <= MAX_ASSETS, Error::<T>::AssetCountAboveMax);

@@ -416,7 +416,7 @@ mod tests {
                 oracle_duration: 1_u32,
                 dispute_duration: 1_u32,
             },
-            scoring_rule: ScoringRule::Lmsr,
+            scoring_rule: ScoringRule::AmmCdaHybrid,
             status: MarketStatus::Active,
             report: None,
             resolved_outcome: None,

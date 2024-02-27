@@ -42,7 +42,7 @@ fn start_global_dispute_fails_on_wrong_mdm() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MaxDisputes::get() + 1),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
         let market_id = MarketCommons::latest_market_id().unwrap();
 
