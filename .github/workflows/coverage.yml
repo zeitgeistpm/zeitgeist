@@ -25,7 +25,7 @@ jobs:
       - name: Free up disk space
         uses: jlumbroso/free-disk-space@main
         with:
-          tool-cache: false
+          tool-cache: true
 
       - name: Install rust toolchain
         run: rustup show

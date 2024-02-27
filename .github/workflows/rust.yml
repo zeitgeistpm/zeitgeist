@@ -121,7 +121,7 @@ jobs:
       - name: Free up disk space
         uses: jlumbroso/free-disk-space@main
         with:
-          tool-cache: false
+          tool-cache: true
 
       - name: Install build tools
         run: ./scripts/init.sh
@@ -147,7 +147,7 @@ jobs:
       - name: Free up disk space
         uses: jlumbroso/free-disk-space@main
         with:
-          tool-cache: false
+          tool-cache: true
 
       - name: Install build tools
         run: ./scripts/init.sh
@@ -173,7 +173,7 @@ jobs:
       - name: Free up disk space
         uses: jlumbroso/free-disk-space@main
         with:
-          tool-cache: false
+          tool-cache: true
 
       - name: Install build tools
         run: ./scripts/init.sh
