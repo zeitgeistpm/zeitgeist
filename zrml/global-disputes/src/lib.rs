@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -733,8 +733,8 @@ mod pallet {
             } else {
                 log::error!(
                     target: LOG_TARGET,
-                    "There should be always at least one owner for a voting \
-                     outcome. This can also happen if reward is smaller than owners_len."
+                    "There should be always at least one owner for a voting outcome. This can \
+                     also happen if reward is smaller than owners_len."
                 );
                 debug_assert!(false);
             }

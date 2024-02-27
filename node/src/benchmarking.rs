@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -283,7 +283,7 @@ pub fn inherent_benchmark_data() -> Result<InherentData> {
     let timestamp = sp_timestamp::InherentDataProvider::new(d.into());
 
     futures::executor::block_on(timestamp.provide_inherent_data(&mut inherent_data))
-        .map_err(|e| format!("creating inherent data: {:?}", e))?;
+        .map_err(|e| format!("creating inherent data: {e:?}"))?;
 
     Ok(inherent_data)
 }

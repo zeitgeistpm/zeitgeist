@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -27,7 +27,7 @@ fn withdraw_fees_interacts_correctly_with_join() {
             BASE_ASSET,
             MarketType::Categorical(category_count),
             _10,
-            spot_prices.clone(),
+            spot_prices,
             CENT,
         );
 

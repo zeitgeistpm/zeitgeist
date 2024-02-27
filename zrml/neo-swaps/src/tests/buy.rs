@@ -31,7 +31,7 @@ fn buy_works() {
             BASE_ASSET,
             MarketType::Categorical(2),
             liquidity,
-            spot_prices.clone(),
+            spot_prices,
             swap_fee,
         );
         let pool = Pools::<Runtime>::get(market_id).unwrap();

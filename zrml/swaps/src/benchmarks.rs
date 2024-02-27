@@ -81,14 +81,9 @@ where
 {
     let (assets, asset_amount) = generate_assets::<T>(&caller, asset_count, opt_asset_amount);
     let weights = opt_weights.unwrap_or_else(|| vec![T::MinWeight::get(); asset_count]);
-    let pool_id = Pallet::<T>::create_pool(
-        caller.clone(),
-        assets.clone(),
-        Zero::zero(),
-        asset_amount,
-        weights,
-    )
-    .unwrap();
+    let pool_id =
+        Pallet::<T>::create_pool(caller, assets.clone(), Zero::zero(), asset_amount, weights)
+            .unwrap();
     if open {
         Pallet::<T>::open_pool(pool_id).unwrap();
     }

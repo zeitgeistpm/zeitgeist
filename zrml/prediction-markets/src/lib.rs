@@ -130,10 +130,12 @@ mod pallet {
                     debug_assert!(false, "{}", warning);
                     return Ok(());
                 }
-                let missing = T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
+                let missing =
+                    T::Currency::unreserve_named(&Self::reserve_id(), &bond.who, bond.value);
                 debug_assert!(
                     missing.is_zero(),
-                    "Could not unreserve all of the amount. reserve_id: {:?}, who: {:?}, value: {:?}.",
+                    "Could not unreserve all of the amount. reserve_id: {:?}, who: {:?}, value: \
+                     {:?}.",
                     &Self::reserve_id(),
                     &bond.who,
                     bond.value,
@@ -204,8 +206,8 @@ mod pallet {
                     );
                     debug_assert!(
                         missing.is_zero(),
-                        "Could not unreserve all of the amount. reserve_id: {:?}, \
-                         who: {:?}, amount: {:?}, missing: {:?}",
+                        "Could not unreserve all of the amount. reserve_id: {:?}, who: {:?}, \
+                         amount: {:?}, missing: {:?}",
                         Self::reserve_id(),
                         &bond.who,
                         unreserve_amount,
@@ -890,7 +892,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin.clone())?;
             let current_block = <frame_system::Pallet<T>>::block_number();
-            let market_report = Report { at: current_block, by: sender.clone(), outcome };
+            let market_report = Report { at: current_block, by: sender, outcome };
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
             Self::ensure_market_is_closed(&market)?;
@@ -2112,7 +2114,7 @@ mod pallet {
                 period,
                 deadlines,
                 metadata,
-                creation.clone(),
+                creation,
                 market_type,
                 dispute_mechanism,
                 scoring_rule,

@@ -29,7 +29,7 @@ fn sell_works() {
             BASE_ASSET,
             MarketType::Scalar(0..=1),
             liquidity,
-            spot_prices.clone(),
+            spot_prices,
             swap_fee,
         );
         let pool = Pools::<Runtime>::get(market_id).unwrap();

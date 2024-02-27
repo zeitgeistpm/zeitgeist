@@ -1623,7 +1623,7 @@ fn create_pool_fails_on_too_many_assets() {
         });
 
         assert_noop!(
-            Swaps::create_pool(BOB, assets.clone(), 0, DEFAULT_LIQUIDITY, weights,),
+            Swaps::create_pool(BOB, assets, 0, DEFAULT_LIQUIDITY, weights),
             Error::<Runtime>::TooManyAssets
         );
     });

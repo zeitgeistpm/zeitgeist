@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -92,7 +92,7 @@ fn create_market_and_deploy_pool(
         RuntimeOrigin::signed(ALICE),
         market_id,
         amount,
-        spot_prices.clone(),
+        spot_prices,
         swap_fee,
     ));
     market_id

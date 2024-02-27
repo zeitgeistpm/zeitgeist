@@ -1068,8 +1068,7 @@ mod pallet {
                 let (imbalance, missing) = T::Currency::slash(ai, slashable);
                 debug_assert!(
                     missing.is_zero(),
-                    "Could not slash all of the amount for juror {:?}.",
-                    ai
+                    "Could not slash all of the amount for juror {ai:?}.",
                 );
                 T::Currency::resolve_creating(&reward_pot, imbalance);
             };
@@ -2018,8 +2017,7 @@ mod pallet {
                         total_imb.subsume(imb);
                         debug_assert!(
                             missing.is_zero(),
-                            "Could not slash all of the amount for delegator {:?}.",
-                            delegator
+                            "Could not slash all of the amount for delegator {delegator:?}.",
                         );
                     }
                     total_imb
@@ -2047,8 +2045,7 @@ mod pallet {
                             total_incentives.subsume(imb);
                             debug_assert!(
                                 missing.is_zero(),
-                                "Could not slash all of the amount for juror {:?}.",
-                                juror
+                                "Could not slash all of the amount for juror {juror:?}.",
                             );
 
                             let imb = slash_all_delegators(delegations.as_slice());

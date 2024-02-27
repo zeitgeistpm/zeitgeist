@@ -24,7 +24,7 @@
 )]
 
 use crate as zrml_neo_swaps;
-use crate::{consts::*, AssetOf, MarketIdOf};
+use crate::{consts::*, AssetOf, BalanceOf, MarketIdOf};
 use core::marker::PhantomData;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
@@ -65,7 +65,6 @@ use zeitgeist_primitives::{
         Hash, Index, MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
-use zrml_neo_swaps::BalanceOf;
 
 pub const ALICE: AccountIdTest = 0;
 #[allow(unused)]

@@ -54,7 +54,7 @@ fn schedule_early_close_emits_event() {
         System::assert_last_event(
             Event::MarketEarlyCloseScheduled {
                 market_id,
-                new_period: new_period.clone(),
+                new_period,
                 state: EarlyCloseState::ScheduledAsOther,
             }
             .into(),

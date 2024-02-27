@@ -1083,7 +1083,7 @@ benchmarks! {
         )?;
 
         Pallet::<T>::dispute_early_close(
-            RawOrigin::Signed(caller.clone()).into(),
+            RawOrigin::Signed(caller).into(),
             market_id,
         )?;
 
@@ -1106,7 +1106,6 @@ benchmarks! {
         )?;
 
         let market = zrml_market_commons::Pallet::<T>::market(&market_id)?;
-        let market_creator = market.creator.clone();
 
         for i in 0..o {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
@@ -1125,7 +1124,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let origin = RawOrigin::Signed(market_creator).into();
+        let origin = RawOrigin::Signed(market.creator).into();
         let call = Call::<T>::schedule_early_close { market_id };
     }: { call.dispatch_bypass_filter(origin)? }
 
@@ -1143,10 +1142,8 @@ benchmarks! {
             Some(MarketDisputeMechanism::Court),
         )?;
 
-        let market_creator = caller.clone();
-
         Pallet::<T>::schedule_early_close(
-            RawOrigin::Signed(market_creator.clone()).into(),
+            RawOrigin::Signed(caller.clone()).into(),
             market_id,
         )?;
 
@@ -1176,7 +1173,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let origin = RawOrigin::Signed(market_creator).into();
+        let origin = RawOrigin::Signed(caller).into();
         let call = Call::<T>::dispute_early_close { market_id };
     }: { call.dispatch_bypass_filter(origin)? }
 
@@ -1193,8 +1190,6 @@ benchmarks! {
             Some(MarketPeriod::Timestamp(range_start..old_range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
-
-        let market_creator = caller.clone();
 
         let close_origin = T::CloseMarketEarlyOrigin::try_successful_origin().unwrap();
         Pallet::<T>::schedule_early_close(
@@ -1242,15 +1237,13 @@ benchmarks! {
             Some(MarketDisputeMechanism::Court),
         )?;
 
-        let market_creator = caller.clone();
-
         Pallet::<T>::schedule_early_close(
-            RawOrigin::Signed(market_creator.clone()).into(),
+            RawOrigin::Signed(caller.clone()).into(),
             market_id,
         )?;
 
         Pallet::<T>::dispute_early_close(
-            RawOrigin::Signed(caller.clone()).into(),
+            RawOrigin::Signed(caller).into(),
             market_id,
         )?;
 
