@@ -17,4 +17,79 @@
 
 #![cfg(test)]
 
+use crate::{mock::*, types::*, utils::*, AccountIdOf, BalanceOf, MarketIdOf, *};
+use frame_support::{assert_noop, assert_ok};
+use orml_currencies::Error as CurrenciesError;
+use sp_runtime::{Perbill, SaturatedConversion};
+use test_case::test_case;
+use zeitgeist_primitives::{
+    constants::{base_multiples::*, BASE, CENT},
+    order_book::Order,
+    types::{
+        AccountIdTest, Asset, Deadlines, MarketCreation, MarketPeriod, MarketStatus, MarketType,
+        MultiHash, ScoringRule,
+    },
+};
+use zrml_neo_swaps::Event as NeoSwapsEvent;
+use zrml_market_commons::{Error as MError, MarketCommonsPalletApi, Markets};
+use zrml_orderbook::Orders;
+
 mod buy;
+
+#[cfg(not(feature = "parachain"))]
+const BASE_ASSET: Asset<MarketIdOf<Runtime>> = Asset::Ztg;
+#[cfg(feature = "parachain")]
+const BASE_ASSET: Asset<MarketIdOf<Runtime>> = FOREIGN_ASSET;
+
+fn create_market(
+    creator: AccountIdTest,
+    base_asset: Asset<MarketIdOf<Runtime>>,
+    market_type: MarketType,
+    scoring_rule: ScoringRule,
+) -> MarketIdOf<Runtime> {
+    let mut metadata = [2u8; 50];
+    metadata[0] = 0x15;
+    metadata[1] = 0x30;
+    assert_ok!(PredictionMarkets::create_market(
+        RuntimeOrigin::signed(creator),
+        base_asset,
+        Perbill::zero(),
+        EVE,
+        MarketPeriod::Block(0..2),
+        Deadlines {
+            grace_period: 0_u32.into(),
+            oracle_duration: <Runtime as zrml_prediction_markets::Config>::MinOracleDuration::get(),
+            dispute_duration: 0_u32.into(),
+        },
+        MultiHash::Sha3_384(metadata),
+        MarketCreation::Permissionless,
+        market_type,
+        None,
+        scoring_rule,
+    ));
+    MarketCommons::latest_market_id().unwrap()
+}
+
+fn create_market_and_deploy_pool(
+    creator: AccountIdOf<Runtime>,
+    base_asset: Asset<MarketIdOf<Runtime>>,
+    market_type: MarketType,
+    amount: BalanceOf<Runtime>,
+    spot_prices: Vec<BalanceOf<Runtime>>,
+    swap_fee: BalanceOf<Runtime>,
+) -> MarketIdOf<Runtime> {
+    let market_id = create_market(creator, base_asset, market_type, ScoringRule::AmmCdaHybrid);
+    assert_ok!(PredictionMarkets::buy_complete_set(
+        RuntimeOrigin::signed(ALICE),
+        market_id,
+        amount,
+    ));
+    assert_ok!(NeoSwaps::deploy_pool(
+        RuntimeOrigin::signed(ALICE),
+        market_id,
+        amount,
+        spot_prices.clone(),
+        swap_fee,
+    ));
+    market_id
+}

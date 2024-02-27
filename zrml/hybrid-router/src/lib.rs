@@ -285,6 +285,11 @@ mod pallet {
                 return Ok(amount);
             }
 
+            let spot_price = T::Amm::get_spot_price(market_id, asset)?;
+            if spot_price >= max_price {
+                return Ok(amount);
+            }
+
             let mut remaining = amount;
             let amm_amount = T::Amm::calculate_buy_amount_until(market_id, asset, max_price)?;
             let amm_amount = amm_amount.min(remaining);

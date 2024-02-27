@@ -19,7 +19,6 @@
 
 use super::*;
 use crate::{
-    consts::*,
     liquidity_tree::{traits::LiquidityTreeHelper, types::LiquidityTree},
     traits::{liquidity_shares_manager::LiquiditySharesManager, pool_operations::PoolOperations},
     AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools, MIN_SPOT_PRICE,
@@ -34,7 +33,7 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::Get, Perbill, SaturatedConversion};
 use zeitgeist_primitives::{
-    constants::CENT,
+    constants::{base_multiples::*, CENT},
     math::fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
     traits::CompleteSetOperationsApi,
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},

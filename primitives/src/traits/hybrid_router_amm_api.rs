@@ -45,6 +45,11 @@ pub trait HybridRouterAmmApi {
 
     fn pool_exists(market_id: Self::MarketId) -> bool;
 
+    fn get_spot_price(
+        market_id: Self::MarketId,
+        asset: Self::Asset,
+    ) -> Result<Self::Balance, DispatchError>;
+
     /// Returns the amount a user has to buy to move the price of `asset` to `until`; zero if the
     /// current spot price is above `until`.
     ///

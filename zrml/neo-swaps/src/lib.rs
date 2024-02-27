@@ -990,6 +990,14 @@ mod pallet {
             Pools::<T>::contains_key(market_id)
         }
 
+        fn get_spot_price(
+            market_id: Self::MarketId,
+            asset: Self::Asset,
+        ) -> Result<Self::Balance, DispatchError> {
+            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            Ok(pool.calculate_spot_price(asset)?)
+        }
+
         fn calculate_buy_amount_until(
             market_id: Self::MarketId,
             asset: Self::Asset,
