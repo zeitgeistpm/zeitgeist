@@ -20,6 +20,7 @@
 use crate::{mock::*, types::*, utils::*, AccountIdOf, BalanceOf, MarketIdOf, *};
 use frame_support::{assert_noop, assert_ok};
 use orml_currencies::Error as CurrenciesError;
+use orml_traits::MultiCurrency;
 use sp_runtime::{Perbill, SaturatedConversion};
 use test_case::test_case;
 use zeitgeist_primitives::{
@@ -30,8 +31,8 @@ use zeitgeist_primitives::{
         MultiHash, ScoringRule,
     },
 };
-use zrml_neo_swaps::Event as NeoSwapsEvent;
 use zrml_market_commons::{Error as MError, MarketCommonsPalletApi, Markets};
+use zrml_neo_swaps::Event as NeoSwapsEvent;
 use zrml_orderbook::Orders;
 
 mod buy;

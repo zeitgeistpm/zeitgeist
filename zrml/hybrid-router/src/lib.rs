@@ -53,7 +53,7 @@ mod pallet {
         ArithmeticError, DispatchResult,
     };
     use zeitgeist_primitives::{
-        math::fixed::FixedMul,
+        math::fixed::{BaseProvider, FixedMul, ZeitgeistBase},
         order_book::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderBookApi},
         types::{Asset, Market, MarketType, ScalarPosition},
@@ -138,6 +138,10 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// The specified amount is zero.
+        AmountIsZero,
+        /// The maximum price is too high.
+        MaxPriceTooHigh,
         /// The price of an order is above the specified maximum price.
         OrderPriceAboveMaxPrice,
         /// The price of an order is below the specified minimum price.
@@ -192,7 +196,7 @@ mod pallet {
         pub fn buy(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
-            #[pallet::compact] asset_count: u32,
+            #[pallet::compact] asset_count: u16,
             asset: AssetOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             #[pallet::compact] max_price: BalanceOf<T>,
@@ -237,7 +241,7 @@ mod pallet {
         pub fn sell(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
-            #[pallet::compact] asset_count: u32,
+            #[pallet::compact] asset_count: u16,
             asset: AssetOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             #[pallet::compact] min_price: BalanceOf<T>,
@@ -308,17 +312,21 @@ mod pallet {
         fn do_buy(
             who: AccountIdOf<T>,
             market_id: MarketIdOf<T>,
-            asset_count: u32,
+            asset_count: u16,
             asset: AssetOf<T>,
             amount: BalanceOf<T>,
             max_price: BalanceOf<T>,
             orders: Vec<OrderId>,
             strategy: Strategy,
         ) -> DispatchResult {
+            ensure!(amount > BalanceOf::<T>::zero(), Error::<T>::AmountIsZero);
+            ensure!(
+                max_price <= ZeitgeistBase::<BalanceOf<T>>::get()?,
+                Error::<T>::MaxPriceTooHigh
+            );
             let market = T::MarketCommons::market(&market_id)?;
             let assets = Self::outcome_assets(market_id, &market);
-            let assets_len: u32 = assets.len().saturated_into();
-            ensure!(asset_count == assets_len, Error::<T>::AssetCountMismatch);
+            ensure!(asset_count as usize == assets.len(), Error::<T>::AssetCountMismatch);
 
             let required_base_asset_amount = amount.bmul_ceil(max_price)?;
             T::AssetManager::ensure_can_withdraw(
@@ -426,7 +434,7 @@ mod pallet {
         fn do_sell(
             who: AccountIdOf<T>,
             market_id: MarketIdOf<T>,
-            asset_count: u32,
+            asset_count: u16,
             asset: AssetOf<T>,
             amount: BalanceOf<T>,
             min_price: BalanceOf<T>,
@@ -435,8 +443,7 @@ mod pallet {
         ) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
             let assets = Self::outcome_assets(market_id, &market);
-            let assets_len: u32 = assets.len().saturated_into();
-            ensure!(asset_count == assets_len, Error::<T>::AssetCountMismatch);
+            ensure!(asset_count as usize == assets.len(), Error::<T>::AssetCountMismatch);
 
             T::AssetManager::ensure_can_withdraw(asset, &who, amount)?;
 
