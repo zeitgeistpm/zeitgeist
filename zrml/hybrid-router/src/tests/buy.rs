@@ -37,7 +37,7 @@ fn buy_from_amm_and_then_fill_specified_order() {
         );
 
         let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount = _2;
+        let amount_in = _2;
 
         let order_maker_amount = _6;
         let order_taker_amount = _12;
@@ -60,20 +60,20 @@ fn buy_from_amm_and_then_fill_specified_order() {
             market_id,
             asset_count,
             asset,
-            amount,
+            amount_in,
             max_price,
             order_ids,
             strategy,
         ));
 
-        let amm_amount_out = 5552568736;
+        let amm_amount_in = 2776004824;
         System::assert_has_event(
             NeoSwapsEvent::<Runtime>::BuyExecuted {
                 who: ALICE,
                 market_id,
                 asset_out: asset,
-                amount_in: 2776004824,
-                amount_out: amm_amount_out,
+                amount_in: amm_amount_in,
+                amount_out: 5552568736,
                 swap_fee_amount: 27760048,
                 external_fee_amount: 0,
             }
@@ -83,20 +83,21 @@ fn buy_from_amm_and_then_fill_specified_order() {
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
         assert_eq!(order_ids.len(), 1);
         let order = Orders::<Runtime>::get(order_ids[0]).unwrap();
-        let unfilled_asset_amount = 42776004824;
+        let unfilled_base_asset_amount = 102776004824;
         assert_eq!(
             order,
             Order {
                 market_id,
                 maker: CHARLIE,
                 maker_asset: Asset::CategoricalOutcome(market_id, 0),
-                maker_amount: unfilled_asset_amount,
+                maker_amount: 51388002412,
                 taker_asset: BASE_ASSET,
-                taker_amount: 85552009648,
+                taker_amount: unfilled_base_asset_amount,
             }
         );
-        let filled_order_amount = order_maker_amount - unfilled_asset_amount;
-        assert_eq!(amm_amount_out + filled_order_amount, amount);
+        let filled_base_asset_amount = order_taker_amount - unfilled_base_asset_amount;
+        assert_eq!(filled_base_asset_amount, 17223995176);
+        assert_eq!(amm_amount_in + filled_base_asset_amount, amount_in);
     });
 }
 
@@ -180,10 +181,10 @@ fn buy_fill_multiple_orders_if_amm_spot_price_higher_than_order_prices() {
         );
 
         let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount = _2;
+        let amount_in = _2;
 
-        let order_maker_amount = _1;
-        let order_taker_amount = _2;
+        let order_maker_amount = _1_2;
+        let order_taker_amount = _1;
         assert_ok!(AssetManager::deposit(asset, &CHARLIE, 2 * order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
@@ -211,7 +212,7 @@ fn buy_fill_multiple_orders_if_amm_spot_price_higher_than_order_prices() {
             market_id,
             asset_count,
             asset,
-            amount,
+            amount_in,
             max_price,
             order_ids,
             strategy,
@@ -278,9 +279,9 @@ fn buy_fill_specified_order_partially_if_amm_spot_price_higher() {
                 market_id,
                 maker: CHARLIE,
                 maker_asset: Asset::CategoricalOutcome(market_id, 0),
-                maker_amount: _2,
+                maker_amount: _3,
                 taker_asset: BASE_ASSET,
-                taker_amount: _4,
+                taker_amount: _6,
             }
         );
     });
@@ -483,9 +484,9 @@ fn buy_max_price_lower_than_amm_spot_price_results_in_place_order() {
                 market_id,
                 maker: ALICE,
                 maker_asset: base_asset,
-                maker_amount: 10000000000,
+                maker_amount: _2,
                 taker_asset: asset,
-                taker_amount: amount,
+                taker_amount: _4,
             }
         );
     });
@@ -510,9 +511,9 @@ fn buy_from_amm_but_low_amount() {
         let base_asset = market.base_asset;
 
         let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount = _2;
+        let amount_in = _2;
         //*  max_price is just 1 larger than the spot price of the AMM
-        //*  this results in a low buy amount on the AMM
+        //*  this results in a low buy amount_in on the AMM
         let max_price = (_1_2 + 1u128).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::LimitOrder;
@@ -521,7 +522,7 @@ fn buy_from_amm_but_low_amount() {
             market_id,
             asset_count,
             asset,
-            amount,
+            amount_in,
             max_price,
             orders,
             strategy,
@@ -550,9 +551,9 @@ fn buy_from_amm_but_low_amount() {
                 market_id,
                 maker: ALICE,
                 maker_asset: base_asset,
-                maker_amount: 9999999987,
+                maker_amount: 19999999971,
                 taker_asset: asset,
-                taker_amount: 19999999971,
+                taker_amount: 39999999935,
             }
         );
     });
@@ -648,9 +649,9 @@ fn buy_places_limit_order_no_pool() {
                 market_id,
                 maker: ALICE,
                 maker_asset: base_asset,
-                maker_amount: 5 * BASE,
+                maker_amount: 10 * BASE,
                 taker_asset: asset,
-                taker_amount: 10 * BASE,
+                taker_amount: 20 * BASE,
             }
         );
     });
@@ -670,7 +671,7 @@ fn buy_emits_event() {
 
         let asset_count = required_asset_count;
         let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount = 10 * BASE;
+        let amount_in = 10 * BASE;
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::LimitOrder;
@@ -679,7 +680,7 @@ fn buy_emits_event() {
             market_id,
             asset_count,
             asset,
-            amount,
+            amount_in,
             max_price,
             orders,
             strategy,
@@ -690,7 +691,7 @@ fn buy_emits_event() {
                 who: ALICE,
                 market_id,
                 asset,
-                amount,
+                amount_in,
                 max_price,
             }
             .into(),
