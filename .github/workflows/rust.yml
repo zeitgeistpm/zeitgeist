@@ -80,6 +80,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+
       - name: Install build tools
         run: ./scripts/init.sh
 
@@ -101,6 +106,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+
       - name: Install build tools
         run: ./scripts/init.sh
       
@@ -121,7 +131,7 @@ jobs:
       - name: Free up disk space
         uses: jlumbroso/free-disk-space@main
         with:
-          tool-cache: true
+          tool-cache: false
 
       - name: Install build tools
         run: ./scripts/init.sh
@@ -147,7 +157,7 @@ jobs:
       - name: Free up disk space
         uses: jlumbroso/free-disk-space@main
         with:
-          tool-cache: true
+          tool-cache: false
 
       - name: Install build tools
         run: ./scripts/init.sh
@@ -173,7 +183,7 @@ jobs:
       - name: Free up disk space
         uses: jlumbroso/free-disk-space@main
         with:
-          tool-cache: true
+          tool-cache: false
 
       - name: Install build tools
         run: ./scripts/init.sh

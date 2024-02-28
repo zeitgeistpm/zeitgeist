@@ -25,7 +25,7 @@ jobs:
       - name: Free up disk space
         uses: jlumbroso/free-disk-space@main
         with:
-          tool-cache: true
+          tool-cache: false
 
       - name: Install rust toolchain
         run: rustup show
@@ -33,7 +33,7 @@ jobs:
       - uses: actions-rs/install@v0.1
         with:
           crate: grcov
-          use-tool-cache: true
+          use-tool-cache: false
       
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
