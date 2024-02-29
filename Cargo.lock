@@ -14661,9 +14661,7 @@ dependencies = [
  "zrml-neo-swaps",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
- "zrml-rikiddo",
  "zrml-simple-disputes",
- "zrml-swaps",
 ]
 
 [[package]]
@@ -14757,9 +14755,7 @@ dependencies = [
  "zrml-market-commons",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
- "zrml-rikiddo",
  "zrml-simple-disputes",
- "zrml-swaps",
 ]
 
 [[package]]
@@ -14880,7 +14876,6 @@ dependencies = [
  "test-case",
  "zeitgeist-macros",
  "zeitgeist-primitives",
- "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
