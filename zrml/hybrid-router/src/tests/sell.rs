@@ -439,10 +439,10 @@ fn buy_from_amm_and_orders() {
 }
 
 #[test]
-fn buy_max_price_lower_than_amm_spot_price_results_in_place_order() {
+fn buy_min_price_higher_than_amm_spot_price_results_in_place_order() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
-        let spot_prices = vec![_1_2 + 1u128, _1_2 - 1u128];
+        let spot_prices = vec![_1_2 - 1u128, _1_2 + 1u128];
         let swap_fee = CENT;
         let asset_count = 2u16;
         let market_id = create_market_and_deploy_pool(
@@ -458,18 +458,22 @@ fn buy_max_price_lower_than_amm_spot_price_results_in_place_order() {
 
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
-        //*  max_price is just 1 smaller than the spot price of the AMM
-        //*  this results in no buy on the AMM, but places an order on the order book
-        let max_price = (_1_2).saturated_into::<BalanceOf<Runtime>>();
+
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount, 0));
+
+        //*  min_price is just 1 higher than the spot price of the AMM
+        //*  this results in no sell on the AMM, but places an order on the order book
+        let min_price = (_1_2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::LimitOrder;
-        assert_ok!(HybridRouter::buy(
+        // TODO this test and up to get sell tests to work... all common tests should be placed in trade mod and removed from the other two modules (buy and sell)
+        assert_ok!(HybridRouter::sell(
             RuntimeOrigin::signed(ALICE),
             market_id,
             asset_count,
             asset,
             amount,
-            max_price,
+            min_price,
             orders,
             strategy,
         ));
@@ -493,7 +497,7 @@ fn buy_max_price_lower_than_amm_spot_price_results_in_place_order() {
 }
 
 #[test]
-fn buy_from_amm_but_low_amount() {
+fn sell_to_amm_but_low_amount() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
         let spot_prices = vec![_1_2, _1_2];
@@ -512,29 +516,32 @@ fn buy_from_amm_but_low_amount() {
 
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
-        //*  max_price is just 1 larger than the spot price of the AMM
-        //*  this results in a low buy amount_in on the AMM
-        let max_price = (_1_2 + 1u128).saturated_into::<BalanceOf<Runtime>>();
+
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount_in, 0));
+
+        //*  min_price is just 1 smaller than the spot price of the AMM
+        //*  this results in a low sell amount_in on the AMM
+        let min_price = (_1_2 - 1u128).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::LimitOrder;
-        assert_ok!(HybridRouter::buy(
+        assert_ok!(HybridRouter::sell(
             RuntimeOrigin::signed(ALICE),
             market_id,
             asset_count,
             asset,
             amount_in,
-            max_price,
+            min_price,
             orders,
             strategy,
         ));
 
         System::assert_has_event(
-            NeoSwapsEvent::<Runtime>::BuyExecuted {
+            NeoSwapsEvent::<Runtime>::SellExecuted {
                 who: ALICE,
                 market_id,
-                asset_out: asset,
-                amount_in: 29,
-                amount_out: 58,
+                asset_in: asset,
+                amount_in: 58,
+                amount_out: 29,
                 swap_fee_amount: 0,
                 external_fee_amount: 0,
             }
@@ -550,17 +557,17 @@ fn buy_from_amm_but_low_amount() {
             Order {
                 market_id,
                 maker: ALICE,
-                maker_asset: base_asset,
-                maker_amount: 19999999971,
-                taker_asset: asset,
-                taker_amount: 39999999935,
+                maker_asset: asset,
+                maker_amount: 19999999942,
+                taker_asset: base_asset,
+                taker_amount: 9999999969,
             }
         );
     });
 }
 
 #[test]
-fn buy_from_amm_only() {
+fn sell_to_amm_only() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
         let spot_prices = vec![_1_2, _1_2];
@@ -577,29 +584,32 @@ fn buy_from_amm_only() {
 
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
-        let max_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
+
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount, 0));
+
+        let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::ImmediateOrCancel;
-        assert_ok!(HybridRouter::buy(
+        assert_ok!(HybridRouter::sell(
             RuntimeOrigin::signed(ALICE),
             market_id,
             asset_count,
             asset,
             amount,
-            max_price,
+            min_price,
             orders,
             strategy,
         ));
 
         System::assert_has_event(
-            NeoSwapsEvent::<Runtime>::BuyExecuted {
+            NeoSwapsEvent::<Runtime>::SellExecuted {
                 who: ALICE,
                 market_id,
-                asset_out: asset,
+                asset_in: asset,
                 amount_in: 20000000000,
-                amount_out: 36852900215,
-                swap_fee_amount: 200000000,
-                external_fee_amount: 200000000,
+                amount_out: 9653703575,
+                swap_fee_amount: 96537036,
+                external_fee_amount: 0,
             }
             .into(),
         );
@@ -610,7 +620,7 @@ fn buy_from_amm_only() {
 }
 
 #[test]
-fn buy_places_limit_order_no_pool() {
+fn sell_places_limit_order_no_pool() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>(MARKET_CREATOR);
@@ -625,16 +635,19 @@ fn buy_places_limit_order_no_pool() {
         let asset_count = required_asset_count;
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
-        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
+
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount, 0));
+
+        let min_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::LimitOrder;
-        assert_ok!(HybridRouter::buy(
+        assert_ok!(HybridRouter::sell(
             RuntimeOrigin::signed(ALICE),
             market_id,
             asset_count,
             asset,
             amount,
-            max_price,
+            min_price,
             orders,
             strategy,
         ));
@@ -648,59 +661,17 @@ fn buy_places_limit_order_no_pool() {
             Order {
                 market_id,
                 maker: ALICE,
-                maker_asset: base_asset,
+                maker_asset: asset,
                 maker_amount: 10 * BASE,
-                taker_asset: asset,
-                taker_amount: 20 * BASE,
+                taker_asset: base_asset,
+                taker_amount: 5 * BASE,
             }
         );
     });
 }
 
 #[test]
-fn buy_emits_event() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
-        let required_asset_count = match &market.market_type {
-            MarketType::Scalar(_) => panic!("Categorical market type is expected!"),
-            MarketType::Categorical(categories) => *categories,
-        };
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market);
-
-        let asset_count = required_asset_count;
-        let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount_in = 10 * BASE;
-        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
-        let orders = vec![];
-        let strategy = Strategy::LimitOrder;
-        assert_ok!(HybridRouter::buy(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            asset_count,
-            asset,
-            amount_in,
-            max_price,
-            orders,
-            strategy,
-        ));
-
-        System::assert_last_event(
-            Event::<Runtime>::HybridRouterBuyExecuted {
-                who: ALICE,
-                market_id,
-                asset,
-                amount_in,
-                max_price,
-            }
-            .into(),
-        );
-    });
-}
-
-#[test]
-fn buy_fails_if_cancel_strategy_applied() {
+fn sell_fails_if_balance_too_low() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>(MARKET_CREATOR);
@@ -714,118 +685,24 @@ fn buy_fails_if_cancel_strategy_applied() {
         let asset_count = required_asset_count;
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
-        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
+
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount - 1, 0));
+
+        let min_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::ImmediateOrCancel;
         assert_noop!(
-            HybridRouter::buy(
+            HybridRouter::sell(
                 RuntimeOrigin::signed(ALICE),
                 market_id,
                 asset_count,
                 asset,
                 amount,
-                max_price,
+                min_price,
                 orders,
                 strategy,
             ),
-            Error::<Runtime>::CancelStrategyApplied
-        );
-    });
-}
-
-#[test]
-fn buy_fails_if_balance_too_low() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
-        let required_asset_count = match &market.market_type {
-            MarketType::Scalar(_) => panic!("Categorical market type is expected!"),
-            MarketType::Categorical(categories) => *categories,
-        };
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market);
-
-        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), ALICE, 0, 0));
-
-        let asset_count = required_asset_count;
-        let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount = 10 * BASE;
-        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
-        let orders = vec![];
-        let strategy = Strategy::ImmediateOrCancel;
-        assert_noop!(
-            HybridRouter::buy(
-                RuntimeOrigin::signed(ALICE),
-                market_id,
-                asset_count,
-                asset,
-                amount,
-                max_price,
-                orders,
-                strategy,
-            ),
-            CurrenciesError::<Runtime>::BalanceTooLow
-        );
-    });
-}
-
-#[test]
-fn buy_fails_if_asset_count_mismatch() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
-        let required_asset_count = match &market.market_type {
-            MarketType::Scalar(_) => panic!("Categorical market type is expected!"),
-            MarketType::Categorical(categories) => *categories,
-        };
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market);
-
-        let asset_count = 2;
-        assert_ne!(required_asset_count, asset_count);
-        let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount = 10 * BASE;
-        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
-        let orders = vec![];
-        let strategy = Strategy::ImmediateOrCancel;
-        assert_noop!(
-            HybridRouter::buy(
-                RuntimeOrigin::signed(ALICE),
-                market_id,
-                asset_count,
-                asset,
-                amount,
-                max_price,
-                orders,
-                strategy,
-            ),
-            Error::<Runtime>::AssetCountMismatch
-        );
-    });
-}
-
-#[test]
-fn buy_fails_if_market_does_not_exist() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let asset_count = 2;
-        let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount = 10 * BASE;
-        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
-        let orders = vec![];
-        let strategy = Strategy::ImmediateOrCancel;
-        assert_noop!(
-            HybridRouter::buy(
-                RuntimeOrigin::signed(ALICE),
-                market_id,
-                asset_count,
-                asset,
-                amount,
-                max_price,
-                orders,
-                strategy,
-            ),
-            MError::<Runtime>::MarketDoesNotExist
+            TokensError::<Runtime>::BalanceTooLow
         );
     });
 }

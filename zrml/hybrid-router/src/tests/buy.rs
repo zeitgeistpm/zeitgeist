@@ -658,82 +658,6 @@ fn buy_places_limit_order_no_pool() {
 }
 
 #[test]
-fn buy_emits_event() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
-        let required_asset_count = match &market.market_type {
-            MarketType::Scalar(_) => panic!("Categorical market type is expected!"),
-            MarketType::Categorical(categories) => *categories,
-        };
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market);
-
-        let asset_count = required_asset_count;
-        let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount_in = 10 * BASE;
-        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
-        let orders = vec![];
-        let strategy = Strategy::LimitOrder;
-        assert_ok!(HybridRouter::buy(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            asset_count,
-            asset,
-            amount_in,
-            max_price,
-            orders,
-            strategy,
-        ));
-
-        System::assert_last_event(
-            Event::<Runtime>::HybridRouterBuyExecuted {
-                who: ALICE,
-                market_id,
-                asset,
-                amount_in,
-                max_price,
-            }
-            .into(),
-        );
-    });
-}
-
-#[test]
-fn buy_fails_if_cancel_strategy_applied() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
-        let required_asset_count = match &market.market_type {
-            MarketType::Scalar(_) => panic!("Categorical market type is expected!"),
-            MarketType::Categorical(categories) => *categories,
-        };
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market);
-
-        let asset_count = required_asset_count;
-        let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount = 10 * BASE;
-        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
-        let orders = vec![];
-        let strategy = Strategy::ImmediateOrCancel;
-        assert_noop!(
-            HybridRouter::buy(
-                RuntimeOrigin::signed(ALICE),
-                market_id,
-                asset_count,
-                asset,
-                amount,
-                max_price,
-                orders,
-                strategy,
-            ),
-            Error::<Runtime>::CancelStrategyApplied
-        );
-    });
-}
-
-#[test]
 fn buy_fails_if_balance_too_low() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
@@ -745,14 +669,14 @@ fn buy_fails_if_balance_too_low() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), ALICE, 0, 0));
-
         let asset_count = required_asset_count;
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
+        
+        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), ALICE, amount - 1, 0));
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
-        let strategy = Strategy::ImmediateOrCancel;
+        let strategy = Strategy::LimitOrder;
         assert_noop!(
             HybridRouter::buy(
                 RuntimeOrigin::signed(ALICE),
@@ -765,67 +689,6 @@ fn buy_fails_if_balance_too_low() {
                 strategy,
             ),
             CurrenciesError::<Runtime>::BalanceTooLow
-        );
-    });
-}
-
-#[test]
-fn buy_fails_if_asset_count_mismatch() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
-        let required_asset_count = match &market.market_type {
-            MarketType::Scalar(_) => panic!("Categorical market type is expected!"),
-            MarketType::Categorical(categories) => *categories,
-        };
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market);
-
-        let asset_count = 2;
-        assert_ne!(required_asset_count, asset_count);
-        let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount = 10 * BASE;
-        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
-        let orders = vec![];
-        let strategy = Strategy::ImmediateOrCancel;
-        assert_noop!(
-            HybridRouter::buy(
-                RuntimeOrigin::signed(ALICE),
-                market_id,
-                asset_count,
-                asset,
-                amount,
-                max_price,
-                orders,
-                strategy,
-            ),
-            Error::<Runtime>::AssetCountMismatch
-        );
-    });
-}
-
-#[test]
-fn buy_fails_if_market_does_not_exist() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let asset_count = 2;
-        let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount = 10 * BASE;
-        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
-        let orders = vec![];
-        let strategy = Strategy::ImmediateOrCancel;
-        assert_noop!(
-            HybridRouter::buy(
-                RuntimeOrigin::signed(ALICE),
-                market_id,
-                asset_count,
-                asset,
-                amount,
-                max_price,
-                orders,
-                strategy,
-            ),
-            MError::<Runtime>::MarketDoesNotExist
         );
     });
 }

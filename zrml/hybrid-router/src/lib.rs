@@ -448,7 +448,7 @@ mod pallet {
         }
 
         #[require_transactional]
-        fn do_trade(
+        pub(crate) fn do_trade(
             tx_type: TxType,
             who: AccountIdOf<T>,
             market_id: MarketIdOf<T>,
@@ -499,27 +499,40 @@ mod pallet {
             }
 
             if !remaining.is_zero() {
-                let taker_amount = match tx_type {
-                    TxType::Buy => remaining.bdiv_ceil(price_limit)?,
-                    TxType::Sell => price_limit.bmul_floor(remaining)?,
+                let (maker_asset, maker_amount, taker_asset, taker_amount) = match tx_type {
+                    TxType::Buy => {
+                        let maker_asset = market.base_asset;
+                        let maker_amount = remaining;
+                        let taker_asset = asset;
+                        let taker_amount = remaining.bdiv_ceil(price_limit)?;
+                        (maker_asset, maker_amount, taker_asset, taker_amount)
+                    }
+                    TxType::Sell => {
+                        let maker_asset = asset;
+                        let maker_amount = remaining;
+                        let taker_asset = market.base_asset;
+                        let taker_amount = price_limit.bmul_floor(remaining)?;
+                        (maker_asset, maker_amount, taker_asset, taker_amount)
+                    }
                 };
+
                 Self::maybe_place_limit_order(
                     strategy,
                     &who,
                     market_id,
-                    asset,
-                    remaining,
-                    market.base_asset,
+                    maker_asset,
+                    maker_amount,
+                    taker_asset,
                     taker_amount,
                 )?;
             }
 
-            Self::deposit_event(Event::HybridRouterSellExecuted {
+            Self::deposit_event(Event::HybridRouterBuyExecuted {
                 who: who.clone(),
                 market_id,
                 asset,
                 amount_in,
-                min_price: price_limit,
+                max_price: price_limit,
             });
 
             Ok(())

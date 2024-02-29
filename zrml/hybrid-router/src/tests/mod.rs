@@ -20,6 +20,7 @@
 use crate::{mock::*, types::*, utils::*, AccountIdOf, BalanceOf, MarketIdOf, *};
 use frame_support::{assert_noop, assert_ok};
 use orml_currencies::Error as CurrenciesError;
+use orml_tokens::Error as TokensError;
 use orml_traits::MultiCurrency;
 use sp_runtime::{Perbill, SaturatedConversion};
 use test_case::test_case;
@@ -37,6 +38,7 @@ use zrml_orderbook::Orders;
 
 mod buy;
 mod sell;
+mod trade;
 
 #[cfg(not(feature = "parachain"))]
 const BASE_ASSET: Asset<MarketIdOf<Runtime>> = Asset::Ztg;
