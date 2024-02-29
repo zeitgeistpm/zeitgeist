@@ -36,6 +36,7 @@ use zrml_neo_swaps::Event as NeoSwapsEvent;
 use zrml_orderbook::Orders;
 
 mod buy;
+mod sell;
 
 #[cfg(not(feature = "parachain"))]
 const BASE_ASSET: Asset<MarketIdOf<Runtime>> = Asset::Ztg;

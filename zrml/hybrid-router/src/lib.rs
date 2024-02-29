@@ -33,7 +33,10 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{types::Strategy, weights::WeightInfoZeitgeist};
+    use crate::{
+        types::{Strategy, TxType},
+        weights::WeightInfoZeitgeist,
+    };
     use alloc::{vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
@@ -140,8 +143,8 @@ mod pallet {
     pub enum Error<T> {
         /// The specified amount is zero.
         AmountIsZero,
-        /// The maximum price is too high.
-        MaxPriceTooHigh,
+        /// The price limit is too high.
+        PriceLimitTooHigh,
         /// The price of an order is above the specified maximum price.
         OrderPriceAboveMaxPrice,
         /// The price of an order is below the specified minimum price.
@@ -205,7 +208,8 @@ mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            Self::do_buy(
+            Self::do_trade(
+                TxType::Buy,
                 who,
                 market_id,
                 asset_count,
@@ -259,7 +263,8 @@ mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            Self::do_sell(
+            Self::do_trade(
+                TxType::Sell,
                 who,
                 market_id,
                 asset_count,
@@ -296,28 +301,48 @@ mod pallet {
             }
         }
 
-        fn maybe_buy_from_amm(
+        fn maybe_fill_from_amm(
+            tx_type: TxType,
             who: &AccountIdOf<T>,
             market_id: MarketIdOf<T>,
             asset: AssetOf<T>,
             amount_in: BalanceOf<T>,
-            max_price: BalanceOf<T>,
+            price_limit: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
             if !T::Amm::pool_exists(market_id) {
                 return Ok(amount_in);
             }
 
             let spot_price = T::Amm::get_spot_price(market_id, asset)?;
-            if spot_price >= max_price {
-                return Ok(amount_in);
-            }
 
             let mut remaining = amount_in;
-            let amm_amount_in = T::Amm::calculate_buy_amount_until(market_id, asset, max_price)?;
+            let amm_amount_in = match tx_type {
+                TxType::Buy => {
+                    if spot_price >= price_limit {
+                        return Ok(amount_in);
+                    }
+                    T::Amm::calculate_buy_amount_until(market_id, asset, price_limit)?
+                }
+                TxType::Sell => T::Amm::calculate_sell_amount_until(market_id, asset, price_limit)?,
+            };
+
             let amm_amount_in = amm_amount_in.min(remaining);
 
             if !amm_amount_in.is_zero() {
-                T::Amm::buy(&who, market_id, asset, amm_amount_in, BalanceOf::<T>::zero())?;
+                match tx_type {
+                    TxType::Buy => {
+                        T::Amm::buy(&who, market_id, asset, amm_amount_in, BalanceOf::<T>::zero())?;
+                    }
+                    TxType::Sell => {
+                        T::Amm::sell(
+                            &who,
+                            market_id,
+                            asset,
+                            amm_amount_in,
+                            BalanceOf::<T>::zero(),
+                        )?;
+                    }
+                }
                 remaining = remaining
                     .checked_sub(&amm_amount_in)
                     .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
@@ -326,197 +351,167 @@ mod pallet {
             Ok(remaining)
         }
 
+        fn maybe_fill_orders(
+            tx_type: TxType,
+            orders: &[OrderId],
+            mut remaining: BalanceOf<T>,
+            who: &AccountIdOf<T>,
+            market_id: MarketIdOf<T>,
+            base_asset: AssetOf<T>,
+            asset: AssetOf<T>,
+            price_limit: BalanceOf<T>,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            for &order_id in orders {
+                if remaining.is_zero() {
+                    break;
+                }
+
+                let order = match T::OrderBook::order(order_id) {
+                    Ok(order) => order,
+                    Err(_) => continue,
+                };
+
+                let order_price = order.price(base_asset)?;
+
+                match tx_type {
+                    TxType::Buy => {
+                        // existing order is willing to give the required `asset` as the `maker_asset`
+                        ensure!(
+                            asset == order.maker_asset,
+                            Error::<T>::AssetNotEqualToOrderBookMakerAsset
+                        );
+                        ensure!(order_price <= price_limit, Error::<T>::OrderPriceAboveMaxPrice);
+                    }
+                    TxType::Sell => {
+                        // existing order is willing to receive the required `asset` as the `taker_asset`
+                        ensure!(
+                            asset == order.taker_asset,
+                            Error::<T>::AssetNotEqualToOrderBookTakerAsset
+                        );
+                        ensure!(order_price >= price_limit, Error::<T>::OrderPriceBelowMinPrice);
+                    }
+                }
+
+                remaining = Self::maybe_fill_from_amm(
+                    tx_type,
+                    who,
+                    market_id,
+                    asset,
+                    remaining,
+                    order_price,
+                )?;
+
+                if remaining.is_zero() {
+                    break;
+                }
+
+                // `remaining` is always denominated in the `taker_asset`
+                // because this is what the order owner (maker) wants to receive
+                let (taker_fill, maker_fill) =
+                    order.taker_and_maker_fill_from_taker_amount(remaining)?;
+                // and the `maker_partial_fill` of `fill_order` is specified in `taker_asset`
+                T::OrderBook::fill_order(who, order_id, Some(maker_fill))?;
+                remaining = remaining
+                    .checked_sub(&taker_fill)
+                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
+            }
+
+            Ok(remaining)
+        }
+
+        fn maybe_place_limit_order(
+            strategy: Strategy,
+            who: &AccountIdOf<T>,
+            market_id: MarketIdOf<T>,
+            maker_asset: AssetOf<T>,
+            maker_amount: BalanceOf<T>,
+            taker_asset: AssetOf<T>,
+            taker_amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            match strategy {
+                Strategy::ImmediateOrCancel => {
+                    return Err(Error::<T>::CancelStrategyApplied.into());
+                }
+                Strategy::LimitOrder => {
+                    T::OrderBook::place_order(
+                        who,
+                        market_id,
+                        maker_asset,
+                        maker_amount,
+                        taker_asset,
+                        taker_amount,
+                    )?;
+                }
+            }
+
+            Ok(())
+        }
+
         #[require_transactional]
-        fn do_buy(
+        fn do_trade(
+            tx_type: TxType,
             who: AccountIdOf<T>,
             market_id: MarketIdOf<T>,
             asset_count: u16,
             asset: AssetOf<T>,
             amount_in: BalanceOf<T>,
-            max_price: BalanceOf<T>,
+            price_limit: BalanceOf<T>,
             orders: Vec<OrderId>,
             strategy: Strategy,
         ) -> DispatchResult {
             ensure!(amount_in > BalanceOf::<T>::zero(), Error::<T>::AmountIsZero);
             ensure!(
-                max_price <= ZeitgeistBase::<BalanceOf<T>>::get()?,
-                Error::<T>::MaxPriceTooHigh
+                price_limit <= ZeitgeistBase::<BalanceOf<T>>::get()?,
+                Error::<T>::PriceLimitTooHigh
             );
             let market = T::MarketCommons::market(&market_id)?;
             let assets = Self::outcome_assets(market_id, &market);
             ensure!(asset_count as usize == assets.len(), Error::<T>::AssetCountMismatch);
 
-            T::AssetManager::ensure_can_withdraw(market.base_asset, &who, amount_in)?;
+            let asset_in = match tx_type {
+                TxType::Buy => market.base_asset,
+                TxType::Sell => asset,
+            };
+            T::AssetManager::ensure_can_withdraw(asset_in, &who, amount_in)?;
 
             let mut remaining = amount_in;
 
-            for order_id in orders {
-                if remaining.is_zero() {
-                    break;
-                }
-
-                let order = match T::OrderBook::order(order_id) {
-                    Ok(order) => order,
-                    Err(_) => continue,
-                };
-
-                // existing order is willing to give the required `asset` as the `maker_asset`
-                ensure!(asset == order.maker_asset, Error::<T>::AssetNotEqualToOrderBookMakerAsset);
-
-                let order_price = order.price(market.base_asset)?;
-                ensure!(order_price <= max_price, Error::<T>::OrderPriceAboveMaxPrice);
-
-                remaining =
-                    Self::maybe_buy_from_amm(&who, market_id, asset, remaining, order_price)?;
-
-                if remaining.is_zero() {
-                    break;
-                }
-
-                // `remaining` is denominated in the market's base asset, so the `taker_asset`
-                let (taker_fill, maker_fill) =
-                    order.taker_and_maker_fill_from_taker_amount(remaining)?;
-                // and the `maker_partial_fill` of `fill_order` is specified in `taker_asset`
-                T::OrderBook::fill_order(&who, order_id, Some(maker_fill))?;
-                remaining = remaining
-                    .checked_sub(&taker_fill)
-                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
-            }
-
-            if !remaining.is_zero() {
-                remaining = Self::maybe_buy_from_amm(&who, market_id, asset, remaining, max_price)?;
-            }
-
-            if !remaining.is_zero() {
-                match strategy {
-                    Strategy::ImmediateOrCancel => {
-                        return Err(Error::<T>::CancelStrategyApplied.into());
-                    }
-                    Strategy::LimitOrder => {
-                        let taker_amount = remaining.bdiv_ceil(max_price)?;
-                        T::OrderBook::place_order(
-                            &who,
-                            market_id,
-                            market.base_asset,
-                            remaining,
-                            asset,
-                            taker_amount,
-                        )?;
-                    }
-                }
-            }
-
-            // TODO: Do we want to emit an event for the Hybrid Router at all if Order Book and AMM do already?
-            Self::deposit_event(Event::HybridRouterBuyExecuted {
-                who: who.clone(),
+            remaining = Self::maybe_fill_orders(
+                tx_type,
+                &orders,
+                remaining,
+                &who,
                 market_id,
+                market.base_asset,
                 asset,
-                amount_in,
-                max_price,
-            });
+                price_limit,
+            )?;
 
-            Ok(())
-        }
-
-        fn maybe_sell_from_amm(
-            who: &AccountIdOf<T>,
-            market_id: MarketIdOf<T>,
-            asset: AssetOf<T>,
-            amount_in: BalanceOf<T>,
-            min_price: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
-            if !T::Amm::pool_exists(market_id) {
-                return Ok(amount_in);
+            if !remaining.is_zero() {
+                remaining = Self::maybe_fill_from_amm(
+                    tx_type,
+                    &who,
+                    market_id,
+                    asset,
+                    remaining,
+                    price_limit,
+                )?;
             }
 
-            let mut remaining = amount_in;
-            let amm_amount_in = T::Amm::calculate_sell_amount_until(market_id, asset, min_price)?;
-            let amm_amount_in = amm_amount_in.min(remaining);
-
-            if !amm_amount_in.is_zero() {
-                T::Amm::sell(&who, market_id, asset, amm_amount_in, BalanceOf::<T>::zero())?;
-                remaining = remaining
-                    .checked_sub(&amm_amount_in)
-                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
-            }
-
-            Ok(remaining)
-        }
-
-        #[require_transactional]
-        fn do_sell(
-            who: AccountIdOf<T>,
-            market_id: MarketIdOf<T>,
-            asset_count: u16,
-            asset: AssetOf<T>,
-            amount_in: BalanceOf<T>,
-            min_price: BalanceOf<T>,
-            orders: Vec<OrderId>,
-            strategy: Strategy,
-        ) -> DispatchResult {
-            let market = T::MarketCommons::market(&market_id)?;
-            let assets = Self::outcome_assets(market_id, &market);
-            ensure!(asset_count as usize == assets.len(), Error::<T>::AssetCountMismatch);
-
-            T::AssetManager::ensure_can_withdraw(asset, &who, amount_in)?;
-
-            let mut remaining = amount_in;
-
-            for order_id in orders {
-                if remaining.is_zero() {
-                    break;
-                }
-
-                let order = match T::OrderBook::order(order_id) {
-                    Ok(order) => order,
-                    Err(_) => continue,
+            if !remaining.is_zero() {
+                let taker_amount = match tx_type {
+                    TxType::Buy => remaining.bdiv_ceil(price_limit)?,
+                    TxType::Sell => price_limit.bmul_floor(remaining)?,
                 };
-
-                // existing order is willing to receive the required `asset` as the `taker_asset`
-                ensure!(asset == order.taker_asset, Error::<T>::AssetNotEqualToOrderBookTakerAsset);
-
-                let order_price = order.price(market.base_asset)?;
-                ensure!(order_price >= min_price, Error::<T>::OrderPriceBelowMinPrice);
-
-                remaining =
-                    Self::maybe_sell_from_amm(&who, market_id, asset, remaining, order_price)?;
-
-                if remaining.is_zero() {
-                    break;
-                }
-
-                // `remaining` is denominated in `asset`, so the `taker_asset`
-                let (taker_fill, maker_fill) =
-                    order.taker_and_maker_fill_from_taker_amount(remaining)?;
-                // and the `maker_partial_fill` of `fill_order` is specified in `taker_asset`
-                T::OrderBook::fill_order(&who, order_id, Some(maker_fill))?;
-                remaining = remaining
-                    .checked_sub(&taker_fill)
-                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
-            }
-
-            if !remaining.is_zero() {
-                remaining =
-                    Self::maybe_sell_from_amm(&who, market_id, asset, remaining, min_price)?;
-            }
-
-            if !remaining.is_zero() {
-                match strategy {
-                    Strategy::ImmediateOrCancel => {
-                        return Err(Error::<T>::CancelStrategyApplied.into());
-                    }
-                    Strategy::LimitOrder => {
-                        let taker_amount = min_price.bmul_floor(remaining)?;
-                        T::OrderBook::place_order(
-                            &who,
-                            market_id,
-                            asset,
-                            remaining,
-                            market.base_asset,
-                            taker_amount,
-                        )?;
-                    }
-                }
+                Self::maybe_place_limit_order(
+                    strategy,
+                    &who,
+                    market_id,
+                    asset,
+                    remaining,
+                    market.base_asset,
+                    taker_amount,
+                )?;
             }
 
             Self::deposit_event(Event::HybridRouterSellExecuted {
@@ -524,7 +519,7 @@ mod pallet {
                 market_id,
                 asset,
                 amount_in,
-                min_price,
+                min_price: price_limit,
             });
 
             Ok(())

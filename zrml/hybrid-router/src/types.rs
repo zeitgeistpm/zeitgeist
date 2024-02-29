@@ -38,3 +38,9 @@ pub enum Strategy {
     /// achieving a specific price rather than immediate execution.
     LimitOrder,
 }
+
+#[derive(Copy, Clone)]
+pub(crate) enum TxType {
+    Buy,
+    Sell,
+}
