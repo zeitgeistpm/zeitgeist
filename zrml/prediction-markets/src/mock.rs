@@ -85,8 +85,8 @@ pub struct DeployPoolArgs {
 }
 
 thread_local! {
-    pub static DEPLOY_POOL_CALL_DATA: RefCell<Vec<DeployPoolArgs>> = RefCell::new(vec![]);
-    pub static DEPLOY_POOL_RETURN_VALUE: RefCell<DispatchResult> = RefCell::new(Ok(()));
+    pub static DEPLOY_POOL_CALL_DATA: RefCell<Vec<DeployPoolArgs>> = const { RefCell::new(vec![]) };
+    pub static DEPLOY_POOL_RETURN_VALUE: RefCell<DispatchResult> = const { RefCell::new(Ok(())) };
 }
 
 #[allow(unused)]
