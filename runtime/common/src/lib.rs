@@ -854,8 +854,10 @@ macro_rules! impl_config_traits {
                     ),
                     ProxyType::ProvideLiquidity => matches!(
                         c,
-                        RuntimeCall::Swaps(zrml_swaps::Call::pool_join { .. })
-                            | RuntimeCall::Swaps(zrml_swaps::Call::pool_exit { .. })
+                        RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::join { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::exit { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::deploy_pool { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::withdraw_fees { .. })
                     ),
                     ProxyType::BuySellCompleteSets => matches!(
                         c,
@@ -867,18 +869,20 @@ macro_rules! impl_config_traits {
                     ),
                     ProxyType::Trading => matches!(
                         c,
-                        RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_in { .. })
-                            | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out { .. })
+                        RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::sell { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::place_order { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::fill_order { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::remove_order { .. })
                     ),
                     ProxyType::HandleAssets => matches!(
                         c,
-                        RuntimeCall::Swaps(zrml_swaps::Call::pool_join { .. })
-                            | RuntimeCall::Swaps(zrml_swaps::Call::pool_exit { .. })
-                            | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_in { .. })
-                            | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out { .. })
+                        RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::join { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::exit { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::sell { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::deploy_pool { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::withdraw_fees { .. })
                             | RuntimeCall::PredictionMarkets(
                                 zrml_prediction_markets::Call::buy_complete_set { .. }
                             )

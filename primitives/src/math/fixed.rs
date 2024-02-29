@@ -366,6 +366,28 @@ mod tests {
 
     pub(crate) const _1_10: u128 = _1 / 10;
 
+    #[macro_export]
+    macro_rules! assert_approx {
+        ($left:expr, $right:expr, $precision:expr $(,)?) => {
+            match (&$left, &$right, &$precision) {
+                (left_val, right_val, precision_val) => {
+                    let diff = if *left_val > *right_val {
+                        *left_val - *right_val
+                    } else {
+                        *right_val - *left_val
+                    };
+                    if diff > *precision_val {
+                        panic!(
+                            "assertion `left approx== right` failed\n      left: {}\n     right: \
+                             {}\n precision: {}\ndifference: {}",
+                            *left_val, *right_val, *precision_val, diff
+                        );
+                    }
+                }
+            }
+        };
+    }
+
     #[test_case(0, 0, 0)]
     #[test_case(0, _1, 0)]
     #[test_case(0, _2, 0)]
@@ -1074,26 +1096,4 @@ mod tests {
         // round down instead of up.
         assert_approx!(result, expected, 1);
     }
-}
-
-#[macro_export]
-macro_rules! assert_approx {
-    ($left:expr, $right:expr, $precision:expr $(,)?) => {
-        match (&$left, &$right, &$precision) {
-            (left_val, right_val, precision_val) => {
-                let diff = if *left_val > *right_val {
-                    *left_val - *right_val
-                } else {
-                    *right_val - *left_val
-                };
-                if diff > *precision_val {
-                    panic!(
-                        "assertion `left approx== right` failed\n      left: {}\n     right: {}\n \
-                         precision: {}\ndifference: {}",
-                        *left_val, *right_val, *precision_val, diff
-                    );
-                }
-            }
-        }
-    };
 }

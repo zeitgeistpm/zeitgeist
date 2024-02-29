@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -145,7 +145,10 @@ mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            T::Currency::deposit_creating(&Pallet::<T>::pallet_account_id(), self.initial_balance);
+            let _ = T::Currency::deposit_creating(
+                &Pallet::<T>::pallet_account_id(),
+                self.initial_balance,
+            );
             <PerBlockIncentive<T>>::put(self.per_block_distribution);
         }
     }

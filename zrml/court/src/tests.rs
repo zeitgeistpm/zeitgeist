@@ -1515,7 +1515,7 @@ fn appeal_emits_event() {
 
         let court = Courts::<Runtime>::get(court_id).unwrap();
         let new_round_ends = Some(court.round_ends);
-        let appeal_info = court.appeals.get(0).unwrap().clone();
+        let appeal_info = court.appeals.first().unwrap().clone();
 
         System::assert_last_event(
             Event::CourtAppealed { court_id, appeal_info, new_round_ends }.into(),

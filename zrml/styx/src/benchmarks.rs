@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -40,7 +40,7 @@ benchmarks! {
     cross {
         let caller: T::AccountId = whitelisted_caller();
         let balance = (90_000_000 * BASE).saturated_into();
-        T::Currency::deposit_creating(&caller, balance);
+        let _ = T::Currency::deposit_creating(&caller, balance);
     }: _(RawOrigin::Signed(caller))
 
     set_burn_amount {
@@ -48,7 +48,7 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let balance = (10_000 * BASE).saturated_into();
         let amount = (20 * BASE).saturated_into();
-        T::Currency::deposit_creating(&caller, balance);
+        let _ = T::Currency::deposit_creating(&caller, balance);
         let call = Call::<T>::set_burn_amount { amount };
     }: { call.dispatch_bypass_filter(origin)? }
 
