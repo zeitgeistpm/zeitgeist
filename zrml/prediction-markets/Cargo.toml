@@ -30,8 +30,6 @@ sp-api = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 zrml-prediction-markets-runtime-api = { workspace = true, optional = true }
-zrml-rikiddo = { workspace = true, optional = true }
-zrml-swaps = { workspace = true, optional = true }
 
 [dev-dependencies]
 more-asserts = { workspace = true }
@@ -52,8 +50,6 @@ mock = [
     "sp-io/default",
     "zeitgeist-primitives/mock",
     "zrml-prediction-markets-runtime-api/default",
-    "zrml-rikiddo/default",
-    "zrml-swaps/default",
     "xcm/default",
     "orml-asset-registry/default",
     "env_logger/default",
