@@ -34,7 +34,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         );
 
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, CENT));
@@ -93,7 +93,7 @@ fn it_resolves_a_disputed_market() {
             base_asset,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         );
 
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, CENT));
@@ -277,7 +277,7 @@ fn it_resolves_a_disputed_court_market() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
 
         let market_id = 0;
@@ -495,7 +495,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -541,7 +541,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -588,7 +588,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
@@ -639,7 +639,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -691,7 +691,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
@@ -751,7 +751,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -809,7 +809,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
 
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -881,7 +881,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
 
         let outsider = CHARLIE;
@@ -953,7 +953,7 @@ fn trusted_market_complete_lifecycle() {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             None,
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         let market_id = 0;
         assert_ok!(PredictionMarkets::buy_complete_set(
@@ -1001,7 +1001,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());
@@ -1047,7 +1047,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, ValidityBond::get() + OracleBond::get());

@@ -30,7 +30,7 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
             base_asset,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         );
         let market_id = 0;
 
@@ -104,7 +104,7 @@ fn admin_move_market_to_resolved_fails_if_market_is_not_reported_or_disputed(
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..33,
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         );
         let market_id = 0;
         assert_ok!(MarketCommons::mutate_market(&market_id, |market| {

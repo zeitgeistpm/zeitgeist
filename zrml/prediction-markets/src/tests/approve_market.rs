@@ -31,7 +31,7 @@ fn it_allows_advisory_origin_to_approve_markets() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         );
 
         let market = MarketCommons::market(&0);
@@ -59,7 +59,7 @@ fn market_with_edit_request_cannot_be_approved() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         );
 
         // make sure it's in status proposed
@@ -94,7 +94,7 @@ fn approve_market_correctly_unreserves_advisory_bond() {
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         let market_id = 0;
         let alice_balance_before = Balances::free_balance(ALICE);
