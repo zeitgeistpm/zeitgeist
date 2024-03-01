@@ -18,7 +18,7 @@
 
 #![cfg(feature = "mock")]
 
-use crate as orderbook;
+use crate as orderbook_v1;
 use crate::{AssetOf, BalanceOf, MarketIdOf};
 use core::marker::PhantomData;
 use frame_support::{construct_runtime, pallet_prelude::Get, parameter_types, traits::Everything};
@@ -89,7 +89,7 @@ construct_runtime!(
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
-        Orderbook: orderbook::{Call, Event<T>, Pallet},
+        Orderbook: orderbook_v1::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         AssetManager: orml_currencies::{Call, Pallet, Storage},
@@ -103,7 +103,7 @@ impl crate::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type PalletId = OrderbookPalletId;
-    type WeightInfo = orderbook::weights::WeightInfo<Runtime>;
+    type WeightInfo = orderbook_v1::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {

@@ -1,5 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
-// Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2023 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -16,17 +15,19 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
+use zeitgeist_primitives::types::Asset;
 
-extern crate alloc;
+pub type OrderId = u128;
 
-mod asset;
-pub mod constants;
-mod market;
-pub mod math;
-mod max_runtime_usize;
-mod outcome_report;
-mod proxy_type;
-mod serde_wrapper;
-pub mod traits;
-pub mod types;
+#[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen> {
+    pub market_id: MarketId,
+    pub maker: AccountId,
+    pub maker_asset: Asset<MarketId>,
+    pub maker_amount: Balance,
+    pub taker_asset: Asset<MarketId>,
+    pub taker_amount: Balance,
+}
