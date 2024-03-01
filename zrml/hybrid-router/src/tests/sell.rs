@@ -20,11 +20,11 @@
 use super::*;
 
 #[test]
-fn buy_from_amm_and_then_fill_specified_order() {
+fn sell_to_amm_and_then_fill_specified_order() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
         let pivot = _1_100;
-        let spot_prices = vec![_1_2 - pivot, _1_2 + pivot];
+        let spot_prices = vec![_1_2 + pivot, _1_2 - pivot];
         let swap_fee = CENT;
         let asset_count = 2u16;
         let market_id = create_market_and_deploy_pool(
@@ -45,36 +45,38 @@ fn buy_from_amm_and_then_fill_specified_order() {
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
-            asset,
-            order_maker_amount,
             BASE_ASSET,
+            order_maker_amount,
+            asset,
             order_taker_amount,
         ));
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
 
-        let max_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount_in, 0));
+
+        let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let strategy = Strategy::LimitOrder;
-        assert_ok!(HybridRouter::buy(
+        assert_ok!(HybridRouter::sell(
             RuntimeOrigin::signed(ALICE),
             market_id,
             asset_count,
             asset,
             amount_in,
-            max_price,
+            min_price,
             order_ids,
             strategy,
         ));
 
-        let amm_amount_in = 2776004824;
+        let amm_amount_in = 5608094330;
         System::assert_has_event(
-            NeoSwapsEvent::<Runtime>::BuyExecuted {
+            NeoSwapsEvent::<Runtime>::SellExecuted {
                 who: ALICE,
                 market_id,
-                asset_out: asset,
+                asset_in: asset,
                 amount_in: amm_amount_in,
-                amount_out: 5552568736,
-                swap_fee_amount: 27760048,
+                amount_out: 2832089506,
+                swap_fee_amount: 28320895,
                 external_fee_amount: 0,
             }
             .into(),
@@ -83,29 +85,29 @@ fn buy_from_amm_and_then_fill_specified_order() {
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
         assert_eq!(order_ids.len(), 1);
         let order = Orders::<Runtime>::get(order_ids[0]).unwrap();
-        let unfilled_base_asset_amount = 102776004824;
+        let unfilled_base_asset_amount = 105608094330;
         assert_eq!(
             order,
             Order {
                 market_id,
                 maker: CHARLIE,
-                maker_asset: Asset::CategoricalOutcome(market_id, 0),
-                maker_amount: 51388002412,
-                taker_asset: BASE_ASSET,
+                maker_asset: BASE_ASSET,
+                maker_amount: 52804047165,
+                taker_asset: Asset::CategoricalOutcome(market_id, 0),
                 taker_amount: unfilled_base_asset_amount,
             }
         );
         let filled_base_asset_amount = order_taker_amount - unfilled_base_asset_amount;
-        assert_eq!(filled_base_asset_amount, 17223995176);
+        assert_eq!(filled_base_asset_amount, 14391905670);
         assert_eq!(amm_amount_in + filled_base_asset_amount, amount_in);
     });
 }
 
 #[test]
-fn buy_from_amm_if_specified_order_has_higher_prices_than_the_amm() {
+fn sell_to_amm_if_specified_order_has_lower_prices_than_the_amm() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
-        let spot_prices = vec![_1_4, _3_4];
+        let spot_prices = vec![_9_10, _1_10];
         let swap_fee = CENT;
         let asset_count = 2u16;
         let market_id = create_market_and_deploy_pool(
@@ -118,31 +120,33 @@ fn buy_from_amm_if_specified_order_has_higher_prices_than_the_amm() {
         );
 
         let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount = _2;
+        let amount = _1;
 
-        let order_maker_amount = _2;
-        let order_taker_amount = _4;
+        let order_maker_amount = _1;
+        let order_taker_amount = _2;
         assert_ok!(AssetManager::deposit(asset, &CHARLIE, order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
-            asset,
-            order_maker_amount,
             BASE_ASSET,
+            order_maker_amount,
+            asset,
             order_taker_amount,
         ));
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
 
-        let max_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount, 0));
+
+        let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let strategy = Strategy::LimitOrder;
-        assert_ok!(HybridRouter::buy(
+        assert_ok!(HybridRouter::sell(
             RuntimeOrigin::signed(ALICE),
             market_id,
             asset_count,
             asset,
             amount,
-            max_price,
+            min_price,
             order_ids,
             strategy,
         ));
@@ -150,25 +154,27 @@ fn buy_from_amm_if_specified_order_has_higher_prices_than_the_amm() {
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
         assert_eq!(order_ids.len(), 1);
         let order = Orders::<Runtime>::get(order_ids[0]).unwrap();
+        let order_price = order.price(BASE_ASSET).unwrap();
+        assert_eq!(order_price, _1_2);
         assert_eq!(
             order,
             Order {
                 market_id,
                 maker: CHARLIE,
-                maker_asset: Asset::CategoricalOutcome(market_id, 0),
-                maker_amount: _2,
-                taker_asset: BASE_ASSET,
-                taker_amount: _4,
+                maker_asset: BASE_ASSET,
+                maker_amount: _1,
+                taker_asset: Asset::CategoricalOutcome(market_id, 0),
+                taker_amount: _2,
             }
         );
     });
 }
 
 #[test]
-fn buy_fill_multiple_orders_if_amm_spot_price_higher_than_order_prices() {
+fn sell_fill_multiple_orders_if_amm_spot_price_lower_than_order_prices() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
-        let spot_prices = vec![_1_2, _1_2];
+        let spot_prices = vec![_1_2 - 1, _1_2 + 1];
         let swap_fee = CENT;
         let asset_count = 2u16;
         let market_id = create_market_and_deploy_pool(
@@ -189,31 +195,33 @@ fn buy_fill_multiple_orders_if_amm_spot_price_higher_than_order_prices() {
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
-            asset,
-            order_maker_amount,
             BASE_ASSET,
+            order_maker_amount,
+            asset,
             order_taker_amount,
         ));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
-            asset,
-            order_maker_amount,
             BASE_ASSET,
+            order_maker_amount,
+            asset,
             order_taker_amount,
         ));
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
 
-        let max_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount_in, 0));
+
+        let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let strategy = Strategy::LimitOrder;
-        assert_ok!(HybridRouter::buy(
+        assert_ok!(HybridRouter::sell(
             RuntimeOrigin::signed(ALICE),
             market_id,
             asset_count,
             asset,
             amount_in,
-            max_price,
+            min_price,
             order_ids,
             strategy,
         ));
@@ -224,10 +232,10 @@ fn buy_fill_multiple_orders_if_amm_spot_price_higher_than_order_prices() {
 }
 
 #[test]
-fn buy_fill_specified_order_partially_if_amm_spot_price_higher() {
+fn sell_fill_specified_order_partially_if_amm_spot_price_lower() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
-        let spot_prices = vec![_1_2, _1_2];
+        let spot_prices = vec![_1_2 - 1, _1_2 + 1];
         let swap_fee = CENT;
         let asset_count = 2u16;
         let market_id = create_market_and_deploy_pool(
@@ -248,9 +256,9 @@ fn buy_fill_specified_order_partially_if_amm_spot_price_higher() {
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
-            asset,
-            order_maker_amount,
             BASE_ASSET,
+            order_maker_amount,
+            asset,
             order_taker_amount,
         ));
 
@@ -258,16 +266,18 @@ fn buy_fill_specified_order_partially_if_amm_spot_price_higher() {
         assert_eq!(order_ids.len(), 1);
         let order_id = order_ids[0];
 
-        let max_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount, 0));
+
+        let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![order_id];
         let strategy = Strategy::LimitOrder;
-        assert_ok!(HybridRouter::buy(
+        assert_ok!(HybridRouter::sell(
             RuntimeOrigin::signed(ALICE),
             market_id,
             asset_count,
             asset,
             amount,
-            max_price,
+            min_price,
             orders,
             strategy,
         ));
@@ -278,9 +288,9 @@ fn buy_fill_specified_order_partially_if_amm_spot_price_higher() {
             Order {
                 market_id,
                 maker: CHARLIE,
-                maker_asset: Asset::CategoricalOutcome(market_id, 0),
+                maker_asset: BASE_ASSET,
                 maker_amount: _3,
-                taker_asset: BASE_ASSET,
+                taker_asset: Asset::CategoricalOutcome(market_id, 0),
                 taker_amount: _6,
             }
         );
@@ -288,7 +298,7 @@ fn buy_fill_specified_order_partially_if_amm_spot_price_higher() {
 }
 
 #[test]
-fn buy_fails_if_asset_not_equal_to_order_book_maker_asset() {
+fn sell_fails_if_asset_not_equal_to_order_book_taker_asset() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
         let spot_prices = vec![_1_2, _1_2];
@@ -304,42 +314,47 @@ fn buy_fails_if_asset_not_equal_to_order_book_maker_asset() {
         );
 
         let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount = _2;
+        let amount_in = _2;
+
+        let maker_amount = _1;
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), CHARLIE, asset, maker_amount, 0));
 
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
+            asset,
+            maker_amount,
             BASE_ASSET,
-            10000000000,
-            Asset::CategoricalOutcome(market_id, 0),
-            20000000000,
+            amount_in,
         ));
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
         assert_eq!(order_ids.len(), 1);
         let order_id = order_ids[0];
 
-        let max_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount_in, 0));
+
+        let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![order_id];
         let strategy = Strategy::LimitOrder;
         assert_noop!(
-            HybridRouter::buy(
+            HybridRouter::sell(
                 RuntimeOrigin::signed(ALICE),
                 market_id,
                 asset_count,
                 asset,
-                amount,
-                max_price,
+                amount_in,
+                min_price,
                 orders,
                 strategy,
             ),
-            Error::<Runtime>::AssetNotEqualToOrderBookMakerAsset
+            Error::<Runtime>::AssetNotEqualToOrderBookTakerAsset
         );
     });
 }
 
 #[test]
-fn buy_fails_if_order_price_above_max_price() {
+fn sell_fails_if_order_price_below_min_price() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
         let spot_prices = vec![_1_2, _1_2];
@@ -357,42 +372,44 @@ fn buy_fails_if_order_price_above_max_price() {
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
-        let order_maker_amount = 20000000000;
+        let order_maker_amount = _4;
         assert_ok!(AssetManager::deposit(asset, &CHARLIE, order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
-            Asset::CategoricalOutcome(market_id, 0),
-            order_maker_amount,
             BASE_ASSET,
-            10000000000,
+            order_maker_amount,
+            Asset::CategoricalOutcome(market_id, 0),
+            amount,
         ));
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
         assert_eq!(order_ids.len(), 1);
         let order_id = order_ids[0];
 
-        let max_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, 5 * amount, 0));
+
+        let min_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![order_id];
         let strategy = Strategy::LimitOrder;
         assert_noop!(
-            HybridRouter::buy(
+            HybridRouter::sell(
                 RuntimeOrigin::signed(ALICE),
                 market_id,
                 asset_count,
                 asset,
                 amount,
-                max_price,
+                min_price,
                 orders,
                 strategy,
             ),
-            Error::<Runtime>::OrderPriceAboveMaxPrice
+            Error::<Runtime>::OrderPriceBelowMinPrice
         );
     });
 }
 
 #[test]
-fn buy_from_amm_and_orders() {
+fn sell_to_amm() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
         let spot_prices = vec![_1_2, _1_2];
@@ -409,29 +426,32 @@ fn buy_from_amm_and_orders() {
 
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
-        let max_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
+
+        assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount, 0));
+
+        let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::LimitOrder;
-        assert_ok!(HybridRouter::buy(
+        assert_ok!(HybridRouter::sell(
             RuntimeOrigin::signed(ALICE),
             market_id,
             asset_count,
             asset,
             amount,
-            max_price,
+            min_price,
             orders,
             strategy,
         ));
 
         System::assert_has_event(
-            NeoSwapsEvent::<Runtime>::BuyExecuted {
+            NeoSwapsEvent::<Runtime>::SellExecuted {
                 who: ALICE,
                 market_id,
-                asset_out: asset,
+                asset_in: asset,
                 amount_in: 20000000000,
-                amount_out: 36852900215,
-                swap_fee_amount: 200000000,
-                external_fee_amount: 200000000,
+                amount_out: 9653703575,
+                swap_fee_amount: 96537036,
+                external_fee_amount: 0,
             }
             .into(),
         );
@@ -439,7 +459,7 @@ fn buy_from_amm_and_orders() {
 }
 
 #[test]
-fn buy_min_price_higher_than_amm_spot_price_results_in_place_order() {
+fn sell_min_price_higher_than_amm_spot_price_results_in_place_order() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
         let spot_prices = vec![_1_2 - 1u128, _1_2 + 1u128];
@@ -461,12 +481,11 @@ fn buy_min_price_higher_than_amm_spot_price_results_in_place_order() {
 
         assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount, 0));
 
-        //*  min_price is just 1 higher than the spot price of the AMM
+        //*  spot price of the AMM is 1 smaller than the min_price
         //*  this results in no sell on the AMM, but places an order on the order book
         let min_price = (_1_2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::LimitOrder;
-        // TODO this test and up to get sell tests to work... all common tests should be placed in trade mod and removed from the other two modules (buy and sell)
         assert_ok!(HybridRouter::sell(
             RuntimeOrigin::signed(ALICE),
             market_id,
@@ -487,10 +506,10 @@ fn buy_min_price_higher_than_amm_spot_price_results_in_place_order() {
             Order {
                 market_id,
                 maker: ALICE,
-                maker_asset: base_asset,
+                maker_asset: asset,
                 maker_amount: _2,
-                taker_asset: asset,
-                taker_amount: _4,
+                taker_asset: base_asset,
+                taker_amount: _1,
             }
         );
     });

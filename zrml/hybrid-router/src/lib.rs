@@ -323,7 +323,12 @@ mod pallet {
                     }
                     T::Amm::calculate_buy_amount_until(market_id, asset, price_limit)?
                 }
-                TxType::Sell => T::Amm::calculate_sell_amount_until(market_id, asset, price_limit)?,
+                TxType::Sell => {
+                    if spot_price <= price_limit {
+                        return Ok(amount_in);
+                    }
+                    T::Amm::calculate_sell_amount_until(market_id, asset, price_limit)?
+                }
             };
 
             let amm_amount_in = amm_amount_in.min(remaining);
@@ -407,12 +412,13 @@ mod pallet {
 
                 // `remaining` is always denominated in the `taker_asset`
                 // because this is what the order owner (maker) wants to receive
-                let (taker_fill, maker_fill) =
+                let (_taker_fill, maker_fill) =
                     order.taker_and_maker_fill_from_taker_amount(remaining)?;
                 // and the `maker_partial_fill` of `fill_order` is specified in `taker_asset`
                 T::OrderBook::fill_order(who, order_id, Some(maker_fill))?;
+                // `maker_fill` is the amount the order owner (maker) wants to receive
                 remaining = remaining
-                    .checked_sub(&taker_fill)
+                    .checked_sub(&maker_fill)
                     .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
             }
 

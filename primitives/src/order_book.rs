@@ -44,9 +44,9 @@ impl<AccountId, Balance: AtLeast32BitUnsigned + Copy, MarketId: MaxEncodedLen + 
 {
     pub fn price(&self, base_asset: Asset<MarketId>) -> Result<Balance, DispatchError> {
         if self.maker_asset == base_asset {
-            self.taker_amount.bdiv_floor(self.maker_amount)
-        } else {
             self.maker_amount.bdiv_floor(self.taker_amount)
+        } else {
+            self.taker_amount.bdiv_floor(self.maker_amount)
         }
     }
 

@@ -392,7 +392,7 @@ fn buy_fails_if_order_price_above_max_price() {
 }
 
 #[test]
-fn buy_from_amm_and_orders() {
+fn buy_from_amm() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
         let spot_prices = vec![_1_2, _1_2];
