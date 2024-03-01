@@ -31,7 +31,7 @@ use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
 use sp_runtime::Perbill;
 use zeitgeist_primitives::{
-    constants::{base_multiples::*, CENT},
+    constants::CENT,
     math::fixed::{FixedDiv, FixedMul},
     types::{
         AccountIdTest, Asset, Deadlines, MarketCreation, MarketId, MarketPeriod, MarketStatus,
