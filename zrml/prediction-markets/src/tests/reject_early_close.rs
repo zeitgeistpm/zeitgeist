@@ -32,7 +32,7 @@ fn reject_early_close_emits_event() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         let market_id = 0;
@@ -58,7 +58,7 @@ fn reject_early_close_fails_if_state_is_scheduled_as_market_creator() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         // just to ensure events are emitted
@@ -86,7 +86,7 @@ fn reject_early_close_fails_if_state_is_rejected() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         // just to ensure events are emitted
@@ -122,7 +122,7 @@ fn reject_early_close_resets_to_old_market_period() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
 
         let market_id = 0;
@@ -162,7 +162,7 @@ fn reject_early_close_settles_bonds() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
 
         let market_id = 0;

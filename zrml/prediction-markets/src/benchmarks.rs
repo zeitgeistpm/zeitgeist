@@ -124,7 +124,7 @@ fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
     let (caller, market_id) = create_market_common::<T>(
         permission,
         options,
-        ScoringRule::Lmsr,
+        ScoringRule::AmmCdaHybrid,
         Some(period),
         Some(MarketDisputeMechanism::Court),
     )?;
@@ -152,7 +152,7 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     let (caller, market_id) = create_market_common::<T>(
         MarketCreation::Permissionless,
         market_type.clone(),
-        ScoringRule::Lmsr,
+        ScoringRule::AmmCdaHybrid,
         None,
         Some(MarketDisputeMechanism::Court),
     )?;
@@ -198,7 +198,7 @@ where
     let (caller, market_id) = create_market_common::<T>(
         MarketCreation::Permissionless,
         MarketType::Categorical(categories.saturated_into()),
-        ScoringRule::Lmsr,
+        ScoringRule::AmmCdaHybrid,
         None,
         Some(MarketDisputeMechanism::Court),
     )?;
@@ -244,7 +244,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             Some(MarketPeriod::Timestamp(range_start..range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -437,7 +437,7 @@ benchmarks! {
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             None,
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -451,7 +451,7 @@ benchmarks! {
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             None,
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -466,7 +466,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             None,
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -500,7 +500,7 @@ benchmarks! {
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
     )
 
     edit_market {
@@ -508,7 +508,7 @@ benchmarks! {
 
         let market_type = MarketType::Categorical(T::MaxCategories::get());
         let dispute_mechanism = Some(MarketDisputeMechanism::Court);
-        let scoring_rule = ScoringRule::Lmsr;
+        let scoring_rule = ScoringRule::AmmCdaHybrid;
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let period = MarketPeriod::Timestamp(range_start..range_end);
@@ -660,7 +660,7 @@ benchmarks! {
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             Some(MarketPeriod::Timestamp(100_000..200_000)),
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -784,7 +784,7 @@ benchmarks! {
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             Some(MarketPeriod::Timestamp(range_start..range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -810,7 +810,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             Some(MarketPeriod::Timestamp(range_start..range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -869,7 +869,7 @@ benchmarks! {
             creation: MarketCreation::Permissionless,
             market_type: MarketType::Categorical(3),
             dispute_mechanism: None,
-            scoring_rule: ScoringRule::Lmsr,
+            scoring_rule: ScoringRule::AmmCdaHybrid,
         }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         let market_id = zrml_market_commons::Pallet::<T>::latest_market_id()?;
@@ -886,7 +886,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             None,
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -912,7 +912,7 @@ benchmarks! {
             create_market_common::<T>(
                 MarketCreation::Permissionless,
                 MarketType::Categorical(T::MaxCategories::get()),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
                 Some(MarketPeriod::Block(start_block..end_block)),
                 Some(MarketDisputeMechanism::Court),
             ).unwrap();
@@ -924,7 +924,7 @@ benchmarks! {
             create_market_common::<T>(
                 MarketCreation::Permissionless,
                 MarketType::Categorical(T::MaxCategories::get()),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
                 Some(MarketPeriod::Timestamp(range_start..range_end)),
                 Some(MarketDisputeMechanism::Court),
             ).unwrap();
@@ -975,7 +975,7 @@ benchmarks! {
             let (_, market_id) = create_market_common::<T>(
                 MarketCreation::Permissionless,
                 MarketType::Categorical(T::MaxCategories::get()),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
                 Some(MarketPeriod::Timestamp(range_start..range_end)),
                 Some(MarketDisputeMechanism::Court),
             )?;
@@ -1020,7 +1020,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             Some(MarketPeriod::Timestamp(range_start..old_range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -1055,7 +1055,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             Some(MarketPeriod::Timestamp(range_start..old_range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -1100,7 +1100,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             Some(MarketPeriod::Timestamp(range_start..old_range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -1138,7 +1138,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             Some(MarketPeriod::Timestamp(range_start..old_range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -1189,7 +1189,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             Some(MarketPeriod::Timestamp(range_start..old_range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -1237,7 +1237,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             Some(MarketPeriod::Timestamp(range_start..old_range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
@@ -1267,7 +1267,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             Some(MarketPeriod::Timestamp(range_start..range_end)),
             None,
         )?;
@@ -1332,7 +1332,7 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
             Some(MarketPeriod::Timestamp(range_start..range_end)),
             Some(MarketDisputeMechanism::Court),
         )?;
