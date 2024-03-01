@@ -94,16 +94,4 @@ pub(crate) trait PoolOperations<T: Config> {
         asset: AssetOf<T>,
         amount_in: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
-
-    fn calculate_buy_amount_until(
-        &self,
-        asset: AssetOf<T>,
-        until: BalanceOf<T>,
-    ) -> Result<BalanceOf<T>, DispatchError>;
-
-    fn calculate_sell_amount_until(
-        &self,
-        asset: AssetOf<T>,
-        until: BalanceOf<T>,
-    ) -> Result<BalanceOf<T>, DispatchError>;
 }

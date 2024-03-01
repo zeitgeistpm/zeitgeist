@@ -42,9 +42,7 @@ use sp_runtime::{
 #[cfg(feature = "parachain")]
 use zeitgeist_primitives::types::Asset;
 use zeitgeist_primitives::{
-    constants::{
-        base_multiples::*,
-        mock::{
+    constants::mock::{
         AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
         BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
         CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
@@ -52,14 +50,13 @@ use zeitgeist_primitives::{
         ExistentialDeposit, ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId,
         GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
         LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations,
-        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
-        MaxGracePeriod, MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration,
-        MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation,
-        MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
-        MinOutcomeVoteAmount, MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond,
-        OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
-        SimpleDisputesPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, CENT,
-},
+        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
+        MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners,
+        MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinCategories,
+        MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod,
+        NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId,
+        RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, TreasuryPalletId, VotePeriod,
+        VotingOutcomeFee, CENT,
     },
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
