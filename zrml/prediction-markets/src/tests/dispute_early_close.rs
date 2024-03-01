@@ -33,7 +33,7 @@ fn dispute_early_close_emits_event() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         );
 
         let market_id = 0;
@@ -64,7 +64,7 @@ fn dispute_early_close_from_market_creator_works() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::AmmCdaHybrid
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -138,7 +138,7 @@ fn dispute_early_close_fails_if_scheduled_as_sudo() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::AmmCdaHybrid
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -170,7 +170,7 @@ fn dispute_early_close_fails_if_already_disputed() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::AmmCdaHybrid
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -208,7 +208,7 @@ fn dispute_early_close_fails_if_already_rejected() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::AmmCdaHybrid
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -248,7 +248,7 @@ fn settles_early_close_bonds_with_resolution_in_state_disputed() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::AmmCdaHybrid
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -311,7 +311,7 @@ fn settles_early_close_bonds_with_resolution_in_state_scheduled_as_market_creato
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::AmmCdaHybrid
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;
@@ -359,7 +359,7 @@ fn schedule_early_close_disputed_sudo_schedule_and_settle_bonds() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::AmmCdaHybrid
+            ScoringRule::Lmsr
         ));
 
         let market_id = 0;

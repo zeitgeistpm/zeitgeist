@@ -380,9 +380,8 @@ mod pallet {
             let mut order_data = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist)?;
             let market = T::MarketCommons::market(&order_data.market_id)?;
             debug_assert!(
-                market.scoring_rule == ScoringRule::AmmCdaHybrid,
-                "The call to place_order already ensured the scoring rule amm and order book \
-                 hybrid."
+                market.scoring_rule == ScoringRule::Orderbook,
+                "The call to place_order already ensured the scoring rule order book."
             );
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             let base_asset = market.base_asset;
@@ -464,10 +463,7 @@ mod pallet {
         ) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
-            ensure!(
-                market.scoring_rule == ScoringRule::AmmCdaHybrid,
-                Error::<T>::InvalidScoringRule
-            );
+            ensure!(market.scoring_rule == ScoringRule::Orderbook, Error::<T>::InvalidScoringRule);
             let market_assets = Self::outcome_assets(market_id, &market);
             let base_asset = market.base_asset;
             let outcome_asset = if maker_asset == base_asset {

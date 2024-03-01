@@ -42,7 +42,7 @@ fn on_market_close_auto_rejects_expired_advised_market() {
             base_asset,
             MarketCreation::Advised,
             0..end,
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         );
         let market_id = 0;
 
@@ -88,7 +88,7 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
             base_asset,
             MarketCreation::Advised,
             0..end,
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         );
         run_to_block(2);
         let market_id = 0;
@@ -143,7 +143,7 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         let market_id = 0;
 
@@ -175,7 +175,7 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         let market_id = 0;
 
@@ -215,7 +215,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
@@ -228,7 +228,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
 
         // This block takes much longer than 12sec, but markets and pools still close correctly.
@@ -266,7 +266,7 @@ fn on_market_close_market_status_manager_exceeds_max_recovery_time_frames_after_
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
@@ -279,7 +279,7 @@ fn on_market_close_market_status_manager_exceeds_max_recovery_time_frames_after_
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
 
         set_timestamp_for_on_initialize(

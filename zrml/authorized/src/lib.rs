@@ -392,7 +392,7 @@ where
         },
         report: None,
         resolved_outcome: None,
-        scoring_rule: ScoringRule::AmmCdaHybrid,
+        scoring_rule: ScoringRule::Lmsr,
         status: MarketStatus::Disputed,
         bonds: MarketBonds::default(),
         early_close: None,
