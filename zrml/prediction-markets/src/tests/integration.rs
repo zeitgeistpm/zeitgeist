@@ -54,7 +54,7 @@ fn it_appeals_a_court_market_to_global_dispute() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
 
         let market_id = 0;
@@ -149,7 +149,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid
+            ScoringRule::Lmsr
         ));
 
         // is ok
@@ -189,7 +189,7 @@ fn full_scalar_market_lifecycle() {
             MarketCreation::Permissionless,
             MarketType::Scalar(10..=30),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid
+            ScoringRule::Lmsr
         ));
 
         assert_ok!(PredictionMarkets::buy_complete_set(
@@ -328,7 +328,7 @@ fn authorized_correctly_resolves_disputed_market() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, CENT));
 
@@ -489,7 +489,7 @@ fn outsider_reports_wrong_outcome() {
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
 
         let outsider = CHARLIE;

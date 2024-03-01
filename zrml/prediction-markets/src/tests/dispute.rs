@@ -34,7 +34,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         );
 
         // Run to the end of the trading phase.
@@ -90,7 +90,7 @@ fn dispute_fails_disputed_already() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
 
         // Run to the end of the trading phase.
@@ -131,7 +131,7 @@ fn dispute_fails_if_market_not_reported() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
 
         // Run to the end of the trading phase.
@@ -166,7 +166,7 @@ fn dispute_reserves_dispute_bond() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
 
         // Run to the end of the trading phase.
@@ -212,7 +212,7 @@ fn dispute_updates_market() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
 
         // Run to the end of the trading phase.
@@ -259,7 +259,7 @@ fn dispute_emits_event() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         ));
 
         // Run to the end of the trading phase.
@@ -295,7 +295,7 @@ fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
             Asset::Ztg,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::AmmCdaHybrid,
+            ScoringRule::Lmsr,
         );
 
         assert_ok!(MarketCommons::mutate_market(&0, |market_inner| {

@@ -576,7 +576,7 @@ where
             by: T::PalletId::get().into_account_truncating(),
         }),
         resolved_outcome: None,
-        scoring_rule: ScoringRule::AmmCdaHybrid,
+        scoring_rule: ScoringRule::Lmsr,
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
         bonds: MarketBonds::default(),
         early_close: None,

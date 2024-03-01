@@ -77,7 +77,7 @@ where
         }),
         resolved_outcome: None,
         status: MarketStatus::Disputed,
-        scoring_rule: ScoringRule::AmmCdaHybrid,
+        scoring_rule: ScoringRule::Lmsr,
         bonds: MarketBonds {
             creation: None,
             oracle: None,

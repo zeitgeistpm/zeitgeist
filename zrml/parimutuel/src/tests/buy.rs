@@ -101,7 +101,8 @@ fn buy_fails_if_asset_not_parimutuel_share() {
     });
 }
 
-#[test_case(ScoringRule::AmmCdaHybrid; "lmsr")]
+#[test_case(ScoringRule::Orderbook; "orderbook")]
+#[test_case(ScoringRule::Lmsr; "lmsr")]
 fn buy_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
