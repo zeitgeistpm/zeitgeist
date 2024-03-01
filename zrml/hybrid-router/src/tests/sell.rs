@@ -372,7 +372,7 @@ fn sell_fails_if_order_price_below_min_price() {
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
-        let order_maker_amount = _4;
+        let order_maker_amount = _1;
         assert_ok!(AssetManager::deposit(asset, &CHARLIE, order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),

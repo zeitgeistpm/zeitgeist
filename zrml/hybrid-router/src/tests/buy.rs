@@ -39,8 +39,8 @@ fn buy_from_amm_and_then_fill_specified_order() {
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
-        let order_maker_amount = _6;
-        let order_taker_amount = _12;
+        let order_maker_amount = _12;
+        let order_taker_amount = _6;
         assert_ok!(AssetManager::deposit(asset, &CHARLIE, order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
@@ -83,14 +83,14 @@ fn buy_from_amm_and_then_fill_specified_order() {
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
         assert_eq!(order_ids.len(), 1);
         let order = Orders::<Runtime>::get(order_ids[0]).unwrap();
-        let unfilled_base_asset_amount = 102776004824;
+        let unfilled_base_asset_amount = 42776004824;
         assert_eq!(
             order,
             Order {
                 market_id,
                 maker: CHARLIE,
                 maker_asset: Asset::CategoricalOutcome(market_id, 0),
-                maker_amount: 51388002412,
+                maker_amount: 85552009648,
                 taker_asset: BASE_ASSET,
                 taker_amount: unfilled_base_asset_amount,
             }
@@ -120,8 +120,8 @@ fn buy_from_amm_if_specified_order_has_higher_prices_than_the_amm() {
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
-        let order_maker_amount = _2;
-        let order_taker_amount = _4;
+        let order_maker_amount = _4;
+        let order_taker_amount = _2;
         assert_ok!(AssetManager::deposit(asset, &CHARLIE, order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
@@ -156,9 +156,9 @@ fn buy_from_amm_if_specified_order_has_higher_prices_than_the_amm() {
                 market_id,
                 maker: CHARLIE,
                 maker_asset: Asset::CategoricalOutcome(market_id, 0),
-                maker_amount: _2,
+                maker_amount: _4,
                 taker_asset: BASE_ASSET,
-                taker_amount: _4,
+                taker_amount: _2,
             }
         );
     });
@@ -183,8 +183,8 @@ fn buy_fill_multiple_orders_if_amm_spot_price_higher_than_order_prices() {
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
-        let order_maker_amount = _1_2;
-        let order_taker_amount = _1;
+        let order_maker_amount = _1;
+        let order_taker_amount = _1_2;
         assert_ok!(AssetManager::deposit(asset, &CHARLIE, 2 * order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
@@ -242,8 +242,8 @@ fn buy_fill_specified_order_partially_if_amm_spot_price_higher() {
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
-        let order_maker_amount = _4;
-        let order_taker_amount = _8;
+        let order_maker_amount = _8;
+        let order_taker_amount = _4;
         assert_ok!(AssetManager::deposit(asset, &CHARLIE, order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
@@ -279,9 +279,9 @@ fn buy_fill_specified_order_partially_if_amm_spot_price_higher() {
                 market_id,
                 maker: CHARLIE,
                 maker_asset: Asset::CategoricalOutcome(market_id, 0),
-                maker_amount: _3,
+                maker_amount: _4,
                 taker_asset: BASE_ASSET,
-                taker_amount: _6,
+                taker_amount: _2,
             }
         );
     });
@@ -357,7 +357,7 @@ fn buy_fails_if_order_price_above_max_price() {
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
-        let order_maker_amount = 20000000000;
+        let order_maker_amount = _1;
         assert_ok!(AssetManager::deposit(asset, &CHARLIE, order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
@@ -365,7 +365,7 @@ fn buy_fails_if_order_price_above_max_price() {
             Asset::CategoricalOutcome(market_id, 0),
             order_maker_amount,
             BASE_ASSET,
-            10000000000,
+            _2,
         ));
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
@@ -672,7 +672,7 @@ fn buy_fails_if_balance_too_low() {
         let asset_count = required_asset_count;
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
-        
+
         assert_ok!(Balances::set_balance(RuntimeOrigin::root(), ALICE, amount - 1, 0));
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
