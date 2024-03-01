@@ -314,6 +314,7 @@ macro_rules! create_runtime {
                 NeoSwaps: zrml_neo_swaps::{Call, Event<T>, Pallet, Storage} = 60,
                 Orderbook: zrml_orderbook::{Call, Event<T>, Pallet, Storage} = 61,
                 Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
+                HybridRouter: zrml_hybrid_router::{Call, Event<T>, Pallet, Storage} = 63,
 
                 $($additional_pallets)*
             }
@@ -1276,6 +1277,15 @@ macro_rules! impl_config_traits {
             type MinBetSize = MinBetSize;
             type PalletId = ParimutuelPalletId;
             type WeightInfo = zrml_parimutuel::weights::WeightInfo<Runtime>;
+        }
+
+        impl zrml_hybrid_router::Config for Runtime {
+            type AssetManager = AssetManager;
+            type MarketCommons = MarketCommons;
+            type Amm = NeoSwaps;
+            type OrderBook = Orderbook;
+            type RuntimeEvent = RuntimeEvent;
+            type WeightInfo = zrml_hybrid_router::weights::WeightInfo<Runtime>;
         }
     };
 }
