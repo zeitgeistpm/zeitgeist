@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-use crate::{types::*, weights::*};
+use crate::weights::*;
 use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use frame_support::{
@@ -41,7 +41,8 @@ use zeitgeist_primitives::{
         checked_ops_res::{CheckedAddRes, CheckedSubRes},
         fixed::FixedMulDiv,
     },
-    traits::{DistributeFees, MarketCommonsPalletApi},
+    order_book::{Order, OrderId},
+    traits::{DistributeFees, HybridRouterOrderBookApi, MarketCommonsPalletApi},
     types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
 };
 
@@ -51,7 +52,6 @@ pub mod migrations;
 pub mod mock;
 #[cfg(test)]
 mod tests;
-pub mod types;
 mod utils;
 pub mod weights;
 
@@ -380,8 +380,9 @@ mod pallet {
             let mut order_data = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist)?;
             let market = T::MarketCommons::market(&order_data.market_id)?;
             debug_assert!(
-                market.scoring_rule == ScoringRule::Orderbook,
-                "The call to place_order already ensured the scoring rule order book."
+                market.scoring_rule == ScoringRule::AmmCdaHybrid,
+                "The call to place_order already ensured the scoring rule amm and order book \
+                 hybrid."
             );
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             let base_asset = market.base_asset;
@@ -463,7 +464,10 @@ mod pallet {
         ) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
-            ensure!(market.scoring_rule == ScoringRule::Orderbook, Error::<T>::InvalidScoringRule);
+            ensure!(
+                market.scoring_rule == ScoringRule::AmmCdaHybrid,
+                Error::<T>::InvalidScoringRule
+            );
             let market_assets = Self::outcome_assets(market_id, &market);
             let base_asset = market.base_asset;
             let outcome_asset = if maker_asset == base_asset {
@@ -505,6 +509,45 @@ mod pallet {
             Self::deposit_event(Event::OrderPlaced { order_id, order });
 
             Ok(())
+        }
+    }
+
+    impl<T: Config> HybridRouterOrderBookApi for Pallet<T> {
+        type AccountId = AccountIdOf<T>;
+        type MarketId = MarketIdOf<T>;
+        type Balance = BalanceOf<T>;
+        type Asset = AssetOf<T>;
+        type Order = OrderOf<T>;
+        type OrderId = OrderId;
+
+        fn order(order_id: Self::OrderId) -> Result<Self::Order, DispatchError> {
+            <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist.into())
+        }
+
+        fn fill_order(
+            who: &Self::AccountId,
+            order_id: Self::OrderId,
+            maker_partial_fill: Option<Self::Balance>,
+        ) -> DispatchResult {
+            Self::do_fill_order(order_id, who.clone(), maker_partial_fill)
+        }
+
+        fn place_order(
+            who: &Self::AccountId,
+            market_id: Self::MarketId,
+            maker_asset: Self::Asset,
+            maker_amount: Self::Balance,
+            taker_asset: Self::Asset,
+            taker_amount: Self::Balance,
+        ) -> Result<(), DispatchError> {
+            Self::do_place_order(
+                who.clone(),
+                market_id,
+                maker_asset,
+                maker_amount,
+                taker_asset,
+                taker_amount,
+            )
         }
     }
 }

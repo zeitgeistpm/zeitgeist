@@ -69,7 +69,7 @@ mod pallet {
             checked_ops_res::{CheckedAddRes, CheckedSubRes},
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
-        traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees},
+        traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees, HybridRouterAmmApi},
         types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -831,7 +831,10 @@ mod pallet {
             ensure!(!Pools::<T>::contains_key(market_id), Error::<T>::DuplicatePool);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-            ensure!(market.scoring_rule == ScoringRule::Lmsr, Error::<T>::InvalidTradingMechanism);
+            ensure!(
+                market.scoring_rule == ScoringRule::AmmCdaHybrid,
+                Error::<T>::InvalidTradingMechanism
+            );
             let asset_count = spot_prices.len();
             ensure!(asset_count as u16 == market.outcomes(), Error::<T>::IncorrectVecLen);
             ensure!(market.outcomes() <= MAX_ASSETS, Error::<T>::AssetCountAboveMax);
@@ -974,6 +977,63 @@ mod pallet {
             swap_fee: Self::Balance,
         ) -> DispatchResult {
             Self::do_deploy_pool(who, market_id, amount, spot_prices, swap_fee)
+        }
+    }
+
+    impl<T: Config> HybridRouterAmmApi for Pallet<T> {
+        type AccountId = T::AccountId;
+        type MarketId = MarketIdOf<T>;
+        type Balance = BalanceOf<T>;
+        type Asset = AssetOf<T>;
+
+        fn pool_exists(market_id: Self::MarketId) -> bool {
+            Pools::<T>::contains_key(market_id)
+        }
+
+        fn get_spot_price(
+            market_id: Self::MarketId,
+            asset: Self::Asset,
+        ) -> Result<Self::Balance, DispatchError> {
+            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            Ok(pool.calculate_spot_price(asset)?)
+        }
+
+        fn calculate_buy_amount_until(
+            market_id: Self::MarketId,
+            asset: Self::Asset,
+            until: Self::Balance,
+        ) -> Result<Self::Balance, DispatchError> {
+            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            Ok(pool.calculate_buy_amount_until(asset, until)?)
+        }
+
+        fn buy(
+            who: &Self::AccountId,
+            market_id: Self::MarketId,
+            asset_out: Self::Asset,
+            amount_in: Self::Balance,
+            min_amount_out: Self::Balance,
+        ) -> DispatchResult {
+            Self::do_buy(who.clone(), market_id, asset_out, amount_in, min_amount_out)
+        }
+
+        fn calculate_sell_amount_until(
+            market_id: Self::MarketId,
+            asset: Self::Asset,
+            until: Self::Balance,
+        ) -> Result<Self::Balance, DispatchError> {
+            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            Ok(pool.calculate_sell_amount_until(asset, until)?)
+        }
+
+        fn sell(
+            who: &Self::AccountId,
+            market_id: Self::MarketId,
+            asset_out: Self::Asset,
+            amount_in: Self::Balance,
+            min_amount_out: Self::Balance,
+        ) -> DispatchResult {
+            Self::do_sell(who.clone(), market_id, asset_out, amount_in, min_amount_out)
         }
     }
 }

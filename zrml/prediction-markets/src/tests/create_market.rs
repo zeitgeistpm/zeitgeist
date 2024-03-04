@@ -46,7 +46,7 @@ fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
                 MarketCreation::Permissionless,
                 MarketType::Scalar(range),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::InvalidOutcomeRange
         );
@@ -73,7 +73,7 @@ fn create_market_fails_on_min_dispute_period() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::DisputeDurationSmallerThanMinDisputeDuration
         );
@@ -100,7 +100,7 @@ fn create_market_fails_on_min_oracle_duration() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::OracleDurationSmallerThanMinOracleDuration
         );
@@ -127,7 +127,7 @@ fn create_market_fails_on_max_dispute_period() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::DisputeDurationGreaterThanMaxDisputeDuration
         );
@@ -154,7 +154,7 @@ fn create_market_fails_on_max_grace_period() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::GracePeriodGreaterThanMaxGracePeriod
         );
@@ -181,7 +181,7 @@ fn create_market_fails_on_max_oracle_duration() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::OracleDurationGreaterThanMaxOracleDuration
         );
@@ -213,7 +213,7 @@ fn create_market_with_foreign_assets() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::InvalidBaseAsset,
         );
@@ -230,7 +230,7 @@ fn create_market_with_foreign_assets() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::UnregisteredForeignAsset,
         );
@@ -246,7 +246,7 @@ fn create_market_with_foreign_assets() {
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.base_asset, Asset::ForeignAsset(100));
@@ -268,7 +268,7 @@ fn it_does_not_create_market_with_too_few_categories() {
                 MarketCreation::Advised,
                 MarketType::Categorical(<Runtime as Config>::MinCategories::get() - 1),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr
+                ScoringRule::AmmCdaHybrid
             ),
             Error::<Runtime>::NotEnoughCategories
         );
@@ -290,7 +290,7 @@ fn it_does_not_create_market_with_too_many_categories() {
                 MarketCreation::Advised,
                 MarketType::Categorical(<Runtime as Config>::MaxCategories::get() + 1),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr
+                ScoringRule::AmmCdaHybrid
             ),
             Error::<Runtime>::TooManyCategories
         );
@@ -319,7 +319,7 @@ fn create_categorical_market_fails_if_market_period_is_invalid(
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 Some(MarketDisputeMechanism::Authorized),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::InvalidMarketPeriod,
         );
@@ -343,7 +343,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 Some(MarketDisputeMechanism::Authorized),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::InvalidMarketPeriod,
         );
@@ -361,7 +361,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 Some(MarketDisputeMechanism::Authorized),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::InvalidMarketPeriod,
         );
@@ -390,7 +390,7 @@ fn create_market_succeeds_if_market_duration_is_maximal_in_blocks() {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
     });
 }
@@ -418,7 +418,7 @@ fn create_market_suceeds_if_market_duration_is_maximal_in_moments() {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             Some(MarketDisputeMechanism::Authorized),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
     });
 }
@@ -446,7 +446,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_blocks() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 Some(MarketDisputeMechanism::Authorized),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             crate::Error::<Runtime>::MarketDurationTooLong,
         );
@@ -477,7 +477,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 Some(MarketDisputeMechanism::Authorized),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             crate::Error::<Runtime>::MarketDurationTooLong,
         );
@@ -486,7 +486,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
 
 #[test_case(
     MarketCreation::Advised,
-    ScoringRule::Lmsr,
+    ScoringRule::AmmCdaHybrid,
     MarketStatus::Proposed,
     MarketBonds {
         creation: Some(Bond::new(ALICE, <Runtime as Config>::AdvisoryBond::get())),
@@ -499,7 +499,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
 )]
 #[test_case(
     MarketCreation::Permissionless,
-    ScoringRule::Lmsr,
+    ScoringRule::AmmCdaHybrid,
     MarketStatus::Active,
     MarketBonds {
         creation: Some(Bond::new(ALICE, <Runtime as Config>::ValidityBond::get())),
@@ -580,7 +580,7 @@ fn create_market_fails_on_trusted_market_with_non_zero_dispute_period() {
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
                 None,
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::NonZeroDisputePeriodOnTrustedMarket
         );
@@ -594,7 +594,7 @@ fn create_categorical_market_deposits_the_correct_event() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             1..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
@@ -610,7 +610,7 @@ fn create_scalar_market_deposits_the_correct_event() {
             Asset::Ztg,
             MarketCreation::Permissionless,
             1..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();

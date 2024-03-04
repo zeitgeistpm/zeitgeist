@@ -32,7 +32,7 @@ fn only_creator_can_edit_market() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         // make sure it's in status proposed
@@ -58,7 +58,7 @@ fn only_creator_can_edit_market() {
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr
+                ScoringRule::AmmCdaHybrid
             ),
             Error::<Runtime>::EditorNotCreator
         );
@@ -72,7 +72,7 @@ fn edit_cycle_for_proposed_markets() {
             Asset::Ztg,
             MarketCreation::Advised,
             2..4,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         let market = MarketCommons::market(&0);
@@ -97,7 +97,7 @@ fn edit_cycle_for_proposed_markets() {
             gen_metadata(2),
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
         let edited_market = MarketCommons::market(&0).expect("Market not found");
         System::assert_last_event(Event::MarketEdited(0, edited_market).into());
@@ -117,7 +117,7 @@ fn edit_market_with_foreign_asset() {
             Asset::Ztg,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         // make sure it's in status proposed
@@ -144,7 +144,7 @@ fn edit_market_with_foreign_asset() {
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr
+                ScoringRule::AmmCdaHybrid
             ),
             Error::<Runtime>::UnregisteredForeignAsset
         );
@@ -160,7 +160,7 @@ fn edit_market_with_foreign_asset() {
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr
+                ScoringRule::AmmCdaHybrid
             ),
             Error::<Runtime>::InvalidBaseAsset,
         );
@@ -175,7 +175,7 @@ fn edit_market_with_foreign_asset() {
             gen_metadata(2),
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.base_asset, Asset::ForeignAsset(100));
