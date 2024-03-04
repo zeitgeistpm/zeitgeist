@@ -65,7 +65,7 @@ fn refund_fails_if_market_not_resolved(status: MarketStatus) {
     });
 }
 
-#[test_case(ScoringRule::AmmCdaHybrid; "lmsr")]
+#[test_case(ScoringRule::AmmCdaHybrid)]
 fn refund_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
