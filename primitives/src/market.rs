@@ -285,7 +285,6 @@ pub struct Deadlines<BN> {
 
 #[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
 pub enum ScoringRule {
-    // TODO: Do migration: migrate from LMSR, Order Book enum fields to AMM-CDA hybrid field
     AmmCdaHybrid,
     Parimutuel,
 }
