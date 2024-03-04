@@ -42,6 +42,7 @@ pub struct Order<
 impl<AccountId, Balance: AtLeast32BitUnsigned + Copy, MarketId: MaxEncodedLen + PartialEq>
     Order<AccountId, Balance, MarketId>
 {
+    /// Return the price of the order.
     pub fn price(&self, base_asset: Asset<MarketId>) -> Result<Balance, DispatchError> {
         if self.maker_asset == base_asset {
             self.maker_amount.bdiv_floor(self.taker_amount)
