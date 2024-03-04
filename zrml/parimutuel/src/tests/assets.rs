@@ -16,23 +16,19 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{mock::*, utils::*, *};
-use core::ops::RangeInclusive;
 use frame_support::{
-    assert_noop, assert_ok,
+    assert_ok,
     pallet_prelude::Weight,
     traits::{
         fungibles::{Create, Inspect},
         OnIdle,
     },
 };
-use orml_traits::MultiCurrency;
-use sp_runtime::Percent;
-use test_case::test_case;
 use zeitgeist_primitives::{
     traits::MarketTransitionApi,
-    types::{Asset, MarketStatus, MarketType, OutcomeReport, ParimutuelAsset, ScoringRule},
+    types::{Asset, MarketStatus, OutcomeReport, ParimutuelAsset},
 };
-use zrml_market_commons::{Error as MError, Markets};
+use zrml_market_commons::Markets;
 
 use frame_support::{
     pallet_prelude::DispatchError,
@@ -117,7 +113,7 @@ fn destroyed_losing_after_resolution_with_winner() {
         {
             assert!(
                 !<Runtime as Config>::AssetCreator::asset_exists((*asset).into()),
-                "Asset {:?} seems to exist?",
+                "Asset {:?} still exists after destruction",
                 asset
             );
         }
@@ -150,26 +146,77 @@ fn no_resolved_outcome_is_catched() {
     });
 }
 
-/*
 #[test]
 fn destroyed_after_resolution_without_winner() {
     ExtBuilder::default().build().execute_with(|| {
-        // TODO
+        let market_id = 0;
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
+        market.status = MarketStatus::Active;
+        Markets::<Runtime>::insert(market_id, market);
+        let _ = with_transaction(|| {
+            assert_ok!(Parimutuel::on_activation(&market_id));
+            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
+        });
+
+        let losing_asset = ParimutuelAsset::Share(market_id, 1u16);
+        let losing_amount = 20 * <Runtime as Config>::MinBetSize::get();
+        assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), losing_asset, losing_amount));
+
+        let mut market = Markets::<Runtime>::get(market_id).unwrap();
+        market.status = MarketStatus::Resolved;
+        market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let _ = with_transaction(|| {
+            assert_ok!(Parimutuel::on_resolution(&market_id));
+            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
+        });
+        <Runtime as Config>::AssetDestroyer::on_idle(System::block_number(), Weight::MAX);
+        assert!(<Runtime as Config>::AssetCreator::asset_exists(losing_asset.into()));
+
+        for asset in market
+            .outcome_assets(market_id)
+            .iter()
+            .filter(|a| Asset::from(**a) != Asset::from(losing_asset))
+        {
+            assert!(
+                !<Runtime as Config>::AssetCreator::asset_exists((*asset).into()),
+                "Asset {:?} still exists after destruction",
+                asset
+            );
+        }
     });
 }
 
 #[test]
 fn destroyed_after_refund() {
     ExtBuilder::default().build().execute_with(|| {
-        // TODO
-    });
-}
+        let market_id = 0;
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
+        market.status = MarketStatus::Active;
+        Markets::<Runtime>::insert(market_id, market);
+        let _ = with_transaction(|| {
+            assert_ok!(Parimutuel::on_activation(&market_id));
+            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
+        });
 
-#[test]
-#[should_panic(expected = "Can't destroy losing outcome asset: TODO")]
-fn deprecated_market_assets_are_not_destroyed() {
-    ExtBuilder::default().build().execute_with(|| {
-        // TODO
+        let losing_asset = ParimutuelAsset::Share(market_id, 1u16);
+        let losing_amount = 20 * <Runtime as Config>::MinBetSize::get();
+        assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), losing_asset, losing_amount));
+
+        let mut market = Markets::<Runtime>::get(market_id).unwrap();
+        market.status = MarketStatus::Resolved;
+        market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
+        Markets::<Runtime>::insert(market_id, market.clone());
+        let _ = with_transaction(|| {
+            assert_ok!(Parimutuel::on_resolution(&market_id));
+            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
+        });
+
+        <Runtime as Config>::AssetDestroyer::on_idle(System::block_number(), Weight::MAX);
+        assert!(<Runtime as Config>::AssetCreator::asset_exists(losing_asset.into()));
+        assert_ok!(Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), losing_asset));
+        <Runtime as Config>::AssetDestroyer::on_idle(System::block_number(), Weight::MAX);
+        assert!(!<Runtime as Config>::AssetCreator::asset_exists(losing_asset.into()));
     });
 }
-*/

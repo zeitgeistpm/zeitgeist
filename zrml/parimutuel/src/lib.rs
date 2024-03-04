@@ -37,7 +37,10 @@ mod pallet {
         ensure, log,
         pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
         require_transactional,
-        traits::{fungibles::Create, Get, IsType, StorageVersion},
+        traits::{
+            fungibles::{Create, Inspect},
+            Get, IsType, StorageVersion,
+        },
         PalletId, RuntimeDebug,
     };
     use frame_system::{
@@ -55,7 +58,7 @@ mod pallet {
         math::fixed::FixedMulDiv,
         traits::{DistributeFees, MarketTransitionApi},
         types::{
-            Asset, BaseAsset, Market, MarketStatus, MarketType, OutcomeReport,
+            Asset, BaseAsset, Market, MarketAssetClass, MarketStatus, MarketType, OutcomeReport,
             ParimutuelAssetClass, ScoringRule,
         },
     };
@@ -459,7 +462,8 @@ mod pallet {
                 unreachable_non_terminating!(
                     destroy_result.is_ok(),
                     LOG_TARGET,
-                    "Can't destroy winning outcome asset: {:?}",
+                    "Can't destroy winning outcome asset {:?}: {:?}",
+                    winning_asset,
                     destroy_result.err()
                 );
             }
@@ -523,9 +527,20 @@ mod pallet {
                 refund_balance,
             )?;
 
+            if T::AssetCreator::total_issuance(refund_asset_general).is_zero() {
+                let destroy_result = T::AssetDestroyer::managed_destroy(refund_asset_general, None);
+                unreachable_non_terminating!(
+                    destroy_result.is_ok(),
+                    LOG_TARGET,
+                    "Can't destroy losing outcome asset {:?}: {:?}",
+                    refund_asset_general,
+                    destroy_result
+                );
+            }
+
             Self::deposit_event(Event::BalanceRefunded {
                 market_id,
-                asset: refund_asset.into(),
+                asset: refund_asset_general,
                 refunded_balance: refund_balance,
                 sender: who.clone(),
             });
@@ -533,30 +548,22 @@ mod pallet {
             Ok(())
         }
 
-        fn destroy_winning_outcome_exists(market_id: &MarketIdOf<T>, market: &MarketOf<T>, winning_asset: &zeitgeist_primitives::types::MarketAssetClass<MarketIdOf<T>>) -> DispatchResult {
+        fn get_assets_to_destroy<F>(
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
+            filter: F,
+        ) -> BTreeMap<AssetOf<T>, Option<T::AccountId>>
+        where
+            F: Copy + FnOnce(MarketAssetClass<MarketIdOf<T>>) -> bool,
+        {
             // Destroy losing assets.
-            let assets_to_destroy = BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
+            BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
                 market
                     .outcome_assets(*market_id)
                     .into_iter()
-                    .filter(|asset| asset != winning_asset)
-                    .map(|asset| (AssetOf::<T>::from(asset), None))
-            );
-
-            let destroy_result = T::AssetDestroyer::managed_destroy_multi(assets_to_destroy);
-            unreachable_non_terminating!(
-                destroy_result.is_ok(),
-                LOG_TARGET,
-                "Can't destroy losing outcome asset: {:?}",
-                destroy_result
-            );
-
-            Ok(())
-        }
-
-        fn destroy_winning_outcome_doesnt_exist(market_id: &MarketIdOf<T>, market: &MarketOf<T>) -> DispatchResult {
-            // TODO destroy
-            Ok(())
+                    .filter(|asset| filter(*asset))
+                    .map(|asset| (AssetOf::<T>::from(asset), None)),
+            )
         }
     }
 
@@ -572,7 +579,7 @@ mod pallet {
                 let admin = Self::pot_account(*market_id);
                 let is_sufficient = true;
                 let min_balance = 1u8;
-                let result = T::AssetCreator::create(outcome.into(), admin, is_sufficient, min_balance.into());
+                T::AssetCreator::create(outcome.into(), admin, is_sufficient, min_balance.into())?;
             }
 
             Ok(())
@@ -599,13 +606,25 @@ mod pallet {
             };
 
             let outcome_total = T::AssetManager::total_issuance(winning_asset.into());
-            // Allow to refund shares.
-            if outcome_total.is_zero() {
-                // TODO: destroy_refund
-                Self::destroy_winning_outcome_doesnt_exist(&market_id, &market)
+            let assets_to_destroy = if outcome_total.is_zero() {
+                Self::get_assets_to_destroy(market_id, &market, |asset| {
+                    T::AssetCreator::total_issuance(asset.into()).is_zero()
+                })
             } else {
-                Self::destroy_winning_outcome_exists(&market_id, &market, &winning_asset)
-            }
+                Self::get_assets_to_destroy(market_id, &market, |asset| asset != winning_asset)
+            };
+
+            let destroy_result =
+                T::AssetDestroyer::managed_destroy_multi(assets_to_destroy.clone());
+            unreachable_non_terminating!(
+                destroy_result.is_ok(),
+                LOG_TARGET,
+                "Can't destroy losing outcome assets {:?}: {:?}",
+                assets_to_destroy,
+                destroy_result
+            );
+
+            Ok(())
         }
     }
 }
