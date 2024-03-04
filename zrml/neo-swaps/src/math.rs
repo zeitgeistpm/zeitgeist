@@ -373,9 +373,7 @@ mod detail {
         exp_x_over_b.checked_add(exp_neg_r_over_b)?.checked_sub(FixedType::checked_from_num(1)?)
     }
 
-    // TODO: test this function
     /// Calculate -b * ln( (1 - q) / (1 - p_i(r)) )
-    /// Expect result of ln to be negative. Otherwise, return None.
     pub(super) fn calculate_buy_amount_until_fixed(
         until: FixedType,
         liquidity: FixedType,
@@ -392,7 +390,6 @@ mod detail {
         Some(liquidity.checked_mul(ln_result)?)
     }
 
-    // TODO: test this function
     /// Calculate b * ln( (1 / (1 / p_i(r) - 1)) - (1 / q * (1 / p_i(r) - 1)) )
     pub(super) fn calculate_sell_amount_until_fixed(
         until: FixedType,
@@ -714,5 +711,37 @@ mod tests {
         let result: FixedType =
             exp(FixedType::checked_from_num(EXP_OVERFLOW_THRESHOLD).unwrap(), neg).unwrap();
         assert_eq!(result, expected);
+    }
+
+    #[test_case(_9_10, _10, _1_10, 219722457734)] // Large price shift
+    #[test_case(_4_10, _10, _3_10, 15415067983)] // Small price shift
+    #[test_case(_3_10, _10, _4_10, 0)] // Zero buy amount
+    #[test_case(_4_10, _10, _4_10, 0)] // Zero buy amount
+    fn calculate_buy_amount_until_works(
+        until: MockBalance,
+        liquidity: MockBalance,
+        spot_price: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(
+            MockMath::calculate_buy_amount_until(until, liquidity, spot_price).unwrap(),
+            expected
+        );
+    }
+
+    #[test_case(_1_10, _10, _9_10, 439444915467)] // Large price shift
+    #[test_case(_1_10, _10, _2_10, 81093021622)] // Small price shift
+    #[test_case(_2_10, _10, _1_10, 0)] // Zero sell amount
+    #[test_case(_1_10, _10, _1_10, 0)] // Zero sell amount
+    fn calculate_sell_amount_until_fixed_works(
+        until: MockBalance,
+        liquidity: MockBalance,
+        spot_price: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(
+            MockMath::calculate_sell_amount_until(until, liquidity, spot_price).unwrap(),
+            expected
+        );
     }
 }
