@@ -137,7 +137,7 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
         }
     }
 
-    pub fn report_into_outcome<MI: HasCompact + MaxEncodedLen>(
+    pub fn report_into_asset<MI: HasCompact + MaxEncodedLen>(
         &self,
         market_id: MI,
     ) -> Option<MarketAssetClass<MI>> {
@@ -147,10 +147,10 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
             return None;
         };
 
-        self.outcome_report_into_outcome(market_id, &outcome)
+        self.outcome_report_into_asset(market_id, &outcome)
     }
 
-    pub fn resolved_outcome_into_outcome<MI: HasCompact + MaxEncodedLen>(
+    pub fn resolved_outcome_into_asset<MI: HasCompact + MaxEncodedLen>(
         &self,
         market_id: MI,
     ) -> Option<MarketAssetClass<MI>> {
@@ -160,10 +160,10 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
             return None;
         };
 
-        self.outcome_report_into_outcome(market_id, &outcome)
+        self.outcome_report_into_asset(market_id, &outcome)
     }
 
-    fn outcome_report_into_outcome<MI: HasCompact + MaxEncodedLen>(
+    fn outcome_report_into_asset<MI: HasCompact + MaxEncodedLen>(
         &self,
         market_id: MI,
         outcome_report: &OutcomeReport,
@@ -624,8 +624,8 @@ mod tests {
             bonds: MarketBonds::default(),
             early_close: None,
         };
-        assert_eq!(market.resolved_outcome_into_outcome(0), expected);
-        assert_eq!(market.report_into_outcome(0), expected);
+        assert_eq!(market.resolved_outcome_into_asset(0), expected);
+        assert_eq!(market.report_into_asset(0), expected);
     }
 
     #[test]

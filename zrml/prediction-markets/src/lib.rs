@@ -2773,16 +2773,16 @@ mod pallet {
                 Ok(())
             })?;
 
-            let winning_outcome = updated_market.resolved_outcome_into_outcome(*market_id);
+            // TODO: Only destroy when assets also created here.
+            let winning_outcome = updated_market.resolved_outcome_into_asset(*market_id);
             if let Some(winning_outcome_inner) = winning_outcome {
                 // Destroy losing assets.
                 let assets_to_destroy = BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
-                    updated_market
+                    market
                         .outcome_assets(*market_id)
                         .into_iter()
                         .filter(|outcome| *outcome != winning_outcome_inner)
-                        .map(|asset| AssetOf::<T>::from(asset))
-                        .zip(vec![None]),
+                        .map(|asset| (AssetOf::<T>::from(asset), None))
                 );
                 // Ensure managed_destroy_multi does not error during lazy migration because
                 // it tried to delete an old outcome asset from orml-tokens

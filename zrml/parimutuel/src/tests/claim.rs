@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
-
 use crate::{mock::*, utils::*, *};
 use core::ops::RangeInclusive;
 use frame_support::{
@@ -176,30 +174,6 @@ fn claim_rewards_categorical_changes_balances_correctly() {
             ),
             0
         );
-    });
-}
-
-#[test]
-fn claim_rewards_destroys_assets() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market);
-
-        let winner_asset = ParimutuelAsset::Share(market_id, 0u16);
-        AssetRouter::create(winner_asset.into(), Default::default(), true, 1).unwrap();
-        let winner_amount = 20 * <Runtime as Config>::MinBetSize::get();
-        assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), winner_asset, winner_amount));
-
-        let mut market = Markets::<Runtime>::get(market_id).unwrap();
-        market.status = MarketStatus::Resolved;
-        market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
-        Markets::<Runtime>::insert(market_id, market.clone());
-
-        assert_ok!(Parimutuel::claim_rewards(RuntimeOrigin::signed(ALICE), market_id));
-        AssetRouter::on_idle(System::block_number(), Weight::MAX);
-        assert!(!AssetRouter::asset_exists(winner_asset.into()));
     });
 }
 

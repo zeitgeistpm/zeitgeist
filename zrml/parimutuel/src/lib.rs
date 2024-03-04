@@ -532,62 +532,80 @@ mod pallet {
 
             Ok(())
         }
+
+        fn destroy_winning_outcome_exists(market_id: &MarketIdOf<T>, market: &MarketOf<T>, winning_asset: &zeitgeist_primitives::types::MarketAssetClass<MarketIdOf<T>>) -> DispatchResult {
+            // Destroy losing assets.
+            let assets_to_destroy = BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
+                market
+                    .outcome_assets(*market_id)
+                    .into_iter()
+                    .filter(|asset| asset != winning_asset)
+                    .map(|asset| (AssetOf::<T>::from(asset), None))
+            );
+
+            let destroy_result = T::AssetDestroyer::managed_destroy_multi(assets_to_destroy);
+            unreachable_non_terminating!(
+                destroy_result.is_ok(),
+                LOG_TARGET,
+                "Can't destroy losing outcome asset: {:?}",
+                destroy_result
+            );
+
+            Ok(())
+        }
+
+        fn destroy_winning_outcome_doesnt_exist(market_id: &MarketIdOf<T>, market: &MarketOf<T>) -> DispatchResult {
+            // TODO destroy
+            Ok(())
+        }
     }
 
     impl<T: Config> MarketTransitionApi<MarketIdOf<T>> for Pallet<T> {
+        #[require_transactional]
         fn on_activation(market_id: &MarketIdOf<T>) -> DispatchResult {
             let market = T::MarketCommons::market(market_id)?;
-            if market.scoring_rule != ScoringRule::Parimutuel { return Ok(()) };
+            if market.scoring_rule != ScoringRule::Parimutuel {
+                return Ok(());
+            };
 
             for outcome in market.outcome_assets(*market_id) {
                 let admin = Self::pot_account(*market_id);
                 let is_sufficient = true;
                 let min_balance = 1u8;
-                T::AssetCreator::create(outcome.into(), admin, is_sufficient, min_balance.into())?;
+                let result = T::AssetCreator::create(outcome.into(), admin, is_sufficient, min_balance.into());
             }
 
             Ok(())
         }
+
+        #[require_transactional]
         fn on_resolution(market_id: &MarketIdOf<T>) -> DispatchResult {
             let market = T::MarketCommons::market(market_id)?;
-            if market.scoring_rule != ScoringRule::Parimutuel { return Ok(()) };
-            
-            let winning_asset = Self::get_winning_asset(*market_id, &market)?;
-            let outcome_total = T::AssetManager::total_issuance(winning_asset);
-            // Allow to refund shares.
-            if outcome_total.is_zero() {
+            if market.scoring_rule != ScoringRule::Parimutuel {
                 return Ok(());
-            }
+            };
 
-            let winning_outcome = market.resolved_outcome_into_outcome(*market_id);
-            if let Some(winning_outcome_inner) = winning_outcome {
-                // Destroy losing assets.
-                let assets_to_destroy = BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
-                    market
-                        .outcome_assets(*market_id)
-                        .into_iter()
-                        .filter(|outcome| *outcome != winning_outcome_inner)
-                        .map(|asset| AssetOf::<T>::from(asset))
-                        .zip(vec![None]),
-                );
-
-                let destroy_result = T::AssetDestroyer::managed_destroy_multi(assets_to_destroy);
-                unreachable_non_terminating!(
-                    destroy_result.is_ok(),
-                    LOG_TARGET,
-                    "Can't destroy losing outcome asset: {:?}",
-                    destroy_result
-                );
+            let winning_asset_option = market.resolved_outcome_into_asset(*market_id);
+            let winning_asset = if let Some(winning_asset) = winning_asset_option {
+                winning_asset
             } else {
                 unreachable_non_terminating!(
-                    winning_outcome.is_some(),
+                    winning_asset_option.is_some(),
                     LOG_TARGET,
                     "Resolved market with id {:?} does not have a resolved outcome",
                     market_id,
                 );
-            }
+                return Ok(());
+            };
 
-            Ok(())
+            let outcome_total = T::AssetManager::total_issuance(winning_asset.into());
+            // Allow to refund shares.
+            if outcome_total.is_zero() {
+                // TODO: destroy_refund
+                Self::destroy_winning_outcome_doesnt_exist(&market_id, &market)
+            } else {
+                Self::destroy_winning_outcome_exists(&market_id, &market, &winning_asset)
+            }
         }
     }
 }

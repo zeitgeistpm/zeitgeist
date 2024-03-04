@@ -15,31 +15,25 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::{pallet_prelude::DispatchResult, require_transactional};
+use frame_support::pallet_prelude::DispatchResult;
 
-/// API that provides a signal on each market state transition
+/// API that is used to catch market state transitions.
 pub trait MarketTransitionApi<MI> {
-    #[require_transactional]
     fn on_proposal(_market_id: &MI) -> DispatchResult {
         Ok(())
     }
-    #[require_transactional]
     fn on_activation(_market_id: &MI) -> DispatchResult {
         Ok(())
     }
-    #[require_transactional]
     fn on_closure(_market_id: &MI) -> DispatchResult {
         Ok(())
     }
-    #[require_transactional]
     fn on_report(_market_id: &MI) -> DispatchResult {
         Ok(())
     }
-    #[require_transactional]
     fn on_dispute(_market_id: &MI) -> DispatchResult {
         Ok(())
     }
-    #[require_transactional]
     fn on_resolution(_market_id: &MI) -> DispatchResult {
         Ok(())
     }
