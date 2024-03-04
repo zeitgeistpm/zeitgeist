@@ -387,10 +387,7 @@ mod detail {
         let (ln_result, ln_neg) = ln(ln_arg).ok()?;
         // since q > p_i(r) results in (1 - q) / (1 - p_i(r)) < 1, ln will be negative
         if !ln_neg {
-            // TODO remove this debug assert after testing
-            debug_assert!(false, "ln unexpectedly positive");
-            // None, if the logarithm is unexpectedly positive
-            return None;
+            return Some(FixedType::checked_from_num(0)?);
         }
         Some(liquidity.checked_mul(ln_result)?)
     }
@@ -415,10 +412,7 @@ mod detail {
         let (ln_result, ln_neg) = ln(ln_arg).ok()?;
         // because of q < p_i(r) the logarithm will be positive
         if ln_neg {
-            // TODO remove this debug assert after testing
-            debug_assert!(false, "ln unexpectedly negative");
-            // None, if the logarithm is unexpectedly negative
-            return None;
+            return Some(FixedType::checked_from_num(0)?);
         }
         Some(liquidity.checked_mul(ln_result)?)
     }

@@ -95,12 +95,26 @@ pub(crate) trait PoolOperations<T: Config> {
         amount_in: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
+    /// Calculates the amount a user has to buy to move the price of `asset` to `until`. Returns
+    /// zero if the current spot price is above or equal to `until`.
+    ///
+    /// # Parameters
+    ///
+    /// - `asset`: The asset to calculate the buy amount for.
+    /// - `until`: The maximum price.
     fn calculate_buy_amount_until(
         &self,
         asset: AssetOf<T>,
         until: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
+    /// Calculates the amount a user has to sell to move the price of `asset` to `until`. Returns
+    /// zero if the current spot price is below or equal to `until`.
+    ///
+    /// # Parameters
+    ///
+    /// - `asset`: The asset to calculate the sell amount for.
+    /// - `until`: The minimum price.
     fn calculate_sell_amount_until(
         &self,
         asset: AssetOf<T>,
