@@ -121,22 +121,7 @@ mod pallet {
     where
         T: Config,
     {
-        /// A buy order was executed.
-        HybridRouterBuyExecuted {
-            who: AccountIdOf<T>,
-            market_id: MarketIdOf<T>,
-            asset: AssetOf<T>,
-            amount_in: BalanceOf<T>,
-            max_price: BalanceOf<T>,
-        },
-        /// A sell order was executed.
-        HybridRouterSellExecuted {
-            who: AccountIdOf<T>,
-            market_id: MarketIdOf<T>,
-            asset: AssetOf<T>,
-            amount_in: BalanceOf<T>,
-            min_price: BalanceOf<T>,
-        },
+        // TODO add `HybridRouterExecuted` event in AMM-CDA-7
     }
 
     #[pallet::error]
@@ -283,6 +268,19 @@ mod pallet {
     where
         T: Config,
     {
+        /// Returns a vector of assets corresponding to the given market ID and market type.
+        ///
+        /// # Arguments
+        ///
+        /// * `market_id` - The ID of the market.
+        /// * `market` - A reference to the market.
+        ///
+        /// # Returns
+        ///
+        /// A vector of assets based on the market type. If the market type is `Categorical`,
+        /// the function creates a vector of `CategoricalOutcome` assets with the given market ID
+        /// and category index. If the market type is `Scalar`, the function creates a vector
+        /// containing `ScalarOutcome` assets with the given market ID and both `Long` and `Short` positions.
         pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
             match market.market_type {
                 MarketType::Categorical(categories) => {
@@ -301,6 +299,20 @@ mod pallet {
             }
         }
 
+        /// Fills the order from the Automated Market Maker (AMM) if it exists and meets the price conditions.
+        ///
+        /// # Arguments
+        ///
+        /// * `tx_type` - The type of transaction (Buy or Sell).
+        /// * `who` - The account ID of the user performing the transaction.
+        /// * `market_id` - The ID of the market.
+        /// * `asset` - The asset to be traded.
+        /// * `amount_in` - The amount to be traded.
+        /// * `price_limit` - The maximum or minimum price at which the trade can be executed.
+        ///
+        /// # Returns
+        ///
+        /// The remaining amount after filling the order from the AMM, or an error if the order cannot be filled.
         fn maybe_fill_from_amm(
             tx_type: TxType,
             who: &AccountIdOf<T>,
@@ -356,6 +368,23 @@ mod pallet {
             Ok(remaining)
         }
 
+        /// Fills the order from the order book if it exists and meets the price conditions.
+        /// If the order is partially filled, the remaining amount is returned.
+        ///
+        /// # Arguments
+        ///
+        /// * `tx_type` - The type of transaction (Buy or Sell).
+        /// * `orders` - A list of orders from the order book.
+        /// * `remaining` - The amount to be traded.
+        /// * `who` - The account ID of the user performing the transaction.
+        /// * `market_id` - The ID of the market.
+        /// * `base_asset` - The base asset of the market.
+        /// * `asset` - The asset to be traded.
+        /// * `price_limit` - The maximum or minimum price at which the trade can be executed.
+        ///
+        /// # Returns
+        ///
+        /// The remaining amount after filling the order, or an error if the order cannot be filled.
         fn maybe_fill_orders(
             tx_type: TxType,
             orders: &[OrderId],
@@ -425,6 +454,23 @@ mod pallet {
             Ok(remaining)
         }
 
+        /// Places a limit order if the strategy is `Strategy::LimitOrder`.
+        /// If the strategy is `Strategy::ImmediateOrCancel`, an error is returned.
+        ///
+        /// # Arguments
+        ///
+        /// * `strategy` - The strategy to handle the remaining non-zero amount when the `max_price` is reached.
+        /// * `who` - The account ID of the user performing the transaction.
+        /// * `market_id` - The ID of the market.
+        /// * `maker_asset` - The asset to provide.
+        /// * `maker_amount` - The amount of the `maker_asset` to be provided.
+        /// * `taker_asset` - The asset to be received.
+        /// * `taker_amount` - The amount of the `taker_asset` to be received.
+        ///
+        /// # Returns
+        ///
+        /// An error if the strategy is `Strategy::ImmediateOrCancel`.
+        /// Otherwise, the limit order is placed.
         fn maybe_place_limit_order(
             strategy: Strategy,
             who: &AccountIdOf<T>,
@@ -453,6 +499,26 @@ mod pallet {
             Ok(())
         }
 
+        /// Executes a trade by routing the order to the Automated Market Maker (AMM) and the Order Book
+        /// to achieve the best average execution price.
+        ///
+        /// # Arguments
+        ///
+        /// * `tx_type` - The type of transaction (Buy or Sell).
+        /// * `who` - The account ID of the user performing the transaction.
+        /// * `market_id` - The ID of the market.
+        /// * `asset_count` - The number of assets traded on the market.
+        /// * `asset` - The asset to be traded.
+        /// * `amount_in` - The amount to be traded.
+        /// * `price_limit` - The maximum or minimum price at which the trade can be executed.
+        /// * `orders` - A list of orders from the order book.
+        /// * `strategy` - The strategy to handle the remaining non-zero amount when the `max_price` is reached.
+        ///
+        /// # Returns
+        ///
+        /// An error if the strategy is `Strategy::ImmediateOrCancel` and the full amount cannot be filled.
+        /// Otherwise, the trade is executed and maybe places an order, 
+        /// if the full amount could not be processed at the specified price limit.
         #[require_transactional]
         pub(crate) fn do_trade(
             tx_type: TxType,
@@ -532,14 +598,6 @@ mod pallet {
                     taker_amount,
                 )?;
             }
-
-            Self::deposit_event(Event::HybridRouterBuyExecuted {
-                who: who.clone(),
-                market_id,
-                asset,
-                amount_in,
-                max_price: price_limit,
-            });
 
             Ok(())
         }
