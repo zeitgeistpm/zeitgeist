@@ -181,7 +181,7 @@ where
     T: Config,
 {
     let market = Market {
-        base_asset,
+        base_asset: base_asset.try_into().unwrap(),
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),
         creator: caller.clone(),

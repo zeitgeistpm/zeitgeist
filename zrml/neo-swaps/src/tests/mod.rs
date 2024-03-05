@@ -34,20 +34,20 @@ use zeitgeist_primitives::{
     constants::CENT,
     math::fixed::{FixedDiv, FixedMul},
     types::{
-        AccountIdTest, Asset, Deadlines, MarketCreation, MarketId, MarketPeriod, MarketStatus,
-        MarketType, MultiHash, ScalarPosition, ScoringRule,
+        AccountIdTest, Asset, Assets, Deadlines, MarketCreation, MarketId, MarketPeriod,
+        MarketStatus, MarketType, MultiHash, ScalarPosition, ScoringRule,
     },
 };
 use zrml_market_commons::{MarketCommonsPalletApi, Markets};
 
 #[cfg(not(feature = "parachain"))]
-const BASE_ASSET: Asset<MarketId> = Asset::Ztg;
+const BASE_ASSET: Assets = Assets::Ztg;
 #[cfg(feature = "parachain")]
-const BASE_ASSET: Asset<MarketId> = FOREIGN_ASSET;
+const BASE_ASSET: Assets = FOREIGN_ASSET;
 
 fn create_market(
     creator: AccountIdTest,
-    base_asset: Asset<MarketId>,
+    base_asset: Assets,
     market_type: MarketType,
     scoring_rule: ScoringRule,
 ) -> MarketId {
@@ -56,7 +56,7 @@ fn create_market(
     metadata[1] = 0x30;
     assert_ok!(PredictionMarkets::create_market(
         RuntimeOrigin::signed(creator),
-        base_asset,
+        base_asset.try_into().unwrap(),
         Perbill::zero(),
         EVE,
         MarketPeriod::Block(0..2),
@@ -76,13 +76,14 @@ fn create_market(
 
 fn create_market_and_deploy_pool(
     creator: AccountIdOf<Runtime>,
-    base_asset: Asset<MarketId>,
+    base_asset: Assets,
     market_type: MarketType,
     amount: BalanceOf<Runtime>,
     spot_prices: Vec<BalanceOf<Runtime>>,
     swap_fee: BalanceOf<Runtime>,
 ) -> MarketId {
-    let market_id = create_market(creator, base_asset, market_type, ScoringRule::Lmsr);
+    let market_id =
+        create_market(creator, base_asset.try_into().unwrap(), market_type, ScoringRule::Lmsr);
     assert_ok!(PredictionMarkets::buy_complete_set(
         RuntimeOrigin::signed(ALICE),
         market_id,
@@ -104,7 +105,7 @@ fn deposit_complete_set(
     amount: BalanceOf<Runtime>,
 ) {
     let market = MarketCommons::market(&market_id).unwrap();
-    assert_ok!(AssetManager::deposit(market.base_asset, &account, amount));
+    assert_ok!(AssetManager::deposit(market.base_asset.into(), &account, amount));
     assert_ok!(<Runtime as Config>::CompleteSetOperations::buy_complete_set(
         RuntimeOrigin::signed(account),
         market_id,
