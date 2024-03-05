@@ -1,0 +1,66 @@
+[dependencies]
+frame-benchmarking = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+orml-traits = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+scale-info = { workspace = true, features = ["derive"] }
+sp-runtime = { workspace = true }
+zeitgeist-primitives = { workspace = true }
+zrml-market-commons = { workspace = true }
+
+[dev-dependencies]
+env_logger = { workspace = true }
+orml-currencies = { workspace = true, features = ["default"] }
+orml-tokens = { workspace = true, features = ["default"] }
+pallet-balances = { workspace = true, features = ["default"] }
+pallet-randomness-collective-flip = { workspace = true, features = ["default"] }
+pallet-timestamp = { workspace = true, features = ["default"] }
+pallet-treasury = { workspace = true, features = ["default"] }
+sp-io = { workspace = true, features = ["default"] }
+pallet-xcm = { workspace = true, features = ["default"] }
+xcm = { workspace = true, features = ["default"] }
+xcm-builder = { workspace = true, features = ["default"] }
+zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
+zrml-authorized = { workspace = true, features = ["default"] }
+zrml-court = { workspace = true, features = ["default"] }
+zrml-global-disputes = { workspace = true, features = ["default"] }
+zrml-liquidity-mining = { workspace = true, features = ["default"] }
+zrml-market-commons = { workspace = true, features = ["default"] }
+zrml-neo-swaps = { workspace = true, features = ["default"] }
+zrml-orderbook = { workspace = true, features = ["default"] }
+zrml-prediction-markets = { workspace = true, features = ["default"] }
+zrml-rikiddo = { workspace = true, features = ["default"] }
+zrml-simple-disputes = { workspace = true, features = ["default"] }
+zrml-swaps = { workspace = true, features = ["default"] }
+
+test-case = { workspace = true }
+
+[features]
+default = ["std"]
+runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "xcm-builder/runtime-benchmarks",
+    "pallet-xcm/runtime-benchmarks",
+]
+std = [
+    "frame-benchmarking?/std",
+    "frame-support/std",
+    "frame-system/std",
+    "orml-traits/std",
+    "parity-scale-codec/std",
+    "sp-runtime/std",
+    "zeitgeist-primitives/std",
+    "zrml-market-commons/std",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+]
+
+[package]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
+edition = "2021"
+name = "zrml-hybrid-router"
+version = "0.4.3"
