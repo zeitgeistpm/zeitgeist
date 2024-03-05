@@ -190,7 +190,7 @@ where
         market_type: MarketType::Categorical(asset_count),
         period: MarketPeriod::Block(0u32.into()..1u32.into()),
         deadlines: Default::default(),
-        scoring_rule: ScoringRule::Lmsr,
+        scoring_rule: ScoringRule::AmmCdaHybrid,
         status: MarketStatus::Active,
         report: None,
         resolved_outcome: None,

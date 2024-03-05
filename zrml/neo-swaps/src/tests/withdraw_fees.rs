@@ -87,7 +87,7 @@ fn withdraw_fees_works() {
 fn withdraw_fees_fails_on_pool_not_found() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::Lmsr);
+            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::AmmCdaHybrid);
         assert_noop!(
             NeoSwaps::withdraw_fees(RuntimeOrigin::signed(ALICE), market_id),
             Error::<Runtime>::PoolNotFound
