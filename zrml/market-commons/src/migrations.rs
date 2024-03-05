@@ -85,7 +85,7 @@ pub(crate) type Markets<T: Config> =
 
 pub struct MigrateScoringRuleAmmCdaHybrid<T>(PhantomData<T>);
 
-/// Deletes all Rikiddo markets from storage and migrates CPMM markets to LMSR.
+/// Migrates AMM and CDA markets to the new combined scoring rule.
 impl<T> OnRuntimeUpgrade for MigrateScoringRuleAmmCdaHybrid<T>
 where
     T: Config,
@@ -201,12 +201,12 @@ mod tests {
         });
     }
 
-    #[test_case(OldScoringRule::Orderbook, Some(ScoringRule::AmmCdaHybrid))]
-    #[test_case(OldScoringRule::Lmsr, Some(ScoringRule::AmmCdaHybrid))]
-    #[test_case(OldScoringRule::Parimutuel, Some(ScoringRule::Parimutuel))]
+    #[test_case(OldScoringRule::Orderbook, ScoringRule::AmmCdaHybrid)]
+    #[test_case(OldScoringRule::Lmsr, ScoringRule::AmmCdaHybrid)]
+    #[test_case(OldScoringRule::Parimutuel, ScoringRule::Parimutuel)]
     fn on_runtime_upgrade_works_as_expected(
-        old_data: OldScoringRule,
-        new_data: Option<ScoringRule>,
+        old_scoring_rule: OldScoringRule,
+        new_scoring_rule: ScoringRule,
     ) {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
@@ -232,7 +232,6 @@ mod tests {
             };
             let status = MarketStatus::Active;
             let early_close = None;
-            let old_scoring_rule = old_data;
             let old_market = OldMarket {
                 base_asset,
                 creator,
@@ -251,7 +250,7 @@ mod tests {
                 bonds: bonds.clone(),
                 early_close: early_close.clone(),
             };
-            let opt_new_market = new_data.map(|new_scoring_rule| Market {
+            let new_market = Market {
                 base_asset,
                 creator,
                 creation,
@@ -268,8 +267,7 @@ mod tests {
                 dispute_mechanism,
                 bonds,
                 early_close,
-            });
-            // Don't set up chain to signal that storage is already up to date.
+            };
             populate_test_data::<Blake2_128Concat, MarketId, OldMarketOf<Runtime>>(
                 MARKET_COMMONS,
                 MARKETS,
@@ -277,8 +275,8 @@ mod tests {
             );
             MigrateScoringRuleAmmCdaHybrid::<Runtime>::on_runtime_upgrade();
 
-            let actual = crate::Markets::<Runtime>::get(0);
-            assert_eq!(actual, opt_new_market);
+            let actual = crate::Markets::<Runtime>::get(0).unwrap();
+            assert_eq!(actual, new_market);
         });
     }
 
