@@ -44,7 +44,7 @@ mod pallet {
         pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
         require_transactional,
         traits::{IsType, StorageVersion},
-        RuntimeDebug,
+        BoundedVec, RuntimeDebug,
     };
     use frame_system::{
         ensure_signed,
@@ -52,7 +52,7 @@ mod pallet {
     };
     use orml_traits::MultiCurrency;
     use sp_runtime::{
-        traits::{CheckedSub, SaturatedConversion, Zero},
+        traits::{CheckedSub, Get, SaturatedConversion, Zero},
         ArithmeticError, DispatchResult,
     };
     use zeitgeist_primitives::{
@@ -80,6 +80,9 @@ mod pallet {
                 Asset = AssetOf<Self>,
                 Balance = BalanceOf<Self>,
             >;
+
+        #[pallet::constant]
+        type MaxOrders: Get<u32>;
 
         type OrderBook: HybridRouterOrderBookApi<
                 AccountId = AccountIdOf<Self>,
@@ -110,6 +113,7 @@ mod pallet {
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> =
         Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
+    pub(crate) type OrdersOf<T> = BoundedVec<OrderId, <T as Config>::MaxOrders>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -119,8 +123,7 @@ mod pallet {
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T>
     where
-        T: Config,
-    {
+        T: Config, {
         // TODO add `HybridRouterExecuted` event in AMM-CDA-7
     }
 
@@ -142,6 +145,8 @@ mod pallet {
         CancelStrategyApplied,
         /// The asset count does not match the markets asset count.
         AssetCountMismatch,
+        /// The maximum number of orders was exceeded.
+        MaxOrdersExceeded,
         /// Action cannot be completed because an unexpected error has occurred. This should be
         /// reported to protocol maintainers.
         InconsistentState(InconsistentStateError),
@@ -517,7 +522,7 @@ mod pallet {
         /// # Returns
         ///
         /// An error if the strategy is `Strategy::ImmediateOrCancel` and the full amount cannot be filled.
-        /// Otherwise, the trade is executed and maybe places an order, 
+        /// Otherwise, the trade is executed and maybe places an order,
         /// if the full amount could not be processed at the specified price limit.
         #[require_transactional]
         pub(crate) fn do_trade(
@@ -536,6 +541,8 @@ mod pallet {
                 price_limit <= ZeitgeistBase::<BalanceOf<T>>::get()?,
                 Error::<T>::PriceLimitTooHigh
             );
+            let orders: OrdersOf<T> =
+                orders.try_into().map_err(|_| Error::<T>::MaxOrdersExceeded)?;
             let market = T::MarketCommons::market(&market_id)?;
             let assets = Self::outcome_assets(market_id, &market);
             ensure!(asset_count as usize == assets.len(), Error::<T>::AssetCountMismatch);

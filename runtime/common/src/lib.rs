@@ -1284,6 +1284,7 @@ macro_rules! impl_config_traits {
             type MarketCommons = MarketCommons;
             type Amm = NeoSwaps;
             type OrderBook = Orderbook;
+            type MaxOrders = MaxOrders;
             type RuntimeEvent = RuntimeEvent;
             type WeightInfo = zrml_hybrid_router::weights::WeightInfo<Runtime>;
         }
