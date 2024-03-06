@@ -37,7 +37,7 @@ use types::Strategy;
 use zeitgeist_primitives::{
     constants::{base_multiples::*, CENT},
     math::fixed::{BaseProvider, ZeitgeistBase},
-    traits::{CompleteSetOperationsApi, DeployPoolApi},
+    traits::{CompleteSetOperationsApi, DeployPoolApi, HybridRouterOrderBookApi},
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -123,7 +123,7 @@ mod benchmarks {
     use super::*;
 
     #[benchmark]
-    fn buy(n: Linear<2, 128>) {
+    fn buy(n: Linear<2, 128>, o: Linear<0, 100>) {
         let buyer: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
         let asset_count = n.try_into().unwrap();
@@ -135,16 +135,33 @@ mod benchmarks {
         );
 
         let asset = Asset::CategoricalOutcome(market_id, 0u16);
-        let amount_in = _1.saturated_into();
-        assert_ok!(T::AssetManager::deposit(base_asset, &buyer, _10.saturated_into()));
+        let amount_in = _1000.saturated_into();
+        assert_ok!(T::AssetManager::deposit(base_asset, &buyer, amount_in));
 
         let max_price = _9_10.saturated_into();
-        let orders = vec![];
+        let orders = (0u128..o as u128).collect::<Vec<_>>();
+        let maker_asset = asset;
+        let maker_amount = _1000.saturated_into();
+        let taker_asset = base_asset;
+        let taker_amount = _1_100.saturated_into();
+        for order_id in &orders {
+            let order_creator: T::AccountId = account("order_creator", *order_id as u32, 0);
+            assert_ok!(T::AssetManager::deposit(maker_asset, &order_creator, maker_amount));
+            T::OrderBook::place_order(
+                &order_creator,
+                market_id,
+                maker_asset,
+                maker_amount,
+                taker_asset,
+                taker_amount,
+            )
+            .unwrap();
+        }
         let strategy = Strategy::LimitOrder;
 
         #[extrinsic_call]
         buy(
-            RawOrigin::Signed(buyer),
+            RawOrigin::Signed(buyer.clone()),
             market_id,
             asset_count,
             asset,
@@ -153,6 +170,75 @@ mod benchmarks {
             orders,
             strategy,
         );
+
+        let buyer_limit_order = T::OrderBook::order(o as u128).unwrap();
+        assert_eq!(buyer_limit_order.market_id, market_id);
+        assert_eq!(buyer_limit_order.maker, buyer);
+        assert_eq!(buyer_limit_order.maker_asset, base_asset);
+        assert_eq!(buyer_limit_order.taker_asset, asset);
+    }
+
+    #[benchmark]
+    fn sell(n: Linear<2, 128>, o: Linear<0, 100>) {
+        let seller: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = n.try_into().unwrap();
+        let market_id = create_market_and_deploy_pool::<T>(
+            seller.clone(),
+            base_asset,
+            asset_count,
+            _444.saturated_into(),
+        );
+
+        // this is used to have a higher spot price for the amm than on the order book
+        let highest_spot_price_asset_index = n as u16 - 1u16;
+        let asset = Asset::CategoricalOutcome(market_id, highest_spot_price_asset_index);
+        let amount_in = _1000.saturated_into();
+        assert_ok!(T::AssetManager::deposit(asset, &seller, amount_in));
+        // seller base asset amount needs to exist, 
+        // otherwise repatriate_reserved_named from order book fails
+        // with DeadAccount for base asset repatriate to seller beneficiary
+        let min_balance = T::AssetManager::minimum_balance(base_asset);
+        assert_ok!(T::AssetManager::deposit(base_asset, &seller, min_balance));
+
+        let min_price = _1_100.saturated_into();
+        let orders = (0u128..o as u128).collect::<Vec<_>>();
+        let maker_asset = base_asset;
+        let maker_amount = _1_100.saturated_into();
+        let taker_asset = asset;
+        let taker_amount = _1.saturated_into();
+        for order_id in &orders {
+            let order_creator: T::AccountId = account("order_creator", *order_id as u32, 0);
+            assert_ok!(T::AssetManager::deposit(maker_asset, &order_creator, maker_amount));
+            T::OrderBook::place_order(
+                &order_creator,
+                market_id,
+                maker_asset,
+                maker_amount,
+                taker_asset,
+                taker_amount,
+            )
+            .unwrap();
+        }
+        let strategy = Strategy::LimitOrder;
+
+        #[extrinsic_call]
+        sell(
+            RawOrigin::Signed(seller.clone()),
+            market_id,
+            asset_count,
+            asset,
+            amount_in,
+            min_price,
+            orders,
+            strategy,
+        );
+
+        let seller_limit_order = T::OrderBook::order(o as u128).unwrap();
+        assert_eq!(seller_limit_order.market_id, market_id);
+        assert_eq!(seller_limit_order.maker, seller);
+        assert_eq!(seller_limit_order.maker_asset, asset);
+        assert_eq!(seller_limit_order.taker_asset, base_asset);
     }
 
     impl_benchmark_test_suite!(
