@@ -123,8 +123,18 @@ mod pallet {
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T>
     where
-        T: Config, {
-        // TODO add `HybridRouterExecuted` event in AMM-CDA-7
+        T: Config,
+    {
+        /// A trade was executed.
+        HybridRouterExecuted {
+            tx_type: TxType,
+            who: AccountIdOf<T>,
+            market_id: MarketIdOf<T>,
+            price_limit: BalanceOf<T>,
+            asset_in: AssetOf<T>,
+            amount_in: BalanceOf<T>,
+            asset_out: AssetOf<T>,
+        },
     }
 
     #[pallet::error]
@@ -329,6 +339,8 @@ mod pallet {
             if !T::Amm::pool_exists(market_id) {
                 return Ok(amount_in);
             }
+
+            // TODO: what about swap fees and how does it influence our trade?
 
             let spot_price = T::Amm::get_spot_price(market_id, asset)?;
 
@@ -547,9 +559,9 @@ mod pallet {
             let assets = Self::outcome_assets(market_id, &market);
             ensure!(asset_count as usize == assets.len(), Error::<T>::AssetCountMismatch);
 
-            let asset_in = match tx_type {
-                TxType::Buy => market.base_asset,
-                TxType::Sell => asset,
+            let (asset_in, asset_out) = match tx_type {
+                TxType::Buy => (market.base_asset, asset),
+                TxType::Sell => (asset, market.base_asset),
             };
             T::AssetManager::ensure_can_withdraw(asset_in, &who, amount_in)?;
 
@@ -605,6 +617,16 @@ mod pallet {
                     taker_amount,
                 )?;
             }
+
+            Self::deposit_event(Event::HybridRouterExecuted {
+                tx_type,
+                who,
+                market_id,
+                price_limit,
+                asset_in,
+                amount_in,
+                asset_out,
+            });
 
             Ok(())
         }
