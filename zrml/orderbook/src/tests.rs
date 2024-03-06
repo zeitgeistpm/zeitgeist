@@ -45,7 +45,7 @@ fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
             Orderbook::place_order(
                 RuntimeOrigin::signed(ALICE),
                 market_id,
-                market.base_asset,
+                market.base_asset.into(),
                 10 * BASE,
                 Asset::CategoricalOutcome(market_id, 2),
                 25 * BASE,
@@ -74,7 +74,7 @@ fn place_order_fails_if_market_status_not_active(status: MarketStatus) {
             Orderbook::place_order(
                 RuntimeOrigin::signed(ALICE),
                 market_id,
-                market.base_asset,
+                market.base_asset.into(),
                 10 * BASE,
                 Asset::CategoricalOutcome(0, 2),
                 25 * BASE,
@@ -95,7 +95,7 @@ fn fill_order_fails_if_market_status_not_active(status: MarketStatus) {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -128,7 +128,7 @@ fn fill_order_fails_if_amount_too_high_for_order() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -157,7 +157,7 @@ fn fill_order_fails_if_amount_is_below_minimum_balance() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -190,7 +190,7 @@ fn place_order_fails_if_amount_is_below_minimum_balance() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         assert_noop!(
@@ -226,7 +226,7 @@ fn fill_order_fails_if_balance_too_low() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -259,7 +259,7 @@ fn fill_order_fails_if_partial_fill_near_full_fill_not_allowed() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -294,7 +294,7 @@ fn fill_order_removes_order() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -324,7 +324,7 @@ fn fill_order_partially_fills_order() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -403,7 +403,7 @@ fn place_order_fails_if_invalid_outcome_asset() {
 
         assert_eq!(market.market_type, MarketType::Categorical(64u16));
         let maker_asset = Asset::ScalarOutcome(0, ScalarPosition::Long);
-        let taker_asset = market.base_asset;
+        let taker_asset = market.base_asset.into();
 
         assert_noop!(
             Orderbook::place_order(
@@ -449,7 +449,7 @@ fn place_order_fails_if_maker_has_insufficient_funds() {
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let maker = ALICE;
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
         let alice_free_maker_amount = AssetManager::free_balance(maker_asset, &maker);
 
@@ -497,18 +497,18 @@ fn it_places_orders() {
         let taker_amount = 10 * BASE;
         let maker_amount = 250 * BASE;
 
-        assert_ok!(AssetManager::deposit(market.base_asset, &ALICE, maker_amount));
+        assert_ok!(AssetManager::deposit(market.base_asset.into(), &ALICE, maker_amount));
 
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(ALICE),
             market_id,
-            market.base_asset,
+            market.base_asset.into(),
             maker_amount,
             taker_asset_0,
             taker_amount,
         ));
 
-        let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
+        let reserved_funds = AssetManager::reserved_balance(market.base_asset.into(), &ALICE);
         assert_eq!(reserved_funds, maker_amount);
 
         let maker_asset = Asset::CategoricalOutcome(0, 1);
@@ -522,7 +522,7 @@ fn it_places_orders() {
             market_id,
             maker_asset,
             maker_amount,
-            market.base_asset,
+            market.base_asset.into(),
             taker_amount,
         ));
 
@@ -539,7 +539,7 @@ fn it_fills_order_fully_maker_outcome_asset() {
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let maker_asset = Asset::CategoricalOutcome(0, 1);
-        let taker_asset = market.base_asset;
+        let taker_asset = market.base_asset.into();
 
         let maker_amount = 100 * BASE;
         let taker_amount = 500 * BASE;
@@ -589,7 +589,7 @@ fn it_fills_order_fully_maker_outcome_asset() {
         assert_eq!(alice_maker_asset_free, INITIAL_BALANCE);
         assert_eq!(alice_taker_asset_free, maker_amount);
 
-        let bob_taker_asset_free = AssetManager::free_balance(market.base_asset, &BOB);
+        let bob_taker_asset_free = AssetManager::free_balance(market.base_asset.into(), &BOB);
         let bob_maker_asset_free = AssetManager::free_balance(maker_asset, &BOB);
         assert_eq!(bob_taker_asset_free, INITIAL_BALANCE + taker_amount - taker_fees);
         assert_eq!(bob_maker_asset_free, 0);
@@ -603,7 +603,7 @@ fn it_fills_order_fully_maker_base_asset() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 1);
 
         let taker_amount = 10 * BASE;
@@ -662,7 +662,7 @@ fn it_fills_order_partially_maker_base_asset() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 1);
 
         let maker_amount = 500 * BASE;
@@ -757,7 +757,7 @@ fn it_fills_order_partially_maker_outcome_asset() {
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let maker_asset = Asset::CategoricalOutcome(0, 1);
-        let taker_asset = market.base_asset;
+        let taker_asset = market.base_asset.into();
 
         let maker_amount = 100 * BASE;
         let taker_amount = 500 * BASE;
@@ -779,7 +779,7 @@ fn it_fills_order_partially_maker_outcome_asset() {
 
         let order_id = 0u128;
         let market_creator_free_balance_before =
-            AssetManager::free_balance(market.base_asset, &MARKET_CREATOR);
+            AssetManager::free_balance(market.base_asset.into(), &MARKET_CREATOR);
 
         // instead of buying 500 of the base asset, Alice buys 70 shares
         let alice_portion = 70 * BASE;
@@ -787,7 +787,7 @@ fn it_fills_order_partially_maker_outcome_asset() {
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, portion,));
 
         let market_creator_free_balance_after =
-            AssetManager::free_balance(market.base_asset, &MARKET_CREATOR);
+            AssetManager::free_balance(market.base_asset.into(), &MARKET_CREATOR);
         assert_eq!(
             market_creator_free_balance_after - market_creator_free_balance_before,
             calculate_fee::<Runtime>(70 * BASE)
@@ -853,7 +853,7 @@ fn it_removes_order() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let taker_amount = 25 * BASE;
@@ -868,7 +868,7 @@ fn it_removes_order() {
             taker_amount,
         ));
 
-        let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
+        let reserved_funds = AssetManager::reserved_balance(market.base_asset.into(), &ALICE);
         assert_eq!(reserved_funds, maker_amount);
 
         let order_id = 0u128;
@@ -878,12 +878,12 @@ fn it_removes_order() {
             Order { market_id, maker: ALICE, maker_asset, maker_amount, taker_asset, taker_amount }
         );
 
-        let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
+        let reserved_funds = AssetManager::reserved_balance(market.base_asset.into(), &ALICE);
         assert_eq!(reserved_funds, maker_amount);
 
         assert_ok!(Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_id));
 
-        let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
+        let reserved_funds = AssetManager::reserved_balance(market.base_asset.into(), &ALICE);
         assert_eq!(reserved_funds, 0);
 
         assert!(Orders::<Runtime>::get(order_id).is_none());
@@ -897,7 +897,7 @@ fn remove_order_emits_event() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let taker_amount = 25 * BASE;
@@ -927,7 +927,7 @@ fn remove_order_fails_if_not_order_creator() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let taker_amount = 25 * BASE;
@@ -958,7 +958,7 @@ fn place_order_emits_event() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset;
+        let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let taker_amount = 25 * BASE;

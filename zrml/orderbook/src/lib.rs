@@ -22,7 +22,7 @@
 extern crate alloc;
 
 use crate::{types::*, weights::*};
-use alloc::{vec, vec::Vec};
+use alloc::vec;
 use core::marker::PhantomData;
 use frame_support::{
     ensure,
@@ -42,7 +42,7 @@ use zeitgeist_primitives::{
         fixed::FixedMulDiv,
     },
     traits::{DistributeFees, MarketCommonsPalletApi},
-    types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
+    types::{Asset, BaseAsset, MarketAssetClass, MarketStatus, ScoringRule},
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -103,15 +103,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type OrderOf<T> = Order<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
-    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
-    pub(crate) type MarketOf<T> = Market<
-        AccountIdOf<T>,
-        BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
-        MomentOf<T>,
-        AssetOf<T>,
-    >;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -252,24 +244,6 @@ mod pallet {
             T::PalletId::get().0
         }
 
-        pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
-            match market.market_type {
-                MarketType::Categorical(categories) => {
-                    let mut assets = Vec::new();
-                    for i in 0..categories {
-                        assets.push(Asset::CategoricalOutcome(market_id, i));
-                    }
-                    assets
-                }
-                MarketType::Scalar(_) => {
-                    vec![
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
-                    ]
-                }
-            }
-        }
-
         /// Reduces the reserved maker and requested taker amount
         /// by the amount the maker and taker actually filled.
         fn decrease_order_amounts(
@@ -343,21 +317,21 @@ mod pallet {
         /// Charge the external fees from `taker` and return the adjusted maker fill.
         fn charge_external_fees(
             order_data: &OrderOf<T>,
-            base_asset: AssetOf<T>,
+            base_asset: BaseAsset,
             maker_fill: BalanceOf<T>,
             taker: &AccountIdOf<T>,
             taker_fill: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
-            let maker_asset_is_base = order_data.maker_asset == base_asset;
+            let maker_asset_is_base = order_data.maker_asset == base_asset.into();
             let base_asset_fill = if maker_asset_is_base {
                 taker_fill
             } else {
-                debug_assert!(order_data.taker_asset == base_asset);
+                debug_assert!(order_data.taker_asset == base_asset.into());
                 maker_fill
             };
             let fee_amount = T::ExternalFees::distribute(
                 order_data.market_id,
-                base_asset,
+                base_asset.into(),
                 taker,
                 base_asset_fill,
             );
@@ -464,18 +438,22 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             ensure!(market.scoring_rule == ScoringRule::Orderbook, Error::<T>::InvalidScoringRule);
-            let market_assets = Self::outcome_assets(market_id, &market);
             let base_asset = market.base_asset;
-            let outcome_asset = if maker_asset == base_asset {
+            let outcome_asset = if maker_asset == base_asset.into() {
                 taker_asset
             } else {
-                ensure!(taker_asset == base_asset, Error::<T>::MarketBaseAssetNotPresent);
+                ensure!(taker_asset == base_asset.into(), Error::<T>::MarketBaseAssetNotPresent);
                 maker_asset
             };
-            ensure!(
-                market_assets.binary_search(&outcome_asset).is_ok(),
-                Error::<T>::InvalidOutcomeAsset
-            );
+
+            let outcome_asset_converted =
+                MarketAssetClass::<MarketIdOf<T>>::try_from(outcome_asset)
+                    .map_err(|_| Error::<T>::InvalidOutcomeAsset)?;
+            let market_assets = market.outcome_assets(market_id);
+            market_assets
+                .binary_search(&outcome_asset_converted)
+                .map_err(|_| Error::<T>::InvalidOutcomeAsset)?;
+                
             ensure!(
                 maker_amount >= T::AssetManager::minimum_balance(maker_asset),
                 Error::<T>::BelowMinimumBalance
