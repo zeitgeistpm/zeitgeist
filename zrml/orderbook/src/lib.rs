@@ -490,8 +490,8 @@ mod pallet {
             let order_id = <NextOrderId<T>>::get();
             let next_order_id = order_id.checked_add_res(&1)?;
 
-            // Fees are always only charged in the base asset in fill_order.
-            // Reserving the maker_asset is preferred (depends on other pallet support)
+            // fees are always only charged in the base asset in fill_order
+            // reserving the maker_asset is preferred (depends on other pallet support)
             if T::AssetManager::can_reserve(maker_asset, &who, maker_amount) {
                 T::AssetManager::reserve_named(
                     &Self::reserve_id(),

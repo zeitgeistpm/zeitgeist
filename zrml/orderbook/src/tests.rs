@@ -273,9 +273,7 @@ fn fill_order_fails_if_partial_fill_near_full_fill_not_allowed() {
             taker_asset,
             taker_amount,
         ));
-
-        AssetManager::deposit(taker_asset, &BOB, taker_amount).unwrap();
-
+        assert_ok!(AssetManager::deposit(taker_asset, &BOB, taker_amount));
         assert_noop!(
             Orderbook::fill_order(
                 RuntimeOrigin::signed(BOB),
