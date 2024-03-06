@@ -143,8 +143,6 @@ mod pallet {
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
-    // TODO implement a benchmark api for creating a pool ??
-    // TODO or implement an api to execute deploy_pool etc.. ??
     #[pallet::storage]
     pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, MarketIdOf<T>, PoolOf<T>>;
 
