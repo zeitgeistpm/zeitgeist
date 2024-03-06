@@ -326,6 +326,7 @@ parameter_types! {
 
     // Orderbook parameters
     pub const OrderbookPalletId: PalletId = ORDERBOOK_PALLET_ID;
+    pub const MaxOrders: u32 = 100;
 
     // Parimutuel parameters
     pub const MinBetSize: Balance = 100 * ExistentialDeposit::get();
