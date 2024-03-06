@@ -8,6 +8,7 @@ orml-traits = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
 sp-runtime = { workspace = true }
+zeitgeist-macros = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 
 # Mock

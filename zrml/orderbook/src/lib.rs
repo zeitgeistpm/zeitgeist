@@ -33,16 +33,19 @@ use frame_support::{
     transactional, PalletId, Twox64Concat,
 };
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-use orml_traits::{BalanceStatus, MultiCurrency, NamedMultiReservableCurrency};
+use orml_traits::{
+    BalanceStatus, MultiCurrency, MultiReservableCurrency, NamedMultiReservableCurrency,
+};
 pub use pallet::*;
-use sp_runtime::traits::{Get, Zero};
+use sp_runtime::traits::{AccountIdConversion, Get, Zero};
+use zeitgeist_macros::unreachable_non_terminating;
 use zeitgeist_primitives::{
     math::{
         checked_ops_res::{CheckedAddRes, CheckedSubRes},
         fixed::FixedMulDiv,
     },
     traits::{DistributeFees, MarketCommonsPalletApi},
-    types::{Asset, BaseAsset, MarketAssetClass, MarketStatus, ScoringRule},
+    types::{Asset, BaseAsset, MarketStatus, ScoringRule},
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -238,12 +241,6 @@ mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        /// The reserve ID of the order book pallet.
-        #[inline]
-        pub fn reserve_id() -> [u8; 8] {
-            T::PalletId::get().0
-        }
-
         /// Reduces the reserved maker and requested taker amount
         /// by the amount the maker and taker actually filled.
         fn decrease_order_amounts(
@@ -253,6 +250,17 @@ mod pallet {
         ) -> DispatchResult {
             order_data.maker_amount = order_data.maker_amount.checked_sub_res(&taker_fill)?;
             order_data.taker_amount = order_data.taker_amount.checked_sub_res(&maker_fill)?;
+            Ok(())
+        }
+
+        fn ensure_ratio_quotient_valid(order_data: &OrderOf<T>) -> DispatchResult {
+            let maker_full_fill = order_data.taker_amount;
+            // this ensures that partial fills, which fill nearly the whole order, are not executed
+            // this protects the last fill happening
+            // without a division by zero for `Perquintill::from_rational`
+            let is_ratio_quotient_valid = maker_full_fill.is_zero()
+                || maker_full_fill >= T::AssetManager::minimum_balance(order_data.taker_asset);
+            ensure!(is_ratio_quotient_valid, Error::<T>::PartialFillNearFullFillNotAllowed);
             Ok(())
         }
 
@@ -272,15 +280,16 @@ mod pallet {
             maker_fill.bmul_bdiv_floor(taker_full_fill, maker_full_fill)
         }
 
-        fn ensure_ratio_quotient_valid(order_data: &OrderOf<T>) -> DispatchResult {
-            let maker_full_fill = order_data.taker_amount;
-            // this ensures that partial fills, which fill nearly the whole order, are not executed
-            // this protects the last fill happening
-            // without a division by zero for `Perquintill::from_rational`
-            let is_ratio_quotient_valid = maker_full_fill.is_zero()
-                || maker_full_fill >= T::AssetManager::minimum_balance(order_data.taker_asset);
-            ensure!(is_ratio_quotient_valid, Error::<T>::PartialFillNearFullFillNotAllowed);
-            Ok(())
+        /// The order account for a specific order id.
+        #[inline]
+        pub(crate) fn order_account(order_id: OrderId) -> AccountIdOf<T> {
+            T::PalletId::get().into_sub_account_truncating(order_id)
+        }
+
+        /// The reserve ID of the order book pallet.
+        #[inline]
+        pub(crate) fn reserve_id() -> [u8; 8] {
+            T::PalletId::get().0
         }
 
         fn do_remove_order(order_id: OrderId, who: AccountIdOf<T>) -> DispatchResult {
@@ -288,24 +297,28 @@ mod pallet {
 
             let maker = &order_data.maker;
             ensure!(who == *maker, Error::<T>::NotOrderCreator);
+            let order_account = Self::order_account(order_id);
+            let asset = order_data.maker_asset;
+            let amount = order_data.maker_amount;
 
-            let missing = T::AssetManager::unreserve_named(
-                &Self::reserve_id(),
-                order_data.maker_asset,
-                maker,
-                order_data.maker_amount,
-            );
+            if T::AssetManager::ensure_can_withdraw(asset, &order_account, amount).is_ok() {
+                T::AssetManager::transfer(asset, &order_account, &maker, amount)?;
+            } else {
+                let missing =
+                    T::AssetManager::unreserve_named(&Self::reserve_id(), asset, maker, amount);
 
-            debug_assert!(
-                missing.is_zero(),
-                "Could not unreserve all of the amount. reserve_id: {:?}, asset: {:?} who: {:?}, \
-                 amount: {:?}, missing: {:?}",
-                Self::reserve_id(),
-                order_data.maker_asset,
-                maker,
-                order_data.maker_amount,
-                missing,
-            );
+                unreachable_non_terminating!(
+                    missing.is_zero(),
+                    LOG_TARGET,
+                    "Could not unreserve all of the amount. reserve_id: {:?}, asset: {:?} who: \
+                     {:?}, amount: {:?}, missing: {:?}",
+                    Self::reserve_id(),
+                    asset,
+                    maker,
+                    amount,
+                    missing,
+                );
+            }
 
             <Orders<T>>::remove(order_id);
 
@@ -326,7 +339,12 @@ mod pallet {
             let base_asset_fill = if maker_asset_is_base {
                 taker_fill
             } else {
-                debug_assert!(order_data.taker_asset == base_asset.into());
+                unreachable_non_terminating!(
+                    order_data.taker_asset == base_asset.into(),
+                    LOG_TARGET,
+                    "Order {:?} does not contain a base asset",
+                    order_data
+                );
                 maker_fill
             };
             let fee_amount = T::ExternalFees::distribute(
@@ -353,9 +371,10 @@ mod pallet {
         ) -> DispatchResult {
             let mut order_data = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist)?;
             let market = T::MarketCommons::market(&order_data.market_id)?;
-            debug_assert!(
+            unreachable_non_terminating!(
                 market.scoring_rule == ScoringRule::Orderbook,
-                "The call to place_order already ensured the scoring rule order book."
+                LOG_TARGET,
+                "The call to place_order already ensured the scoring rule order book.",
             );
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             let base_asset = market.base_asset;
@@ -375,17 +394,23 @@ mod pallet {
             // to repatriate successfully, e.g. taker gets a little bit less
             // it should always ensure that the maker's request (maker_fill) is fully filled
             let taker_fill = Self::get_taker_fill(&order_data, maker_fill)?;
+            let order_account = Self::order_account(order_id);
+
+            if T::AssetManager::ensure_can_withdraw(maker_asset, &order_account, taker_fill).is_ok()
+            {
+                T::AssetManager::transfer(maker_asset, &order_account, &taker, taker_fill)?;
+            } else {
+                T::AssetManager::repatriate_reserved_named(
+                    &Self::reserve_id(),
+                    maker_asset,
+                    &maker,
+                    &taker,
+                    taker_fill,
+                    BalanceStatus::Free,
+                )?;
+            }
 
             // if base asset: fund the full amount, but charge base asset fees from taker later
-            T::AssetManager::repatriate_reserved_named(
-                &Self::reserve_id(),
-                maker_asset,
-                &maker,
-                &taker,
-                taker_fill,
-                BalanceStatus::Free,
-            )?;
-
             // always charge fees from the base asset and not the outcome asset
             let maybe_adjusted_maker_fill = Self::charge_external_fees(
                 &order_data,
@@ -447,13 +472,12 @@ mod pallet {
             };
 
             let outcome_asset_converted =
-                MarketAssetClass::<MarketIdOf<T>>::try_from(outcome_asset)
-                    .map_err(|_| Error::<T>::InvalidOutcomeAsset)?;
+                outcome_asset.try_into().map_err(|_| Error::<T>::InvalidOutcomeAsset)?;
             let market_assets = market.outcome_assets(market_id);
             market_assets
                 .binary_search(&outcome_asset_converted)
                 .map_err(|_| Error::<T>::InvalidOutcomeAsset)?;
-                
+
             ensure!(
                 maker_amount >= T::AssetManager::minimum_balance(maker_asset),
                 Error::<T>::BelowMinimumBalance
@@ -466,8 +490,19 @@ mod pallet {
             let order_id = <NextOrderId<T>>::get();
             let next_order_id = order_id.checked_add_res(&1)?;
 
-            // fees are always only charged in the base asset in fill_order
-            T::AssetManager::reserve_named(&Self::reserve_id(), maker_asset, &who, maker_amount)?;
+            // Fees are always only charged in the base asset in fill_order.
+            // Reserving the maker_asset is preferred (depends on other pallet support)
+            if T::AssetManager::can_reserve(maker_asset, &who, maker_amount) {
+                T::AssetManager::reserve_named(
+                    &Self::reserve_id(),
+                    maker_asset,
+                    &who,
+                    maker_amount,
+                )?;
+            } else {
+                let order_account = Self::order_account(order_id);
+                T::AssetManager::transfer(maker_asset, &who, &order_account, maker_amount)?;
+            }
 
             let order = Order {
                 market_id,
