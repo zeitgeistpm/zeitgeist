@@ -137,6 +137,7 @@ mod pallet {
             filled_taker_amount: BalanceOf<T>,
             unfilled_maker_amount: BalanceOf<T>,
             unfilled_taker_amount: BalanceOf<T>,
+            external_fee_amount: BalanceOf<T>,
         },
         OrderPlaced {
             order_id: OrderId,
@@ -341,13 +342,15 @@ mod pallet {
         }
 
         /// Charge the external fees from `taker` and return the adjusted maker fill.
+        /// 
+        /// Returns the maybe adjusted maker fill and the charged fee amount.
         fn charge_external_fees(
             order_data: &OrderOf<T>,
             base_asset: AssetOf<T>,
             maker_fill: BalanceOf<T>,
             taker: &AccountIdOf<T>,
             taker_fill: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
+        ) -> Result<(BalanceOf<T>, BalanceOf<T>), DispatchError> {
             let maker_asset_is_base = order_data.maker_asset == base_asset;
             let base_asset_fill = if maker_asset_is_base {
                 taker_fill
@@ -364,11 +367,11 @@ mod pallet {
             if maker_asset_is_base {
                 // maker_fill is the amount that the maker wants to have (outcome asset from taker)
                 // do not charge fees from outcome assets, but rather from the base asset
-                Ok(maker_fill)
+                Ok((maker_fill, fee_amount))
             } else {
                 // accounting fees from the taker,
                 // who is responsible to pay the base asset minus fees to the maker
-                Ok(maker_fill.checked_sub_res(&fee_amount)?)
+                Ok((maker_fill.checked_sub_res(&fee_amount)?, fee_amount))
             }
         }
 
@@ -413,7 +416,7 @@ mod pallet {
             )?;
 
             // always charge fees from the base asset and not the outcome asset
-            let maybe_adjusted_maker_fill = Self::charge_external_fees(
+            let (maybe_adjusted_maker_fill, external_fee_amount) = Self::charge_external_fees(
                 &order_data,
                 base_asset,
                 maker_fill,
@@ -448,6 +451,7 @@ mod pallet {
                 filled_taker_amount: maker_fill,
                 unfilled_maker_amount: order_data.maker_amount,
                 unfilled_taker_amount: order_data.taker_amount,
+                external_fee_amount,
             });
 
             Ok(())
