@@ -157,19 +157,19 @@ impl Contains<RuntimeCall> for IsCallable {
                 destroy_approvals { .. } => false,
                 finish_destroy { .. } => false,
                 _ => true,
-            }
+            },
             RuntimeCall::CustomAssets(inner_call) => match inner_call {
                 destroy_accounts { .. } => false,
                 destroy_approvals { .. } => false,
                 finish_destroy { .. } => false,
                 _ => true,
-            }
+            },
             RuntimeCall::MarketAssets(inner_call) => match inner_call {
                 destroy_accounts { .. } => false,
                 destroy_approvals { .. } => false,
                 finish_destroy { .. } => false,
                 _ => true,
-            }
+            },
             // Permissioned contracts: Only deployable via utility.dispatch_as(...)
             RuntimeCall::Contracts(inner_call) => match inner_call {
                 call { .. } => true,

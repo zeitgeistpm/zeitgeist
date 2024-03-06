@@ -17,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::types::{MarketAssetClass, OutcomeReport, ScalarPosition};
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use core::ops::{Range, RangeInclusive};
 use parity_scale_codec::{Decode, Encode, HasCompact, MaxEncodedLen};
 use scale_info::TypeInfo;

@@ -35,7 +35,7 @@ mod types;
 #[frame_support::pallet]
 pub mod pallet {
     pub(crate) use super::types::*;
-    pub(crate) use alloc::{collections::BTreeMap, format};
+    pub(crate) use alloc::collections::BTreeMap;
     pub(crate) use core::{fmt::Debug, marker::PhantomData};
     pub(crate) use frame_support::{
         ensure, log,

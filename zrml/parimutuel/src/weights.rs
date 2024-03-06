@@ -118,18 +118,10 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
 
     fn on_activation() -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `2421`
-        //  Estimated: `18794`
-        // Minimum execution time: 47_831 nanoseconds.
-        Weight::from(10_000_000_000)
+        Weight::from_all(10_000_000_000)
     }
 
     fn on_resolution() -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `2421`
-        //  Estimated: `18794`
-        // Minimum execution time: 47_831 nanoseconds.
-        Weight::from(10_000_000_000)
+        Weight::from_all(10_000_000_000)
     }
 }

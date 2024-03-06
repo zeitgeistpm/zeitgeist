@@ -1255,6 +1255,8 @@ macro_rules! impl_config_traits {
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
             type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
+            type AssetCreator = AssetRouter;
+            type AssetDestroyer = AssetRouter;
             type ApproveOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type AssetManager = AssetManager;
             #[cfg(feature = "parachain")]
@@ -1290,7 +1292,7 @@ macro_rules! impl_config_traits {
             type MaxEditReasonLen = MaxEditReasonLen;
             type MaxRejectReasonLen = MaxRejectReasonLen;
             // Can be a tuple of hooks
-            type OnStateTransition = (Parimutuel, );
+            type OnStateTransition = (Parimutuel,);
             type OracleBond = OracleBond;
             type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
@@ -1397,12 +1399,14 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_parimutuel::Config for Runtime {
-            type ExternalFees = MarketCreatorFee;
-            type RuntimeEvent = RuntimeEvent;
-            type MarketCommons = MarketCommons;
+            type AssetCreator = AssetRouter;
+            type AssetDestroyer = AssetRouter;
             type AssetManager = AssetManager;
+            type ExternalFees = MarketCreatorFee;
+            type MarketCommons = MarketCommons;
             type MinBetSize = MinBetSize;
             type PalletId = ParimutuelPalletId;
+            type RuntimeEvent = RuntimeEvent;
             type WeightInfo = zrml_parimutuel::weights::WeightInfo<Runtime>;
         }
     };
