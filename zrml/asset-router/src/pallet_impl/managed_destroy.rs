@@ -58,7 +58,6 @@ impl<T: Config> ManagedDestroy<T::AccountId> for Pallet<T> {
         Ok(())
     }
 
-    #[require_transactional]
     fn managed_destroy_multi(
         assets: BTreeMap<Self::AssetId, Option<T::AccountId>>,
     ) -> DispatchResult {

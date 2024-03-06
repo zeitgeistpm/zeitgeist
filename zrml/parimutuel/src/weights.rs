@@ -52,6 +52,8 @@ pub trait WeightInfoZeitgeist {
     fn buy() -> Weight;
     fn claim_rewards() -> Weight;
     fn claim_refunds() -> Weight;
+    fn on_activation() -> Weight;
+    fn on_resolution() -> Weight;
 }
 
 /// Weight functions for zrml_parimutuel (automatically generated)
@@ -113,5 +115,21 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         Weight::from_parts(47_831_000, 18794)
             .saturating_add(T::DbWeight::get().reads(7))
             .saturating_add(T::DbWeight::get().writes(3))
+    }
+
+    fn on_activation() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `2421`
+        //  Estimated: `18794`
+        // Minimum execution time: 47_831 nanoseconds.
+        Weight::from(10_000_000_000)
+    }
+
+    fn on_resolution() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `2421`
+        //  Estimated: `18794`
+        // Minimum execution time: 47_831 nanoseconds.
+        Weight::from(10_000_000_000)
     }
 }

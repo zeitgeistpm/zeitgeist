@@ -16,11 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{mock::*, utils::*, *};
-use frame_support::{
-    assert_noop, assert_ok,
-    pallet_prelude::DispatchError,
-    storage::{with_transaction, TransactionOutcome},
-};
+use frame_support::{assert_noop, assert_ok};
 use sp_runtime::Percent;
 use test_case::test_case;
 use zeitgeist_primitives::{
@@ -141,10 +137,7 @@ fn refund_fails_if_refundable_balance_is_zero() {
         market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
-        let _ = with_transaction(|| {
-            assert_ok!(Parimutuel::on_activation(&market_id));
-            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
-        });
+        assert_ok!(Parimutuel::on_activation(&market_id).result);
 
         let asset = ParimutuelAsset::Share(market_id, 0u16);
         let amount = 2 * <Runtime as Config>::MinBetSize::get();
@@ -174,10 +167,7 @@ fn refund_emits_event() {
         market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
-        let _ = with_transaction(|| {
-            assert_ok!(Parimutuel::on_activation(&market_id));
-            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
-        });
+        assert_ok!(Parimutuel::on_activation(&market_id).result);
 
         let asset = ParimutuelAsset::Share(market_id, 0u16);
         let amount = 10 * <Runtime as Config>::MinBetSize::get();

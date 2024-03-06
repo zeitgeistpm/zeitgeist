@@ -42,12 +42,7 @@ fn created_after_market_activation() {
         let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market.clone());
-
-        let _ = with_transaction(|| {
-            assert_ok!(Parimutuel::on_activation(&market_id));
-            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
-        });
-
+        assert_ok!(Parimutuel::on_activation(&market_id).result);
         for asset in market.outcome_assets(market_id) {
             assert!(<Runtime as Config>::AssetCreator::asset_exists(asset.into()));
         }
@@ -85,10 +80,7 @@ fn destroyed_losing_after_resolution_with_winner() {
         let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
-        let _ = with_transaction(|| {
-            assert_ok!(Parimutuel::on_activation(&market_id));
-            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
-        });
+        assert_ok!(Parimutuel::on_activation(&market_id).result);
 
         let winner_asset = ParimutuelAsset::Share(market_id, 0u16);
         let winner_amount = 20 * <Runtime as Config>::MinBetSize::get();
@@ -99,10 +91,7 @@ fn destroyed_losing_after_resolution_with_winner() {
         market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let _ = with_transaction(|| {
-            assert_ok!(Parimutuel::on_resolution(&market_id));
-            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
-        });
+        assert_ok!(Parimutuel::on_resolution(&market_id).result);
         <Runtime as Config>::AssetDestroyer::on_idle(System::block_number(), Weight::MAX);
         assert!(<Runtime as Config>::AssetCreator::asset_exists(winner_asset.into()));
 
@@ -153,10 +142,7 @@ fn destroyed_after_resolution_without_winner() {
         let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
-        let _ = with_transaction(|| {
-            assert_ok!(Parimutuel::on_activation(&market_id));
-            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
-        });
+        assert_ok!(Parimutuel::on_activation(&market_id).result);
 
         let losing_asset = ParimutuelAsset::Share(market_id, 1u16);
         let losing_amount = 20 * <Runtime as Config>::MinBetSize::get();
@@ -167,10 +153,7 @@ fn destroyed_after_resolution_without_winner() {
         market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let _ = with_transaction(|| {
-            assert_ok!(Parimutuel::on_resolution(&market_id));
-            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
-        });
+        assert_ok!(Parimutuel::on_resolution(&market_id).result);
         <Runtime as Config>::AssetDestroyer::on_idle(System::block_number(), Weight::MAX);
         assert!(<Runtime as Config>::AssetCreator::asset_exists(losing_asset.into()));
 
@@ -195,10 +178,7 @@ fn destroyed_after_refund() {
         let mut market = market_mock::<Runtime>(MARKET_CREATOR);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
-        let _ = with_transaction(|| {
-            assert_ok!(Parimutuel::on_activation(&market_id));
-            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
-        });
+        assert_ok!(Parimutuel::on_activation(&market_id).result);
 
         let losing_asset = ParimutuelAsset::Share(market_id, 1u16);
         let losing_amount = 20 * <Runtime as Config>::MinBetSize::get();
@@ -208,10 +188,7 @@ fn destroyed_after_refund() {
         market.status = MarketStatus::Resolved;
         market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
         Markets::<Runtime>::insert(market_id, market.clone());
-        let _ = with_transaction(|| {
-            assert_ok!(Parimutuel::on_resolution(&market_id));
-            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
-        });
+        assert_ok!(Parimutuel::on_resolution(&market_id).result);
 
         <Runtime as Config>::AssetDestroyer::on_idle(System::block_number(), Weight::MAX);
         assert!(<Runtime as Config>::AssetCreator::asset_exists(losing_asset.into()));

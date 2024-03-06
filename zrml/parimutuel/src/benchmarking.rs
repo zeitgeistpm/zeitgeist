@@ -23,11 +23,17 @@
 
 use crate::{utils::*, Pallet as Parimutuel, *};
 use frame_benchmarking::v2::*;
-use frame_support::traits::Get;
+use frame_support::{
+    assert_ok,
+    traits::{fungibles::Inspect, Get},
+};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::{SaturatedConversion, Saturating};
-use zeitgeist_primitives::types::{MarketStatus, MarketType, OutcomeReport};
+use zeitgeist_primitives::{
+    traits::MarketTransitionApi,
+    types::{MarketStatus, MarketType, OutcomeReport},
+};
 use zrml_market_commons::MarketCommonsPalletApi;
 
 fn setup_market<T: Config>(market_type: MarketType) -> MarketIdOf<T> {
@@ -75,6 +81,7 @@ mod benchmarks {
     fn claim_rewards() {
         // max category index is worst case
         let market_id = setup_market::<T>(MarketType::Categorical(64u16));
+        assert_ok!(Parimutuel::<T>::on_activation(&market_id).result);
 
         let winner = whitelisted_caller();
         let winner_asset = ParimutuelShareOf::<T>::Share(market_id, 0u16);
@@ -102,6 +109,7 @@ mod benchmarks {
     fn claim_refunds() {
         // max category index is worst case
         let market_id = setup_market::<T>(MarketType::Categorical(64u16));
+        assert_ok!(Parimutuel::<T>::on_activation(&market_id).result);
 
         let loser_0 = whitelisted_caller();
         let loser_0_index = 0u16;
@@ -132,6 +140,55 @@ mod benchmarks {
 
         #[extrinsic_call]
         claim_refunds(RawOrigin::Signed(loser_0), loser_0_asset);
+    }
+
+    #[benchmark]
+    fn on_activation() {
+        let market_id = setup_market::<T>(MarketType::Categorical(64u16));
+
+        #[block]
+        {
+            Parimutuel::<T>::on_activation(&market_id);
+        }
+
+        for asset_idx in 0..64 {
+            let asset = ParimutuelShareOf::<T>::Share(Zero::zero(), asset_idx).into();
+            assert!(T::AssetCreator::asset_exists(asset));
+        }
+    }
+
+    #[benchmark]
+    fn on_resultion() {
+        let market_id = setup_market::<T>(MarketType::Categorical(64u16));
+        assert_ok!(Parimutuel::<T>::on_activation(&market_id).result);
+
+        for asset_idx in 0..64 {
+            let asset = ParimutuelShareOf::<T>::Share(Zero::zero(), asset_idx).into();
+            assert!(T::AssetCreator::asset_exists(asset));
+        }
+
+        T::MarketCommons::mutate_market(&market_id, |market| {
+            market.status = MarketStatus::Resolved;
+            let resolved_outcome = OutcomeReport::Categorical(0u16);
+            market.resolved_outcome = Some(resolved_outcome);
+            Ok(())
+        })?;
+
+        #[block]
+        {
+            Parimutuel::<T>::on_resolution(&market_id);
+        }
+
+        #[cfg(test)]
+        {
+            use frame_support::{pallet_prelude::Weight, traits::OnIdle};
+
+            crate::mock::AssetRouter::on_idle(Zero::zero(), Weight::MAX);
+            for asset_idx in 0..64 {
+                let asset = ParimutuelShareOf::<T>::Share(Zero::zero(), asset_idx).into();
+                assert!(!T::AssetCreator::asset_exists(asset));
+            }
+        }
     }
 
     impl_benchmark_test_suite!(

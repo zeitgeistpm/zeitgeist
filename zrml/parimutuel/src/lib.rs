@@ -59,7 +59,7 @@ mod pallet {
         traits::{DistributeFees, MarketTransitionApi},
         types::{
             Asset, BaseAsset, Market, MarketAssetClass, MarketStatus, MarketType, OutcomeReport,
-            ParimutuelAssetClass, ScoringRule,
+            ParimutuelAssetClass, ResultWithWeightInfo, ScoringRule,
         },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -568,28 +568,50 @@ mod pallet {
     }
 
     impl<T: Config> MarketTransitionApi<MarketIdOf<T>> for Pallet<T> {
-        #[require_transactional]
-        fn on_activation(market_id: &MarketIdOf<T>) -> DispatchResult {
-            let market = T::MarketCommons::market(market_id)?;
-            if market.scoring_rule != ScoringRule::Parimutuel {
-                return Ok(());
+        fn on_activation(market_id: &MarketIdOf<T>) -> ResultWithWeightInfo<DispatchResult> {
+            let market_result = T::MarketCommons::market(market_id);
+
+            let market = match market_result {
+                Ok(market) if market.scoring_rule == ScoringRule::Parimutuel => market,
+                Err(e) => {
+                    return ResultWithWeightInfo::new(Err(e).into(), T::DbWeight::get().reads(1));
+                }
+                _ => {
+                    return ResultWithWeightInfo::new(Ok(()), T::DbWeight::get().reads(1));
+                }
             };
 
             for outcome in market.outcome_assets(*market_id) {
                 let admin = Self::pot_account(*market_id);
                 let is_sufficient = true;
                 let min_balance = 1u8;
-                T::AssetCreator::create(outcome.into(), admin, is_sufficient, min_balance.into())?;
+                if let Err(e) = T::AssetCreator::create(
+                    outcome.into(),
+                    admin,
+                    is_sufficient,
+                    min_balance.into(),
+                ) {
+                    return ResultWithWeightInfo::new(
+                        Err(e).into(),
+                        T::WeightInfo::on_activation(),
+                    );
+                }
             }
 
-            Ok(())
+            ResultWithWeightInfo::new(Ok(()), T::WeightInfo::on_activation())
         }
 
-        #[require_transactional]
-        fn on_resolution(market_id: &MarketIdOf<T>) -> DispatchResult {
-            let market = T::MarketCommons::market(market_id)?;
-            if market.scoring_rule != ScoringRule::Parimutuel {
-                return Ok(());
+        fn on_resolution(market_id: &MarketIdOf<T>) -> ResultWithWeightInfo<DispatchResult> {
+            let market_result = T::MarketCommons::market(market_id);
+
+            let market = match market_result {
+                Ok(market) if market.scoring_rule == ScoringRule::Parimutuel => market,
+                Err(e) => {
+                    return ResultWithWeightInfo::new(Err(e).into(), T::DbWeight::get().reads(1));
+                }
+                _ => {
+                    return ResultWithWeightInfo::new(Ok(()), T::DbWeight::get().reads(1));
+                }
             };
 
             let winning_asset_option = market.resolved_outcome_into_asset(*market_id);
@@ -602,7 +624,7 @@ mod pallet {
                     "Resolved market with id {:?} does not have a resolved outcome",
                     market_id,
                 );
-                return Ok(());
+                return ResultWithWeightInfo::new(Ok(()), T::DbWeight::get().reads(1));
             };
 
             let outcome_total = T::AssetManager::total_issuance(winning_asset.into());
@@ -624,7 +646,7 @@ mod pallet {
                 destroy_result
             );
 
-            Ok(())
+            ResultWithWeightInfo::new(Ok(()), T::WeightInfo::on_resolution())
         }
     }
 }

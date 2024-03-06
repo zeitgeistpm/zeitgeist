@@ -17,12 +17,7 @@
 
 use crate::{mock::*, utils::*, *};
 use core::ops::RangeInclusive;
-use frame_support::{
-    assert_noop, assert_ok,
-    pallet_prelude::DispatchError,
-    storage::{with_transaction, TransactionOutcome},
-    traits::fungibles::Create,
-};
+use frame_support::{assert_noop, assert_ok, traits::fungibles::Create};
 use orml_traits::MultiCurrency;
 use sp_runtime::Percent;
 use test_case::test_case;
@@ -326,10 +321,7 @@ fn claim_refunds_works() {
         market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
-        let _ = with_transaction(|| {
-            assert_ok!(Parimutuel::on_activation(&market_id));
-            TransactionOutcome::Commit(Ok::<(), DispatchError>(()))
-        });
+        assert_ok!(Parimutuel::on_activation(&market_id).result);
 
         let alice_asset = ParimutuelAsset::Share(market_id, 0u16);
         let alice_amount = 20 * <Runtime as Config>::MinBetSize::get();

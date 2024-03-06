@@ -1289,6 +1289,8 @@ macro_rules! impl_config_traits {
             type MinCategories = MinCategories;
             type MaxEditReasonLen = MaxEditReasonLen;
             type MaxRejectReasonLen = MaxRejectReasonLen;
+            // Can be a tuple of hooks
+            type OnStateTransition = (Parimutuel, );
             type OracleBond = OracleBond;
             type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
