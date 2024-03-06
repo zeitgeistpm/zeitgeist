@@ -71,7 +71,7 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{
             CompleteSetOperationsApi, DeployPoolApi, DisputeApi, DisputeMaxWeightApi,
-            DisputeResolutionApi,
+            DisputeResolutionApi, MarketTransitionApi,
         },
         types::{
             Asset, BaseAsset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem,
@@ -445,11 +445,27 @@ mod pallet {
                     Error::<T>::MarketEditRequestAlreadyInProgress
                 );
                 m.status = new_status;
+
+                if m.is_redeemable() {
+                    for outcome in m.outcome_assets(market_id) {
+                        let admin = Self::market_account(market_id);
+                        let is_sufficient = true;
+                        let min_balance = 1u8;
+                        T::AssetCreator::create(
+                            outcome.into(),
+                            admin,
+                            is_sufficient,
+                            min_balance.into(),
+                        )?;
+                    }
+                }
+
                 Ok(())
             })?;
 
             Self::unreserve_creation_bond(&market_id)?;
 
+            T::OnStateTransition::on_activation(&market_id).result?;
             Self::deposit_event(Event::MarketApproved(market_id, new_status));
             // The ApproveOrigin should not pay fees for providing this service
             let default_weight: Option<Weight> = None;
@@ -583,6 +599,7 @@ mod pallet {
                 Ok(())
             })?;
 
+            T::OnStateTransition::on_dispute(&market_id).result?;
             Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed, who));
             Ok((Some(weight)).into())
         }
@@ -1043,6 +1060,7 @@ mod pallet {
                     m.status = MarketStatus::Disputed;
                     Ok(())
                 })?;
+                T::OnStateTransition::on_dispute(&market_id).result?;
             }
 
             // global disputes uses DisputeResolution API to control its resolution
@@ -1708,6 +1726,9 @@ mod pallet {
         /// The origin that is allowed to reject pending advised markets.
         type RejectOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
+        /// Additional handler during state transitions
+        type OnStateTransition: MarketTransitionApi<MarketIdOf<Self>>;
+
         /// The base amount of currency that must be bonded to ensure the oracle reports
         ///  in a timely manner.
         #[pallet::constant]
@@ -2148,18 +2169,30 @@ mod pallet {
 
             let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
             let market_account = Self::market_account(market_id);
+            match market.status {
+                MarketStatus::Active => {
+                    if market.is_redeemable() {
+                        for outcome in market.outcome_assets(market_id) {
+                            let admin = market_account.clone();
+                            let is_sufficient = true;
+                            let min_balance = 1u8;
+                            T::AssetCreator::create(
+                                outcome.into(),
+                                admin,
+                                is_sufficient,
+                                min_balance.into(),
+                            )?;
+                        }
+                    }
 
-            for outcome in market.outcome_assets(market_id) {
-                let admin = market_account.clone();
-                let is_sufficient = true;
-                let min_balance = 1u8;
-                T::AssetCreator::create(outcome.into(), admin, is_sufficient, min_balance.into())?;
+                    T::OnStateTransition::on_activation(&market_id).result?
+                }
+                MarketStatus::Proposed => T::OnStateTransition::on_proposal(&market_id).result?,
+                _ => (),
             }
 
             let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
-
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
-
             Ok((ids_amount, market_id))
         }
 
@@ -2517,9 +2550,12 @@ mod pallet {
                 market.status = MarketStatus::Closed;
                 Ok(())
             })?;
-            let mut total_weight = T::DbWeight::get().reads_writes(1, 1);
+
+            let mut total_weight = T::DbWeight::get().reads_writes(1, 2);
+            let on_state_transition_result = T::OnStateTransition::on_closure(market_id);
+            on_state_transition_result.result?;
+            total_weight = total_weight.saturating_add(on_state_transition_result.weight);
             Self::deposit_event(Event::MarketClosed(*market_id));
-            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             Ok(total_weight)
         }
 
@@ -2773,28 +2809,35 @@ mod pallet {
                 Ok(())
             })?;
 
-            // TODO: Only destroy when assets also created here.
             let winning_outcome = updated_market.resolved_outcome_into_asset(*market_id);
-            if let Some(winning_outcome_inner) = winning_outcome {
-                // Destroy losing assets.
-                let assets_to_destroy = BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
-                    market
-                        .outcome_assets(*market_id)
-                        .into_iter()
-                        .filter(|outcome| *outcome != winning_outcome_inner)
-                        .map(|asset| (AssetOf::<T>::from(asset), None))
-                );
-                // Ensure managed_destroy_multi does not error during lazy migration because
-                // it tried to delete an old outcome asset from orml-tokens
-                let _ = T::AssetDestroyer::managed_destroy_multi(assets_to_destroy);
+            if market.is_redeemable() {
+                if let Some(winning_outcome_inner) = winning_outcome {
+                    // Destroy losing assets.
+                    let assets_to_destroy = BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
+                        market
+                            .outcome_assets(*market_id)
+                            .into_iter()
+                            .filter(|outcome| *outcome != winning_outcome_inner)
+                            .map(|asset| (AssetOf::<T>::from(asset), None)),
+                    );
+                    // Ensure managed_destroy_multi does not error during lazy migration because
+                    // it tried to delete an old outcome asset from orml-tokens
+                    let _ = T::AssetDestroyer::managed_destroy_multi(assets_to_destroy);
+                }
             }
+
+            let on_state_transition_result = T::OnStateTransition::on_resolution(market_id);
+            on_state_transition_result.result?;
+            total_weight = total_weight.saturating_add(on_state_transition_result.weight);
+            total_weight =
+                total_weight.saturating_add(Self::calculate_internal_resolve_weight(market));
 
             Self::deposit_event(Event::MarketResolved(
                 *market_id,
                 MarketStatus::Resolved,
                 resolved_outcome,
             ));
-            Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(market)))
+            Ok(total_weight)
         }
 
         /// The reserve ID of the prediction-markets pallet.
@@ -3034,6 +3077,7 @@ mod pallet {
                 Ok(())
             })?;
 
+            T::OnStateTransition::on_report(&market_id).result?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             let block_after_dispute_duration =
                 report.at.saturating_add(market.deadlines.dispute_duration);
@@ -3062,6 +3106,7 @@ mod pallet {
                 market.status = MarketStatus::Reported;
                 Ok(())
             })?;
+            T::OnStateTransition::on_report(&market_id).result?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             Self::on_resolution(&market_id, &market)?;
             Ok(Some(T::WeightInfo::report_trusted_market()).into())

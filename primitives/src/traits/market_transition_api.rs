@@ -15,54 +15,104 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::pallet_prelude::DispatchResult;
+use crate::types::ResultWithWeightInfo;
+use frame_support::pallet_prelude::{DispatchResult, Weight};
 
 /// API that is used to catch market state transitions.
 pub trait MarketTransitionApi<MI> {
-    fn on_proposal(_market_id: &MI) -> DispatchResult {
-        Ok(())
+    fn on_proposal(_market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {
+        ResultWithWeightInfo::new(Ok(()), Weight::zero())
     }
-    fn on_activation(_market_id: &MI) -> DispatchResult {
-        Ok(())
+    fn on_activation(_market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {
+        ResultWithWeightInfo::new(Ok(()), Weight::zero())
     }
-    fn on_closure(_market_id: &MI) -> DispatchResult {
-        Ok(())
+    fn on_closure(_market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {
+        ResultWithWeightInfo::new(Ok(()), Weight::zero())
     }
-    fn on_report(_market_id: &MI) -> DispatchResult {
-        Ok(())
+    fn on_report(_market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {
+        ResultWithWeightInfo::new(Ok(()), Weight::zero())
     }
-    fn on_dispute(_market_id: &MI) -> DispatchResult {
-        Ok(())
+    fn on_dispute(_market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {
+        ResultWithWeightInfo::new(Ok(()), Weight::zero())
     }
-    fn on_resolution(_market_id: &MI) -> DispatchResult {
-        Ok(())
+    fn on_resolution(_market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {
+        ResultWithWeightInfo::new(Ok(()), Weight::zero())
     }
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(8)]
+/// Implementation returns on first error or after successful execution of all elements.
 impl<MI> MarketTransitionApi<MI> for Tuple {
-    fn on_proposal(market_id: &MI) -> DispatchResult {
-        for_tuples!( #( Tuple::on_proposal(market_id)?; )* );
-        Ok(())
+    fn on_proposal(market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {
+        let mut collective_result = ResultWithWeightInfo::new(Ok(()), Weight::zero());
+        for_tuples!( #(
+            let result = Tuple::on_proposal(market_id);
+            collective_result.result = result.result;
+            collective_result.weight = collective_result.weight.saturating_add(result.weight);
+            if collective_result.result.is_err() {
+                return collective_result;
+            }
+        )* );
+        collective_result
     }
-    fn on_activation(market_id: &MI) -> DispatchResult {
-        for_tuples!( #( Tuple::on_activation(market_id)?; )* );
-        Ok(())
+    fn on_activation(market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {
+        let mut collective_result = ResultWithWeightInfo::new(Ok(()), Weight::zero());
+        for_tuples!( #(
+            let result = Tuple::on_activation(market_id);
+            collective_result.result = result.result;
+            collective_result.weight = collective_result.weight.saturating_add(result.weight);
+            if collective_result.result.is_err() {
+                return collective_result;
+            }
+        )* );
+        collective_result
     }
-    fn on_closure(market_id: &MI) -> DispatchResult {
-        for_tuples!( #( Tuple::on_closure(market_id)?; )* );
-        Ok(())
+    fn on_closure(market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {
+        let mut collective_result = ResultWithWeightInfo::new(Ok(()), Weight::zero());
+        for_tuples!( #(
+            let result = Tuple::on_closure(market_id);
+            collective_result.result = result.result;
+            collective_result.weight = collective_result.weight.saturating_add(result.weight);
+            if collective_result.result.is_err() {
+                return collective_result;
+            }
+        )* );
+        collective_result
     }
-    fn on_report(market_id: &MI) -> DispatchResult {
-        for_tuples!( #( Tuple::on_report(market_id)?; )* );
-        Ok(())
+    fn on_report(market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {
+        let mut collective_result = ResultWithWeightInfo::new(Ok(()), Weight::zero());
+        for_tuples!( #(
+            let result = Tuple::on_report(market_id);
+            collective_result.result = result.result;
+            collective_result.weight = collective_result.weight.saturating_add(result.weight);
+            if collective_result.result.is_err() {
+                return collective_result;
+            }
+        )* );
+        collective_result
     }
-    fn on_dispute(market_id: &MI) -> DispatchResult {
-        for_tuples!( #( Tuple::on_dispute(market_id)?; )* );
-        Ok(())
+    fn on_dispute(market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {
+        let mut collective_result = ResultWithWeightInfo::new(Ok(()), Weight::zero());
+        for_tuples!( #(
+            let result = Tuple::on_dispute(market_id);
+            collective_result.result = result.result;
+            collective_result.weight = collective_result.weight.saturating_add(result.weight);
+            if collective_result.result.is_err() {
+                return collective_result;
+            }
+        )* );
+        collective_result
     }
-    fn on_resolution(market_id: &MI) -> DispatchResult {
-        for_tuples!( #( Tuple::on_resolution(market_id)?; )* );
-        Ok(())
+    fn on_resolution(market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {
+        let mut collective_result = ResultWithWeightInfo::new(Ok(()), Weight::zero());
+        for_tuples!( #(
+            let result = Tuple::on_resolution(market_id);
+            collective_result.result = result.result;
+            collective_result.weight = collective_result.weight.saturating_add(result.weight);
+            if collective_result.result.is_err() {
+                return collective_result;
+            }
+        )* );
+        collective_result
     }
 }

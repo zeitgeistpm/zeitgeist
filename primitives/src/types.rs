@@ -153,6 +153,12 @@ pub struct ResultWithWeightInfo<R> {
     pub weight: Weight,
 }
 
+impl<R> ResultWithWeightInfo<R> {
+    pub fn new(result: R, weight: Weight) -> Self {
+        ResultWithWeightInfo { result, weight }
+    }
+}
+
 #[derive(
     Clone,
     Copy,
