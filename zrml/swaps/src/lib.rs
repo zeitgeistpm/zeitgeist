@@ -65,7 +65,7 @@ mod pallet {
         transactional, Blake2_128Concat, PalletError, PalletId, Parameter,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-    use orml_traits::{MultiCurrency, MultiReservableCurrency};
+    use orml_traits::MultiCurrency;
     use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
     use scale_info::TypeInfo;
     use sp_arithmetic::traits::{Saturating, Zero};
@@ -504,7 +504,7 @@ mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// Shares of outcome assets and native currency
-        type AssetManager: MultiReservableCurrency<Self::AccountId, CurrencyId = Self::Asset>;
+        type AssetManager: MultiCurrency<Self::AccountId, CurrencyId = Self::Asset>;
 
         type Asset: Parameter
             + Member
