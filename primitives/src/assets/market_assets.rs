@@ -25,7 +25,9 @@ use super::*;
 /// * `MI`: Market Id
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[derive(Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
+#[derive(
+    Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, PartialEq, PartialOrd, Ord, TypeInfo,
+)]
 pub enum MarketAssetClass<MI: HasCompact + MaxEncodedLen> {
     #[codec(index = 0)]
     CategoricalOutcome(MI, CategoryIndex),

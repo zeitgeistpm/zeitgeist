@@ -74,10 +74,10 @@ pub enum Asset<MI: MaxEncodedLen + HasCompact> {
     ParimutuelShare(MI, CategoryIndex),
 
     #[codec(index = 7)]
-    CampaignAssetClass(#[codec(compact)] CampaignAssetId),
+    CampaignAsset(#[codec(compact)] CampaignAssetId),
 
     #[codec(index = 8)]
-    CustomAssetClass(#[codec(compact)] CustomAssetId),
+    CustomAsset(#[codec(compact)] CustomAssetId),
 }
 
 impl<MI: HasCompact + MaxEncodedLen> PoolSharesId<PoolId> for Asset<MI> {
@@ -112,13 +112,13 @@ impl<MI: HasCompact + MaxEncodedLen> From<MarketAssetClass<MI>> for Asset<MI> {
 
 impl<MI: HasCompact + MaxEncodedLen> From<CampaignAssetClass> for Asset<MI> {
     fn from(value: CampaignAssetClass) -> Self {
-        Self::CampaignAssetClass(value.0)
+        Self::CampaignAsset(value.0)
     }
 }
 
 impl<MI: HasCompact + MaxEncodedLen> From<CustomAssetClass> for Asset<MI> {
     fn from(value: CustomAssetClass) -> Self {
-        Self::CustomAssetClass(value.0)
+        Self::CustomAsset(value.0)
     }
 }
 
@@ -136,6 +136,35 @@ impl<MI: HasCompact + MaxEncodedLen> From<CurrencyClass<MI>> for Asset<MI> {
             }
             CurrencyClass::<MI>::PoolShare(pool_id) => Self::PoolShare(pool_id),
             CurrencyClass::<MI>::ForeignAsset(asset_id) => Self::ForeignAsset(asset_id),
+        }
+    }
+}
+
+impl<MI: HasCompact + MaxEncodedLen> From<BaseAssetClass> for Asset<MI> {
+    fn from(value: BaseAssetClass) -> Self {
+        match value {
+            BaseAssetClass::Ztg => Self::Ztg,
+            BaseAssetClass::ForeignAsset(id) => Self::ForeignAsset(id),
+            BaseAssetClass::CampaignAsset(id) => Self::CampaignAsset(id),
+        }
+    }
+}
+
+impl<MI: HasCompact + MaxEncodedLen> From<ParimutuelAssetClass<MI>> for Asset<MI> {
+    fn from(value: ParimutuelAssetClass<MI>) -> Self {
+        match value {
+            ParimutuelAssetClass::<MI>::Share(market_id, cat_id) => {
+                Self::ParimutuelShare(market_id, cat_id)
+            }
+        }
+    }
+}
+
+impl<MI: HasCompact + MaxEncodedLen> From<XcmAssetClass> for Asset<MI> {
+    fn from(value: XcmAssetClass) -> Self {
+        match value {
+            XcmAssetClass::Ztg => Self::Ztg,
+            XcmAssetClass::ForeignAsset(id) => Self::ForeignAsset(id),
         }
     }
 }

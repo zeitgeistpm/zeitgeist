@@ -77,29 +77,35 @@ impl<'a> Arbitrary<'a> for MultiHash {
     }
 }
 
-/// ORML adapter
+/// ORML adapter.
 pub type BasicCurrencyAdapter<R, B> = orml_currencies::BasicCurrencyAdapter<R, B, Amount, Balance>;
 
-/// ID type for any asset class
+/// ID type for any asset class.
 pub type Assets = Asset<MarketId>;
 
-/// Asset type representing campaign assets
+/// Asset type representing base assets used by prediction markets.
+pub type BaseAsset = BaseAssetClass;
+
+/// Asset type representing campaign assets.
 pub type CampaignAsset = CampaignAssetClass;
 
-// ID type of the campaign asset class
+// ID type of the campaign asset class.
 pub type CampaignAssetId = u128;
 
-/// Asset type representing custom assets
+/// Asset type representing custom assets.
 pub type CustomAsset = CustomAssetClass;
 
-// ID type of the custom asset class
+// ID type of the custom asset class.
 pub type CustomAssetId = u128;
 
-// Asset type representing currencies (excluding ZTG)
+// Asset type representing currencies (excluding ZTG).
 pub type Currencies = CurrencyClass<MarketId>;
 
-/// Asset type representing assets used by prediction markets
+/// Asset type representing assets used by prediction markets.
 pub type MarketAsset = MarketAssetClass<MarketId>;
+
+/// Asset type representing types used in parimutuel markets.
+pub type ParimutuelAsset = ParimutuelAssetClass<MarketId>;
 
 /// The asset id specifically used for pallet_assets_tx_payment for
 /// paying transaction fees in different assets.
@@ -145,6 +151,12 @@ pub type UncheckedExtrinsicTest<R> = frame_system::mocking::MockUncheckedExtrins
 pub struct ResultWithWeightInfo<R> {
     pub result: R,
     pub weight: Weight,
+}
+
+impl<R> ResultWithWeightInfo<R> {
+    pub fn new(result: R, weight: Weight) -> Self {
+        ResultWithWeightInfo { result, weight }
+    }
 }
 
 #[derive(

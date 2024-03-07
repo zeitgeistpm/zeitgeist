@@ -189,7 +189,7 @@ parameter_type_with_key! {
 
 parameter_type_with_key! {
     pub ExistentialDepositsNew: |_currency_id: Currencies| -> Balance {
-        1
+        2
     };
 }
 
