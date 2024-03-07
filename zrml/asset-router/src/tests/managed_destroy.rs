@@ -322,7 +322,7 @@ fn does_skip_and_remove_assets_in_invalid_state() {
 fn does_trigger_on_idle_outer_loop_safety_guard() {
     ExtBuilder::default().build().execute_with(|| {
         for asset_num in 0..=MAX_ASSET_DESTRUCTIONS_PER_BLOCK {
-            let asset = Assets::CampaignAssetClass(asset_num as u128);
+            let asset = Assets::CampaignAsset(asset_num as u128);
             assert_ok!(AssetRouter::create(asset, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
             assert_ok!(AssetRouter::managed_destroy(asset, None));
         }
