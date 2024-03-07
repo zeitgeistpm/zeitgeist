@@ -41,6 +41,7 @@ pub trait MarketTransitionApi<MI> {
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(8)]
+#[allow(clippy::let_and_return)]
 /// Implementation returns on first error or after successful execution of all elements.
 impl<MI> MarketTransitionApi<MI> for Tuple {
     fn on_proposal(market_id: &MI) -> ResultWithWeightInfo<DispatchResult> {

@@ -302,7 +302,7 @@ mod pallet {
             let amount = order_data.maker_amount;
 
             if T::AssetManager::ensure_can_withdraw(asset, &order_account, amount).is_ok() {
-                T::AssetManager::transfer(asset, &order_account, &maker, amount)?;
+                T::AssetManager::transfer(asset, &order_account, maker, amount)?;
             } else {
                 let missing =
                     T::AssetManager::unreserve_named(&Self::reserve_id(), asset, maker, amount);

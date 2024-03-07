@@ -82,8 +82,7 @@ fn create_market_and_deploy_pool(
     spot_prices: Vec<BalanceOf<Runtime>>,
     swap_fee: BalanceOf<Runtime>,
 ) -> MarketId {
-    let market_id =
-        create_market(creator, base_asset.try_into().unwrap(), market_type, ScoringRule::Lmsr);
+    let market_id = create_market(creator, base_asset, market_type, ScoringRule::Lmsr);
     assert_ok!(PredictionMarkets::buy_complete_set(
         RuntimeOrigin::signed(ALICE),
         market_id,

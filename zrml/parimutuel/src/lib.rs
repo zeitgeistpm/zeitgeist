@@ -336,9 +336,9 @@ mod pallet {
             match market.market_type {
                 MarketType::Categorical(categories) => {
                     ensure!(index < categories, Error::<T>::InvalidOutcomeAsset);
-                    return Ok(());
+                    Ok(())
                 }
-                MarketType::Scalar(_) => return Err(Error::<T>::NotCategorical.into()),
+                MarketType::Scalar(_) => Err(Error::<T>::NotCategorical.into()),
             }
         }
 
@@ -574,7 +574,7 @@ mod pallet {
             let market = match market_result {
                 Ok(market) if market.scoring_rule == ScoringRule::Parimutuel => market,
                 Err(e) => {
-                    return ResultWithWeightInfo::new(Err(e).into(), T::DbWeight::get().reads(1));
+                    return ResultWithWeightInfo::new(Err(e), T::DbWeight::get().reads(1));
                 }
                 _ => {
                     return ResultWithWeightInfo::new(Ok(()), T::DbWeight::get().reads(1));
@@ -591,10 +591,7 @@ mod pallet {
                     is_sufficient,
                     min_balance.into(),
                 ) {
-                    return ResultWithWeightInfo::new(
-                        Err(e).into(),
-                        T::WeightInfo::on_activation(),
-                    );
+                    return ResultWithWeightInfo::new(Err(e), T::WeightInfo::on_activation());
                 }
             }
 
@@ -607,7 +604,7 @@ mod pallet {
             let market = match market_result {
                 Ok(market) if market.scoring_rule == ScoringRule::Parimutuel => market,
                 Err(e) => {
-                    return ResultWithWeightInfo::new(Err(e).into(), T::DbWeight::get().reads(1));
+                    return ResultWithWeightInfo::new(Err(e), T::DbWeight::get().reads(1));
                 }
                 _ => {
                     return ResultWithWeightInfo::new(Ok(()), T::DbWeight::get().reads(1));

@@ -357,6 +357,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type MinCategories = MinCategories;
     type MaxEditReasonLen = MaxEditReasonLen;
     type MaxRejectReasonLen = MaxRejectReasonLen;
+    type OnStateTransition = ();
     type OracleBond = OracleBond;
     type OutsiderBond = OutsiderBond;
     type PalletId = PmPalletId;

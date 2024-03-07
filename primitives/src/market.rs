@@ -147,20 +147,15 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
             return None;
         };
 
-        self.outcome_report_into_asset(market_id, &outcome)
+        self.outcome_report_into_asset(market_id, outcome)
     }
 
     pub fn resolved_outcome_into_asset<MI: HasCompact + MaxEncodedLen>(
         &self,
         market_id: MI,
     ) -> Option<MarketAssetClass<MI>> {
-        let outcome = if let Some(ref outcome) = self.resolved_outcome {
-            outcome
-        } else {
-            return None;
-        };
-
-        self.outcome_report_into_asset(market_id, &outcome)
+        let outcome = self.resolved_outcome.as_ref()?;
+        self.outcome_report_into_asset(market_id, outcome)
     }
 
     fn outcome_report_into_asset<MI: HasCompact + MaxEncodedLen>(
