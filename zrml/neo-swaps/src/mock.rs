@@ -34,6 +34,7 @@ use frame_system::{EnsureRoot, EnsureSignedBy};
 #[cfg(feature = "parachain")]
 use orml_asset_registry::AssetMetadata;
 use orml_traits::MultiCurrency;
+use sp_runtime::Perbill;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, Get, IdentityLookup, Zero},
@@ -146,8 +147,8 @@ where
         }
     }
 
-    fn fee_percentage(_market_id: Self::MarketId) -> Self::Balance {
-        EXTERNAL_FEES.saturated_into()
+    fn fee_percentage(_market_id: Self::MarketId) -> Perbill {
+        Perbill::from_rational(EXTERNAL_FEES, BASE);
     }
 }
 

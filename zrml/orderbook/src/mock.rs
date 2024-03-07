@@ -26,14 +26,13 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup, Zero},
-    SaturatedConversion,
+    Perbill, SaturatedConversion,
 };
 use zeitgeist_primitives::{
     constants::mock::{
         BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
         MaxReserves, MinimumPeriod, OrderbookPalletId, BASE, CENT,
     },
-    math::fixed::FixedMul,
     traits::DistributeFees,
     types::{
         AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
@@ -54,12 +53,12 @@ parameter_types! {
     pub const FeeAccount: AccountIdTest = MARKET_CREATOR;
 }
 
-pub fn fee_percentage<T: crate::Config>() -> BalanceOf<T> {
-    EXTERNAL_FEES.saturated_into::<BalanceOf<T>>()
+pub fn fee_percentage<T: crate::Config>() -> Perbill {
+    Perbill::from_rational(EXTERNAL_FEES, BASE)
 }
 
 pub fn calculate_fee<T: crate::Config>(amount: BalanceOf<T>) -> BalanceOf<T> {
-    fee_percentage::<T>().bmul(amount.saturated_into::<BalanceOf<T>>()).unwrap()
+    fee_percentage::<T>().mul_floor(amount.saturated_into::<BalanceOf<T>>())
 }
 
 pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
@@ -86,7 +85,7 @@ where
         }
     }
 
-    fn fee_percentage(_market_id: Self::MarketId) -> Self::Balance {
+    fn fee_percentage(_market_id: Self::MarketId) -> Perbill {
         fee_percentage::<T>()
     }
 }

@@ -1001,7 +1001,15 @@ mod pallet {
             until: Self::Balance,
         ) -> Result<Self::Balance, DispatchError> {
             let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
-            Ok(pool.calculate_buy_amount_until(asset, until)?)
+            // TODO please correct this!
+            let buy_amount = pool.calculate_buy_amount_until(asset, until)?;
+            let external_fee_percentage = T::ExternalFees::fee_percentage(market_id);
+            let external_fee_amount = external_fee_percentage.mul_floor(buy_amount);
+            let swap_fee_amount = pool.swap_fee.bmul(buy_amount)?;
+            let total_fee_amount = swap_fee_amount.saturating_add(external_fee_amount);
+            let remaining =
+                buy_amount.checked_sub(&total_fee_amount).ok_or(Error::<T>::Unexpected)?;
+            Ok(remaining)
         }
 
         fn buy(
