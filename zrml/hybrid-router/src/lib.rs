@@ -20,8 +20,6 @@
 
 extern crate alloc;
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
 #[cfg(test)]
 mod mock;
 mod tests;
@@ -342,11 +340,11 @@ mod pallet {
             if !amm_amount_in.is_zero() {
                 match tx_type {
                     TxType::Buy => {
-                        T::Amm::buy(&who, market_id, asset, amm_amount_in, BalanceOf::<T>::zero())?;
+                        T::Amm::buy(who.clone(), market_id, asset, amm_amount_in, BalanceOf::<T>::zero())?;
                     }
                     TxType::Sell => {
                         T::Amm::sell(
-                            &who,
+                            who.clone(),
                             market_id,
                             asset,
                             amm_amount_in,

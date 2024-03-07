@@ -1008,13 +1008,13 @@ mod pallet {
         }
 
         fn buy(
-            who: &Self::AccountId,
+            who: Self::AccountId,
             market_id: Self::MarketId,
             asset_out: Self::Asset,
             amount_in: Self::Balance,
             min_amount_out: Self::Balance,
         ) -> DispatchResult {
-            Self::do_buy(who.clone(), market_id, asset_out, amount_in, min_amount_out)
+            Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)
         }
 
         fn calculate_sell_amount_until(
@@ -1027,13 +1027,13 @@ mod pallet {
         }
 
         fn sell(
-            who: &Self::AccountId,
+            who: Self::AccountId,
             market_id: Self::MarketId,
             asset_out: Self::Asset,
             amount_in: Self::Balance,
             min_amount_out: Self::Balance,
         ) -> DispatchResult {
-            Self::do_sell(who.clone(), market_id, asset_out, amount_in, min_amount_out)
+            Self::do_sell(who, market_id, asset_out, amount_in, min_amount_out)
         }
     }
 }

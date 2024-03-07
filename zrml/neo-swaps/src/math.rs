@@ -373,9 +373,8 @@ mod detail {
         exp_x_over_b.checked_add(exp_neg_r_over_b)?.checked_sub(FixedType::checked_from_num(1)?)
     }
 
-    // TODO: test this function
-    /// Calculate -b * ln( (1 - q) / (1 - p_i(r)) )
-    /// Expect result of ln to be negative. Otherwise, return None.
+    /// Calculate `-b * ln( (1-q) / (1-p_i(r)) )` where `q = until` if `q > p_i(r)`; otherwise,
+    /// return zero.
     pub(super) fn calculate_buy_amount_until_fixed(
         until: FixedType,
         liquidity: FixedType,
@@ -385,18 +384,14 @@ mod detail {
         let denominator = FixedType::one().checked_sub(spot_price)?;
         let ln_arg = numerator.checked_div(denominator)?;
         let (ln_result, ln_neg) = ln(ln_arg).ok()?;
-        // since q > p_i(r) results in (1 - q) / (1 - p_i(r)) < 1, ln will be negative
         if !ln_neg {
-            // TODO remove this debug assert after testing
-            debug_assert!(false, "ln unexpectedly positive");
-            // None, if the logarithm is unexpectedly positive
-            return None;
+            return Some(FixedType::checked_from_num(0)?);
         }
         Some(liquidity.checked_mul(ln_result)?)
     }
 
-    // TODO: test this function
-    /// Calculate b * ln( (1 / (1 / p_i(r) - 1)) - (1 / q * (1 / p_i(r) - 1)) )
+    /// Calculate `b * ln( (1 / (1 / p_i(r) - 1)) - (1 / q * (1 / p_i(r) - 1)) )` where `q = until`
+    /// if `q < p_i(r)`; otherwise, return zero.
     pub(super) fn calculate_sell_amount_until_fixed(
         until: FixedType,
         liquidity: FixedType,
@@ -413,12 +408,8 @@ mod detail {
         let second_term = second_numerator.checked_div(second_denominator)?;
         let ln_arg = second_term.checked_sub(first_term)?;
         let (ln_result, ln_neg) = ln(ln_arg).ok()?;
-        // because of q < p_i(r) the logarithm will be positive
         if ln_neg {
-            // TODO remove this debug assert after testing
-            debug_assert!(false, "ln unexpectedly negative");
-            // None, if the logarithm is unexpectedly negative
-            return None;
+            return Some(FixedType::checked_from_num(0)?);
         }
         Some(liquidity.checked_mul(ln_result)?)
     }
@@ -720,5 +711,37 @@ mod tests {
         let result: FixedType =
             exp(FixedType::checked_from_num(EXP_OVERFLOW_THRESHOLD).unwrap(), neg).unwrap();
         assert_eq!(result, expected);
+    }
+
+    #[test_case(_9_10, _10, _1_10, 219722457734)] // Large price shift
+    #[test_case(_4_10, _10, _3_10, 15415067983)] // Small price shift
+    #[test_case(_3_10, _10, _4_10, 0)] // Zero buy amount
+    #[test_case(_4_10, _10, _4_10, 0)] // Zero buy amount
+    fn calculate_buy_amount_until_works(
+        until: MockBalance,
+        liquidity: MockBalance,
+        spot_price: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(
+            MockMath::calculate_buy_amount_until(until, liquidity, spot_price).unwrap(),
+            expected
+        );
+    }
+
+    #[test_case(_1_10, _10, _9_10, 439444915467)] // Large price shift
+    #[test_case(_1_10, _10, _2_10, 81093021622)] // Small price shift
+    #[test_case(_2_10, _10, _1_10, 0)] // Zero sell amount
+    #[test_case(_1_10, _10, _1_10, 0)] // Zero sell amount
+    fn calculate_sell_amount_until_fixed_works(
+        until: MockBalance,
+        liquidity: MockBalance,
+        spot_price: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(
+            MockMath::calculate_sell_amount_until(until, liquidity, spot_price).unwrap(),
+            expected
+        );
     }
 }
