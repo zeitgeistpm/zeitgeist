@@ -242,6 +242,37 @@ fn from_parimutuel_assets_to_all_assets(
     assert_eq!(new_asset, new_asset_converted);
 }
 
+// Assets <> XcmAssetClass
+#[test_case(
+    Asset::<MarketId>::ForeignAsset(7),
+    XcmAssetClass::ForeignAsset(7);
+    "foreign_asset"
+)]
+#[test_case(
+    Asset::<MarketId>::Ztg,
+    XcmAssetClass::Ztg;
+    "ztg"
+)]
+fn from_all_assets_to_xcm_assets(old_asset: Asset<MarketId>, new_asset: XcmAssetClass) {
+    let new_asset_converted: XcmAssetClass = old_asset.try_into().unwrap();
+    assert_eq!(new_asset, new_asset_converted);
+}
+
+#[test_case(
+    XcmAssetClass::ForeignAsset(7),
+    Asset::<MarketId>::ForeignAsset(7);
+    "foreign_asset"
+)]
+#[test_case(
+    XcmAssetClass::Ztg,
+    Asset::<MarketId>::Ztg;
+    "ztg"
+)]
+fn from_xcm_assets_to_all_assets(old_asset: XcmAssetClass, new_asset: Asset<MarketId>) {
+    let new_asset_converted: Asset<MarketId> = old_asset.into();
+    assert_eq!(new_asset, new_asset_converted);
+}
+
 // CampaignAssetId <> CampaignAssetClass
 #[test]
 fn from_campaign_asset_id_to_campaign_asset() {

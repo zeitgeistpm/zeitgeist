@@ -19,6 +19,8 @@ use super::*;
 
 pub use base_assets::BaseAssetClass;
 pub use parimutuel::ParimutuelAssetClass;
+pub use xcm_assets::XcmAssetClass;
 
 mod base_assets;
 mod parimutuel;
+mod xcm_assets;

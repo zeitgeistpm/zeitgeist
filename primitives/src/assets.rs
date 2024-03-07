@@ -30,7 +30,7 @@ pub use campaign_assets::CampaignAssetClass;
 pub use currencies::CurrencyClass;
 pub use custom_assets::CustomAssetClass;
 pub use market_assets::MarketAssetClass;
-pub use subsets::{BaseAssetClass, ParimutuelAssetClass};
+pub use subsets::{BaseAssetClass, ParimutuelAssetClass, XcmAssetClass};
 
 mod all_assets;
 mod campaign_assets;

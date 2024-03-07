@@ -126,3 +126,21 @@ fn index_matching_works_for_parimutuel_assets(
             .unwrap();
     assert_eq!(new_asset_decoded, new_asset);
 }
+
+// Assets <> XcmAssetClass
+#[test_case(
+    Asset::<MarketId>::ForeignAsset(7),
+    XcmAssetClass::ForeignAsset(7);
+    "foreign_asset"
+)]
+#[test_case(
+    Asset::<MarketId>::Ztg,
+    XcmAssetClass::Ztg;
+    "ztg"
+)]
+fn index_matching_works_for_xcm_assets(old_asset: Asset<MarketId>, new_asset: XcmAssetClass) {
+    let old_asset_encoded: Vec<u8> = old_asset.encode();
+    let new_asset_decoded =
+        <XcmAssetClass as Decode>::decode(&mut old_asset_encoded.as_slice()).unwrap();
+    assert_eq!(new_asset_decoded, new_asset);
+}

@@ -159,3 +159,12 @@ impl<MI: HasCompact + MaxEncodedLen> From<ParimutuelAssetClass<MI>> for Asset<MI
         }
     }
 }
+
+impl<MI: HasCompact + MaxEncodedLen> From<XcmAssetClass> for Asset<MI> {
+    fn from(value: XcmAssetClass) -> Self {
+        match value {
+            XcmAssetClass::Ztg => Self::Ztg,
+            XcmAssetClass::ForeignAsset(id) => Self::ForeignAsset(id),
+        }
+    }
+}

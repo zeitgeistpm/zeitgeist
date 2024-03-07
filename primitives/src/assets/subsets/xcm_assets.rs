@@ -17,31 +17,26 @@
 
 use super::*;
 
-/// The `BaseAssetClass` enum represents all assets that can be used as collateral in
-/// prediction markets.
+/// The `XcmAssetClass` enum represents all assets that can be transferred via XCM.
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
-pub enum BaseAssetClass {
+pub enum XcmAssetClass {
     #[codec(index = 4)]
     #[default]
     Ztg,
 
     #[codec(index = 5)]
     ForeignAsset(u32),
-
-    #[codec(index = 7)]
-    CampaignAsset(#[codec(compact)] CampaignAssetId),
 }
 
-impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for BaseAssetClass {
+impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for XcmAssetClass {
     type Error = ();
 
     fn try_from(value: Asset<MI>) -> Result<Self, Self::Error> {
         match value {
             Asset::<MI>::Ztg => Ok(Self::Ztg),
             Asset::<MI>::ForeignAsset(id) => Ok(Self::ForeignAsset(id)),
-            Asset::<MI>::CampaignAsset(id) => Ok(Self::CampaignAsset(id)),
             _ => Err(()),
         }
     }
