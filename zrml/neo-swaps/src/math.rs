@@ -713,10 +713,13 @@ mod tests {
         assert_eq!(result, expected);
     }
 
+    // Very large/small until, very large/small spot_price.
     #[test_case(_9_10, _10, _1_10, 219722457734)] // Large price shift
     #[test_case(_4_10, _10, _3_10, 15415067983)] // Small price shift
     #[test_case(_3_10, _10, _4_10, 0)] // Zero buy amount
     #[test_case(_4_10, _10, _4_10, 0)] // Zero buy amount
+    #[test_case(_1_100, _10, _1_2, 0)] // Very small until
+    #[test_case(1_2, _10, 1_100, 0)] // Very small spot_price
     fn calculate_buy_amount_until_works(
         until: MockBalance,
         liquidity: MockBalance,
@@ -729,10 +732,25 @@ mod tests {
         );
     }
 
+    #[test_case(_100, _10, _1_2)] // Very large until
+    #[test_case(_1_2, _10, _100)] // Very large spot_price
+    fn calculate_buy_amount_until_throws_math_error(
+        until: MockBalance,
+        liquidity: MockBalance,
+        spot_price: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_buy_amount_until(until, liquidity, spot_price),
+            Error::<MockRuntime>::MathError
+        );
+    }
+
     #[test_case(_1_10, _10, _9_10, 439444915467)] // Large price shift
     #[test_case(_1_10, _10, _2_10, 81093021622)] // Small price shift
     #[test_case(_2_10, _10, _1_10, 0)] // Zero sell amount
     #[test_case(_1_10, _10, _1_10, 0)] // Zero sell amount
+    #[test_case(_1_100, _10, _1_2, 459511985013)] // Very small until
+    #[test_case(1_2, _10, 1_100, 451815891780)] // Very small spot_price
     fn calculate_sell_amount_until_fixed_works(
         until: MockBalance,
         liquidity: MockBalance,
@@ -742,6 +760,19 @@ mod tests {
         assert_eq!(
             MockMath::calculate_sell_amount_until(until, liquidity, spot_price).unwrap(),
             expected
+        );
+    }
+
+    #[test_case(_100, _10, _1_2)] // Very large until
+    #[test_case(_1_2, _10, _100)] // Very large spot_price
+    fn calculate_sell_amount_until_throws_math_error(
+        until: MockBalance,
+        liquidity: MockBalance,
+        spot_price: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_sell_amount_until(until, liquidity, spot_price),
+            Error::<MockRuntime>::MathError
         );
     }
 }

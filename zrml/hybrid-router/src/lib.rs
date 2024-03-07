@@ -340,7 +340,13 @@ mod pallet {
             if !amm_amount_in.is_zero() {
                 match tx_type {
                     TxType::Buy => {
-                        T::Amm::buy(who.clone(), market_id, asset, amm_amount_in, BalanceOf::<T>::zero())?;
+                        T::Amm::buy(
+                            who.clone(),
+                            market_id,
+                            asset,
+                            amm_amount_in,
+                            BalanceOf::<T>::zero(),
+                        )?;
                     }
                     TxType::Sell => {
                         T::Amm::sell(
