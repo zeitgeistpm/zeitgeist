@@ -27,14 +27,14 @@ use sp_runtime::{DispatchError, Perbill};
 use zeitgeist_primitives::{
     traits::MarketCommonsPalletApi,
     types::{
-        AccountIdTest, Asset, Balance, BlockNumber, Deadlines, Market, MarketBonds, MarketCreation,
-        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment,
+        AccountIdTest, Balance, BaseAsset, BlockNumber, Deadlines, Market, MarketBonds,
+        MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, Moment,
         ScoringRule,
     },
 };
 
-const MARKET_DUMMY: Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<MarketId>> = Market {
-    base_asset: Asset::Ztg,
+const MARKET_DUMMY: Market<AccountIdTest, Balance, BlockNumber, Moment, BaseAsset> = Market {
+    base_asset: BaseAsset::Ztg,
     creation: MarketCreation::Permissionless,
     creator_fee: Perbill::zero(),
     creator: 0,
@@ -346,8 +346,7 @@ fn market_counter_interacts_correctly_with_push_market_and_remove_market() {
 
 fn market_mock(
     id: AccountIdTest,
-) -> zeitgeist_primitives::types::Market<AccountIdTest, Balance, BlockNumber, Moment, Asset<MarketId>>
-{
+) -> zeitgeist_primitives::types::Market<AccountIdTest, Balance, BlockNumber, Moment, BaseAsset> {
     let mut market = MARKET_DUMMY;
     market.oracle = id;
     market
