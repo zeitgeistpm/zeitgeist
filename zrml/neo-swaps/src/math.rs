@@ -373,7 +373,8 @@ mod detail {
         exp_x_over_b.checked_add(exp_neg_r_over_b)?.checked_sub(FixedType::checked_from_num(1)?)
     }
 
-    /// Calculate -b * ln( (1 - q) / (1 - p_i(r)) )
+    /// Calculate `-b * ln( (1-q) / (1-p_i(r)) )` where `q = until` if `q > p_i(r)`; otherwise,
+    /// return zero.
     pub(super) fn calculate_buy_amount_until_fixed(
         until: FixedType,
         liquidity: FixedType,
@@ -383,14 +384,14 @@ mod detail {
         let denominator = FixedType::one().checked_sub(spot_price)?;
         let ln_arg = numerator.checked_div(denominator)?;
         let (ln_result, ln_neg) = ln(ln_arg).ok()?;
-        // since q > p_i(r) results in (1 - q) / (1 - p_i(r)) < 1, ln will be negative
         if !ln_neg {
             return Some(FixedType::checked_from_num(0)?);
         }
         Some(liquidity.checked_mul(ln_result)?)
     }
 
-    /// Calculate b * ln( (1 / (1 / p_i(r) - 1)) - (1 / q * (1 / p_i(r) - 1)) )
+    /// Calculate `b * ln( (1 / (1 / p_i(r) - 1)) - (1 / q * (1 / p_i(r) - 1)) )` where `q = until`
+    /// if `q < p_i(r)`; otherwise, return zero.
     pub(super) fn calculate_sell_amount_until_fixed(
         until: FixedType,
         liquidity: FixedType,
@@ -407,7 +408,6 @@ mod detail {
         let second_term = second_numerator.checked_div(second_denominator)?;
         let ln_arg = second_term.checked_sub(first_term)?;
         let (ln_result, ln_neg) = ln(ln_arg).ok()?;
-        // because of q < p_i(r) the logarithm will be positive
         if ln_neg {
             return Some(FixedType::checked_from_num(0)?);
         }
