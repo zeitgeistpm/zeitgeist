@@ -26,22 +26,9 @@ use sp_runtime::traits::{AtLeast32Bit, AtLeast32BitUnsigned};
 /// Trait for handling the AMM part of the hybrid router.
 pub trait HybridRouterAmmApi {
     type AccountId;
-    type MarketId: AtLeast32Bit
-        + Copy
-        + Default
-        + MaybeSerializeDeserialize
-        + MaxEncodedLen
-        + Member
-        + Parameter;
-    type Balance: AtLeast32BitUnsigned
-        + FullCodec
-        + Copy
-        + MaybeSerializeDeserialize
-        + Debug
-        + Default
-        + scale_info::TypeInfo
-        + MaxEncodedLen;
     type Asset;
+    type Balance;
+    type MarketId;
 
     /// Checks if a pool exists for the given market ID.
     ///
@@ -135,7 +122,7 @@ pub trait HybridRouterAmmApi {
     ///
     /// - `who`: The account ID of the user performing the sell.
     /// - `market_id`: The market ID.
-    /// - `asset_out`: The asset to sell.
+    /// - `asset_in`: The asset to sell.
     /// - `amount_in`: The amount to input for the sell.
     /// - `min_amount_out`: The minimum amount to receive from the sell.
     ///
@@ -145,7 +132,7 @@ pub trait HybridRouterAmmApi {
     fn sell(
         who: &Self::AccountId,
         market_id: Self::MarketId,
-        asset_out: Self::Asset,
+        asset_in: Self::Asset,
         amount_in: Self::Balance,
         min_amount_out: Self::Balance,
     ) -> DispatchResult;
