@@ -3117,6 +3117,37 @@ fn handle_inflation_works() {
 }
 
 #[test]
+fn block_inflation_reward_after_higher_rejoin_right_before_inflation_period() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Court::set_inflation(RuntimeOrigin::root(), Perbill::from_percent(2u32)));
+
+        run_to_block(InflationPeriod::get());
+        let low_risk_stake = MinJurorStake::get();
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), low_risk_stake));
+        let charlie_stake = MinJurorStake::get() * 9;
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(CHARLIE), charlie_stake));
+
+        let inflation_period = InflationPeriod::get();
+        run_blocks(inflation_period - 1);
+
+        let high_risk_rake = MinJurorStake::get() * 123;
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), high_risk_rake));
+
+        let free_bob_before = Balances::free_balance(BOB);
+        let free_charlie_before = Balances::free_balance(CHARLIE);
+
+        run_blocks(1);
+
+        let free_bob_after = Balances::free_balance(BOB);
+        assert_eq!(free_bob_after - free_bob_before, 0);
+
+        let free_charlie_after = Balances::free_balance(CHARLIE);
+        let charlie_reward = 2400000000;
+        assert_eq!(free_charlie_after - free_charlie_before, charlie_reward);
+    });
+}
+
+#[test]
 fn handle_inflation_is_noop_if_yearly_inflation_is_zero() {
     ExtBuilder::default().build().execute_with(|| {
         YearlyInflation::<Runtime>::kill();

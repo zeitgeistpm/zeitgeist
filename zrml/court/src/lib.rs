@@ -1228,7 +1228,6 @@ mod pallet {
 
             let mut active_lock = BalanceOf::<T>::zero();
             let mut consumed_stake = BalanceOf::<T>::zero();
-            let mut joined_at = now;
 
             if let Some(prev_p_info) = <Participants<T>>::get(who) {
                 ensure!(amount >= prev_p_info.stake, Error::<T>::AmountBelowLastJoin);
@@ -1238,7 +1237,6 @@ mod pallet {
                 {
                     active_lock = prev_p_info.active_lock;
                     consumed_stake = pool_item.consumed_stake;
-                    joined_at = pool_item.joined_at;
 
                     pool.remove(index);
                 } else {
@@ -1251,7 +1249,7 @@ mod pallet {
                 pool = remove_weakest_if_full(pool)?;
             }
 
-            let (active_lock, consumed_stake, joined_at) = (active_lock, consumed_stake, joined_at);
+            let (active_lock, consumed_stake) = (active_lock, consumed_stake);
 
             match pool.binary_search_by_key(&(amount, who), |pool_item| {
                 (pool_item.stake, &pool_item.court_participant)
@@ -1271,7 +1269,7 @@ mod pallet {
                             stake: amount,
                             court_participant: who.clone(),
                             consumed_stake,
-                            joined_at,
+                            joined_at: now,
                         },
                     )
                     .map_err(|_| {

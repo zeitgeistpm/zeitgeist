@@ -261,16 +261,6 @@ benchmarks! {
         let new_stake = T::MinJurorStake::get()
             .saturating_add(1u128.saturated_into::<BalanceOf<T>>());
     }: _(RawOrigin::Signed(caller.clone()), new_stake)
-    verify {
-        let now = <frame_system::Pallet<T>>::block_number();
-        let pool = CourtPool::<T>::get();
-        // joined_at did not change, because it was rewritten to the newly created pool item
-        assert_ne!(now, joined_at_before);
-        assert_eq!(
-            pool.into_inner().iter().find(|i| i.court_participant == caller).unwrap().joined_at,
-            joined_at_before,
-        );
-    }
 
     delegate {
         // jurors greater or equal to MaxDelegations,
@@ -303,16 +293,6 @@ benchmarks! {
         let new_stake = T::MinJurorStake::get()
             .saturating_add(1u128.saturated_into::<BalanceOf<T>>());
     }: _(RawOrigin::Signed(caller.clone()), new_stake, delegations)
-    verify {
-        let now = <frame_system::Pallet<T>>::block_number();
-        let pool = CourtPool::<T>::get();
-        // joined_at did not change, because it was rewritten to the newly created pool item
-        assert_ne!(now, joined_at_before);
-        assert_eq!(
-            pool.into_inner().iter().find(|i| i.court_participant == caller).unwrap().joined_at,
-            joined_at_before,
-        );
-    }
 
     prepare_exit_court {
         let j in 0..(T::MaxCourtParticipants::get() - 1);
