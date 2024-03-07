@@ -40,4 +40,12 @@ pub trait DistributeFees {
         account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance;
+
+    /// Returns the numerator of the fee that is distributed.
+    /// To get percentage, divide this by ZeitgeistBase.
+    ///
+    /// # Arguments
+    ///
+    /// - `market_id`: The market on which the fees are taken.
+    fn fee_percentage(market_id: Self::MarketId) -> Self::Balance;
 }

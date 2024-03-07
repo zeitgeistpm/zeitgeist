@@ -45,21 +45,21 @@ use zeitgeist_primitives::{
     constants::{
         base_multiples::*,
         mock::{
-        AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
-        BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
-        CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
-        CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
-        ExistentialDeposit, ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId,
-        GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
-        LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations,
-        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
-        MaxGracePeriod, MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration,
-        MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation,
-        MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
-        MinOutcomeVoteAmount, MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond,
-        OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
-        SimpleDisputesPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, CENT,
-},
+            AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
+            BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
+            CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
+            CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
+            ExistentialDeposit, ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId,
+            GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
+            LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations,
+            MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
+            MaxGracePeriod, MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration,
+            MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation,
+            MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
+            MinOutcomeVoteAmount, MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond,
+            OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
+            SimpleDisputesPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, CENT,
+        },
     },
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
@@ -144,6 +144,10 @@ where
             Ok(_) => fees,
             Err(_) => Zero::zero(),
         }
+    }
+
+    fn fee_percentage(_market_id: Self::MarketId) -> Self::Balance {
+        EXTERNAL_FEES.saturated_into()
     }
 }
 
