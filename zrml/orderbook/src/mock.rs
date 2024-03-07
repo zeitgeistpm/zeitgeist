@@ -21,27 +21,32 @@
 use crate as orderbook;
 use crate::{AssetOf, BalanceOf, MarketIdOf};
 use core::marker::PhantomData;
-use frame_support::{construct_runtime, pallet_prelude::Get, parameter_types, traits::Everything};
+use frame_support::{
+    construct_runtime,
+    pallet_prelude::Get,
+    parameter_types,
+    traits::{AsEnsureOriginWithArg, Everything},
+};
+use frame_system::{EnsureRoot, EnsureSigned};
 use orml_traits::MultiCurrency;
 use parity_scale_codec::Compact;
-use frame_support::traits::AsEnsureOriginWithArg;
-use frame_system::EnsureSigned;
-use frame_system::EnsureRoot;
-use sp_runtime::traits::ConstU32;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup, Zero},
+    traits::{BlakeTwo256, ConstU32, IdentityLookup, Zero},
     Perbill, SaturatedConversion,
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposit, ExistentialDepositsNew, GetNativeCurrencyId, MaxLocks,
-        MaxReserves, MinimumPeriod, OrderbookPalletId, BASE, AssetsApprovalDeposit, AssetsAccountDeposit, AssetsDeposit, AssetsMetadataDepositBase, AssetsMetadataDepositPerByte, AssetsStringLimit, DestroyAccountWeight, DestroyApprovalWeight, DestroyFinishWeight,
+        AssetsAccountDeposit, AssetsApprovalDeposit, AssetsDeposit, AssetsMetadataDepositBase,
+        AssetsMetadataDepositPerByte, AssetsStringLimit, BlockHashCount, DestroyAccountWeight,
+        DestroyApprovalWeight, DestroyFinishWeight, ExistentialDeposit, ExistentialDepositsNew,
+        GetNativeCurrencyId, MaxLocks, MaxReserves, MinimumPeriod, OrderbookPalletId, BASE,
     },
     traits::DistributeFees,
     types::{
-        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, Hash,
-        Index, MarketId, Moment, UncheckedExtrinsicTest, Currencies, CampaignAsset, CampaignAssetId, CustomAsset, CustomAssetId, MarketAsset,
+        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
+        CampaignAsset, CampaignAssetId, Currencies, CustomAsset, CustomAssetId, Hash, Index,
+        MarketAsset, MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 

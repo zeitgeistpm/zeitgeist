@@ -17,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{mock::*, utils::market_mock, Error, Event, Order, Orders};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, traits::fungibles::Create};
 use orml_tokens::Error as AError;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use pallet_balances::Error as BError;
@@ -25,7 +25,7 @@ use sp_runtime::{Perbill, Perquintill};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
-    types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
+    types::{Asset, BaseAsset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
 };
 use zrml_market_commons::{Error as MError, MarketCommonsPalletApi, Markets};
 
@@ -273,7 +273,9 @@ fn fill_order_fails_if_partial_fill_near_full_fill_not_allowed() {
             taker_asset,
             taker_amount,
         ));
+
         assert_ok!(AssetManager::deposit(taker_asset, &BOB, taker_amount));
+
         assert_noop!(
             Orderbook::fill_order(
                 RuntimeOrigin::signed(BOB),
@@ -483,11 +485,16 @@ fn it_fails_order_does_not_exist() {
     });
 }
 
-#[test]
-fn it_places_orders() {
+#[test_case(true; "with_reservable_asset")]
+#[test_case(false; "with_non_reservable_asset")]
+fn it_places_orders(reservable_maker_asset: bool) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        let market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>();
+        if !reservable_maker_asset {
+            market.base_asset = BaseAsset::CampaignAsset(0);
+            assert_ok!(AssetRouter::create(market.base_asset.into(), ALICE, true, 1));
+        }
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let taker_asset_0 = Asset::CategoricalOutcome(0, 2);
@@ -506,7 +513,13 @@ fn it_places_orders() {
             taker_amount,
         ));
 
-        let reserved_funds = AssetManager::reserved_balance(market.base_asset.into(), &ALICE);
+        let reserved_funds = if reservable_maker_asset {
+            AssetManager::reserved_balance(market.base_asset.into(), &ALICE)
+        } else {
+            let order_account = Orderbook::order_account(0);
+            assert_eq!(AssetManager::free_balance(market.base_asset.into(), &BOB), 0);
+            AssetManager::free_balance(market.base_asset.into(), &order_account)
+        };
         assert_eq!(reserved_funds, maker_amount);
 
         let maker_asset = Asset::CategoricalOutcome(0, 1);
@@ -594,18 +607,25 @@ fn it_fills_order_fully_maker_outcome_asset() {
     });
 }
 
-#[test]
-fn it_fills_order_fully_maker_base_asset() {
+#[test_case(true; "with_reservable_asset")]
+#[test_case(false; "with_non_reservable_asset")]
+fn it_fills_order_fully_maker_base_asset(reservable_maker_asset: bool) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        let market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>();
+        let taker_amount = 10 * BASE;
+        let maker_amount = 50 * BASE;
+
+        if !reservable_maker_asset {
+            market.base_asset = BaseAsset::CampaignAsset(0);
+            assert_ok!(AssetRouter::create(market.base_asset.into(), BOB, true, 1));
+            assert_ok!(AssetManager::deposit(market.base_asset.into(), &BOB, maker_amount));
+        }
+
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 1);
-
-        let taker_amount = 10 * BASE;
-        let maker_amount = 50 * BASE;
 
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(BOB),
@@ -616,8 +636,14 @@ fn it_fills_order_fully_maker_base_asset() {
             taker_amount,
         ));
 
-        let reserved_bob = AssetManager::reserved_balance(maker_asset, &BOB);
-        assert_eq!(reserved_bob, maker_amount);
+        let reserved_funds = if reservable_maker_asset {
+            AssetManager::reserved_balance(market.base_asset.into(), &BOB)
+        } else {
+            let order_account = Orderbook::order_account(0);
+            assert_eq!(AssetManager::free_balance(market.base_asset.into(), &BOB), 0);
+            AssetManager::free_balance(market.base_asset.into(), &order_account)
+        };
+        assert_eq!(reserved_funds, maker_amount);
 
         let order_id = 0u128;
         assert_ok!(AssetManager::deposit(taker_asset, &ALICE, taker_amount));
@@ -643,31 +669,48 @@ fn it_fills_order_fully_maker_base_asset() {
         let alice_taker_asset_free = AssetManager::free_balance(taker_asset, &ALICE);
         let maker_fees = calculate_fee::<Runtime>(maker_amount);
         let maker_amount_minus_fees = maker_amount - maker_fees;
-        assert_eq!(alice_maker_asset_free, INITIAL_BALANCE + maker_amount_minus_fees);
+
+        if reservable_maker_asset {
+            assert_eq!(alice_maker_asset_free, INITIAL_BALANCE + maker_amount_minus_fees);
+        } else {
+            assert_eq!(alice_maker_asset_free, maker_amount_minus_fees);
+        }
+
         assert_eq!(alice_taker_asset_free, 0);
 
         let bob_bal = AssetManager::free_balance(maker_asset, &BOB);
         let bob_shares = AssetManager::free_balance(taker_asset, &BOB);
-        assert_eq!(bob_bal, INITIAL_BALANCE - maker_amount);
+
+        if reservable_maker_asset {
+            assert_eq!(bob_bal, INITIAL_BALANCE - maker_amount);
+        } else {
+            assert_eq!(bob_bal, 0);
+        }
+
         assert_eq!(bob_shares, taker_amount);
     });
 }
 
-#[test]
-fn it_fills_order_partially_maker_base_asset() {
+#[test_case(true; "with_reservable_asset")]
+#[test_case(false; "with_non_reservable_asset")]
+fn it_fills_order_partially_maker_base_asset(reservable_maker_asset: bool) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        let market = market_mock::<Runtime>();
+        let mut market = market_mock::<Runtime>();
+        let maker_amount = 500 * BASE;
+        let taker_amount = 100 * BASE;
+
+        if !reservable_maker_asset {
+            market.base_asset = BaseAsset::CampaignAsset(0);
+            assert_ok!(AssetRouter::create(market.base_asset.into(), BOB, true, 1));
+        }
+
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let maker_asset = market.base_asset.into();
         let taker_asset = Asset::CategoricalOutcome(0, 1);
 
-        let maker_amount = 500 * BASE;
-        let taker_amount = 100 * BASE;
-
         assert_ok!(AssetManager::deposit(maker_asset, &BOB, maker_amount));
-
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(BOB),
             market_id,
@@ -677,8 +720,14 @@ fn it_fills_order_partially_maker_base_asset() {
             taker_amount,
         ));
 
-        let reserved_bob = AssetManager::reserved_balance(maker_asset, &BOB);
-        assert_eq!(reserved_bob, maker_amount);
+        let reserved_funds = if reservable_maker_asset {
+            AssetManager::reserved_balance(market.base_asset.into(), &BOB)
+        } else {
+            let order_account = Orderbook::order_account(0);
+            assert_eq!(AssetManager::free_balance(market.base_asset.into(), &BOB), 0);
+            AssetManager::free_balance(market.base_asset.into(), &order_account)
+        };
+        assert_eq!(reserved_funds, maker_amount);
 
         let order_id = 0u128;
         assert_ok!(AssetManager::deposit(taker_asset, &ALICE, taker_amount));
@@ -734,16 +783,34 @@ fn it_fills_order_partially_maker_base_asset() {
             Perquintill::from_rational(alice_portion, taker_amount).mul_floor(maker_amount);
         let filled_maker_amount_minus_fees =
             filled_maker_amount - calculate_fee::<Runtime>(filled_maker_amount);
-        assert_eq!(alice_maker_asset_free, INITIAL_BALANCE + filled_maker_amount_minus_fees);
+
+        if reservable_maker_asset {
+            assert_eq!(alice_maker_asset_free, INITIAL_BALANCE + filled_maker_amount_minus_fees);
+        } else {
+            assert_eq!(alice_maker_asset_free, filled_maker_amount_minus_fees);
+        }
+
         assert_eq!(alice_taker_asset_free, alice_taker_asset_free_left);
 
         let bob_maker_asset_free = AssetManager::free_balance(maker_asset, &BOB);
         let bob_taker_asset_free = AssetManager::free_balance(taker_asset, &BOB);
-        assert_eq!(bob_maker_asset_free, INITIAL_BALANCE);
+
+        if reservable_maker_asset {
+            assert_eq!(bob_maker_asset_free, INITIAL_BALANCE);
+        } else {
+            assert_eq!(bob_maker_asset_free, 0);
+        }
+
         assert_eq!(bob_taker_asset_free, alice_portion);
 
-        let reserved_bob = AssetManager::reserved_balance(maker_asset, &BOB);
-        assert_eq!(reserved_bob, unfilled_maker_amount);
+        if reservable_maker_asset {
+            let reserved_bob = AssetManager::reserved_balance(maker_asset, &BOB);
+            assert_eq!(reserved_bob, unfilled_maker_amount);
+        } else {
+            let order_account = Orderbook::order_account(0);
+            let remaining = AssetManager::free_balance(maker_asset, &order_account);
+            assert_eq!(remaining, unfilled_maker_amount);
+        }
     });
 }
 
@@ -844,18 +911,24 @@ fn it_fills_order_partially_maker_outcome_asset() {
     });
 }
 
-#[test]
-fn it_removes_order() {
+#[test_case(true; "with_reservable_asset")]
+#[test_case(false; "with_non_reservable_asset")]
+fn it_removes_order(reservable_maker_asset: bool) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        let market = market_mock::<Runtime>();
-        Markets::<Runtime>::insert(market_id, market.clone());
-
-        let maker_asset = market.base_asset.into();
-        let taker_asset = Asset::CategoricalOutcome(0, 2);
-
+        let mut market = market_mock::<Runtime>();
         let taker_amount = 25 * BASE;
         let maker_amount = 10 * BASE;
+
+        if !reservable_maker_asset {
+            market.base_asset = BaseAsset::CampaignAsset(0);
+            assert_ok!(AssetRouter::create(market.base_asset.into(), ALICE, true, 1));
+            assert_ok!(AssetManager::deposit(market.base_asset.into(), &ALICE, maker_amount));
+        }
+
+        Markets::<Runtime>::insert(market_id, market.clone());
+        let maker_asset = market.base_asset.into();
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(ALICE),
@@ -866,7 +939,13 @@ fn it_removes_order() {
             taker_amount,
         ));
 
-        let reserved_funds = AssetManager::reserved_balance(market.base_asset.into(), &ALICE);
+        let reserved_funds = if reservable_maker_asset {
+            AssetManager::reserved_balance(market.base_asset.into(), &ALICE)
+        } else {
+            let order_account = Orderbook::order_account(0);
+            assert_eq!(AssetManager::free_balance(market.base_asset.into(), &BOB), 0);
+            AssetManager::free_balance(market.base_asset.into(), &order_account)
+        };
         assert_eq!(reserved_funds, maker_amount);
 
         let order_id = 0u128;
@@ -876,12 +955,16 @@ fn it_removes_order() {
             Order { market_id, maker: ALICE, maker_asset, maker_amount, taker_asset, taker_amount }
         );
 
-        let reserved_funds = AssetManager::reserved_balance(market.base_asset.into(), &ALICE);
-        assert_eq!(reserved_funds, maker_amount);
-
         assert_ok!(Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_id));
 
-        let reserved_funds = AssetManager::reserved_balance(market.base_asset.into(), &ALICE);
+        let reserved_funds = if reservable_maker_asset {
+            AssetManager::reserved_balance(market.base_asset.into(), &ALICE)
+        } else {
+            let order_account = Orderbook::order_account(0);
+            let alice_balance = AssetManager::free_balance(market.base_asset.into(), &ALICE);
+            assert_eq!(alice_balance, maker_amount);
+            AssetManager::free_balance(market.base_asset.into(), &order_account)
+        };
         assert_eq!(reserved_funds, 0);
 
         assert!(Orders::<Runtime>::get(order_id).is_none());
