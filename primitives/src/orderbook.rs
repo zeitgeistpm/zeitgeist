@@ -59,8 +59,8 @@ impl<AccountId, Balance: AtLeast32BitUnsigned + Copy, MarketId: MaxEncodedLen + 
     /// If the `sub_maker_amount` is lower than the `maker_amount`,
     /// the corresponding amounts to partially fill the order are returned.
     ///
-    /// The `taker_fill` is the amount in `maker_asset` the maker fills to the taker.
-    /// The `maker_fill` is the amount in `taker_asset` the taker fills to the maker.
+    /// The `taker_fill` is the amount in `maker_asset` the maker transfers to the taker.
+    /// The `maker_fill` is the amount in `taker_asset` the taker transfers to the maker.
     ///
     /// Returns `(taker_fill, maker_fill)`.
     pub fn taker_and_maker_fill_from_maker_amount(
@@ -88,8 +88,8 @@ impl<AccountId, Balance: AtLeast32BitUnsigned + Copy, MarketId: MaxEncodedLen + 
     /// If the `sub_taker_amount` is lower than the `taker_amount`,
     /// the corresponding amounts to partially fill the order are returned.
     ///
-    /// The `taker_fill` is the amount in `maker_asset` the maker fills to the taker.
-    /// The `maker_fill` is the amount in `taker_asset` the taker fills to the maker.
+    /// The `taker_fill` is the amount in `maker_asset` the maker transfers to the taker.
+    /// The `maker_fill` is the amount in `taker_asset` the taker transfers to the maker.
     ///
     /// Returns `(taker_fill, maker_fill)`.
     pub fn taker_and_maker_fill_from_taker_amount(
