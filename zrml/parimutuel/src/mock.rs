@@ -33,7 +33,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxReserves, MinBetSize,
-        MinimumPeriod, ParimutuelPalletId, BASE,
+        MinimumPeriod, ParimutuelPalletId, BASE, CENT,
     },
     traits::DistributeFees,
     types::{
@@ -50,8 +50,18 @@ pub const MARKET_CREATOR: AccountIdTest = 42;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
+pub const EXTERNAL_FEES: u128 = CENT;
+
 parameter_types! {
     pub const FeeAccount: AccountIdTest = MARKET_CREATOR;
+}
+
+pub fn fee_percentage<T: crate::Config>() -> Perbill {
+    Perbill::from_rational(EXTERNAL_FEES, BASE)
+}
+
+pub fn calculate_fee<T: crate::Config>(amount: BalanceOf<T>) -> BalanceOf<T> {
+    fee_percentage::<T>().mul_floor(amount.saturated_into::<BalanceOf<T>>())
 }
 
 pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
@@ -71,10 +81,13 @@ where
         account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance {
-        let fees =
-            Perbill::from_rational(1u64, 100u64).mul_floor(amount.saturated_into::<BalanceOf<T>>());
+        let fees = calculate_fee::<T>(amount.saturated_into::<BalanceOf<T>>());
         let _ = T::AssetManager::transfer(asset, account, &F::get(), fees);
         fees
+    }
+
+    fn fee_percentage(_market_id: Self::MarketId) -> Perbill {
+        fee_percentage::<T>()
     }
 }
 

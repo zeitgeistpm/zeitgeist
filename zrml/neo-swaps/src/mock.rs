@@ -37,7 +37,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, Get, IdentityLookup, Zero},
-    DispatchResult, Percent, SaturatedConversion,
+    DispatchResult, Perbill, Percent, SaturatedConversion,
 };
 #[cfg(feature = "parachain")]
 use zeitgeist_primitives::types::Asset;
@@ -58,7 +58,7 @@ use zeitgeist_primitives::{
             MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
             MinOutcomeVoteAmount, MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond,
             OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
-            SimpleDisputesPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, CENT,
+            SimpleDisputesPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
         },
     },
     math::fixed::FixedMul,
@@ -144,6 +144,10 @@ where
             Ok(_) => fees,
             Err(_) => Zero::zero(),
         }
+    }
+
+    fn fee_percentage(_market_id: Self::MarketId) -> Perbill {
+        Perbill::from_rational(EXTERNAL_FEES, BASE)
     }
 }
 
