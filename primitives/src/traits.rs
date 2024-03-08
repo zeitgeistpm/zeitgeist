@@ -31,7 +31,7 @@ pub use complete_set_operations_api::CompleteSetOperationsApi;
 pub use deploy_pool_api::DeployPoolApi;
 pub use dispute_api::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi};
 pub use distribute_fees::DistributeFees;
-pub use hybrid_router_orderbook_api::HybridRouterOrderBookApi;
+pub use hybrid_router_orderbook_api::HybridRouterOrderbookApi;
 pub use market_commons_pallet_api::MarketCommonsPalletApi;
 pub use market_id::MarketId;
 pub use swaps::Swaps;

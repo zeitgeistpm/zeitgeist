@@ -508,7 +508,7 @@ mod pallet {
         }
     }
 
-    impl<T: Config> HybridRouterOrderBookApi for Pallet<T> {
+    impl<T: Config> HybridRouterOrderbookApi for Pallet<T> {
         type AccountId = AccountIdOf<T>;
         type MarketId = MarketIdOf<T>;
         type Balance = BalanceOf<T>;
@@ -521,15 +521,15 @@ mod pallet {
         }
 
         fn fill_order(
-            who: &Self::AccountId,
+            who: Self::AccountId,
             order_id: Self::OrderId,
             maker_partial_fill: Option<Self::Balance>,
         ) -> DispatchResult {
-            Self::do_fill_order(order_id, who.clone(), maker_partial_fill)
+            Self::do_fill_order(order_id, who, maker_partial_fill)
         }
 
         fn place_order(
-            who: &Self::AccountId,
+            who: Self::AccountId,
             market_id: Self::MarketId,
             maker_asset: Self::Asset,
             maker_amount: Self::Balance,
@@ -537,7 +537,7 @@ mod pallet {
             taker_amount: Self::Balance,
         ) -> Result<(), DispatchError> {
             Self::do_place_order(
-                who.clone(),
+                who,
                 market_id,
                 maker_asset,
                 maker_amount,

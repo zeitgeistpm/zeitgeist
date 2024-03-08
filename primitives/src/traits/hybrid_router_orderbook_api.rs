@@ -23,25 +23,12 @@ use frame_support::{
 use parity_scale_codec::{FullCodec, MaxEncodedLen};
 use sp_runtime::traits::{AtLeast32Bit, AtLeast32BitUnsigned};
 
-/// Trait for handling the Order Book part of the hybrid router.
-pub trait HybridRouterOrderBookApi {
+/// Trait for handling the order book part of the hybrid router.
+pub trait HybridRouterOrderbookApi {
     type AccountId;
-    type MarketId: AtLeast32Bit
-        + Copy
-        + Default
-        + MaybeSerializeDeserialize
-        + MaxEncodedLen
-        + Member
-        + Parameter;
-    type Balance: AtLeast32BitUnsigned
-        + FullCodec
-        + Copy
-        + MaybeSerializeDeserialize
-        + Debug
-        + Default
-        + scale_info::TypeInfo
-        + MaxEncodedLen;
     type Asset;
+    type Balance;
+    type MarketId;
     type Order;
     type OrderId;
 
@@ -62,7 +49,7 @@ pub trait HybridRouterOrderBookApi {
     ///
     /// Returns the filled order amount.
     fn fill_order(
-        who: &Self::AccountId,
+        who: Self::AccountId,
         order_id: Self::OrderId,
         maker_partial_fill: Option<Self::Balance>,
     ) -> DispatchResult;
@@ -78,7 +65,7 @@ pub trait HybridRouterOrderBookApi {
     /// - `taker_asset`: The asset the maker wants to receive.
     /// - `taker_amount`: The amount the maker wants to receive.
     fn place_order(
-        who: &Self::AccountId,
+        who: Self::AccountId,
         market_id: Self::MarketId,
         maker_asset: Self::Asset,
         maker_amount: Self::Balance,

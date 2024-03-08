@@ -68,8 +68,8 @@ impl<AccountId, Balance: AtLeast32BitUnsigned + Copy, MarketId: MaxEncodedLen + 
         sub_maker_amount: Balance,
     ) -> Result<(Balance, Balance), DispatchError> {
         // concious switch to match maker and taker amounts to correct fill amounts
-        // the taker gets the maker amount (`taker_fill``)
-        // and the maker gets the taker amount (`maker_fill``)
+        // the taker gets the maker amount (`taker_fill`)
+        // and the maker gets the taker amount (`maker_fill`)
         let (taker_fill, maker_fill) = if sub_maker_amount < self.maker_amount {
             let sub_taker_amount =
                 sub_maker_amount.bmul_bdiv_floor(self.taker_amount, self.maker_amount)?;
@@ -97,8 +97,8 @@ impl<AccountId, Balance: AtLeast32BitUnsigned + Copy, MarketId: MaxEncodedLen + 
         sub_taker_amount: Balance,
     ) -> Result<(Balance, Balance), DispatchError> {
         // concious switch to match maker and taker amounts to correct fill amounts
-        // the taker gets the maker amount (`taker_fill``)
-        // and the maker gets the taker amount (`maker_fill``)
+        // the taker gets the maker amount (`taker_fill`)
+        // and the maker gets the taker amount (`maker_fill`)
         let (taker_fill, maker_fill) = if sub_taker_amount < self.taker_amount {
             let sub_maker_amount =
                 sub_taker_amount.bmul_bdiv_floor(self.maker_amount, self.taker_amount)?;
