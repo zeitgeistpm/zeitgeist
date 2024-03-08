@@ -37,9 +37,7 @@ use orml_traits::{BalanceStatus, MultiCurrency, NamedMultiReservableCurrency};
 pub use pallet::*;
 use sp_runtime::traits::{Get, Zero};
 use zeitgeist_primitives::{
-    math::{
-        checked_ops_res::{CheckedAddRes, CheckedSubRes},
-    },
+    math::checked_ops_res::{CheckedAddRes, CheckedSubRes},
     orderbook::{Order, OrderId},
     traits::{DistributeFees, HybridRouterOrderbookApi, MarketCommonsPalletApi},
     types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
