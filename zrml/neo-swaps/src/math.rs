@@ -44,7 +44,10 @@ use crate::{
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use fixed::FixedU128;
-use sp_runtime::{traits::One, DispatchError, SaturatedConversion};
+use sp_runtime::{
+    traits::{One, Zero},
+    DispatchError, SaturatedConversion,
+};
 use typenum::U80;
 
 type Fractional = U80;
@@ -191,7 +194,7 @@ impl<T: Config> MathOps<T> for Math<T> {
 
 mod detail {
     use super::*;
-    use zeitgeist_primitives::{
+        use zeitgeist_primitives::{
         constants::DECIMALS,
         math::fixed::{IntoFixedDecimal, IntoFixedFromDecimal},
     };
@@ -385,7 +388,7 @@ mod detail {
         let ln_arg = numerator.checked_div(denominator)?;
         let (ln_result, ln_neg) = ln(ln_arg).ok()?;
         if !ln_neg {
-            return Some(FixedType::checked_from_num(0)?);
+            return Some(FixedType::zero());
         }
         Some(liquidity.checked_mul(ln_result)?)
     }
@@ -409,7 +412,7 @@ mod detail {
         let ln_arg = second_term.checked_sub(first_term)?;
         let (ln_result, ln_neg) = ln(ln_arg).ok()?;
         if ln_neg {
-            return Some(FixedType::checked_from_num(0)?);
+            return Some(FixedType::zero());
         }
         Some(liquidity.checked_mul(ln_result)?)
     }
