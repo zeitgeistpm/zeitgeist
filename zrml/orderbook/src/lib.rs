@@ -39,10 +39,9 @@ use sp_runtime::traits::{Get, Zero};
 use zeitgeist_primitives::{
     math::{
         checked_ops_res::{CheckedAddRes, CheckedSubRes},
-        fixed::FixedMulDiv,
     },
-    order_book::{Order, OrderId},
-    traits::{DistributeFees, HybridRouterOrderBookApi, MarketCommonsPalletApi},
+    orderbook::{Order, OrderId},
+    traits::{DistributeFees, HybridRouterOrderbookApi, MarketCommonsPalletApi},
     types::{Asset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
 };
 
@@ -282,22 +281,6 @@ mod pallet {
             Ok(())
         }
 
-        /// Calculates the amount that the taker is going to get from the maker's amount.
-        fn get_taker_fill(
-            order_data: &OrderOf<T>,
-            maker_fill: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
-            // the maker_full_fill is the maximum amount of what the maker wants to have
-            let maker_full_fill = order_data.taker_amount;
-            // the taker_full_fill is the maximum amount of what the taker wants to have
-            let taker_full_fill = order_data.maker_amount;
-            // rounding down: the taker will always get a little bit less than what they asked for.
-            // This ensures that the reserve of the maker
-            // is always enough to repatriate successfully!
-            // `maker_full_fill` is ensured to be never zero in `ensure_ratio_quotient_valid`
-            maker_fill.bmul_bdiv_floor(taker_full_fill, maker_full_fill)
-        }
-
         fn ensure_ratio_quotient_valid(order_data: &OrderOf<T>) -> DispatchResult {
             let maker_full_fill = order_data.taker_amount;
             // this ensures that partial fills, which fill nearly the whole order, are not executed
@@ -400,7 +383,8 @@ mod pallet {
             // the reserve of the maker should always be enough
             // to repatriate successfully, e.g. taker gets a little bit less
             // it should always ensure that the maker's request (maker_fill) is fully filled
-            let taker_fill = Self::get_taker_fill(&order_data, maker_fill)?;
+            let (taker_fill, _maker_fill) =
+                order_data.taker_and_maker_fill_from_taker_amount(maker_fill)?;
 
             // if base asset: fund the full amount, but charge base asset fees from taker later
             T::AssetManager::repatriate_reserved_named(
