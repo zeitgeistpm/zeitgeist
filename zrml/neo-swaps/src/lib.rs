@@ -61,7 +61,7 @@ mod pallet {
     use scale_info::TypeInfo;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
-        DispatchError, DispatchResult, SaturatedConversion,
+        DispatchError, DispatchResult, Perbill, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
@@ -977,6 +977,27 @@ mod pallet {
         }
     }
 
+    impl<T: Config> Pallet<T> {
+        fn amount_including_fee_surplus(
+            amount: BalanceOf<T>,
+            fee_fractional: BalanceOf<T>,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let fee_divsisor = ZeitgeistBase::<BalanceOf<T>>::get()?
+                .checked_sub(&fee_fractional)
+                .ok_or(Error::<T>::Unexpected)?;
+            Ok(amount.bdiv(fee_divsisor)?)
+        }
+
+        fn total_fee_fractional(
+            swap_fee: BalanceOf<T>,
+            external_fee_percentage: Perbill,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let external_fee_fractional =
+                external_fee_percentage.mul_floor(ZeitgeistBase::<BalanceOf<T>>::get()?);
+            Ok(swap_fee.checked_add_res(&external_fee_fractional)?)
+        }
+    }
+
     impl<T: Config> HybridRouterAmmApi for Pallet<T> {
         type AccountId = T::AccountId;
         type MarketId = MarketIdOf<T>;
@@ -1001,15 +1022,14 @@ mod pallet {
             until: Self::Balance,
         ) -> Result<Self::Balance, DispatchError> {
             let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
-            // TODO please correct this!
             let buy_amount = pool.calculate_buy_amount_until(asset, until)?;
-            let external_fee_percentage = T::ExternalFees::fee_percentage(market_id);
-            let external_fee_amount = external_fee_percentage.mul_floor(buy_amount);
-            let swap_fee_amount = pool.swap_fee.bmul(buy_amount)?;
-            let total_fee_amount = swap_fee_amount.saturating_add(external_fee_amount);
-            let remaining =
-                buy_amount.checked_sub(&total_fee_amount).ok_or(Error::<T>::Unexpected)?;
-            Ok(remaining)
+            let total_fee_fractional = Self::total_fee_fractional(
+                pool.swap_fee,
+                T::ExternalFees::fee_percentage(market_id),
+            )?;
+            let buy_amount_plus_fees =
+                Self::amount_including_fee_surplus(buy_amount, total_fee_fractional)?;
+            Ok(buy_amount_plus_fees)
         }
 
         fn buy(

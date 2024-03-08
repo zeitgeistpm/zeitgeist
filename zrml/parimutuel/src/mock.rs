@@ -22,14 +22,13 @@ extern crate alloc;
 use crate as zrml_parimutuel;
 use crate::{AssetOf, BalanceOf, MarketIdOf};
 use alloc::{vec, vec::Vec};
-use sp_runtime::Perbill;
 use core::marker::PhantomData;
 use frame_support::{construct_runtime, pallet_prelude::Get, parameter_types, traits::Everything};
 use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    SaturatedConversion,
+    Perbill, SaturatedConversion,
 };
 use zeitgeist_primitives::{
     constants::mock::{
