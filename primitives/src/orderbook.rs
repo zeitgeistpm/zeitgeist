@@ -26,11 +26,7 @@ use sp_runtime::{traits::AtLeast32BitUnsigned, DispatchError, RuntimeDebug};
 pub type OrderId = u128;
 
 #[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Order<
-    AccountId,
-    Balance: AtLeast32BitUnsigned + Copy,
-    MarketId: MaxEncodedLen + PartialEq,
-> {
+pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen> {
     pub market_id: MarketId,
     pub maker: AccountId,
     pub maker_asset: Asset<MarketId>,
