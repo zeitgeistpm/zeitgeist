@@ -988,7 +988,7 @@ mod pallet {
             let fee_divsisor = ZeitgeistBase::<BalanceOf<T>>::get()?
                 .checked_sub(&fee_fractional)
                 .ok_or(Error::<T>::Unexpected)?;
-            Ok(amount.bdiv(fee_divsisor)?)
+            amount.bdiv(fee_divsisor)
         }
 
         fn total_fee_fractional(
@@ -997,7 +997,7 @@ mod pallet {
         ) -> Result<BalanceOf<T>, DispatchError> {
             let external_fee_fractional =
                 external_fee_percentage.mul_floor(ZeitgeistBase::<BalanceOf<T>>::get()?);
-            Ok(swap_fee.checked_add_res(&external_fee_fractional)?)
+            swap_fee.checked_add_res(&external_fee_fractional)
         }
     }
 
@@ -1016,7 +1016,7 @@ mod pallet {
             asset: Self::Asset,
         ) -> Result<Self::Balance, DispatchError> {
             let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
-            Ok(pool.calculate_spot_price(asset)?)
+            pool.calculate_spot_price(asset)
         }
 
         fn calculate_buy_amount_until(
@@ -1051,7 +1051,7 @@ mod pallet {
             until: Self::Balance,
         ) -> Result<Self::Balance, DispatchError> {
             let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
-            Ok(pool.calculate_sell_amount_until(asset, until)?)
+            pool.calculate_sell_amount_until(asset, until)
         }
 
         fn sell(

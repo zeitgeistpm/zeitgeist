@@ -390,7 +390,7 @@ mod detail {
         if !ln_neg {
             return Some(FixedType::zero());
         }
-        Some(liquidity.checked_mul(ln_result)?)
+        liquidity.checked_mul(ln_result)
     }
 
     /// Calculate `b * ln( (1 / (1 / p_i(r) - 1)) - (1 / q * (1 / p_i(r) - 1)) )` where `q = until`
@@ -414,7 +414,7 @@ mod detail {
         if ln_neg {
             return Some(FixedType::zero());
         }
-        Some(liquidity.checked_mul(ln_result)?)
+        liquidity.checked_mul(ln_result)
     }
 }
 
@@ -716,7 +716,6 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-    // Very large/small until, very large/small spot_price.
     #[test_case(_9_10, _10, _1_10, 219722457734)] // Large price shift
     #[test_case(_4_10, _10, _3_10, 15415067983)] // Small price shift
     #[test_case(_3_10, _10, _4_10, 0)] // Zero buy amount

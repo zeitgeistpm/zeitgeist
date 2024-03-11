@@ -36,7 +36,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, Get, IdentityLookup, Zero},
-    DispatchResult, Percent, SaturatedConversion,
+    DispatchResult, Perbill, Percent, SaturatedConversion,
 };
 #[cfg(feature = "parachain")]
 use zeitgeist_primitives::types::Asset;
@@ -50,12 +50,13 @@ use zeitgeist_primitives::{
         GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
         LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations,
         MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
-        MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners,
-        MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinCategories,
-        MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod,
-        NeoMaxSwapFee, NeoSwapsPalletId, OrderbookPalletId, OutcomeBond, OutcomeFactor,
-        OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId,
-        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT, MAX_ASSETS,
+        MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOrders,
+        MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation,
+        MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount,
+        MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OrderbookPalletId, OutcomeBond,
+        OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
+        SimpleDisputesPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
+        MAX_ASSETS,
     },
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
@@ -119,6 +120,14 @@ impl DeployPoolApi for DeployPoolNoop {
     }
 }
 
+pub fn fee_percentage() -> Perbill {
+    Perbill::from_rational(EXTERNAL_FEES, BASE)
+}
+
+pub fn calculate_fee<T: crate::Config>(amount: BalanceOf<T>) -> BalanceOf<T> {
+    fee_percentage().mul_floor(amount.saturated_into::<BalanceOf<T>>())
+}
+
 pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
 
 impl<T: crate::Config, F> DistributeFees for ExternalFees<T, F>
@@ -136,11 +145,15 @@ where
         account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance {
-        let fees = amount.bmul(EXTERNAL_FEES.saturated_into()).unwrap();
+        let fees = calculate_fee::<T>(amount);
         match T::AssetManager::transfer(asset, account, &F::get(), fees) {
             Ok(_) => fees,
             Err(_) => Zero::zero(),
         }
+    }
+
+    fn fee_percentage(_market_id: Self::MarketId) -> Perbill {
+        fee_percentage()
     }
 }
 
@@ -185,6 +198,7 @@ impl crate::Config for Runtime {
     type AssetManager = AssetManager;
     type MarketCommons = MarketCommons;
     type Amm = NeoSwaps;
+    type MaxOrders = MaxOrders;
     type OrderBook = OrderBook;
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = zrml_hybrid_router::weights::WeightInfo<Runtime>;

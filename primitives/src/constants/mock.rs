@@ -66,6 +66,11 @@ parameter_types! {
     pub const VotingOutcomeFee: Balance = 100 * CENT;
 }
 
+// Hybrid Router parameters
+parameter_types! {
+    pub const MaxOrders: u32 = 100;
+}
+
 // Liquidity Mining parameters
 parameter_types! {
     pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");

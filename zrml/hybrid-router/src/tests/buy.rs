@@ -66,6 +66,18 @@ fn buy_from_amm_and_then_fill_specified_order() {
             strategy,
         ));
 
+        /*
+        AMM does this before the buy trade:
+
+        let swap_fees = pool.swap_fee.bmul(amount)?;
+        pool.liquidity_shares_manager.deposit_fees(swap_fees)?; // Should only error unexpectedly!
+        let external_fees =
+            T::ExternalFees::distribute(market_id, pool.collateral, &pool.account_id, amount);
+        let total_fees = external_fees.saturating_add(swap_fees);
+        let remaining = amount.checked_sub(&total_fees).ok_or(Error::<T>::Unexpected)?;
+        Ok(FeeDistribution { remaining, swap_fees, external_fees })
+        */
+        // This is what the amm has executed: 2832657984
         let amm_amount_in = 2776004824;
         System::assert_has_event(
             NeoSwapsEvent::<Runtime>::BuyExecuted {
@@ -73,7 +85,9 @@ fn buy_from_amm_and_then_fill_specified_order() {
                 market_id,
                 asset_out: asset,
                 amount_in: amm_amount_in,
+                // AMM has executed 5664741768
                 amount_out: 5552568736,
+                // AMM has executed 28326580
                 swap_fee_amount: 27760048,
                 external_fee_amount: 0,
             }
