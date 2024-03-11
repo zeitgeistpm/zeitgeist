@@ -996,7 +996,7 @@ mod pallet {
             external_fee_percentage: Perbill,
         ) -> Result<BalanceOf<T>, DispatchError> {
             let external_fee_fractional =
-                external_fee_percentage.mul_floor(ZeitgeistBase::<BalanceOf<T>>::get()?);
+                external_fee_percentage.mul_ceil(ZeitgeistBase::<BalanceOf<T>>::get()?);
             swap_fee.checked_add_res(&external_fee_fractional)
         }
     }
