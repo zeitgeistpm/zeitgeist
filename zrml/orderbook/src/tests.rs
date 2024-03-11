@@ -30,7 +30,6 @@ use zeitgeist_primitives::{
 use zrml_market_commons::{Error as MError, MarketCommonsPalletApi, Markets};
 
 #[test_case(ScoringRule::Parimutuel; "Parimutuel")]
-#[test_case(ScoringRule::Lmsr; "LMSR")]
 fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;

@@ -54,7 +54,7 @@ where
         },
         report: None,
         resolved_outcome: None,
-        scoring_rule: ScoringRule::Lmsr,
+        scoring_rule: ScoringRule::AmmCdaHybrid,
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
         bonds: Default::default(),
         early_close: None,
