@@ -25,6 +25,7 @@ pub mod constants;
 mod market;
 pub mod math;
 mod max_runtime_usize;
+pub mod orderbook;
 mod outcome_report;
 mod proxy_type;
 mod serde_wrapper;
