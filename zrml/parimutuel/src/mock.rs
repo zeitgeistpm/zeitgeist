@@ -56,12 +56,12 @@ parameter_types! {
     pub const FeeAccount: AccountIdTest = MARKET_CREATOR;
 }
 
-pub fn fee_percentage<T: crate::Config>() -> Perbill {
+pub fn fee_percentage() -> Perbill {
     Perbill::from_rational(EXTERNAL_FEES, BASE)
 }
 
 pub fn calculate_fee<T: crate::Config>(amount: BalanceOf<T>) -> BalanceOf<T> {
-    fee_percentage::<T>().mul_floor(amount.saturated_into::<BalanceOf<T>>())
+    fee_percentage().mul_floor(amount.saturated_into::<BalanceOf<T>>())
 }
 
 pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
@@ -87,7 +87,7 @@ where
     }
 
     fn fee_percentage(_market_id: Self::MarketId) -> Perbill {
-        fee_percentage::<T>()
+        fee_percentage()
     }
 }
 

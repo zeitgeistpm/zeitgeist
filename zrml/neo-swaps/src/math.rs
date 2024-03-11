@@ -194,7 +194,7 @@ impl<T: Config> MathOps<T> for Math<T> {
 
 mod detail {
     use super::*;
-        use zeitgeist_primitives::{
+    use zeitgeist_primitives::{
         constants::DECIMALS,
         math::fixed::{IntoFixedDecimal, IntoFixedFromDecimal},
     };
@@ -390,7 +390,7 @@ mod detail {
         if !ln_neg {
             return Some(FixedType::zero());
         }
-        Some(liquidity.checked_mul(ln_result)?)
+        liquidity.checked_mul(ln_result)
     }
 
     /// Calculate `b * ln( (1 / (1 / p_i(r) - 1)) - (1 / q * (1 / p_i(r) - 1)) )` where `q = until`
@@ -414,7 +414,7 @@ mod detail {
         if ln_neg {
             return Some(FixedType::zero());
         }
-        Some(liquidity.checked_mul(ln_result)?)
+        liquidity.checked_mul(ln_result)
     }
 }
 
