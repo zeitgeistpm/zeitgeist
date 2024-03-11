@@ -69,6 +69,10 @@ pub struct Market<AI, BA, BN, M, A> {
 }
 
 impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
+    /// Returns the `ResolutionMechanism` of market, currently either:
+    /// - `RedeemTokens`, which implies that the module that handles the state transitions of
+    ///    a market is also responsible to provide means for redeeming rewards
+    /// - `Noop`, which implies that another module provides the means for redeeming rewards
     pub fn resolution_mechanism(&self) -> ResolutionMechanism {
         match self.scoring_rule {
             ScoringRule::Lmsr | ScoringRule::Orderbook => ResolutionMechanism::RedeemTokens,
@@ -76,11 +80,13 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
         }
     }
 
+    /// Returns whether the market is redeemable, i.e. reward payout is managed within
+    /// the same module that controls the state transitions of the underlying market.
     pub fn is_redeemable(&self) -> bool {
         matches!(self.resolution_mechanism(), ResolutionMechanism::RedeemTokens)
     }
 
-    // Returns the number of outcomes for a market.
+    /// Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
             MarketType::Categorical(categories) => categories,
