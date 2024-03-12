@@ -117,3 +117,206 @@ impl<MI> MarketTransitionApi<MI> for Tuple {
         collective_result
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use frame_support::pallet_prelude::DispatchError;
+
+    const DEFAULT_ERROR: DispatchResult = Err(DispatchError::Other("unimportant"));
+    const ONE: Weight = Weight::from_all(1);
+    const TWO: Weight = Weight::from_all(2);
+    const THREE: Weight = Weight::from_all(3);
+
+    struct ExecutionPath;
+    impl MarketTransitionApi<u128> for ExecutionPath {
+        fn on_proposal(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            panic!("on_proposal");
+        }
+        fn on_activation(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            panic!("on_activation");
+        }
+        fn on_closure(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            panic!("on_closure");
+        }
+        fn on_report(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            panic!("on_report");
+        }
+        fn on_dispute(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            panic!("on_dispute");
+        }
+        fn on_resolution(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            panic!("on_resolution");
+        }
+    }
+
+    struct SucessPath;
+    impl MarketTransitionApi<u128> for SucessPath {
+        fn on_proposal(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            ResultWithWeightInfo::new(Ok(()), ONE)
+        }
+        fn on_activation(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            ResultWithWeightInfo::new(Ok(()), ONE)
+        }
+        fn on_closure(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            ResultWithWeightInfo::new(Ok(()), ONE)
+        }
+        fn on_report(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            ResultWithWeightInfo::new(Ok(()), ONE)
+        }
+        fn on_dispute(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            ResultWithWeightInfo::new(Ok(()), ONE)
+        }
+        fn on_resolution(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            ResultWithWeightInfo::new(Ok(()), ONE)
+        }
+    }
+
+    struct FailurePath;
+    impl MarketTransitionApi<u128> for FailurePath {
+        fn on_proposal(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            ResultWithWeightInfo::new(DEFAULT_ERROR, TWO)
+        }
+        fn on_activation(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            ResultWithWeightInfo::new(DEFAULT_ERROR, TWO)
+        }
+        fn on_closure(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            ResultWithWeightInfo::new(DEFAULT_ERROR, TWO)
+        }
+        fn on_report(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            ResultWithWeightInfo::new(DEFAULT_ERROR, TWO)
+        }
+        fn on_dispute(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            ResultWithWeightInfo::new(DEFAULT_ERROR, TWO)
+        }
+        fn on_resolution(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
+            ResultWithWeightInfo::new(DEFAULT_ERROR, TWO)
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "on_proposal")]
+    fn correct_execution_path_for_tuples_on_proposal() {
+        <(ExecutionPath,)>::on_proposal(&0);
+    }
+
+    #[test]
+    #[should_panic(expected = "on_activation")]
+    fn correct_execution_path_for_tuples_on_activation() {
+        <(ExecutionPath,)>::on_activation(&0);
+    }
+
+    #[test]
+    #[should_panic(expected = "on_closure")]
+    fn correct_execution_path_for_tuples_on_closure() {
+        <(ExecutionPath,)>::on_closure(&0);
+    }
+
+    #[test]
+    #[should_panic(expected = "on_report")]
+    fn correct_execution_path_for_tuples_on_report() {
+        <(ExecutionPath,)>::on_report(&0);
+    }
+
+    #[test]
+    #[should_panic(expected = "on_dispute")]
+    fn correct_execution_path_for_tuples_on_dispute() {
+        <(ExecutionPath,)>::on_dispute(&0);
+    }
+
+    #[test]
+    #[should_panic(expected = "on_resolution")]
+    fn correct_execution_path_for_tuples_on_resolution() {
+        <(ExecutionPath,)>::on_resolution(&0);
+    }
+
+    #[test]
+    fn provides_correct_result_on_proposal() {
+        let mut result = <(SucessPath,)>::on_proposal(&0);
+        assert_eq!(result.result, Ok(()));
+        assert_eq!(result.weight, ONE);
+
+        result = <(SucessPath, FailurePath)>::on_proposal(&0);
+        assert_eq!(result.result, DEFAULT_ERROR);
+        assert_eq!(result.weight, THREE);
+
+        result = <(FailurePath, SucessPath)>::on_proposal(&0);
+        assert_eq!(result.result, DEFAULT_ERROR);
+        assert_eq!(result.weight, TWO);
+    }
+
+    #[test]
+    fn provides_correct_result_on_activation() {
+        let mut result = <(SucessPath,)>::on_activation(&0);
+        assert_eq!(result.result, Ok(()));
+        assert_eq!(result.weight, ONE);
+
+        result = <(SucessPath, FailurePath)>::on_activation(&0);
+        assert_eq!(result.result, DEFAULT_ERROR);
+        assert_eq!(result.weight, THREE);
+
+        result = <(FailurePath, SucessPath)>::on_activation(&0);
+        assert_eq!(result.result, DEFAULT_ERROR);
+        assert_eq!(result.weight, TWO);
+    }
+
+    #[test]
+    fn provides_correct_result_on_closure() {
+        let mut result = <(SucessPath,)>::on_closure(&0);
+        assert_eq!(result.result, Ok(()));
+        assert_eq!(result.weight, ONE);
+
+        result = <(SucessPath, FailurePath)>::on_closure(&0);
+        assert_eq!(result.result, DEFAULT_ERROR);
+        assert_eq!(result.weight, THREE);
+
+        result = <(FailurePath, SucessPath)>::on_closure(&0);
+        assert_eq!(result.result, DEFAULT_ERROR);
+        assert_eq!(result.weight, TWO);
+    }
+
+    #[test]
+    fn provides_correct_result_on_report() {
+        let mut result = <(SucessPath,)>::on_report(&0);
+        assert_eq!(result.result, Ok(()));
+        assert_eq!(result.weight, ONE);
+
+        result = <(SucessPath, FailurePath)>::on_report(&0);
+        assert_eq!(result.result, DEFAULT_ERROR);
+        assert_eq!(result.weight, THREE);
+
+        result = <(FailurePath, SucessPath)>::on_report(&0);
+        assert_eq!(result.result, DEFAULT_ERROR);
+        assert_eq!(result.weight, TWO);
+    }
+
+    #[test]
+    fn provides_correct_result_on_dispute() {
+        let mut result = <(SucessPath,)>::on_dispute(&0);
+        assert_eq!(result.result, Ok(()));
+        assert_eq!(result.weight, ONE);
+
+        result = <(SucessPath, FailurePath)>::on_dispute(&0);
+        assert_eq!(result.result, DEFAULT_ERROR);
+        assert_eq!(result.weight, THREE);
+
+        result = <(FailurePath, SucessPath)>::on_dispute(&0);
+        assert_eq!(result.result, DEFAULT_ERROR);
+        assert_eq!(result.weight, TWO);
+    }
+
+    #[test]
+    fn provides_correct_result_on_resolution() {
+        let mut result = <(SucessPath,)>::on_resolution(&0);
+        assert_eq!(result.result, Ok(()));
+        assert_eq!(result.weight, ONE);
+
+        result = <(SucessPath, FailurePath)>::on_resolution(&0);
+        assert_eq!(result.result, DEFAULT_ERROR);
+        assert_eq!(result.weight, THREE);
+
+        result = <(FailurePath, SucessPath)>::on_resolution(&0);
+        assert_eq!(result.result, DEFAULT_ERROR);
+        assert_eq!(result.weight, TWO);
+    }
+}
