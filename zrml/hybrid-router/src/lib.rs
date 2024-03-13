@@ -338,8 +338,6 @@ mod pallet {
                 return Ok(amount_in);
             }
 
-            // TODO: what about swap fees and how does it influence our trade?
-
             let spot_price = T::Amm::get_spot_price(market_id, asset)?;
 
             let mut remaining = amount_in;
