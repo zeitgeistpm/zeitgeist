@@ -162,14 +162,7 @@ mod pallet {
         AssetCountMismatch,
         /// The maximum number of orders was exceeded.
         MaxOrdersExceeded,
-        /// Action cannot be completed because an unexpected error has occurred. This should be
-        /// reported to protocol maintainers.
-        InconsistentState(InconsistentStateError),
     }
-
-    // NOTE: these errors should never happen.
-    #[derive(Encode, Decode, Eq, PartialEq, TypeInfo, frame_support::PalletError, RuntimeDebug)]
-    pub enum InconsistentStateError {}
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
