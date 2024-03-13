@@ -50,7 +50,6 @@ const COURT_NEXT_STORAGE_VERSION: u16 = 3;
 
 pub struct MigrateCourtPoolItems<T>(PhantomData<T>);
 
-/// Migrates AMM and CDA markets to the new combined scoring rule.
 impl<T> OnRuntimeUpgrade for MigrateCourtPoolItems<T>
 where
     T: Config,
