@@ -548,6 +548,7 @@ mod pallet {
                 price_limit <= ZeitgeistBase::<BalanceOf<T>>::get()?,
                 Error::<T>::PriceLimitTooHigh
             );
+            ensure!(orders.len() as u32 <= T::MaxOrders::get(), Error::<T>::MaxOrdersExceeded);
             let orders: OrdersOf<T> =
                 orders.try_into().map_err(|_| Error::<T>::MaxOrdersExceeded)?;
             let market = T::MarketCommons::market(&market_id)?;
