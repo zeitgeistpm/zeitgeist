@@ -1200,7 +1200,6 @@ mod pallet {
                 None => return Ok((amount, now)),
             };
 
-            // TODO check if this is correct when on_initialize is running at exactly this block
             let current_period_index = now
                 .checked_div(&T::InflationPeriod::get())
                 .ok_or(Error::<T>::Unexpected(UnexpectedError::InflationPeriodIsZero))?;
