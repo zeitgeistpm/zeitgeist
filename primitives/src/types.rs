@@ -107,6 +107,9 @@ pub type MarketAsset = MarketAssetClass<MarketId>;
 /// Asset type representing types used in parimutuel markets.
 pub type ParimutuelAsset = ParimutuelAssetClass<MarketId>;
 
+/// Asset type representing types used in XCMs.
+pub type XcmAsset = XcmAssetClass;
+
 /// The asset id specifically used for pallet_assets_tx_payment for
 /// paying transaction fees in different assets.
 /// Since the polkadot extension and wallets can't handle custom asset ids other than just u32,

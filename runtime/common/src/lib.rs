@@ -566,7 +566,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl orml_asset_registry::Config for Runtime {
-            type AssetId = Currencies;
+            type AssetId = XcmAsset;
             type AssetProcessor = CustomAssetProcessor;
             type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrTwoThirdsCouncil>;
             type Balance = Balance;
@@ -621,7 +621,7 @@ macro_rules! impl_config_traits {
             type AccountIdToMultiLocation = AccountIdToMultiLocation;
             type Balance = Balance;
             type BaseXcmWeight = BaseXcmWeight;
-            type CurrencyId = Assets;
+            type CurrencyId = XcmAsset;
             type CurrencyIdConvert = AssetConvert;
             type RuntimeEvent = RuntimeEvent;
             type MaxAssetsForTransfer = MaxAssetsForTransfer;
