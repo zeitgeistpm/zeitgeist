@@ -66,7 +66,7 @@ use zeitgeist_primitives::{
     types::{
         AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CampaignAsset, CampaignAssetClass, CampaignAssetId, Currencies, CustomAsset, CustomAssetId,
-        Hash, Index, MarketAsset, MarketId, Moment, UncheckedExtrinsicTest,
+        Hash, Index, MarketAsset, MarketId, Moment, UncheckedExtrinsicTest, XcmAsset,
     },
 };
 
@@ -295,7 +295,7 @@ impl orml_tokens::Config for Runtime {
 #[cfg(feature = "parachain")]
 crate::orml_asset_registry::impl_mock_registry! {
     MockRegistry,
-    Currencies,
+    XcmAsset,
     Balance,
     zeitgeist_primitives::types::CustomMetadata
 }
@@ -606,7 +606,7 @@ impl ExtBuilder {
         orml_asset_registry_mock::GenesisConfig {
             metadata: vec![
                 (
-                    Currencies::ForeignAsset(100),
+                    XcmAsset::ForeignAsset(100),
                     AssetMetadata {
                         decimals: 18,
                         name: "ACALA USD".as_bytes().to_vec(),
@@ -617,7 +617,7 @@ impl ExtBuilder {
                     },
                 ),
                 (
-                    Currencies::ForeignAsset(420),
+                    XcmAsset::ForeignAsset(420),
                     AssetMetadata {
                         decimals: 18,
                         name: "FANCY_TOKEN".as_bytes().to_vec(),

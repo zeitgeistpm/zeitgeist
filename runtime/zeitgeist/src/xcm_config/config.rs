@@ -53,10 +53,7 @@ use xcm_builder::{
     TakeWeightCredit,
 };
 use xcm_executor::{traits::TransactAsset, Assets as ExecutorAssets, Config};
-use zeitgeist_primitives::{
-    constants::BalanceFractionalDecimals,
-    types::{Asset, Currencies},
-};
+use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::XcmAsset};
 
 pub mod zeitgeist {
     #[cfg(test)]
@@ -216,7 +213,7 @@ pub struct AlignedFractionalTransactAsset<
 }
 
 impl<
-    AssetRegistry: Inspect<AssetId = Currencies>,
+    AssetRegistry: Inspect<AssetId = XcmAsset>,
     FracDecPlaces: Get<u8>,
     CurrencyIdConvert: Convert<MultiAsset, Option<Assets>>,
     TransactAssetDelegate: TransactAsset,
@@ -240,7 +237,7 @@ impl<
                 return asset.clone();
             };
 
-        let currency = if let Ok(currency) = Currencies::try_from(asset_id) {
+        let currency = if let Ok(currency) = XcmAsset::try_from(asset_id) {
             currency
         } else {
             return asset.clone();
@@ -271,7 +268,7 @@ impl<
 }
 
 impl<
-    AssetRegistry: Inspect<AssetId = Currencies>,
+    AssetRegistry: Inspect<AssetId = XcmAsset>,
     CurrencyIdConvert: Convert<MultiAsset, Option<Assets>>,
     FracDecPlaces: Get<u8>,
     TransactAssetDelegate: TransactAsset,
@@ -352,19 +349,25 @@ pub struct AssetConvert;
 impl Convert<Assets, Option<MultiLocation>> for AssetConvert {
     fn convert(id: Assets) -> Option<MultiLocation> {
         match id {
-            Asset::Ztg => Some(MultiLocation::new(
+            Assets::Ztg => Some(MultiLocation::new(
                 1,
                 X2(
                     Junction::Parachain(ParachainInfo::parachain_id().into()),
                     general_key(zeitgeist::KEY),
                 ),
             )),
-            Asset::ForeignAsset(_) => {
-                let currency = Currencies::try_from(id).ok()?;
-                AssetRegistry::multilocation(&currency).ok()?
+            Assets::ForeignAsset(_) => {
+                let asset = XcmAsset::try_from(id).ok()?;
+                AssetRegistry::multilocation(&asset).ok()?
             }
             _ => None,
         }
+    }
+}
+
+impl Convert<XcmAsset, Option<MultiLocation>> for AssetConvert {
+    fn convert(id: XcmAsset) -> Option<MultiLocation> {
+        <Self as Convert<Assets, Option<MultiLocation>>>::convert(id.into())
     }
 }
 
@@ -401,6 +404,13 @@ impl xcm_executor::traits::Convert<MultiLocation, Assets> for AssetConvert {
             }
             _ => AssetRegistry::location_to_asset_id(location).ok_or(location).map(|a| a.into()),
         }
+    }
+}
+
+impl xcm_executor::traits::Convert<MultiLocation, XcmAsset> for AssetConvert {
+    fn convert(location: MultiLocation) -> Result<XcmAsset, MultiLocation> {
+        <Self as xcm_executor::traits::Convert<MultiLocation, Assets>>::convert(location)
+            .and_then(|asset| asset.try_into().map_err(|_| location))
     }
 }
 

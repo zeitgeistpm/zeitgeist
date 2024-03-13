@@ -65,7 +65,7 @@ use zeitgeist_primitives::{
     types::{
         AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CampaignAsset, CampaignAssetId, Currencies, CustomAsset, CustomAssetId, Hash, Index,
-        MarketAsset, MarketId, Moment, UncheckedExtrinsicTest,
+        MarketAsset, MarketId, Moment, UncheckedExtrinsicTest, XcmAsset,
     },
 };
 use zrml_neo_swaps::BalanceOf;
@@ -543,7 +543,7 @@ impl pallet_treasury::Config for Runtime {
 #[cfg(feature = "parachain")]
 zrml_prediction_markets::impl_mock_registry! {
     MockRegistry,
-    Currencies,
+    XcmAsset,
     Balance,
     zeitgeist_primitives::types::CustomMetadata
 }

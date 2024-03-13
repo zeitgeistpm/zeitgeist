@@ -58,7 +58,7 @@ mod pallet {
     #[cfg(feature = "parachain")]
     use {
         orml_traits::asset_registry::Inspect as RegistryInspect,
-        zeitgeist_primitives::types::{CustomMetadata},
+        zeitgeist_primitives::types::CustomMetadata,
     };
 
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
@@ -77,7 +77,7 @@ mod pallet {
             Asset, BaseAsset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem,
             Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
             MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ResultWithWeightInfo,
-            ScalarPosition, ScoringRule, XcmAsset
+            ScalarPosition, ScoringRule, XcmAsset,
         },
     };
     use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
@@ -2962,10 +2962,7 @@ mod pallet {
                 BaseAsset::Ztg => true,
                 #[cfg(feature = "parachain")]
                 BaseAsset::ForeignAsset(id) => {
-                    if let Some(metadata) =
-                        T::AssetRegistry::metadata(&XcmAsset::ForeignAsset(
-                            id,
-                        ))
+                    if let Some(metadata) = T::AssetRegistry::metadata(&XcmAsset::ForeignAsset(id))
                     {
                         metadata.additional.allow_as_base_asset
                     } else {

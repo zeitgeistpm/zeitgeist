@@ -126,7 +126,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
         assert_eq!(AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &BOB), bob_initial_balance);
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(BOB),
-            FOREIGN_ZTG_ID.into(),
+            FOREIGN_ZTG_ID,
             transfer_amount,
             Box::new(
                 MultiLocation::new(
@@ -200,7 +200,7 @@ fn transfer_btc_sibling_to_zeitgeist() {
         ));
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ALICE),
-            // Target chain will interpret Assets::Ztg as BTC in this context.
+            // Target chain will interpret XcmAsset::Ztg as BTC in this context.
             XcmAsset::Ztg,
             transfer_amount,
             Box::new(
@@ -262,7 +262,7 @@ fn transfer_btc_zeitgeist_to_sibling() {
     Zeitgeist::execute_with(|| {
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ALICE),
-            BTC_ID.into(),
+            BTC_ID,
             transfer_amount,
             Box::new(
                 MultiLocation::new(
@@ -349,7 +349,7 @@ fn transfer_roc_to_relay_chain() {
 
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ALICE),
-            FOREIGN_PARENT_ID.into(),
+            FOREIGN_PARENT_ID,
             transfer_amount,
             Box::new(
                 MultiLocation::new(1, X1(Junction::AccountId32 { id: BOB.into(), network: None }))
