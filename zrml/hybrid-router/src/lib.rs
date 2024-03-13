@@ -56,7 +56,10 @@ mod pallet {
         ArithmeticError, DispatchResult,
     };
     use zeitgeist_primitives::{
-        math::fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
+        math::{
+            checked_ops_res::CheckedSubRes,
+            fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
+        },
         order_book::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderBookApi},
         types::{Asset, Market, MarketType, ScalarPosition},
@@ -373,9 +376,7 @@ mod pallet {
                         )?;
                     }
                 }
-                remaining = remaining
-                    .checked_sub(&amm_amount_in)
-                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
+                remaining = remaining.checked_sub_res(&amm_amount_in)?;
             }
 
             Ok(remaining)
@@ -459,9 +460,7 @@ mod pallet {
                 // and the `maker_partial_fill` of `fill_order` is specified in `taker_asset`
                 T::OrderBook::fill_order(who, order_id, Some(maker_fill))?;
                 // `maker_fill` is the amount the order owner (maker) wants to receive
-                remaining = remaining
-                    .checked_sub(&maker_fill)
-                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Underflow))?;
+                remaining = remaining.checked_sub_res(&maker_fill)?;
             }
 
             Ok(remaining)
