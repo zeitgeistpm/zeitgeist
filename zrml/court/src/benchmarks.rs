@@ -122,8 +122,15 @@ where
             },
         );
         let consumed_stake = BalanceOf::<T>::zero();
-        let pool_item =
-            CourtPoolItem { stake, court_participant: juror.clone(), consumed_stake, joined_at };
+        let pool_item = CourtPoolItem {
+            stake,
+            court_participant: juror.clone(),
+            consumed_stake,
+            joined_at,
+            last_join_at: joined_at,
+            pre_period_join_at: joined_at,
+            pre_period_join_stake: stake,
+        };
         match pool.binary_search_by_key(&(stake, &juror), |pool_item| {
             (pool_item.stake, &pool_item.court_participant)
         }) {

@@ -203,7 +203,7 @@ mod pallet {
     /// Number of draws for the initial court round.
     const INITIAL_DRAWS_NUM: usize = 31;
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
     const LOG_TARGET: &str = "runtime::zrml-court";
     /// Weight used to increase the number of jurors for subsequent appeals
     /// of the same court.
@@ -212,6 +212,7 @@ mod pallet {
     const APPEAL_BOND_BASIS: u32 = 2;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
     pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
     pub(crate) type NegativeImbalanceOf<T> =
         <<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
