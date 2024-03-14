@@ -65,6 +65,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
+        hybrid_router_api_types::AmmTrade,
         math::{
             checked_ops_res::{CheckedAddRes, CheckedSubRes},
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
@@ -100,6 +101,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
     pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>>;
+    pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -535,7 +537,7 @@ mod pallet {
             asset_out: AssetOf<T>,
             amount_in: BalanceOf<T>,
             min_amount_out: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> Result<AmmTradeOf<T>, DispatchError> {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
@@ -584,7 +586,12 @@ mod pallet {
                     swap_fee_amount,
                     external_fee_amount,
                 });
-                Ok(())
+                Ok(AmmTrade {
+                    amount_in,
+                    amount_out,
+                    swap_fee_amount,
+                    external_fee_amount,
+                })
             })
         }
 
@@ -595,7 +602,7 @@ mod pallet {
             asset_in: AssetOf<T>,
             amount_in: BalanceOf<T>,
             min_amount_out: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> Result<AmmTradeOf<T>, DispatchError> {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
@@ -658,7 +665,12 @@ mod pallet {
                     swap_fee_amount,
                     external_fee_amount,
                 });
-                Ok(())
+                Ok(AmmTrade {
+                    amount_in,
+                    amount_out,
+                    swap_fee_amount,
+                    external_fee_amount,
+                })
             })
         }
 
@@ -1041,7 +1053,7 @@ mod pallet {
             asset_out: Self::Asset,
             amount_in: Self::Balance,
             min_amount_out: Self::Balance,
-        ) -> DispatchResult {
+        ) -> Result<AmmTradeOf<T>, DispatchError> {
             Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)
         }
 
@@ -1060,7 +1072,7 @@ mod pallet {
             asset_out: Self::Asset,
             amount_in: Self::Balance,
             min_amount_out: Self::Balance,
-        ) -> DispatchResult {
+        ) -> Result<AmmTradeOf<T>, DispatchError> {
             Self::do_sell(who, market_id, asset_out, amount_in, min_amount_out)
         }
     }

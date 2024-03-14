@@ -46,6 +46,7 @@ mod pallet {
         ArithmeticError, DispatchResult,
     };
     use zeitgeist_primitives::{
+        hybrid_router_api_types::AmmTrade,
         math::{
             checked_ops_res::CheckedSubRes,
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
@@ -55,6 +56,7 @@ mod pallet {
         types::{Asset, Market, MarketType, ScalarPosition},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
+    use zrml_neo_swaps::AmmTradeOf;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -109,6 +111,7 @@ mod pallet {
     pub(crate) type MarketOf<T> =
         Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
     pub(crate) type OrdersOf<T> = BoundedVec<OrderId, <T as Config>::MaxOrders>;
+    pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -316,6 +319,9 @@ mod pallet {
         /// # Returns
         ///
         /// The remaining amount after filling the order from the AMM, or an error if the order cannot be filled.
+        /// If the a trade was executed, trade information is returned from the event.
+        /// Otherwise `None` is returned for the trade information.
+        /// The trade information is useful for event information.
         fn maybe_fill_from_amm(
             tx_type: TxType,
             who: &AccountIdOf<T>,
@@ -323,56 +329,52 @@ mod pallet {
             asset: AssetOf<T>,
             amount_in: BalanceOf<T>,
             price_limit: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
+        ) -> Result<(BalanceOf<T>, Option<AmmTradeOf<T>>), DispatchError> {
             if !T::Amm::pool_exists(market_id) {
-                return Ok(amount_in);
+                return Ok((amount_in, None));
             }
 
             let spot_price = T::Amm::get_spot_price(market_id, asset)?;
 
-            let mut remaining = amount_in;
             let amm_amount_in = match tx_type {
                 TxType::Buy => {
                     if spot_price >= price_limit {
-                        return Ok(amount_in);
+                        return Ok((amount_in, None));
                     }
                     T::Amm::calculate_buy_amount_until(market_id, asset, price_limit)?
                 }
                 TxType::Sell => {
                     if spot_price <= price_limit {
-                        return Ok(amount_in);
+                        return Ok((amount_in, None));
                     }
                     T::Amm::calculate_sell_amount_until(market_id, asset, price_limit)?
                 }
             };
 
-            let amm_amount_in = amm_amount_in.min(remaining);
+            let amm_amount_in = amm_amount_in.min(amount_in);
 
-            if !amm_amount_in.is_zero() {
-                match tx_type {
-                    TxType::Buy => {
-                        T::Amm::buy(
-                            who.clone(),
-                            market_id,
-                            asset,
-                            amm_amount_in,
-                            BalanceOf::<T>::zero(),
-                        )?;
-                    }
-                    TxType::Sell => {
-                        T::Amm::sell(
-                            who.clone(),
-                            market_id,
-                            asset,
-                            amm_amount_in,
-                            BalanceOf::<T>::zero(),
-                        )?;
-                    }
-                }
-                remaining = remaining.checked_sub_res(&amm_amount_in)?;
+            if amm_amount_in.is_zero() {
+                return Ok((amount_in, None));
             }
 
-            Ok(remaining)
+            let amm_trade_info = match tx_type {
+                TxType::Buy => T::Amm::buy(
+                    who.clone(),
+                    market_id,
+                    asset,
+                    amm_amount_in,
+                    BalanceOf::<T>::zero(),
+                )?,
+                TxType::Sell => T::Amm::sell(
+                    who.clone(),
+                    market_id,
+                    asset,
+                    amm_amount_in,
+                    BalanceOf::<T>::zero(),
+                )?,
+            };
+
+            Ok((amount_in.checked_sub_res(&amm_amount_in)?, Some(amm_trade_info)))
         }
 
         /// Fills the order from the order book if it exists and meets the price conditions.
@@ -401,7 +403,8 @@ mod pallet {
             base_asset: AssetOf<T>,
             asset: AssetOf<T>,
             price_limit: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
+        ) -> Result<(BalanceOf<T>, Vec<AmmTradeOf<T>>), DispatchError> {
+            let mut amm_trades = Vec::new();
             for &order_id in orders {
                 if remaining.is_zero() {
                     break;
@@ -433,7 +436,7 @@ mod pallet {
                     }
                 }
 
-                remaining = Self::maybe_fill_from_amm(
+                let amm_trade_info = Self::maybe_fill_from_amm(
                     tx_type,
                     who,
                     market_id,
@@ -441,6 +444,10 @@ mod pallet {
                     remaining,
                     order_price,
                 )?;
+                if let Some(t) = amm_trade_info.1 {
+                    amm_trades.push(t);
+                }
+                remaining = amm_trade_info.0;
 
                 if remaining.is_zero() {
                     break;
@@ -456,7 +463,7 @@ mod pallet {
                 remaining = remaining.checked_sub_res(&maker_fill)?;
             }
 
-            Ok(remaining)
+            Ok((remaining, amm_trades))
         }
 
         /// Places a limit order if the strategy is `Strategy::LimitOrder`.
@@ -554,9 +561,10 @@ mod pallet {
             };
             T::AssetManager::ensure_can_withdraw(asset_in, &who, amount_in)?;
 
+            let mut amm_trades: Vec<AmmTradeOf<T>> = Vec::new();
             let mut remaining = amount_in;
 
-            remaining = Self::maybe_fill_orders(
+            let order_amm_trades_info = Self::maybe_fill_orders(
                 tx_type,
                 &orders,
                 remaining,
@@ -567,8 +575,11 @@ mod pallet {
                 price_limit,
             )?;
 
+            amm_trades.extend(order_amm_trades_info.1);
+            remaining = order_amm_trades_info.0;
+
             if !remaining.is_zero() {
-                remaining = Self::maybe_fill_from_amm(
+                let amm_trade_info = Self::maybe_fill_from_amm(
                     tx_type,
                     &who,
                     market_id,
@@ -576,6 +587,9 @@ mod pallet {
                     remaining,
                     price_limit,
                 )?;
+
+                amm_trades.extend(amm_trade_info.1);
+                remaining = amm_trade_info.0;
             }
 
             if !remaining.is_zero() {
@@ -607,6 +621,7 @@ mod pallet {
                 )?;
             }
 
+            // TODO now can use amm_trades information in event
             Self::deposit_event(Event::HybridRouterExecuted {
                 tx_type,
                 who,

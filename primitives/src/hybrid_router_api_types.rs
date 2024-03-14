@@ -1,5 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
-// Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -16,19 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-extern crate alloc;
-
-pub mod hybrid_router_api_types;
-mod asset;
-pub mod constants;
-mod market;
-pub mod math;
-mod max_runtime_usize;
-pub mod orderbook;
-mod outcome_report;
-mod proxy_type;
-mod serde_wrapper;
-pub mod traits;
-pub mod types;
+pub struct AmmTrade<Balance> {
+    pub amount_in: Balance,
+    pub amount_out: Balance,
+    pub swap_fee_amount: Balance,
+    pub external_fee_amount: Balance,
+}
