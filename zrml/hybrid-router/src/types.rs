@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use frame_support::pallet_prelude::*;
+use scale_info::TypeInfo;
 
 /// Represents the strategy used when placing an order in a trading environment.
 #[derive(
@@ -29,7 +30,7 @@ use frame_support::pallet_prelude::*;
     Decode,
     RuntimeDebug,
     MaxEncodedLen,
-    scale_info::TypeInfo,
+    TypeInfo,
 )]
 pub enum Strategy {
     /// The trade is rolled back if it cannot be executed fully.
@@ -39,8 +40,8 @@ pub enum Strategy {
     LimitOrder,
 }
 
-#[derive(Copy, Clone)]
-pub(crate) enum TxType {
+#[derive(Copy, Clone, RuntimeDebug, Decode, Encode, TypeInfo, PartialEq)]
+pub enum TxType {
     Buy,
     Sell,
 }
