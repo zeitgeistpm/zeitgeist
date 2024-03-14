@@ -55,7 +55,7 @@ macro_rules! decl_common_types {
         use orml_traits::MultiCurrency;
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
-use zrml_market_commons::migrations::MigrateScoringRuleAmmCdaHybrid;
+        use zrml_market_commons::migrations::MigrateScoringRuleAmmCdaHybrid;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
