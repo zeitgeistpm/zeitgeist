@@ -26,7 +26,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::types::{PendingOrderAmounts, Strategy, TxType};
+    use crate::types::{Strategy, TxType};
     use alloc::{vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
@@ -112,7 +112,6 @@ mod pallet {
     pub(crate) type OrdersOf<T> = BoundedVec<OrderId, <T as Config>::MaxOrders>;
     pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
     pub(crate) type OrderTradesOf<T> = OrderbookTrade<BalanceOf<T>>;
-    pub(crate) type PendingOrderAmountsOf<T> = PendingOrderAmounts<BalanceOf<T>>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -143,12 +142,6 @@ mod pallet {
             /// The aggregated amount of the `asset_out` already received
             /// by the trader from AMM and orderbook.
             amount_out: BalanceOf<T>,
-            /// The AMM trades that were executed and their information about the amounts.
-            amm_trades: Vec<AmmTradeOf<T>>,
-            /// The orderbook trades that were executed and their information about the amounts.
-            orderbook_trades: Vec<OrderTradesOf<T>>,
-            /// The remaining amounts after the trade placed as a limit order.
-            pending_order_amounts: Option<PendingOrderAmountsOf<T>>,
         },
     }
 
@@ -612,7 +605,7 @@ mod pallet {
                 remaining = amm_trade_info.0;
             }
 
-            let pending_order_amounts = if !remaining.is_zero() {
+            if !remaining.is_zero() {
                 let (maker_asset, maker_amount, taker_asset, taker_amount) = match tx_type {
                     TxType::Buy => {
                         let maker_asset = market.base_asset;
@@ -639,11 +632,7 @@ mod pallet {
                     taker_asset,
                     taker_amount,
                 )?;
-
-                Some(PendingOrderAmounts { maker_amount, taker_amount })
-            } else {
-                None
-            };
+            }
 
             let amount_out = orderbook_trades
                 .iter()
@@ -663,9 +652,6 @@ mod pallet {
                 amount_in,
                 asset_out,
                 amount_out,
-                amm_trades,
-                orderbook_trades,
-                pending_order_amounts,
             });
 
             Ok(())
