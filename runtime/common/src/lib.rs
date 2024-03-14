@@ -55,7 +55,7 @@ macro_rules! decl_common_types {
         use orml_traits::MultiCurrency;
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
-        use zrml_market_commons::migrations::MigrateScoringRuleAmmCdaHybrid;
+use zrml_market_commons::migrations::MigrateScoringRuleAmmCdaHybrid;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -315,6 +315,7 @@ macro_rules! create_runtime {
                 NeoSwaps: zrml_neo_swaps::{Call, Event<T>, Pallet, Storage} = 60,
                 Orderbook: zrml_orderbook::{Call, Event<T>, Pallet, Storage} = 61,
                 Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
+                HybridRouter: zrml_hybrid_router::{Call, Event<T>, Pallet, Storage} = 63,
 
                 $($additional_pallets)*
             }
@@ -1277,6 +1278,16 @@ macro_rules! impl_config_traits {
             type MinBetSize = MinBetSize;
             type PalletId = ParimutuelPalletId;
             type WeightInfo = zrml_parimutuel::weights::WeightInfo<Runtime>;
+        }
+
+        impl zrml_hybrid_router::Config for Runtime {
+            type AssetManager = AssetManager;
+            type MarketCommons = MarketCommons;
+            type Amm = NeoSwaps;
+            type OrderBook = Orderbook;
+            type MaxOrders = MaxOrders;
+            type RuntimeEvent = RuntimeEvent;
+            type WeightInfo = zrml_hybrid_router::weights::WeightInfo<Runtime>;
         }
     };
 }
