@@ -142,7 +142,7 @@ mod pallet {
             asset_out: AssetOf<T>,
             /// The aggregated amount of the `asset_out` already received
             /// by the trader from AMM and orderbook.
-            settled_amount_out: BalanceOf<T>,
+            amount_out: BalanceOf<T>,
             /// The AMM trades that were executed and their information about the amounts.
             amm_trades: Vec<AmmTradeOf<T>>,
             /// The orderbook trades that were executed and their information about the amounts.
@@ -645,7 +645,7 @@ mod pallet {
                 None
             };
 
-            let settled_amount_out = orderbook_trades
+            let amount_out = orderbook_trades
                 .iter()
                 .map(|o| o.filled_maker_amount.saturated_into::<u128>())
                 .sum::<u128>()
@@ -662,7 +662,7 @@ mod pallet {
                 asset_in,
                 amount_in,
                 asset_out,
-                settled_amount_out,
+                amount_out,
                 amm_trades,
                 orderbook_trades,
                 pending_order_amounts,
