@@ -61,7 +61,7 @@ mod pallet {
     use scale_info::TypeInfo;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
-        DispatchError, DispatchResult, SaturatedConversion,
+        DispatchError, DispatchResult, Perbill, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
@@ -69,7 +69,7 @@ mod pallet {
             checked_ops_res::{CheckedAddRes, CheckedSubRes},
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
-        traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees},
+        traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees, HybridRouterAmmApi},
         types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -977,6 +977,91 @@ mod pallet {
             swap_fee: Self::Balance,
         ) -> DispatchResult {
             Self::do_deploy_pool(who, market_id, amount, spot_prices, swap_fee)
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
+        fn amount_including_fee_surplus(
+            amount: BalanceOf<T>,
+            fee_fractional: BalanceOf<T>,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let fee_divsisor = ZeitgeistBase::<BalanceOf<T>>::get()?
+                .checked_sub(&fee_fractional)
+                .ok_or(Error::<T>::Unexpected)?;
+            amount.bdiv(fee_divsisor)
+        }
+
+        fn total_fee_fractional(
+            swap_fee: BalanceOf<T>,
+            external_fee_percentage: Perbill,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let external_fee_fractional =
+                external_fee_percentage.mul_ceil(ZeitgeistBase::<BalanceOf<T>>::get()?);
+            swap_fee.checked_add_res(&external_fee_fractional)
+        }
+    }
+
+    impl<T: Config> HybridRouterAmmApi for Pallet<T> {
+        type AccountId = T::AccountId;
+        type MarketId = MarketIdOf<T>;
+        type Balance = BalanceOf<T>;
+        type Asset = AssetOf<T>;
+
+        fn pool_exists(market_id: Self::MarketId) -> bool {
+            Pools::<T>::contains_key(market_id)
+        }
+
+        fn get_spot_price(
+            market_id: Self::MarketId,
+            asset: Self::Asset,
+        ) -> Result<Self::Balance, DispatchError> {
+            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            pool.calculate_spot_price(asset)
+        }
+
+        fn calculate_buy_amount_until(
+            market_id: Self::MarketId,
+            asset: Self::Asset,
+            until: Self::Balance,
+        ) -> Result<Self::Balance, DispatchError> {
+            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            let buy_amount = pool.calculate_buy_amount_until(asset, until)?;
+            let total_fee_fractional = Self::total_fee_fractional(
+                pool.swap_fee,
+                T::ExternalFees::fee_percentage(market_id),
+            )?;
+            let buy_amount_plus_fees =
+                Self::amount_including_fee_surplus(buy_amount, total_fee_fractional)?;
+            Ok(buy_amount_plus_fees)
+        }
+
+        fn buy(
+            who: Self::AccountId,
+            market_id: Self::MarketId,
+            asset_out: Self::Asset,
+            amount_in: Self::Balance,
+            min_amount_out: Self::Balance,
+        ) -> DispatchResult {
+            Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)
+        }
+
+        fn calculate_sell_amount_until(
+            market_id: Self::MarketId,
+            asset: Self::Asset,
+            until: Self::Balance,
+        ) -> Result<Self::Balance, DispatchError> {
+            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            pool.calculate_sell_amount_until(asset, until)
+        }
+
+        fn sell(
+            who: Self::AccountId,
+            market_id: Self::MarketId,
+            asset_out: Self::Asset,
+            amount_in: Self::Balance,
+            min_amount_out: Self::Balance,
+        ) -> DispatchResult {
+            Self::do_sell(who, market_id, asset_out, amount_in, min_amount_out)
         }
     }
 }
