@@ -15,9 +15,17 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct AmmTrade<Balance> {
     pub amount_in: Balance,
     pub amount_out: Balance,
     pub swap_fee_amount: Balance,
+    pub external_fee_amount: Balance,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct OrderbookTrade<Balance> {
+    pub filled_maker_amount: Balance,
+    pub filled_taker_amount: Balance,
     pub external_fee_amount: Balance,
 }

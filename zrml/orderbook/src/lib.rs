@@ -37,6 +37,7 @@ use orml_traits::{BalanceStatus, MultiCurrency, NamedMultiReservableCurrency};
 pub use pallet::*;
 use sp_runtime::traits::{Get, Zero};
 use zeitgeist_primitives::{
+    hybrid_router_api_types::OrderbookTrade,
     math::checked_ops_res::{CheckedAddRes, CheckedSubRes},
     orderbook::{Order, OrderId},
     traits::{DistributeFees, HybridRouterOrderbookApi, MarketCommonsPalletApi},
@@ -109,6 +110,7 @@ mod pallet {
         MomentOf<T>,
         AssetOf<T>,
     >;
+    pub(crate) type OrderbookTradeOf<T> = OrderbookTrade<BalanceOf<T>>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -134,6 +136,7 @@ mod pallet {
             filled_taker_amount: BalanceOf<T>,
             unfilled_maker_amount: BalanceOf<T>,
             unfilled_taker_amount: BalanceOf<T>,
+            external_fee_amount: BalanceOf<T>,
         },
         OrderPlaced {
             order_id: OrderId,
@@ -206,7 +209,7 @@ mod pallet {
         ) -> DispatchResult {
             let taker = ensure_signed(origin)?;
 
-            Self::do_fill_order(order_id, taker, maker_partial_fill)?;
+            let _ = Self::do_fill_order(order_id, taker, maker_partial_fill)?;
 
             Ok(())
         }
@@ -322,13 +325,15 @@ mod pallet {
         }
 
         /// Charge the external fees from `taker` and return the adjusted maker fill.
+        ///
+        /// Returns the adjusted maker fill and the external fee amount.
         fn charge_external_fees(
             order_data: &OrderOf<T>,
             base_asset: AssetOf<T>,
             maker_fill: BalanceOf<T>,
             taker: &AccountIdOf<T>,
             taker_fill: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
+        ) -> Result<(BalanceOf<T>, BalanceOf<T>), DispatchError> {
             let maker_asset_is_base = order_data.maker_asset == base_asset;
             let base_asset_fill = if maker_asset_is_base {
                 taker_fill
@@ -345,11 +350,11 @@ mod pallet {
             if maker_asset_is_base {
                 // maker_fill is the amount that the maker wants to have (outcome asset from taker)
                 // do not charge fees from outcome assets, but rather from the base asset
-                Ok(maker_fill)
+                Ok((maker_fill, fee_amount))
             } else {
                 // accounting fees from the taker,
                 // who is responsible to pay the base asset minus fees to the maker
-                Ok(maker_fill.checked_sub_res(&fee_amount)?)
+                Ok((maker_fill.checked_sub_res(&fee_amount)?, fee_amount))
             }
         }
 
@@ -357,7 +362,7 @@ mod pallet {
             order_id: OrderId,
             taker: AccountIdOf<T>,
             maker_partial_fill: Option<BalanceOf<T>>,
-        ) -> DispatchResult {
+        ) -> Result<OrderbookTradeOf<T>, DispatchError> {
             let mut order_data = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist)?;
             let market = T::MarketCommons::market(&order_data.market_id)?;
             debug_assert!(
@@ -396,7 +401,7 @@ mod pallet {
             )?;
 
             // always charge fees from the base asset and not the outcome asset
-            let maybe_adjusted_maker_fill = Self::charge_external_fees(
+            let (maybe_adjusted_maker_fill, external_fee_amount) = Self::charge_external_fees(
                 &order_data,
                 base_asset,
                 maker_fill,
@@ -431,9 +436,14 @@ mod pallet {
                 filled_taker_amount: maker_fill,
                 unfilled_maker_amount: order_data.maker_amount,
                 unfilled_taker_amount: order_data.taker_amount,
+                external_fee_amount,
             });
 
-            Ok(())
+            Ok(OrderbookTrade {
+                filled_maker_amount: taker_fill,
+                filled_taker_amount: maker_fill,
+                external_fee_amount,
+            })
         }
 
         fn do_place_order(
@@ -510,7 +520,7 @@ mod pallet {
             who: Self::AccountId,
             order_id: Self::OrderId,
             maker_partial_fill: Option<Self::Balance>,
-        ) -> DispatchResult {
+        ) -> Result<OrderbookTradeOf<T>, DispatchError> {
             Self::do_fill_order(order_id, who, maker_partial_fill)
         }
 

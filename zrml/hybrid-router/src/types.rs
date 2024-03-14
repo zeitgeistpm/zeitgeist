@@ -45,3 +45,9 @@ pub enum TxType {
     Buy,
     Sell,
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
+pub struct PendingOrderAmounts<Balance> {
+    pub maker_amount: Balance,
+    pub taker_amount: Balance,
+}

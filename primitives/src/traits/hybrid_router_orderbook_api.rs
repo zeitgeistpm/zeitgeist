@@ -17,6 +17,11 @@
 
 use frame_support::dispatch::{DispatchError, DispatchResult};
 
+use crate::hybrid_router_api_types::OrderbookTrade;
+
+/// A type alias for the return struct of orderbook trades.
+pub type OrderbookTradeOf<T> = OrderbookTrade<<T as HybridRouterOrderbookApi>::Balance>;
+
 /// Trait for handling the order book part of the hybrid router.
 pub trait HybridRouterOrderbookApi {
     type AccountId;
@@ -41,12 +46,12 @@ pub trait HybridRouterOrderbookApi {
     /// - `order_id`: The id of the order to fill.
     /// - `maker_partial_fill`: The amount to fill the order with.
     ///
-    /// Returns the filled order amount.
+    /// Returns the trade information about the filled maker and taker amounts, and the external fee.
     fn fill_order(
         who: Self::AccountId,
         order_id: Self::OrderId,
         maker_partial_fill: Option<Self::Balance>,
-    ) -> DispatchResult;
+    ) -> Result<OrderbookTradeOf<Self>, DispatchError>;
 
     /// Places an order on the order book.
     ///

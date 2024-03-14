@@ -26,7 +26,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::types::{Strategy, TxType};
+    use crate::types::{PendingOrderAmounts, Strategy, TxType};
     use alloc::{vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
@@ -46,9 +46,9 @@ mod pallet {
         ArithmeticError, DispatchResult,
     };
     use zeitgeist_primitives::{
-        hybrid_router_api_types::AmmTrade,
+        hybrid_router_api_types::{AmmTrade, OrderbookTrade},
         math::{
-            checked_ops_res::CheckedSubRes,
+            checked_ops_res::{CheckedAddRes, CheckedSubRes},
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
         orderbook::{Order, OrderId},
@@ -56,7 +56,6 @@ mod pallet {
         types::{Asset, Market, MarketType, ScalarPosition},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
-    use zrml_neo_swaps::AmmTradeOf;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -112,6 +111,8 @@ mod pallet {
         Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
     pub(crate) type OrdersOf<T> = BoundedVec<OrderId, <T as Config>::MaxOrders>;
     pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
+    pub(crate) type OrderTradesOf<T> = OrderbookTrade<BalanceOf<T>>;
+    pub(crate) type PendingOrderAmountsOf<T> = PendingOrderAmounts<BalanceOf<T>>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -125,13 +126,29 @@ mod pallet {
     {
         /// A trade was executed.
         HybridRouterExecuted {
+            /// The type of transaction (Buy or Sell).
             tx_type: TxType,
+            /// The account ID of the user performing the trade.
             who: AccountIdOf<T>,
+            /// The ID of the market.
             market_id: MarketIdOf<T>,
+            /// The maximum price limit for buying or the minimum price limit for selling.
             price_limit: BalanceOf<T>,
+            /// The asset provided by the trader.
             asset_in: AssetOf<T>,
+            /// The amount of the `asset_in` provided by the trader.
             amount_in: BalanceOf<T>,
+            /// The asset received by the trader.
             asset_out: AssetOf<T>,
+            /// The aggregated amount of the `asset_out` already received
+            /// by the trader from AMM and orderbook.
+            settled_amount_out: BalanceOf<T>,
+            /// The AMM trades that were executed and their information about the amounts.
+            amm_trades: Vec<AmmTradeOf<T>>,
+            /// The orderbook trades that were executed and their information about the amounts.
+            orderbook_trades: Vec<OrderTradesOf<T>>,
+            /// The remaining amounts after the trade placed as a limit order.
+            pending_order_amounts: Option<PendingOrderAmountsOf<T>>,
         },
     }
 
@@ -403,8 +420,10 @@ mod pallet {
             base_asset: AssetOf<T>,
             asset: AssetOf<T>,
             price_limit: BalanceOf<T>,
-        ) -> Result<(BalanceOf<T>, Vec<AmmTradeOf<T>>), DispatchError> {
+        ) -> Result<(BalanceOf<T>, Vec<AmmTradeOf<T>>, Vec<OrderTradesOf<T>>), DispatchError>
+        {
             let mut amm_trades = Vec::new();
+            let mut order_trades = Vec::new();
             for &order_id in orders {
                 if remaining.is_zero() {
                     break;
@@ -444,9 +463,7 @@ mod pallet {
                     remaining,
                     order_price,
                 )?;
-                if let Some(t) = amm_trade_info.1 {
-                    amm_trades.push(t);
-                }
+                amm_trade_info.1.map(|t| amm_trades.push(t));
                 remaining = amm_trade_info.0;
 
                 if remaining.is_zero() {
@@ -458,12 +475,14 @@ mod pallet {
                 let (_taker_fill, maker_fill) =
                     order.taker_and_maker_fill_from_taker_amount(remaining)?;
                 // and the `maker_partial_fill` of `fill_order` is specified in `taker_asset`
-                T::OrderBook::fill_order(who.clone(), order_id, Some(maker_fill))?;
+                let order_trade =
+                    T::OrderBook::fill_order(who.clone(), order_id, Some(maker_fill))?;
+                order_trades.push(order_trade);
                 // `maker_fill` is the amount the order owner (maker) wants to receive
                 remaining = remaining.checked_sub_res(&maker_fill)?;
             }
 
-            Ok((remaining, amm_trades))
+            Ok((remaining, amm_trades, order_trades))
         }
 
         /// Places a limit order if the strategy is `Strategy::LimitOrder`.
@@ -575,8 +594,9 @@ mod pallet {
                 price_limit,
             )?;
 
-            amm_trades.extend(order_amm_trades_info.1);
             remaining = order_amm_trades_info.0;
+            amm_trades.extend(order_amm_trades_info.1);
+            let orderbook_trades = order_amm_trades_info.2;
 
             if !remaining.is_zero() {
                 let amm_trade_info = Self::maybe_fill_from_amm(
@@ -592,7 +612,7 @@ mod pallet {
                 remaining = amm_trade_info.0;
             }
 
-            if !remaining.is_zero() {
+            let pending_order_amounts = if !remaining.is_zero() {
                 let (maker_asset, maker_amount, taker_asset, taker_amount) = match tx_type {
                     TxType::Buy => {
                         let maker_asset = market.base_asset;
@@ -619,9 +639,21 @@ mod pallet {
                     taker_asset,
                     taker_amount,
                 )?;
-            }
 
-            // TODO now can use amm_trades information in event
+                Some(PendingOrderAmounts { maker_amount, taker_amount })
+            } else {
+                None
+            };
+
+            let settled_amount_out = orderbook_trades
+                .iter()
+                .map(|o| o.filled_maker_amount.saturated_into::<u128>())
+                .sum::<u128>()
+                .checked_add_res(
+                    &amm_trades.iter().map(|t| t.amount_out.saturated_into::<u128>()).sum::<u128>(),
+                )?
+                .saturated_into::<BalanceOf<T>>();
+
             Self::deposit_event(Event::HybridRouterExecuted {
                 tx_type,
                 who,
@@ -630,6 +662,10 @@ mod pallet {
                 asset_in,
                 amount_in,
                 asset_out,
+                settled_amount_out,
+                amm_trades,
+                orderbook_trades,
+                pending_order_amounts,
             });
 
             Ok(())
