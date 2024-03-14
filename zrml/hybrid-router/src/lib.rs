@@ -142,6 +142,10 @@ mod pallet {
             /// The aggregated amount of the `asset_out` already received
             /// by the trader from AMM and orderbook.
             amount_out: BalanceOf<T>,
+            /// The external fee amount paid in the base asset.
+            external_fee_amount: BalanceOf<T>,
+            /// The swap fee amount paid in the base asset.
+            swap_fee_amount: BalanceOf<T>,
         },
     }
 
@@ -634,14 +638,21 @@ mod pallet {
                 )?;
             }
 
-            let amount_out = orderbook_trades
-                .iter()
-                .map(|o| o.filled_maker_amount.saturated_into::<u128>())
-                .sum::<u128>()
-                .checked_add_res(
-                    &amm_trades.iter().map(|t| t.amount_out.saturated_into::<u128>()).sum::<u128>(),
-                )?
-                .saturated_into::<BalanceOf<T>>();
+            let mut amount_out = BalanceOf::<T>::zero();
+            let mut external_fee_amount = BalanceOf::<T>::zero();
+            let mut swap_fee_amount = BalanceOf::<T>::zero();
+            for t in &orderbook_trades {
+                amount_out = amount_out.checked_add_res(&t.filled_maker_amount)?;
+                external_fee_amount =
+                    external_fee_amount.checked_add_res(&t.external_fee_amount)?;
+            }
+
+            for t in &amm_trades {
+                amount_out = amount_out.checked_add_res(&t.amount_out)?;
+                swap_fee_amount = swap_fee_amount.checked_add_res(&t.swap_fee_amount)?;
+                external_fee_amount =
+                    external_fee_amount.checked_add_res(&t.external_fee_amount)?;
+            }
 
             Self::deposit_event(Event::HybridRouterExecuted {
                 tx_type,
@@ -652,6 +663,8 @@ mod pallet {
                 amount_in,
                 asset_out,
                 amount_out,
+                external_fee_amount,
+                swap_fee_amount,
             });
 
             Ok(())
