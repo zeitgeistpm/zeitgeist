@@ -579,6 +579,7 @@ fn it_fills_order_fully_maker_outcome_asset() {
                 filled_taker_amount: taker_amount,
                 unfilled_maker_amount: 0,
                 unfilled_taker_amount: 0,
+                external_fee_amount: taker_fees,
             }
             .into(),
         );
@@ -627,6 +628,8 @@ fn it_fills_order_fully_maker_base_asset() {
         let reserved_bob = AssetManager::reserved_balance(taker_asset, &BOB);
         assert_eq!(reserved_bob, 0);
 
+        let external_fee_amount = calculate_fee::<Runtime>(maker_amount);
+
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
                 order_id,
@@ -636,6 +639,7 @@ fn it_fills_order_fully_maker_base_asset() {
                 filled_taker_amount: taker_amount,
                 unfilled_taker_amount: 0,
                 unfilled_maker_amount: 0,
+                external_fee_amount,
             }
             .into(),
         );
@@ -699,6 +703,7 @@ fn it_fills_order_partially_maker_base_asset() {
         let filled_maker_amount =
             Perquintill::from_rational(alice_portion, taker_amount).mul_floor(maker_amount);
         let unfilled_maker_amount = maker_amount - filled_maker_amount;
+        let external_fee_amount = calculate_fee::<Runtime>(filled_maker_amount);
 
         assert_eq!(
             order,
@@ -721,6 +726,7 @@ fn it_fills_order_partially_maker_base_asset() {
                 filled_taker_amount: alice_portion,
                 unfilled_maker_amount,
                 unfilled_taker_amount,
+                external_fee_amount: external_fee_amount,
             }
             .into(),
         );
@@ -787,9 +793,10 @@ fn it_fills_order_partially_maker_outcome_asset() {
 
         let market_creator_free_balance_after =
             AssetManager::free_balance(market.base_asset, &MARKET_CREATOR);
+        let external_fee_amount = calculate_fee::<Runtime>(70 * BASE);
         assert_eq!(
             market_creator_free_balance_after - market_creator_free_balance_before,
-            calculate_fee::<Runtime>(70 * BASE)
+            external_fee_amount
         );
 
         let order = Orders::<Runtime>::get(order_id).unwrap();
@@ -821,6 +828,7 @@ fn it_fills_order_partially_maker_outcome_asset() {
                 filled_taker_amount: alice_portion,
                 unfilled_maker_amount: filled_maker_amount,
                 unfilled_taker_amount: taker_amount - alice_portion,
+                external_fee_amount,
             }
             .into(),
         );
