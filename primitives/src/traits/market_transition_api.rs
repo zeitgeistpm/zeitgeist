@@ -150,8 +150,8 @@ mod tests {
         }
     }
 
-    struct SucessPath;
-    impl MarketTransitionApi<u128> for SucessPath {
+    struct SuccessPath;
+    impl MarketTransitionApi<u128> for SuccessPath {
         fn on_proposal(_market_id: &u128) -> ResultWithWeightInfo<DispatchResult> {
             ResultWithWeightInfo::new(Ok(()), ONE)
         }
@@ -232,90 +232,90 @@ mod tests {
 
     #[test]
     fn provides_correct_result_on_proposal() {
-        let mut result = <(SucessPath,)>::on_proposal(&0);
+        let mut result = <(SuccessPath,)>::on_proposal(&0);
         assert_eq!(result.result, Ok(()));
         assert_eq!(result.weight, ONE);
 
-        result = <(SucessPath, FailurePath)>::on_proposal(&0);
+        result = <(SuccessPath, FailurePath)>::on_proposal(&0);
         assert_eq!(result.result, DEFAULT_ERROR);
         assert_eq!(result.weight, THREE);
 
-        result = <(FailurePath, SucessPath)>::on_proposal(&0);
+        result = <(FailurePath, SuccessPath)>::on_proposal(&0);
         assert_eq!(result.result, DEFAULT_ERROR);
         assert_eq!(result.weight, TWO);
     }
 
     #[test]
     fn provides_correct_result_on_activation() {
-        let mut result = <(SucessPath,)>::on_activation(&0);
+        let mut result = <(SuccessPath,)>::on_activation(&0);
         assert_eq!(result.result, Ok(()));
         assert_eq!(result.weight, ONE);
 
-        result = <(SucessPath, FailurePath)>::on_activation(&0);
+        result = <(SuccessPath, FailurePath)>::on_activation(&0);
         assert_eq!(result.result, DEFAULT_ERROR);
         assert_eq!(result.weight, THREE);
 
-        result = <(FailurePath, SucessPath)>::on_activation(&0);
+        result = <(FailurePath, SuccessPath)>::on_activation(&0);
         assert_eq!(result.result, DEFAULT_ERROR);
         assert_eq!(result.weight, TWO);
     }
 
     #[test]
     fn provides_correct_result_on_closure() {
-        let mut result = <(SucessPath,)>::on_closure(&0);
+        let mut result = <(SuccessPath,)>::on_closure(&0);
         assert_eq!(result.result, Ok(()));
         assert_eq!(result.weight, ONE);
 
-        result = <(SucessPath, FailurePath)>::on_closure(&0);
+        result = <(SuccessPath, FailurePath)>::on_closure(&0);
         assert_eq!(result.result, DEFAULT_ERROR);
         assert_eq!(result.weight, THREE);
 
-        result = <(FailurePath, SucessPath)>::on_closure(&0);
+        result = <(FailurePath, SuccessPath)>::on_closure(&0);
         assert_eq!(result.result, DEFAULT_ERROR);
         assert_eq!(result.weight, TWO);
     }
 
     #[test]
     fn provides_correct_result_on_report() {
-        let mut result = <(SucessPath,)>::on_report(&0);
+        let mut result = <(SuccessPath,)>::on_report(&0);
         assert_eq!(result.result, Ok(()));
         assert_eq!(result.weight, ONE);
 
-        result = <(SucessPath, FailurePath)>::on_report(&0);
+        result = <(SuccessPath, FailurePath)>::on_report(&0);
         assert_eq!(result.result, DEFAULT_ERROR);
         assert_eq!(result.weight, THREE);
 
-        result = <(FailurePath, SucessPath)>::on_report(&0);
+        result = <(FailurePath, SuccessPath)>::on_report(&0);
         assert_eq!(result.result, DEFAULT_ERROR);
         assert_eq!(result.weight, TWO);
     }
 
     #[test]
     fn provides_correct_result_on_dispute() {
-        let mut result = <(SucessPath,)>::on_dispute(&0);
+        let mut result = <(SuccessPath,)>::on_dispute(&0);
         assert_eq!(result.result, Ok(()));
         assert_eq!(result.weight, ONE);
 
-        result = <(SucessPath, FailurePath)>::on_dispute(&0);
+        result = <(SuccessPath, FailurePath)>::on_dispute(&0);
         assert_eq!(result.result, DEFAULT_ERROR);
         assert_eq!(result.weight, THREE);
 
-        result = <(FailurePath, SucessPath)>::on_dispute(&0);
+        result = <(FailurePath, SuccessPath)>::on_dispute(&0);
         assert_eq!(result.result, DEFAULT_ERROR);
         assert_eq!(result.weight, TWO);
     }
 
     #[test]
     fn provides_correct_result_on_resolution() {
-        let mut result = <(SucessPath,)>::on_resolution(&0);
+        let mut result = <(SuccessPath,)>::on_resolution(&0);
         assert_eq!(result.result, Ok(()));
         assert_eq!(result.weight, ONE);
 
-        result = <(SucessPath, FailurePath)>::on_resolution(&0);
+        result = <(SuccessPath, FailurePath)>::on_resolution(&0);
         assert_eq!(result.result, DEFAULT_ERROR);
         assert_eq!(result.weight, THREE);
 
-        result = <(FailurePath, SucessPath)>::on_resolution(&0);
+        result = <(FailurePath, SuccessPath)>::on_resolution(&0);
         assert_eq!(result.result, DEFAULT_ERROR);
         assert_eq!(result.weight, TWO);
     }
