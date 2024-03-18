@@ -110,6 +110,7 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
         }
     }
 
+    /// Returns a `Vec` of all outcomes for `market_id`.
     pub fn outcome_assets<MI: Copy + HasCompact + MaxEncodedLen>(
         &self,
         market_id: MI,
@@ -143,6 +144,10 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
         }
     }
 
+    /// Tries to convert the reported outcome for `market_id` into an asset,
+    /// returns `None` if not possible. Cases where `None` is returned are:
+    /// - The reported outcome does not exist
+    /// - The reported outcome does not have a corresponding asset type
     pub fn report_into_asset<MI: HasCompact + MaxEncodedLen>(
         &self,
         market_id: MI,
@@ -156,6 +161,10 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
         self.outcome_report_into_asset(market_id, outcome)
     }
 
+    /// Tries to convert the resolved outcome for `market_id` into an asset,
+    /// returns `None` if not possible. Cases where `None` is returned are:
+    /// - The resolved outcome does not exist
+    /// - The resolved outcome does not have a corresponding asset type
     pub fn resolved_outcome_into_asset<MI: HasCompact + MaxEncodedLen>(
         &self,
         market_id: MI,
@@ -164,6 +173,8 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
         self.outcome_report_into_asset(market_id, outcome)
     }
 
+    /// Tries to convert a `outcome_report` for `market_id` into an asset,
+    /// returns `None` if not possible.
     fn outcome_report_into_asset<MI: HasCompact + MaxEncodedLen>(
         &self,
         market_id: MI,
