@@ -44,7 +44,7 @@ impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for CampaignAssetClass {
 
     fn try_from(value: Asset<MI>) -> Result<Self, Self::Error> {
         match value {
-            Asset::<MI>::CampaignAssetClass(id) => Ok(Self(id)),
+            Asset::<MI>::CampaignAsset(id) => Ok(Self(id)),
             _ => Err(()),
         }
     }

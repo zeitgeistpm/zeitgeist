@@ -47,9 +47,9 @@ pub(super) const ALICE: AccountIdTest = 0;
 pub(super) const BOB: AccountIdTest = 1;
 pub(super) const CHARLIE: AccountIdTest = 2;
 
-pub(super) const CAMPAIGN_ASSET: Assets = Assets::CampaignAssetClass(0);
+pub(super) const CAMPAIGN_ASSET: Assets = Assets::CampaignAsset(0);
 pub(super) const CAMPAIGN_ASSET_INTERNAL: CampaignAssetClass = CampaignAssetClass(0);
-pub(super) const CUSTOM_ASSET: Assets = Assets::CustomAssetClass(0);
+pub(super) const CUSTOM_ASSET: Assets = Assets::CustomAsset(0);
 pub(super) const CUSTOM_ASSET_INTERNAL: CustomAssetClass = CustomAssetClass(0);
 pub(super) const MARKET_ASSET: Assets = Assets::CategoricalOutcome(7, 8);
 pub(super) const MARKET_ASSET_INTERNAL: MarketAsset = MarketAsset::CategoricalOutcome(7, 8);

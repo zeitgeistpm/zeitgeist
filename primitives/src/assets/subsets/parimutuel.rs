@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -17,32 +17,21 @@
 
 use super::*;
 
-/// The `CustomAsset` tuple struct represents all custom assets.
+/// The `ParimutuelAssetClass` enum represents all assets that are specific to parimutuel markets.
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[derive(
-    Clone, CompactAs, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo,
-)]
-pub struct CustomAssetClass(#[codec(compact)] pub CustomAssetId);
-
-impl From<Compact<CustomAssetId>> for CustomAssetClass {
-    fn from(value: Compact<CustomAssetId>) -> CustomAssetClass {
-        CustomAssetClass(value.into())
-    }
+#[derive(Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
+pub enum ParimutuelAssetClass<MI> {
+    #[codec(index = 6)]
+    Share(MI, CategoryIndex),
 }
 
-impl From<CustomAssetClass> for Compact<CustomAssetId> {
-    fn from(value: CustomAssetClass) -> Compact<CustomAssetId> {
-        value.0.into()
-    }
-}
-
-impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for CustomAssetClass {
+impl<MI: HasCompact + MaxEncodedLen> TryFrom<Asset<MI>> for ParimutuelAssetClass<MI> {
     type Error = ();
 
     fn try_from(value: Asset<MI>) -> Result<Self, Self::Error> {
         match value {
-            Asset::<MI>::CustomAsset(id) => Ok(Self(id)),
+            Asset::<MI>::ParimutuelShare(market_id, cat_id) => Ok(Self::Share(market_id, cat_id)),
             _ => Err(()),
         }
     }

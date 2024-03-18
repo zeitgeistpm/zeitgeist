@@ -20,7 +20,7 @@ extern crate alloc;
 
 use crate::{
     outcome_report::OutcomeReport,
-    types::{Asset, GlobalDisputeItem, Market, ResultWithWeightInfo},
+    types::{BaseAsset, GlobalDisputeItem, Market, ResultWithWeightInfo},
 };
 use alloc::vec::Vec;
 use frame_support::pallet_prelude::Weight;
@@ -34,7 +34,7 @@ type MarketOfDisputeApi<T> = Market<
     <T as DisputeApi>::Balance,
     <T as DisputeApi>::BlockNumber,
     <T as DisputeApi>::Moment,
-    Asset<<T as DisputeApi>::MarketId>,
+    BaseAsset,
 >;
 
 type GlobalDisputeItemOfDisputeApi<T> =
@@ -150,7 +150,7 @@ type MarketOfDisputeResolutionApi<T> = Market<
     <T as DisputeResolutionApi>::Balance,
     <T as DisputeResolutionApi>::BlockNumber,
     <T as DisputeResolutionApi>::Moment,
-    Asset<<T as DisputeResolutionApi>::MarketId>,
+    BaseAsset,
 >;
 
 pub trait DisputeResolutionApi {
