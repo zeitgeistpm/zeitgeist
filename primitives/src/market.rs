@@ -69,6 +69,10 @@ pub struct Market<AI, BA, BN, M, A> {
 }
 
 impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
+    /// Returns the `ResolutionMechanism` of market, currently either:
+    /// - `RedeemTokens`, which implies that the module that handles the state transitions of
+    ///    a market is also responsible to provide means for redeeming rewards
+    /// - `Noop`, which implies that another module provides the means for redeeming rewards
     pub fn resolution_mechanism(&self) -> ResolutionMechanism {
         match self.scoring_rule {
             ScoringRule::Lmsr | ScoringRule::Orderbook => ResolutionMechanism::RedeemTokens,
@@ -76,11 +80,13 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
         }
     }
 
+    /// Returns whether the market is redeemable, i.e. reward payout is managed within
+    /// the same module that controls the state transitions of the underlying market.
     pub fn is_redeemable(&self) -> bool {
         matches!(self.resolution_mechanism(), ResolutionMechanism::RedeemTokens)
     }
 
-    // Returns the number of outcomes for a market.
+    /// Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
             MarketType::Categorical(categories) => categories,
@@ -104,6 +110,7 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
         }
     }
 
+    /// Returns a `Vec` of all outcomes for `market_id`.
     pub fn outcome_assets<MI: Copy + HasCompact + MaxEncodedLen>(
         &self,
         market_id: MI,
@@ -137,6 +144,10 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
         }
     }
 
+    /// Tries to convert the reported outcome for `market_id` into an asset,
+    /// returns `None` if not possible. Cases where `None` is returned are:
+    /// - The reported outcome does not exist
+    /// - The reported outcome does not have a corresponding asset type
     pub fn report_into_asset<MI: HasCompact + MaxEncodedLen>(
         &self,
         market_id: MI,
@@ -150,6 +161,10 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
         self.outcome_report_into_asset(market_id, outcome)
     }
 
+    /// Tries to convert the resolved outcome for `market_id` into an asset,
+    /// returns `None` if not possible. Cases where `None` is returned are:
+    /// - The resolved outcome does not exist
+    /// - The resolved outcome does not have a corresponding asset type
     pub fn resolved_outcome_into_asset<MI: HasCompact + MaxEncodedLen>(
         &self,
         market_id: MI,
@@ -158,6 +173,8 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
         self.outcome_report_into_asset(market_id, outcome)
     }
 
+    /// Tries to convert a `outcome_report` for `market_id` into an asset,
+    /// returns `None` if not possible.
     fn outcome_report_into_asset<MI: HasCompact + MaxEncodedLen>(
         &self,
         market_id: MI,
