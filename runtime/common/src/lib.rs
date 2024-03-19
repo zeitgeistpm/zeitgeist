@@ -1090,8 +1090,8 @@ macro_rules! impl_config_traits {
 
         impl pallet_asset_tx_payment::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
-            type Fungibles = Tokens;
-            type OnChargeAssetTransaction = TokensTxCharger;
+            type Fungibles = AssetRouter;
+            type OnChargeAssetTransaction = TxCharger;
         }
 
         impl pallet_transaction_payment::Config for Runtime {

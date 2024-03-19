@@ -40,9 +40,8 @@ macro_rules! impl_fee_types {
         }
 
         pub struct DealWithForeignFees;
-
-        impl OnUnbalanced<CreditOf<AccountId, Tokens>> for DealWithForeignFees {
-            fn on_unbalanced(fees_and_tips: CreditOf<AccountId, Tokens>) {
+        impl OnUnbalanced<CreditOf<AccountId, AssetRouter>> for DealWithForeignFees {
+            fn on_unbalanced(fees_and_tips: CreditOf<AccountId, AssetRouter>) {
                 // We have to manage the mint / burn ratio on the Zeitgeist chain,
                 // but we do not have the responsibility and necessary knowledge to
                 // manage the mint / burn ratio for any other chain.
@@ -51,11 +50,20 @@ macro_rules! impl_fee_types {
                 // on_unbalanced is not implemented for other currencies than the native currency
                 // https://github.com/paritytech/substrate/blob/85415fb3a452dba12ff564e6b093048eed4c5aad/frame/treasury/src/lib.rs#L618-L627
                 // https://github.com/paritytech/substrate/blob/5ea6d95309aaccfa399c5f72e5a14a4b7c6c4ca1/frame/treasury/src/lib.rs#L490
-                let res = <Tokens as Balanced<AccountId>>::resolve(
+                let res = AssetRouter::resolve(
                     &TreasuryPalletId::get().into_account_truncating(),
                     fees_and_tips,
                 );
                 debug_assert!(res.is_ok());
+            }
+        }
+
+        /// Disregards the fees.
+        pub struct DealWithCampaignFees;
+        impl OnUnbalanced<CreditOf<AccountId, AssetRouter>> for DealWithCampaignFees {
+            fn on_unbalanced(_fees_and_tips: CreditOf<AccountId, AssetRouter>) {
+                // Handled by type OnDropCredit
+                return;
             }
         }
     };
@@ -81,7 +89,8 @@ macro_rules! impl_foreign_fees {
         };
         use pallet_asset_tx_payment::HandleCredit;
         use sp_runtime::traits::{Convert, DispatchInfoOf, PostDispatchInfoOf};
-        use zeitgeist_primitives::{math::fixed::FixedMul, types::TxPaymentAssetId};
+        use zeitgeist_primitives::{math::fixed::FixedMul, types::Assets};
+        use zeitgeist_primitives::math::fixed::FixedDiv;
 
         #[repr(u8)]
         pub enum CustomTxError {
@@ -90,6 +99,7 @@ macro_rules! impl_foreign_fees {
             NoAssetMetadata = 2,
             NoFeeFactor = 3,
             NonForeignAssetPaid = 4,
+            InvalidAssetType = 5,
         }
 
         // It does calculate foreign fees by extending transactions to include an optional
@@ -116,15 +126,62 @@ macro_rules! impl_foreign_fees {
             Ok(converted_fee)
         }
 
-        #[cfg(feature = "parachain")]
-        pub(crate) fn get_fee_factor(
-            currency: XcmAsset,
+        fn get_fee_factor_campaign_asset(campaign_asset: CampaignAsset) 
+            -> Result<Balance, TransactionValidityError> 
+        {
+            let ztg_supply = Balances::total_issuance();
+            let campaign_asset_supply = AssetManager::total_issuance(campaign_asset.into());
+            let fee_multiplier = Balance::from(CampaignAssetFeeMultiplier::get());
+             
+
+            // Use neutral fee multiplier if the ZTG supply is 100x greater than the campaign
+            // asset supply.
+            if ztg_supply.saturating_div(campaign_asset_supply) >= fee_multiplier {
+                Ok(BASE)
+            } else {
+                campaign_asset_supply.saturating_mul(fee_multiplier).bdiv(ztg_supply)
+                    .map_err(|_| {
+                        TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                            CustomTxError::FeeConversionArith as u8,
+                        ))
+                    })
+            }
+        }
+
+        #[cfg(not(feature = "parachain"))]
+        fn get_fee_factor_foreign_asset(
+            _foreign_asset: Currencies,
         ) -> Result<Balance, TransactionValidityError> {
-            let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&currency).ok_or(
+            Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                CustomTxError::NoForeignAssetsOnStandaloneChain as u8,
+            )))
+        }
+
+        #[cfg(feature = "parachain")]
+        fn get_fee_factor_foreign_asset(
+            foreign_asset: Currencies,
+        ) -> Result<Balance, TransactionValidityError> {
+            match foreign_asset {
+                Currencies::ForeignAsset(_) => (),
+                Currencies::CategoricalOutcome(_, _)
+                | Currencies::ScalarOutcome(_, _)
+                | Currencies::PoolShare(_)
+                | Currencies::ParimutuelShare(_, _) => {
+                    return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                        CustomTxError::InvalidAssetType as u8,
+                    )));
+                }
+            }
+            let metadata_asset: XcmAsset = Assets::from(foreign_asset).try_into().map_err(|_|
                 TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                    CustomTxError::NoAssetMetadata as u8,
-                )),
+                    CustomTxError::InvalidAssetType as u8,
+                ))
             )?;
+
+            let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&metadata_asset)
+                .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                    CustomTxError::NoAssetMetadata as u8,
+                )))?;
             let fee_factor =
                 metadata.additional.xcm.fee_factor.ok_or(TransactionValidityError::Invalid(
                     InvalidTransaction::Custom(CustomTxError::NoFeeFactor as u8),
@@ -132,43 +189,49 @@ macro_rules! impl_foreign_fees {
             Ok(fee_factor)
         }
 
+        pub(crate) fn get_fee_factor(asset: Assets) -> Result<Balance, TransactionValidityError> {
+            if let Ok(campaign_asset) = CampaignAsset::try_from(asset) {
+                return get_fee_factor_campaign_asset(campaign_asset);
+            } else if let Ok(currency) = Currencies::try_from(asset) {
+                return get_fee_factor_foreign_asset(currency);
+            }
+
+            Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                CustomTxError::InvalidAssetType as u8,
+            )))
+        }
+
         pub struct TTCBalanceToAssetBalance;
-        impl BalanceConversion<Balance, TxPaymentAssetId, Balance> for TTCBalanceToAssetBalance {
+        impl BalanceConversion<Balance, Assets, Balance> for TTCBalanceToAssetBalance {
             type Error = TransactionValidityError;
 
             fn to_asset_balance(
                 native_fee: Balance,
-                currency_id: TxPaymentAssetId,
+                asset: Assets,
             ) -> Result<Balance, Self::Error> {
-                #[cfg(feature = "parachain")]
-                {
-                    let currency = XcmAsset::ForeignAsset(currency_id);
-                    let fee_factor = get_fee_factor(currency)?;
-                    let converted_fee = calculate_fee(native_fee, fee_factor)?;
-                    Ok(converted_fee)
-                }
-                #[cfg(not(feature = "parachain"))]
-                {
-                    Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                        CustomTxError::NoForeignAssetsOnStandaloneChain as u8,
-                    )))
-                }
+                let fee_factor = get_fee_factor(asset)?;
+                let converted_fee = calculate_fee(native_fee, fee_factor)?;
+                Ok(converted_fee)
             }
         }
 
         pub struct TTCHandleCredit;
-        impl HandleCredit<AccountId, Tokens> for TTCHandleCredit {
-            fn handle_credit(final_fee: CreditOf<AccountId, Tokens>) {
-                // Handle the final fee and tip, e.g. by transferring to the treasury.
-                DealWithForeignFees::on_unbalanced(final_fee);
+        impl HandleCredit<AccountId, AssetRouter> for TTCHandleCredit {
+            fn handle_credit(final_fee: CreditOf<AccountId, AssetRouter>) {
+                let asset = final_fee.asset();
+                if let Ok(campaign_asset) = CampaignAsset::try_from(asset) {
+                    DealWithForeignFees::on_unbalanced(final_fee);
+                } else if let Ok(currency) = Currencies::try_from(asset) {
+                    DealWithCampaignFees::on_unbalanced(final_fee);
+                }
             }
         }
 
-        pub struct TokensTxCharger;
-        impl pallet_asset_tx_payment::OnChargeAssetTransaction<Runtime> for TokensTxCharger {
-            type AssetId = TxPaymentAssetId;
+        pub struct TxCharger;
+        impl pallet_asset_tx_payment::OnChargeAssetTransaction<Runtime> for TxCharger {
+            type AssetId = Assets;
             type Balance = Balance;
-            type LiquidityInfo = CreditOf<AccountId, Tokens>;
+            type LiquidityInfo = CreditOf<AccountId, AssetRouter>;
 
             fn withdraw_fee(
                 who: &AccountId,
@@ -186,13 +249,13 @@ macro_rules! impl_foreign_fees {
                 let converted_fee =
                     TTCBalanceToAssetBalance::to_asset_balance(native_fee, asset_id)?
                         .max(min_converted_fee);
-                let currency_id = Currencies::ForeignAsset(asset_id);
+
                 let can_withdraw =
-                    <Tokens as Inspect<AccountId>>::can_withdraw(currency_id, who, converted_fee);
+                    <AssetRouter as Inspect<AccountId>>::can_withdraw(asset_id, who, converted_fee);
                 if can_withdraw != WithdrawConsequence::Success {
                     return Err(InvalidTransaction::Payment.into());
                 }
-                <Tokens as Balanced<AccountId>>::withdraw(currency_id, who, converted_fee)
+                <AssetRouter as Balanced<AccountId>>::withdraw(asset_id, who, converted_fee)
                     .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
             }
 
@@ -201,35 +264,23 @@ macro_rules! impl_foreign_fees {
                 _dispatch_info: &DispatchInfoOf<RuntimeCall>,
                 _post_info: &PostDispatchInfoOf<RuntimeCall>,
                 corrected_native_fee: Self::Balance,
-                tip: Self::Balance,
+                _tip: Self::Balance,
                 paid: Self::LiquidityInfo,
             ) -> Result<(), TransactionValidityError> {
                 let min_converted_fee =
                     if corrected_native_fee.is_zero() { Zero::zero() } else { One::one() };
-                let asset_id = match paid.asset() {
-                    Currencies::ForeignAsset(asset_id) => asset_id,
-                    _ => {
-                        return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                            CustomTxError::NonForeignAssetPaid as u8,
-                        )));
-                    }
-                };
+
+                let asset = paid.asset();
                 // Convert the corrected fee and tip into the asset used for payment.
                 let converted_fee =
-                    TTCBalanceToAssetBalance::to_asset_balance(corrected_native_fee, asset_id)?
+                    TTCBalanceToAssetBalance::to_asset_balance(corrected_native_fee, asset)?
                         .max(min_converted_fee);
-                let converted_tip = TTCBalanceToAssetBalance::to_asset_balance(tip, asset_id)?;
 
-                // Calculate how much refund we should return.
-                let (final_fee, refund) = paid.split(converted_fee);
                 // Refund to the account that paid the fees. If this fails, the account might have dropped
                 // below the existential balance. In that case we don't refund anything.
-                let _ = <Tokens as Balanced<AccountId>>::resolve(who, refund);
-
-                // Handle the final fee and tip, e.g. by transferring to the treasury.
-                // Note: The `corrected_native_fee` already includes the `tip`.
+                let (final_fee, refund) = paid.split(converted_fee);
+                let _ = AssetRouter::resolve(who, refund);
                 TTCHandleCredit::handle_credit(final_fee);
-
                 Ok(())
             }
         }
@@ -409,7 +460,7 @@ macro_rules! fee_tests {
                         let paid = <Tokens as Balanced<AccountId>>::issue(dot, 2 * BASE);
                         let paid_balance = paid.peek();
                         let tip = 0u128;
-                        assert_ok!(<TokensTxCharger as OnChargeAssetTransaction<Runtime>>::correct_and_deposit_fee(
+                        assert_ok!(<TxCharger as OnChargeAssetTransaction<Runtime>>::correct_and_deposit_fee(
                             &alice,
                             &mock_dispatch_info,
                             &mock_post_info,
@@ -597,7 +648,7 @@ macro_rules! fee_tests {
                         pays_fee: frame_support::dispatch::Pays::Yes,
                     };
                     assert_eq!(
-                        <TokensTxCharger as OnChargeAssetTransaction<Runtime>>::withdraw_fee(
+                        <TxCharger as OnChargeAssetTransaction<Runtime>>::withdraw_fee(
                             &Treasury::account_id(),
                             &mock_call,
                             &mock_dispatch_info,

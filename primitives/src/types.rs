@@ -110,12 +110,6 @@ pub type ParimutuelAsset = ParimutuelAssetClass<MarketId>;
 /// Asset type representing types used in XCMs.
 pub type XcmAsset = XcmAssetClass;
 
-/// The asset id specifically used for pallet_assets_tx_payment for
-/// paying transaction fees in different assets.
-/// Since the polkadot extension and wallets can't handle custom asset ids other than just u32,
-/// we are using a u32 as on the asset-hubs here.
-pub type TxPaymentAssetId = u32;
-
 /// Index of a transaction in the chain.
 pub type Index = u64;
 

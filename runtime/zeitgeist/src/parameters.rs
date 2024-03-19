@@ -400,6 +400,8 @@ parameter_types! {
     .build_or_panic();
 
     // Transaction payment
+    /// A fee multiplier applied to the calculated fee factor for `CampaignAsset`
+    pub const CampaignAssetFeeMultiplier: u32 = 100;
     /// A fee mulitplier for Operational extrinsics to compute “virtual tip”
     /// to boost their priority.
     pub const OperationalFeeMultiplier: u8 = 5;
