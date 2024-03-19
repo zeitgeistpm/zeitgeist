@@ -43,7 +43,7 @@ pub mod pallet {
         require_transactional,
         traits::{
             tokens::{
-                fungibles::{Create, Destroy, Inspect, Mutate, Transfer},
+                fungibles::{Create, Destroy, Inspect, Mutate, Transfer, Unbalanced},
                 DepositConsequence, WithdrawConsequence,
             },
             BalanceStatus as Status, ConstU32,
@@ -83,6 +83,7 @@ pub mod pallet {
         + Inspect<T::AccountId, AssetId = A, Balance = T::Balance>
         + Transfer<T::AccountId, AssetId = A, Balance = T::Balance>
         + Mutate<T::AccountId, AssetId = A, Balance = T::Balance>
+        + Unbalanced<T::AccountId, AssetId = A, Balance = T::Balance>
     {
     }
 
@@ -92,7 +93,8 @@ pub mod pallet {
             + Destroy<T::AccountId, AssetId = A, Balance = T::Balance>
             + Inspect<T::AccountId, AssetId = A, Balance = T::Balance>
             + Transfer<T::AccountId, AssetId = A, Balance = T::Balance>
-            + Mutate<T::AccountId, AssetId = A, Balance = T::Balance>,
+            + Mutate<T::AccountId, AssetId = A, Balance = T::Balance>
+            + Unbalanced<T::AccountId, AssetId = A, Balance = T::Balance>,
         T: Config,
     {
     }
@@ -145,7 +147,8 @@ pub mod pallet {
                 Balance = Self::Balance,
             > + MultiLockableCurrency<Self::AccountId>
             + MultiReservableCurrency<Self::AccountId>
-            + NamedMultiReservableCurrency<Self::AccountId>;
+            + NamedMultiReservableCurrency<Self::AccountId>
+            + Unbalanced<Self::AccountId, AssetId = Self::CurrencyType, Balance = Self::Balance>;
         /// The currency type.
         type CurrencyType: TryFrom<Self::AssetType>
             + Copy

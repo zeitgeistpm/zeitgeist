@@ -25,3 +25,4 @@ pub mod multi_lockable_currency;
 pub mod multi_reserveable_currency;
 pub mod named_multi_reserveable_currency;
 pub mod transfer_all;
+pub mod unbalanced;

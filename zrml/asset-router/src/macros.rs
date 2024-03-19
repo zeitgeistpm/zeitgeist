@@ -42,6 +42,31 @@ macro_rules! route_call {
     };
 }
 
+macro_rules! route_call_with_trait {
+    ($currency_id:expr, $trait:ident, $method:ident, $($args:expr),*) => {
+        if let Ok(asset) = T::MarketAssetType::try_from($currency_id) {
+            // Route "pre new asset system" market assets to `CurrencyType`
+            if T::MarketAssets::asset_exists(asset) {
+                Ok(<T::MarketAssets as $trait<T::AccountId>>::$method(asset, $($args),*))
+            } else {
+                if let Ok(currency) = T::CurrencyType::try_from($currency_id) {
+                    Ok(<T::Currencies as $trait<T::AccountId>>::$method(currency, $($args),*))
+                } else {
+                    Ok(<T::MarketAssets as $trait<T::AccountId>>::$method(asset, $($args),*))
+                }
+            }
+        } else if let Ok(asset) = T::CampaignAssetType::try_from($currency_id) {
+            Ok(<T::CampaignAssets as $trait<T::AccountId>>::$method(asset, $($args),*))
+        } else if let Ok(asset) = T::CustomAssetType::try_from($currency_id)  {
+            Ok(<T::CustomAssets as $trait<T::AccountId>>::$method(asset, $($args),*))
+        } else if let Ok(currency) = T::CurrencyType::try_from($currency_id) {
+            Ok(<T::Currencies as $trait<T::AccountId>>::$method(currency, $($args),*))
+        } else {
+            Err(Error::<T>::UnknownAsset)
+        }
+    };
+}
+
 /// This macro delegates a call to Currencies if the asset represents a currency, otherwise
 /// it returns an error.
 macro_rules! only_currency {
