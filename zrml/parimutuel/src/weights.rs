@@ -140,7 +140,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     /// Storage: AssetRouter IndestructibleAssets (r:1 w:0)
     /// Proof: AssetRouter IndestructibleAssets (max_values: Some(1), max_size: Some(38914), added: 39409, mode: MaxEncodedLen)
-    fn on_resultion() -> Weight {
+    fn on_resolution() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `18377`
         //  Estimated: `417969`
