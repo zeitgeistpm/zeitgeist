@@ -61,7 +61,7 @@ use sp_runtime::{
     DispatchError, Perbill, SaturatedConversion,
 };
 use zeitgeist_primitives::{
-    math::checked_ops_res::CheckedRemRes,
+    math::checked_ops_res::{CheckedAddRes, CheckedRemRes, CheckedSubRes},
     traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
     types::{
         Asset, GlobalDisputeItem, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
@@ -1191,36 +1191,25 @@ mod pallet {
     where
         T: Config,
     {
-        fn reassign_participant_reward(
+        fn get_uneligible_stake(
             pool_item_opt: Option<&CourtPoolItemOf<T>>,
             amount: BalanceOf<T>,
-            now: BlockNumberFor<T>,
-        ) -> Result<(BalanceOf<T>, BlockNumberFor<T>), DispatchError> {
+            current_period_index: BlockNumberFor<T>,
+        ) -> Result<BalanceOf<T>, DispatchError> {
             let pool_item = match pool_item_opt {
                 Some(pool_item) => pool_item,
-                None => return Ok((amount, now)),
+                None => return Ok(amount),
             };
 
-            let current_period_index = now
-                .checked_div(&T::InflationPeriod::get())
-                .ok_or(Error::<T>::Unexpected(UnexpectedError::InflationPeriodIsZero))?;
-            let last_reward_period_index = pool_item
-                .pre_period_join_at
-                .checked_div(&T::InflationPeriod::get())
-                .ok_or(Error::<T>::Unexpected(UnexpectedError::InflationPeriodIsZero))?;
-            let last_join_period_index = pool_item
-                .last_join_at
-                .checked_div(&T::InflationPeriod::get())
-                .ok_or(Error::<T>::Unexpected(UnexpectedError::InflationPeriodIsZero))?;
-            if current_period_index != last_reward_period_index {
-                if current_period_index != last_join_period_index {
-                    return Ok((pool_item.stake, pool_item.last_join_at));
-                } else {
-                    return Ok((pool_item.pre_period_join_stake, pool_item.pre_period_join_at));
-                }
+            if current_period_index != pool_item.uneligible_index {
+                let uneligible_stake = amount.checked_sub_res(&pool_item.stake)?;
+                Ok(uneligible_stake)
+            } else {
+                let additional_uneligible_stake = amount.checked_sub_res(&pool_item.stake)?;
+                let uneligible_stake =
+                    pool_item.uneligible_stake.checked_add_res(&additional_uneligible_stake)?;
+                Ok(uneligible_stake)
             }
-
-            Ok((amount, now))
         }
 
         fn get_initial_joined_at(
@@ -1300,7 +1289,7 @@ mod pallet {
             let now = <frame_system::Pallet<T>>::block_number();
 
             let (prev_pool_item_opt, active_lock, consumed_stake) =
-                match <Participants<T>>::get(who) {
+                match <Participants<T>>::get(who) {<
                     Some(prev_p_info) => {
                         let (pruned_pool, old_consumed_stake, prev_pool_item_opt) =
                             Self::handle_existing_participant(who, amount, pool, &prev_p_info)?;
@@ -1313,10 +1302,16 @@ mod pallet {
                     }
                 };
 
-            let (pre_period_join_stake, pre_period_join_at) =
-                Self::reassign_participant_reward(prev_pool_item_opt.as_ref(), amount, now)?;
+            let current_period_index = now
+                .checked_div(&T::InflationPeriod::get())
+                .ok_or(Error::<T>::Unexpected(UnexpectedError::InflationPeriodIsZero))?;
+
+            let uneligible_stake = Self::get_uneligible_stake(
+                prev_pool_item_opt.as_ref(),
+                amount,
+                current_period_index,
+            )?;
             let joined_at = Self::get_initial_joined_at(prev_pool_item_opt.as_ref(), now);
-            let last_join_at = now;
 
             match pool.binary_search_by_key(&(amount, who), |pool_item| {
                 (pool_item.stake, &pool_item.court_participant)
@@ -1337,9 +1332,8 @@ mod pallet {
                             court_participant: who.clone(),
                             consumed_stake,
                             joined_at,
-                            last_join_at,
-                            pre_period_join_stake,
-                            pre_period_join_at,
+                            uneligible_index: current_period_index,
+                            uneligible_stake,
                         },
                     )
                     .map_err(|_| {
@@ -1425,50 +1419,40 @@ mod pallet {
             let pool_len = pool.len() as u32;
             let at_least_one_inflation_period =
                 |join_at| now.saturating_sub(join_at) >= T::InflationPeriod::get();
-            let total_rewardable_stake = pool.iter().fold(0u128, |acc, pool_item| {
-                if at_least_one_inflation_period(pool_item.last_join_at) {
-                    acc.saturating_add(pool_item.stake.saturated_into::<u128>())
-                } else if at_least_one_inflation_period(pool_item.pre_period_join_at) {
-                    acc.saturating_add(pool_item.pre_period_join_stake.saturated_into::<u128>())
-                } else {
-                    acc
-                }
+            debug_assert!(!T::InflationPeriod::get().is_zero());
+            let current_period_index = now.checked_div(&T::InflationPeriod::get());
+            let eligible_stake = |pool_item: &CourtPoolItemOf<T>| match current_period_index {
+                Some(index) if index != pool_item.uneligible_index => pool_item.stake,
+                Some(_) => pool_item.stake.saturating_sub(pool_item.uneligible_stake),
+                None => pool_item.stake,
+            };
+            let total_eligible_stake = pool.iter().fold(0u128, |acc, pool_item| {
+                eligible_stake(pool_item).saturated_into::<u128>().saturating_add(acc)
             });
-            if total_rewardable_stake.is_zero() {
+            if total_eligible_stake.is_zero() {
                 return T::WeightInfo::handle_inflation(0u32);
             }
 
             let mut total_mint = T::Currency::issue(inflation_period_mint);
 
-            for CourtPoolItem {
-                court_participant,
-                last_join_at,
-                stake,
-                pre_period_join_at,
-                pre_period_join_stake,
-                ..
-            } in pool
-            {
-                let rewardable_stake = if at_least_one_inflation_period(last_join_at) {
-                    stake
-                } else if at_least_one_inflation_period(pre_period_join_at) {
-                    pre_period_join_stake
-                } else {
-                    // participants who joined and didn't wait
-                    // at least one full inflation period won't get a reward
+            for pool_item in pool {
+                let eligible_stake = eligible_stake(&pool_item);
+                if eligible_stake.is_zero() {
                     continue;
-                };
+                }
                 let share = Perquintill::from_rational(
-                    rewardable_stake.saturated_into::<u128>(),
-                    total_rewardable_stake,
+                    eligible_stake.saturated_into::<u128>(),
+                    total_eligible_stake,
                 );
                 let mint = share.mul_floor(inflation_period_mint.saturated_into::<u128>());
                 let (mint_imb, remainder) = total_mint.split(mint.saturated_into::<BalanceOf<T>>());
                 let mint_amount = mint_imb.peek();
                 total_mint = remainder;
-                if let Ok(()) = T::Currency::resolve_into_existing(&court_participant, mint_imb) {
+                if let Ok(()) =
+                    T::Currency::resolve_into_existing(&pool_item.court_participant, mint_imb)
+                {
                     Self::deposit_event(Event::MintedInCourt {
-                        court_participant: court_participant.clone(),
+                        court_participant: pool_item.court_participant.clone(),
                         amount: mint_amount,
                     });
                 }

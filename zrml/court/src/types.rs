@@ -285,12 +285,8 @@ pub struct CourtPoolItem<AccountId, Balance, BlockNumber> {
     pub consumed_stake: Balance,
     /// The block number at which the participant initially joined.
     pub joined_at: BlockNumber,
-    /// The block number at which the participant lastly joined.
-    pub last_join_at: BlockNumber,
-    /// The amount of the join for the past inflation period.
-    pub pre_period_join_stake: Balance,
-    /// The relevant block number to determine the join for the past inflation period.
-    pub pre_period_join_at: BlockNumber,
+    pub uneligible_index: BlockNumber,
+    pub uneligible_stake: Balance,
 }
 
 /// The information about an internal selected draw of a juror or delegator.
