@@ -24,8 +24,14 @@ pub struct AmmTrade<Balance> {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct OrderbookTrade<Balance> {
+pub struct ExternalFee<AccountId, Balance> {
+    pub account: AccountId,
+    pub amount: Balance,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct OrderbookTrade<AccountId, Balance> {
     pub filled_maker_amount: Balance,
     pub filled_taker_amount: Balance,
-    pub external_fee_amount: Balance,
+    pub external_fee: ExternalFee<AccountId, Balance>,
 }

@@ -46,7 +46,7 @@ mod pallet {
         ArithmeticError, DispatchResult,
     };
     use zeitgeist_primitives::{
-        hybrid_router_api_types::{AmmTrade, OrderbookTrade},
+        hybrid_router_api_types::{AmmTrade, ExternalFee, OrderbookTrade},
         math::{
             checked_ops_res::{CheckedAddRes, CheckedSubRes},
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
@@ -111,7 +111,7 @@ mod pallet {
         Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
     pub(crate) type OrdersOf<T> = BoundedVec<OrderId, <T as Config>::MaxOrders>;
     pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
-    pub(crate) type OrderTradesOf<T> = OrderbookTrade<BalanceOf<T>>;
+    pub(crate) type OrderTradesOf<T> = OrderbookTrade<AccountIdOf<T>, BalanceOf<T>>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -641,10 +641,12 @@ mod pallet {
             let mut amount_out = BalanceOf::<T>::zero();
             let mut external_fee_amount = BalanceOf::<T>::zero();
             let mut swap_fee_amount = BalanceOf::<T>::zero();
-            for t in &orderbook_trades {
-                amount_out = amount_out.checked_add_res(&t.filled_maker_amount)?;
-                external_fee_amount =
-                    external_fee_amount.checked_add_res(&t.external_fee_amount)?;
+            for &t in &orderbook_trades {
+                amount_out = amount_out.checked_add_res(t.filled_maker_amount)?;
+                if &t.external_fee.account == &who {
+                    external_fee_amount =
+                        external_fee_amount.checked_add_res(t.external_fee.amount)?;
+                }
             }
 
             for t in &amm_trades {
