@@ -127,9 +127,8 @@ where
             court_participant: juror.clone(),
             consumed_stake,
             joined_at,
-            last_join_at: joined_at,
-            pre_period_join_at: joined_at,
-            pre_period_join_stake: stake,
+            uneligible_index: 0u64.saturated_into::<T::BlockNumber>(),
+            uneligible_stake: stake,
         };
         match pool.binary_search_by_key(&(stake, &juror), |pool_item| {
             (pool_item.stake, &pool_item.court_participant)

@@ -285,7 +285,10 @@ pub struct CourtPoolItem<AccountId, Balance, BlockNumber> {
     pub consumed_stake: Balance,
     /// The block number at which the participant initially joined.
     pub joined_at: BlockNumber,
+    /// The index of the inflation period in which the court participant increased the stake lastly.
+    /// The court participant can increase the stake by joining the court with a higher stake.
     pub uneligible_index: BlockNumber,
+    /// The additional stake added in the inflation period of the uneligible index.
     pub uneligible_stake: Balance,
 }
 

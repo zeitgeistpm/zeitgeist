@@ -1289,7 +1289,7 @@ mod pallet {
             let now = <frame_system::Pallet<T>>::block_number();
 
             let (prev_pool_item_opt, active_lock, consumed_stake) =
-                match <Participants<T>>::get(who) {<
+                match <Participants<T>>::get(who) {
                     Some(prev_p_info) => {
                         let (pruned_pool, old_consumed_stake, prev_pool_item_opt) =
                             Self::handle_existing_participant(who, amount, pool, &prev_p_info)?;
@@ -1302,8 +1302,9 @@ mod pallet {
                     }
                 };
 
+            let inflation_period = T::InflationPeriod::get();
             let current_period_index = now
-                .checked_div(&T::InflationPeriod::get())
+                .checked_div(&inflation_period)
                 .ok_or(Error::<T>::Unexpected(UnexpectedError::InflationPeriodIsZero))?;
 
             let uneligible_stake = Self::get_uneligible_stake(
@@ -1387,11 +1388,11 @@ mod pallet {
 
             let yearly_inflation_amount = yearly_inflation_amount.saturated_into::<BalanceOf<T>>();
             let issue_per_block = issue_per_block.saturated_into::<BalanceOf<T>>();
-            let inflation_period =
+            let inflation_period_balance =
                 inflation_period.saturated_into::<u128>().saturated_into::<BalanceOf<T>>();
 
             // example: 7979867607 * 7200 * 30 = 1723651403112000
-            let inflation_period_mint = issue_per_block.saturating_mul(inflation_period);
+            let inflation_period_mint = issue_per_block.saturating_mul(inflation_period_balance);
 
             // inflation_period_mint shouldn't exceed 0.5% of the total issuance
             let log_threshold = Perbill::from_perthousand(5u32)
@@ -1417,18 +1418,17 @@ mod pallet {
 
             let pool = <CourtPool<T>>::get();
             let pool_len = pool.len() as u32;
-            let at_least_one_inflation_period =
-                |join_at| now.saturating_sub(join_at) >= T::InflationPeriod::get();
-            debug_assert!(!T::InflationPeriod::get().is_zero());
-            let current_period_index = now.checked_div(&T::InflationPeriod::get());
+            debug_assert!(!inflation_period.is_zero());
+            let current_period_index =
+                now.checked_div(&inflation_period.saturating_add(One::one()));
             let eligible_stake = |pool_item: &CourtPoolItemOf<T>| match current_period_index {
                 Some(index) if index != pool_item.uneligible_index => pool_item.stake,
-                Some(_) => pool_item.stake.saturating_sub(pool_item.uneligible_stake),
-                None => pool_item.stake,
+                _ => pool_item.stake.saturating_sub(pool_item.uneligible_stake),
             };
-            let total_eligible_stake = pool.iter().fold(0u128, |acc, pool_item| {
-                eligible_stake(pool_item).saturated_into::<u128>().saturating_add(acc)
-            });
+            let total_eligible_stake =
+                pool.iter().fold(BalanceOf::<T>::zero(), |acc, pool_item| {
+                    eligible_stake(pool_item).saturating_add(acc)
+                });
             if total_eligible_stake.is_zero() {
                 return T::WeightInfo::handle_inflation(0u32);
             }
@@ -1442,7 +1442,7 @@ mod pallet {
                 }
                 let share = Perquintill::from_rational(
                     eligible_stake.saturated_into::<u128>(),
-                    total_eligible_stake,
+                    total_eligible_stake.saturated_into::<u128>(),
                 );
                 let mint = share.mul_floor(inflation_period_mint.saturated_into::<u128>());
                 let (mint_imb, remainder) = total_mint.split(mint.saturated_into::<BalanceOf<T>>());

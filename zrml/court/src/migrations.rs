@@ -30,6 +30,7 @@ use frame_support::{
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_runtime::{traits::CheckedDiv, SaturatedConversion};
 
 #[derive(Decode, Encode, MaxEncodedLen, TypeInfo, Clone, Debug, PartialEq, Eq)]
 pub struct OldCourtPoolItem<AccountId, Balance, BlockNumber> {
@@ -77,9 +78,20 @@ where
                             court_participant: old_pool_item.court_participant.clone(),
                             consumed_stake: old_pool_item.consumed_stake,
                             joined_at: old_pool_item.joined_at,
-                            last_join_at: old_pool_item.joined_at,
-                            pre_period_join_stake: old_pool_item.stake,
-                            pre_period_join_at: old_pool_item.joined_at,
+                            uneligible_index: old_pool_item
+                                .joined_at
+                                .checked_div(&T::InflationPeriod::get())
+                                // because inflation period is not zero checked_div is safe
+                                // however, if not use the current period index
+                                // 5_184_000 is the block of the inflation reward distribution
+                                // 5_184_000 / 216_000 (blocks per 30 day inflation period) = 24
+                                .unwrap_or(24u64.saturated_into::<BlockNumberOf<T>>()),
+                            // using old_pool_item.stake leads to all joins in period 24
+                            // to be uneligible, which is exactly what we want
+                            // if using zero, all joins of period 24 would be eligible,
+                            // but only joins in 23 waited the full period yet
+                            // to understand the calculation of the eligible stake look into handle_inflation
+                            uneligible_stake: old_pool_item.stake,
                         })
                         .collect::<Vec<_>>(),
                 )
@@ -139,8 +151,10 @@ mod tests {
             let stake_1 = 101;
             let court_participant = 200;
             let consumed_stake = 300;
-            let joined_at_0 = 42;
-            let joined_at_1 = 123;
+            let inflation_period = <Runtime as Config>::InflationPeriod::get();
+            assert_eq!(inflation_period, 20u64);
+            let joined_at_0 = 461;
+            let joined_at_1 = 481;
             let old_court_pool = OldCourtPoolOf::<Runtime>::truncate_from(vec![
                 OldCourtPoolItemOf::<Runtime> {
                     stake: stake_0,
@@ -161,18 +175,16 @@ mod tests {
                     court_participant,
                     consumed_stake,
                     joined_at: joined_at_0,
-                    last_join_at: joined_at_0,
-                    pre_period_join_stake: stake_0,
-                    pre_period_join_at: joined_at_0,
+                    uneligible_index: 23,
+                    uneligible_stake: stake_0,
                 },
                 CourtPoolItemOf::<Runtime> {
                     stake: stake_1,
                     court_participant,
                     consumed_stake,
                     joined_at: joined_at_1,
-                    last_join_at: joined_at_1,
-                    pre_period_join_stake: stake_1,
-                    pre_period_join_at: joined_at_1,
+                    uneligible_index: 24,
+                    uneligible_stake: stake_1,
                 },
             ]);
             CourtPool::<Runtime>::put::<OldCourtPoolOf<Runtime>>(old_court_pool);
@@ -196,18 +208,16 @@ mod tests {
                     court_participant: 2,
                     consumed_stake: 3,
                     joined_at: 4,
-                    last_join_at: 4,
-                    pre_period_join_stake: 4,
-                    pre_period_join_at: 4,
+                    uneligible_index: 23,
+                    uneligible_stake: 1,
                 },
                 CourtPoolItemOf::<Runtime> {
                     stake: 8,
                     court_participant: 9,
                     consumed_stake: 10,
                     joined_at: 11,
-                    last_join_at: 11,
-                    pre_period_join_stake: 11,
-                    pre_period_join_at: 11,
+                    uneligible_index: 24,
+                    uneligible_stake: 8,
                 },
             ]);
             crate::CourtPool::<Runtime>::put(court_pool);
