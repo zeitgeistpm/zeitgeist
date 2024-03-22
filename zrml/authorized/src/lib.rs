@@ -49,7 +49,7 @@ mod pallet {
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
         types::{
-            Asset, AuthorityReport, GlobalDisputeItem, Market, MarketDisputeMechanism,
+            AuthorityReport, BaseAsset, GlobalDisputeItem, Market, MarketDisputeMechanism,
             MarketStatus, OutcomeReport, ResultWithWeightInfo,
         },
     };
@@ -72,7 +72,7 @@ mod pallet {
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
-        Asset<MarketIdOf<T>>,
+        BaseAsset,
     >;
 
     #[pallet::call]
@@ -371,12 +371,12 @@ where
     use frame_support::traits::Get;
     use sp_runtime::{traits::AccountIdConversion, Perbill};
     use zeitgeist_primitives::types::{
-        Asset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+        BaseAsset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
         MarketStatus, MarketType, ScoringRule,
     };
 
     zeitgeist_primitives::types::Market {
-        base_asset: Asset::Ztg,
+        base_asset: BaseAsset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),
         creator: T::PalletId::get().into_account_truncating(),
