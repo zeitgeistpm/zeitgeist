@@ -285,21 +285,14 @@ mod pallet {
         T: Config,
     {
         /// Returns a vector of assets corresponding to the given market ID and market type.
-        ///
+        /// For scalar outcomes, the returned vector is [LONG, SHORT].
+        /// For categorical outcomes, 
+        /// the vector starts with the lowest and ends with the highest categorical outcome.
+        /// 
         /// # Arguments
         ///
         /// * `market_id` - The ID of the market.
         /// * `market` - A reference to the market.
-        ///
-        /// # Returns
-        ///
-        /// A vector of assets based on the market type. If the market type is `Categorical`,
-        /// the function creates a vector of `CategoricalOutcome` assets with the given market ID
-        /// and category index. If the market type is `Scalar`, the function creates a vector
-        /// containing `ScalarOutcome` assets with the given market ID and both `Long` and `Short` positions.
-        /// For scalar outcomes, the returned vector is [LONG, SHORT].
-        /// For categorical outcomes, 
-        /// the vector starts with the lowest and ends with the highest categorical outcome.
         pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
             match market.market_type {
                 MarketType::Categorical(categories) => {
@@ -329,10 +322,6 @@ mod pallet {
         /// * `asset` - The asset to be traded.
         /// * `amount_in` - The amount to be traded.
         /// * `price_limit` - The maximum or minimum price at which the trade can be executed.
-        ///
-        /// # Returns
-        ///
-        /// The remaining amount after filling the order from the AMM, or an error if the order cannot be filled.
         fn maybe_fill_from_amm(
             tx_type: TxType,
             who: &AccountIdOf<T>,
@@ -399,10 +388,6 @@ mod pallet {
         /// * `base_asset` - The base asset of the market.
         /// * `asset` - The asset to be traded.
         /// * `price_limit` - The maximum or minimum price at which the trade can be executed.
-        ///
-        /// # Returns
-        ///
-        /// The remaining amount after filling the order, or an error if the order cannot be filled.
         fn maybe_fill_orders(
             tx_type: TxType,
             orders: &[OrderId],
@@ -482,11 +467,6 @@ mod pallet {
         /// * `maker_amount` - The amount of the `maker_asset` to be provided.
         /// * `taker_asset` - The asset to be received.
         /// * `taker_amount` - The amount of the `taker_asset` to be received.
-        ///
-        /// # Returns
-        ///
-        /// An error if the strategy is `Strategy::ImmediateOrCancel`.
-        /// Otherwise, the limit order is placed.
         fn maybe_place_limit_order(
             strategy: Strategy,
             who: &AccountIdOf<T>,
@@ -529,12 +509,6 @@ mod pallet {
         /// * `price_limit` - The maximum or minimum price at which the trade can be executed.
         /// * `orders` - A list of orders from the order book.
         /// * `strategy` - The strategy to handle the remaining non-zero amount when the `max_price` is reached.
-        ///
-        /// # Returns
-        ///
-        /// An error if the strategy is `Strategy::ImmediateOrCancel` and the full amount cannot be filled.
-        /// Otherwise, the trade is executed and maybe places an order,
-        /// if the full amount could not be processed at the specified price limit.
         #[require_transactional]
         pub(crate) fn do_trade(
             tx_type: TxType,
