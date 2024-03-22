@@ -297,6 +297,9 @@ mod pallet {
         /// the function creates a vector of `CategoricalOutcome` assets with the given market ID
         /// and category index. If the market type is `Scalar`, the function creates a vector
         /// containing `ScalarOutcome` assets with the given market ID and both `Long` and `Short` positions.
+        /// For scalar outcomes, the returned vector is [LONG, SHORT].
+        /// For categorical outcomes, 
+        /// the vector starts by the lowest and ends with the highest categorical outcome.
         pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
             match market.market_type {
                 MarketType::Categorical(categories) => {
