@@ -158,7 +158,7 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn on_resultion() {
+    fn on_resolution() {
         let market_id = setup_market::<T>(MarketType::Categorical(64u16));
         assert_ok!(Parimutuel::<T>::on_activation(&market_id).result);
 

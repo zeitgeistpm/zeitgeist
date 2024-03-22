@@ -164,3 +164,18 @@ fn close_trusted_market_fails_if_invalid_market_state(status: MarketStatus) {
         );
     });
 }
+
+#[test]
+fn does_trigger_market_transition_api_permissionless() {
+    ExtBuilder::default().build().execute_with(|| {
+        StateTransitionMock::ensure_empty_state();
+        simple_create_categorical_market(
+            BaseAsset::Ztg,
+            MarketCreation::Permissionless,
+            1..2,
+            ScoringRule::Lmsr,
+        );
+        assert_ok!(PredictionMarkets::close_market(&0));
+        assert!(StateTransitionMock::on_closure_triggered());
+    });
+}

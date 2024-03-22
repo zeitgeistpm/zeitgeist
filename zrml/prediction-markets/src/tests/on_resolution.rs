@@ -1134,3 +1134,32 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         test(BaseAsset::ForeignAsset(100));
     });
 }
+
+#[test]
+fn does_trigger_market_transition_api() {
+    ExtBuilder::default().build().execute_with(|| {
+        StateTransitionMock::ensure_empty_state();
+        let end = 3;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(ALICE),
+            BaseAsset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            Deadlines {
+                grace_period: 0,
+                oracle_duration: <Runtime as Config>::MinOracleDuration::get(),
+                dispute_duration: Zero::zero(),
+            },
+            gen_metadata(0x99),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            None,
+            ScoringRule::Lmsr,
+        ));
+        run_to_block(end);
+        let outcome = OutcomeReport::Categorical(1);
+        assert_ok!(PredictionMarkets::report(RuntimeOrigin::signed(BOB), 0, outcome.clone()));
+        assert!(StateTransitionMock::on_resolution_triggered());
+    });
+}

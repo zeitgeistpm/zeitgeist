@@ -1726,7 +1726,7 @@ mod pallet {
         /// The origin that is allowed to reject pending advised markets.
         type RejectOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        /// Additional handler during state transitions
+        /// Additional handler during state transitions.
         type OnStateTransition: MarketTransitionApi<MarketIdOf<Self>>;
 
         /// The base amount of currency that must be bonded to ensure the oracle reports

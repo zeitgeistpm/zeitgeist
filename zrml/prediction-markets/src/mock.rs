@@ -27,6 +27,7 @@ use frame_support::{
     construct_runtime, ord_parameter_types,
     pallet_prelude::Weight,
     parameter_types,
+    storage::unhashed::put,
     traits::{
         AsEnsureOriginWithArg, Everything, GenesisBuild, NeverEnsureOrigin, OnFinalize, OnIdle,
         OnInitialize,
@@ -62,13 +63,20 @@ use zeitgeist_primitives::{
         OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId,
         TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT, MILLISECS_PER_BLOCK,
     },
-    traits::DeployPoolApi,
+    traits::{DeployPoolApi, MarketTransitionApi},
     types::{
         AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CampaignAsset, CampaignAssetClass, CampaignAssetId, Currencies, CustomAsset, CustomAssetId,
-        Hash, Index, MarketAsset, MarketId, Moment, UncheckedExtrinsicTest,
+        Hash, Index, MarketAsset, MarketId, Moment, ResultWithWeightInfo, UncheckedExtrinsicTest,
     },
 };
+
+pub(super) const ON_PROPOSAL_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x00];
+pub(super) const ON_ACTIVATION_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x01];
+pub(super) const ON_CLOSURE_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x02];
+pub(super) const ON_REPORT_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x03];
+pub(super) const ON_DISPUTE_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x04];
+pub(super) const ON_RESOLUTION_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x05];
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
@@ -91,6 +99,36 @@ pub struct DeployPoolArgs {
     amount: Balance,
     swap_prices: Vec<Balance>,
     swap_fee: Balance,
+}
+
+// It just writes true to specific memory locations depending on the hook that's invoked.
+pub struct StateTransitionMock;
+
+impl MarketTransitionApi<MarketId> for StateTransitionMock {
+    fn on_proposal(_market_id: &MarketId) -> ResultWithWeightInfo<DispatchResult> {
+        put(&ON_PROPOSAL_STORAGE, &true);
+        ResultWithWeightInfo::new(Ok(()), Weight::zero())
+    }
+    fn on_activation(_market_id: &MarketId) -> ResultWithWeightInfo<DispatchResult> {
+        put(&ON_ACTIVATION_STORAGE, &true);
+        ResultWithWeightInfo::new(Ok(()), Weight::zero())
+    }
+    fn on_closure(_market_id: &MarketId) -> ResultWithWeightInfo<DispatchResult> {
+        put(&ON_CLOSURE_STORAGE, &true);
+        ResultWithWeightInfo::new(Ok(()), Weight::zero())
+    }
+    fn on_report(_market_id: &MarketId) -> ResultWithWeightInfo<DispatchResult> {
+        put(&ON_REPORT_STORAGE, &true);
+        ResultWithWeightInfo::new(Ok(()), Weight::zero())
+    }
+    fn on_dispute(_market_id: &MarketId) -> ResultWithWeightInfo<DispatchResult> {
+        put(&ON_DISPUTE_STORAGE, &true);
+        ResultWithWeightInfo::new(Ok(()), Weight::zero())
+    }
+    fn on_resolution(_market_id: &MarketId) -> ResultWithWeightInfo<DispatchResult> {
+        put(&ON_RESOLUTION_STORAGE, &true);
+        ResultWithWeightInfo::new(Ok(()), Weight::zero())
+    }
 }
 
 thread_local! {
@@ -229,7 +267,7 @@ impl crate::Config for Runtime {
     type MinCategories = MinCategories;
     type MaxEditReasonLen = MaxEditReasonLen;
     type MaxRejectReasonLen = MaxRejectReasonLen;
-    type OnStateTransition = ();
+    type OnStateTransition = (StateTransitionMock,);
     type OracleBond = OracleBond;
     type OutsiderBond = OutsiderBond;
     type PalletId = PmPalletId;
