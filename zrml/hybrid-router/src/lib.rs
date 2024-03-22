@@ -318,7 +318,8 @@ mod pallet {
             }
         }
 
-        /// Fills the order from the Automated Market Maker (AMM) if it exists and meets the price conditions.
+        /// Fills the order from the Automated Market Maker (AMM) if it exists.
+        /// The order is filled until the `price_limit` is reached.
         ///
         /// # Arguments
         ///
