@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -22,6 +22,8 @@
     clippy::arithmetic_side_effects
 )]
 
+#[cfg(feature = "mock")]
+pub mod base_multiples;
 #[cfg(feature = "mock")]
 pub mod mock;
 pub mod ztg;

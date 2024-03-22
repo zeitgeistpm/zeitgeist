@@ -31,7 +31,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::mock::{
         BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
-        MaxReserves, MinimumPeriod, OrderbookPalletId, BASE,
+        MaxReserves, MinimumPeriod, OrderbookPalletId, BASE, CENT,
     },
     traits::DistributeFees,
     types::{
@@ -47,12 +47,18 @@ pub const MARKET_CREATOR: AccountIdTest = 42;
 
 pub const INITIAL_BALANCE: Balance = 100 * BASE;
 
+pub const EXTERNAL_FEES: Balance = CENT;
+
 parameter_types! {
     pub const FeeAccount: AccountIdTest = MARKET_CREATOR;
 }
 
+pub fn fee_percentage<T: crate::Config>() -> Perbill {
+    Perbill::from_rational(EXTERNAL_FEES, BASE)
+}
+
 pub fn calculate_fee<T: crate::Config>(amount: BalanceOf<T>) -> BalanceOf<T> {
-    Perbill::from_rational(1u64, 100u64).mul_floor(amount.saturated_into::<BalanceOf<T>>())
+    fee_percentage::<T>().mul_floor(amount.saturated_into::<BalanceOf<T>>())
 }
 
 pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
@@ -77,6 +83,10 @@ where
             Ok(_) => fees,
             Err(_) => Zero::zero(),
         }
+    }
+
+    fn fee_percentage(_market_id: Self::MarketId) -> Perbill {
+        fee_percentage::<T>()
     }
 }
 

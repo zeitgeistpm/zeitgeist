@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -31,7 +31,7 @@ use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
 use sp_runtime::Perbill;
 use zeitgeist_primitives::{
-    constants::CENT,
+    constants::{base_multiples::*, CENT},
     math::fixed::{FixedDiv, FixedMul},
     types::{
         AccountIdTest, Asset, Deadlines, MarketCreation, MarketId, MarketPeriod, MarketStatus,

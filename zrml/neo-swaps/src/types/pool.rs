@@ -116,6 +116,26 @@ where
         let reserve = self.reserve_of(&asset)?;
         Math::<T>::calculate_buy_ln_argument(reserve, amount_in, self.liquidity_parameter)
     }
+
+    fn calculate_buy_amount_until(
+        &self,
+        asset: AssetOf<T>,
+        until: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        let reserve = self.reserve_of(&asset)?;
+        let spot_price = Math::<T>::calculate_spot_price(reserve, self.liquidity_parameter)?;
+        Math::<T>::calculate_buy_amount_until(until, self.liquidity_parameter, spot_price)
+    }
+
+    fn calculate_sell_amount_until(
+        &self,
+        asset: AssetOf<T>,
+        until: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        let reserve = self.reserve_of(&asset)?;
+        let spot_price = Math::<T>::calculate_spot_price(reserve, self.liquidity_parameter)?;
+        Math::<T>::calculate_sell_amount_until(until, self.liquidity_parameter, spot_price)
+    }
 }
 
 // TODO(#1214): Replace BTreeMap with BoundedBTreeMap and remove the unnecessary `MaxEncodedLen`
