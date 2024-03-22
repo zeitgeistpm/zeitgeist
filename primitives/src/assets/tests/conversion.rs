@@ -49,6 +49,14 @@ fn from_all_assets_to_market_assets(
     assert_eq!(new_asset, new_asset_converted);
 }
 
+#[test_case(Asset::<MarketId>::Ztg; "ztg")]
+#[test_case(Asset::<MarketId>::ForeignAsset(7); "foreign_asset")]
+#[test_case(Asset::<MarketId>::CampaignAsset(7); "campaign_asset")]
+#[test_case(Asset::<MarketId>::CustomAsset(7); "custom_asset")]
+fn from_all_assets_to_market_assets_fails(asset: Asset<MarketId>) {
+    assert!(MarketAssetClass::<MarketId>::try_from(asset).is_err());
+}
+
 #[test_case(
     MarketAssetClass::<MarketId>::CategoricalOutcome(7, 8),
     Asset::<MarketId>::CategoricalOutcome(7, 8);
@@ -108,6 +116,13 @@ fn from_all_assets_to_currencies(old_asset: Asset<MarketId>, new_asset: Currency
     assert_eq!(new_asset, new_asset_converted);
 }
 
+#[test_case(Asset::<MarketId>::Ztg; "ztg")]
+#[test_case(Asset::<MarketId>::CampaignAsset(7); "campaign_asset")]
+#[test_case(Asset::<MarketId>::CustomAsset(7); "custom_asset")]
+fn from_all_assets_to_currencies_fails(asset: Asset<MarketId>) {
+    assert!(CurrencyClass::<MarketId>::try_from(asset).is_err());
+}
+
 #[test_case(
     CurrencyClass::<MarketId>::CategoricalOutcome(7, 8),
     Asset::<MarketId>::CategoricalOutcome(7, 8);
@@ -148,6 +163,17 @@ fn from_all_assets_to_campaign_assets() {
     assert_eq!(new_asset, new_asset_converted);
 }
 
+#[test_case(Asset::<MarketId>::CategoricalOutcome(7, 8); "categorical_outcome")]
+#[test_case(Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long); "scalar_outcome")]
+#[test_case(Asset::<MarketId>::PoolShare(7); "pool_share")]
+#[test_case(Asset::<MarketId>::Ztg; "ztg")]
+#[test_case(Asset::<MarketId>::ForeignAsset(7); "foreign_asset")]
+#[test_case(Asset::<MarketId>::ParimutuelShare(7, 8); "parimutuel_share")]
+#[test_case(Asset::<MarketId>::CustomAsset(7); "custom_asset")]
+fn from_all_assets_to_campaign_assets_fails(asset: Asset<MarketId>) {
+    assert!(CampaignAssetClass::try_from(asset).is_err());
+}
+
 #[test]
 fn from_campaign_assets_to_all_assets() {
     let old_asset = CampaignAssetClass(7);
@@ -164,6 +190,17 @@ fn from_all_assets_to_custom_assets() {
 
     let new_asset_converted: CustomAssetClass = old_asset.try_into().unwrap();
     assert_eq!(new_asset, new_asset_converted);
+}
+
+#[test_case(Asset::<MarketId>::CategoricalOutcome(7, 8); "categorical_outcome")]
+#[test_case(Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long); "scalar_outcome")]
+#[test_case(Asset::<MarketId>::PoolShare(7); "pool_share")]
+#[test_case(Asset::<MarketId>::Ztg; "ztg")]
+#[test_case(Asset::<MarketId>::ForeignAsset(7); "foreign_asset")]
+#[test_case(Asset::<MarketId>::ParimutuelShare(7, 8); "parimutuel_share")]
+#[test_case(Asset::<MarketId>::CampaignAsset(7); "campaign_asset")]
+fn from_all_assets_to_custom_assets_fails(asset: Asset<MarketId>) {
+    assert!(CustomAssetClass::try_from(asset).is_err());
 }
 
 #[test]
@@ -193,6 +230,15 @@ fn from_custom_assets_to_all_assets() {
 fn from_all_assets_to_base_assets(old_asset: Asset<MarketId>, new_asset: BaseAssetClass) {
     let new_asset_converted: BaseAssetClass = old_asset.try_into().unwrap();
     assert_eq!(new_asset, new_asset_converted);
+}
+
+#[test_case(Asset::<MarketId>::CategoricalOutcome(7, 8); "categorical_outcome")]
+#[test_case(Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long); "scalar_outcome")]
+#[test_case(Asset::<MarketId>::PoolShare(7); "pool_share")]
+#[test_case(Asset::<MarketId>::ParimutuelShare(7, 8); "parimutuel_share")]
+#[test_case(Asset::<MarketId>::CustomAsset(7); "custom_asset")]
+fn from_all_assets_to_base_assets_fails(asset: Asset<MarketId>) {
+    assert!(BaseAssetClass::try_from(asset).is_err());
 }
 
 #[test_case(
@@ -229,6 +275,17 @@ fn from_all_assets_to_parimutuel_assets(
     assert_eq!(new_asset, new_asset_converted);
 }
 
+#[test_case(Asset::<MarketId>::CategoricalOutcome(7, 8); "categorical_outcome")]
+#[test_case(Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long); "scalar_outcome")]
+#[test_case(Asset::<MarketId>::PoolShare(7); "pool_share")]
+#[test_case(Asset::<MarketId>::Ztg; "ztg")]
+#[test_case(Asset::<MarketId>::ForeignAsset(7); "foreign_asset")]
+#[test_case(Asset::<MarketId>::CampaignAsset(7); "campaign_asset")]
+#[test_case(Asset::<MarketId>::CustomAsset(7); "custom_asset")]
+fn from_all_assets_to_parimutuel_assets_fails(asset: Asset<MarketId>) {
+    assert!(ParimutuelAssetClass::<MarketId>::try_from(asset).is_err());
+}
+
 #[test_case(
     ParimutuelAssetClass::<MarketId>::Share(7, 8),
     Asset::<MarketId>::ParimutuelShare(7, 8);
@@ -256,6 +313,15 @@ fn from_parimutuel_assets_to_all_assets(
 fn from_all_assets_to_xcm_assets(old_asset: Asset<MarketId>, new_asset: XcmAssetClass) {
     let new_asset_converted: XcmAssetClass = old_asset.try_into().unwrap();
     assert_eq!(new_asset, new_asset_converted);
+}
+
+#[test_case(Asset::<MarketId>::CategoricalOutcome(7, 8); "categorical_outcome")]
+#[test_case(Asset::<MarketId>::ScalarOutcome(7, ScalarPosition::Long); "scalar_outcome")]
+#[test_case(Asset::<MarketId>::PoolShare(7); "pool_share")]
+#[test_case(Asset::<MarketId>::CampaignAsset(7); "campaign_asset")]
+#[test_case(Asset::<MarketId>::CustomAsset(7); "custom_asset")]
+fn from_all_assets_to_xcm_assets_fails(asset: Asset<MarketId>) {
+    assert!(XcmAssetClass::try_from(asset).is_err());
 }
 
 #[test_case(

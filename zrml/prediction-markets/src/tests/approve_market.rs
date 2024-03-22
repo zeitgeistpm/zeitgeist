@@ -116,3 +116,18 @@ fn approve_market_correctly_unreserves_advisory_bond() {
         test(BaseAsset::ForeignAsset(100));
     });
 }
+
+#[test]
+fn does_trigger_market_transition_api() {
+    ExtBuilder::default().build().execute_with(|| {
+        StateTransitionMock::ensure_empty_state();
+        simple_create_categorical_market(
+            BaseAsset::Ztg,
+            MarketCreation::Advised,
+            1..2,
+            ScoringRule::Lmsr,
+        );
+        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert!(StateTransitionMock::on_activation_triggered());
+    });
+}

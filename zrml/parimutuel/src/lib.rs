@@ -556,7 +556,6 @@ mod pallet {
         where
             F: Copy + FnOnce(MarketAssetClass<MarketIdOf<T>>) -> bool,
         {
-            // Destroy losing assets.
             BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
                 market
                     .outcome_assets(*market_id)
