@@ -985,10 +985,10 @@ mod pallet {
             amount: BalanceOf<T>,
             fee_fractional: BalanceOf<T>,
         ) -> Result<BalanceOf<T>, DispatchError> {
-            let fee_divsisor = ZeitgeistBase::<BalanceOf<T>>::get()?
+            let fee_divisor = ZeitgeistBase::<BalanceOf<T>>::get()?
                 .checked_sub(&fee_fractional)
                 .ok_or(Error::<T>::Unexpected)?;
-            amount.bdiv(fee_divsisor)
+            amount.bdiv(fee_divisor)
         }
 
         fn total_fee_fractional(
@@ -996,7 +996,7 @@ mod pallet {
             external_fee_percentage: Perbill,
         ) -> Result<BalanceOf<T>, DispatchError> {
             let external_fee_fractional =
-                external_fee_percentage.mul_ceil(ZeitgeistBase::<BalanceOf<T>>::get()?);
+                external_fee_percentage.mul_floor(ZeitgeistBase::<BalanceOf<T>>::get()?);
             swap_fee.checked_add_res(&external_fee_fractional)
         }
     }
