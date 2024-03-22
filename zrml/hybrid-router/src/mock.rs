@@ -101,24 +101,6 @@ parameter_types! {
     pub const MaxCategories: u16 = MAX_ASSETS + 1;
 }
 
-pub struct DeployPoolNoop;
-
-impl DeployPoolApi for DeployPoolNoop {
-    type AccountId = AccountIdTest;
-    type Balance = Balance;
-    type MarketId = MarketId;
-
-    fn deploy_pool(
-        _who: Self::AccountId,
-        _market_id: Self::MarketId,
-        _amount: Self::Balance,
-        _swap_prices: Vec<Self::Balance>,
-        _swap_fee: Self::Balance,
-    ) -> DispatchResult {
-        Ok(())
-    }
-}
-
 pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
 
 impl<T: crate::Config, F> DistributeFees for ExternalFees<T, F>
