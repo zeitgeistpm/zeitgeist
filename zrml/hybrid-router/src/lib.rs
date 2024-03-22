@@ -527,8 +527,6 @@ mod pallet {
                 Error::<T>::PriceLimitTooHigh
             );
             ensure!(orders.len() as u32 <= T::MaxOrders::get(), Error::<T>::MaxOrdersExceeded);
-            let orders: OrdersOf<T> =
-                orders.try_into().map_err(|_| Error::<T>::MaxOrdersExceeded)?;
             let market = T::MarketCommons::market(&market_id)?;
             let assets = Self::outcome_assets(market_id, &market);
             ensure!(asset_count as usize == assets.len(), Error::<T>::AssetCountMismatch);
