@@ -45,7 +45,7 @@ fn create_market_and_deploy_pool_works() {
         let market_id = 0;
         assert_ok!(PredictionMarkets::create_market_and_deploy_pool(
             RuntimeOrigin::signed(creator),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             creator_fee,
             oracle,
             period.clone(),

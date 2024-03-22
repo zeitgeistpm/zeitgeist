@@ -17,6 +17,7 @@
 
 #![cfg(test)]
 
+mod assets;
 mod buy;
 mod claim;
 mod refund;

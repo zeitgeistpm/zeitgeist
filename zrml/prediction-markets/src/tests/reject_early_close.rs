@@ -29,7 +29,7 @@ fn reject_early_close_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
             ScoringRule::Lmsr,
@@ -55,7 +55,7 @@ fn reject_early_close_fails_if_state_is_scheduled_as_market_creator() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
             ScoringRule::Lmsr,
@@ -83,7 +83,7 @@ fn reject_early_close_fails_if_state_is_rejected() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
             ScoringRule::Lmsr,
@@ -113,7 +113,7 @@ fn reject_early_close_resets_to_old_market_period() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -153,7 +153,7 @@ fn reject_early_close_settles_bonds() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),

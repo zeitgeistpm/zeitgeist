@@ -14753,6 +14753,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "pallet-assets",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -14760,7 +14761,9 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "test-case",
+ "zeitgeist-macros",
  "zeitgeist-primitives",
+ "zrml-asset-router",
  "zrml-market-commons",
 ]
 
