@@ -215,7 +215,7 @@ fn join_fails_on_insufficient_funds() {
                 _100,
                 vec![u128::MAX, u128::MAX]
             ),
-            orml_tokens::Error::<Runtime>::BalanceTooLow
+            pallet_assets::Error::<Runtime, MarketAssetsInstance>::NoAccount
         );
     });
 }
