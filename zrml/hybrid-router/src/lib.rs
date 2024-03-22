@@ -149,11 +149,13 @@ mod pallet {
             /// The asset provided by the trader.
             asset_in: AssetOf<T>,
             /// The amount of the `asset_in` provided by the trader.
+            /// It includes swap and external fees.
             amount_in: BalanceOf<T>,
             /// The asset received by the trader.
             asset_out: AssetOf<T>,
             /// The aggregated amount of the `asset_out` already received
             /// by the trader from AMM and orderbook.
+            /// It is the amount going out after all fees were paid.
             amount_out: BalanceOf<T>,
             /// The external fee amount paid in the base asset.
             external_fee_amount: BalanceOf<T>,
@@ -666,6 +668,7 @@ mod pallet {
                                 })
                             }
                             Trade::Amm(amm_trade) => {
+                                // TODO For Sell the AMM says on the SellExecuted event that amount_out is with fees not yet deducted. We need to be sure what amount_out is (with regards to order book too. Is the fee included in amount_out there?)
                                 let amount_out =
                                     event_info.amount_out.checked_add_res(amm_trade.amount_out)?;
                                 let external_fee_amount = event_info
