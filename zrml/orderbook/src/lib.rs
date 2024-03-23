@@ -301,9 +301,7 @@ mod pallet {
             let asset = order_data.maker_asset;
             let amount = order_data.maker_amount;
 
-            if T::AssetManager::ensure_can_withdraw(asset, &order_account, amount).is_ok() {
-                T::AssetManager::transfer(asset, &order_account, maker, amount)?;
-            } else {
+            if !T::AssetManager::reserved_balance(asset, &maker).is_zero() {
                 let missing =
                     T::AssetManager::unreserve_named(&Self::reserve_id(), asset, maker, amount);
 
@@ -318,6 +316,8 @@ mod pallet {
                     amount,
                     missing,
                 );
+            } else {
+                T::AssetManager::transfer(asset, &order_account, maker, amount)?;
             }
 
             <Orders<T>>::remove(order_id);
@@ -396,10 +396,7 @@ mod pallet {
             let taker_fill = Self::get_taker_fill(&order_data, maker_fill)?;
             let order_account = Self::order_account(order_id);
 
-            if T::AssetManager::ensure_can_withdraw(maker_asset, &order_account, taker_fill).is_ok()
-            {
-                T::AssetManager::transfer(maker_asset, &order_account, &taker, taker_fill)?;
-            } else {
+            if !T::AssetManager::reserved_balance(maker_asset, &maker).is_zero() {
                 T::AssetManager::repatriate_reserved_named(
                     &Self::reserve_id(),
                     maker_asset,
@@ -408,6 +405,8 @@ mod pallet {
                     taker_fill,
                     BalanceStatus::Free,
                 )?;
+            } else {
+                T::AssetManager::transfer(maker_asset, &order_account, &taker, taker_fill)?;
             }
 
             // if base asset: fund the full amount, but charge base asset fees from taker later
