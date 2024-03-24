@@ -65,7 +65,7 @@ use zeitgeist_primitives::{
     types::{
         AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CampaignAsset, CampaignAssetId, Currencies, CustomAsset, CustomAssetId, Hash, Index,
-        MarketAsset, MarketId, Moment, UncheckedExtrinsicTest, XcmAsset,
+        MarketAsset, MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 use zrml_neo_swaps::BalanceOf;

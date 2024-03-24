@@ -209,7 +209,6 @@ fn full_scalar_market_lifecycle() {
             let bal = AssetManager::free_balance((*asset).into(), &CHARLIE);
             assert_eq!(bal, 100 * BASE);
         }
-        let market = MarketCommons::market(&0).unwrap();
 
         set_timestamp_for_on_initialize(100_000_000);
         let report_at = 2;
