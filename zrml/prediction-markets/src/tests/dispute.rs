@@ -309,3 +309,34 @@ fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
         );
     });
 }
+
+#[test]
+fn does_trigger_market_transition_api() {
+    ExtBuilder::default().build().execute_with(|| {
+        StateTransitionMock::ensure_empty_state();
+        let end = 2;
+        simple_create_categorical_market(
+            BaseAsset::Ztg,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::Lmsr,
+        );
+
+        // Run to the end of the trading phase.
+        let market = MarketCommons::market(&0).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        run_to_block(grace_period + 1);
+
+        assert_ok!(PredictionMarkets::report(
+            RuntimeOrigin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let dispute_at = grace_period + 2;
+        run_to_block(dispute_at);
+
+        assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), 0));
+        assert!(StateTransitionMock::on_dispute_triggered());
+    });
+}

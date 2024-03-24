@@ -618,3 +618,31 @@ fn create_scalar_market_deposits_the_correct_event() {
         System::assert_last_event(Event::MarketCreated(0, market_account, market).into());
     });
 }
+
+#[test]
+fn does_trigger_market_transition_api() {
+    ExtBuilder::default().build().execute_with(|| {
+        StateTransitionMock::ensure_empty_state();
+        simple_create_categorical_market(
+            BaseAsset::Ztg,
+            MarketCreation::Advised,
+            1..2,
+            ScoringRule::Lmsr,
+        );
+        assert!(StateTransitionMock::on_proposal_triggered());
+    });
+}
+
+#[test]
+fn does_trigger_market_transition_api_permissionless() {
+    ExtBuilder::default().build().execute_with(|| {
+        StateTransitionMock::ensure_empty_state();
+        simple_create_categorical_market(
+            BaseAsset::Ztg,
+            MarketCreation::Permissionless,
+            1..2,
+            ScoringRule::Lmsr,
+        );
+        assert!(StateTransitionMock::on_activation_triggered());
+    });
+}

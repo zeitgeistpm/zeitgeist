@@ -18,6 +18,7 @@
 
 use super::*;
 
+use test_case::test_case;
 use zeitgeist_primitives::{constants::MILLISECS_PER_BLOCK, types::OutcomeReport};
 
 // TODO(#1239) MarketDoesNotExist
@@ -385,35 +386,38 @@ fn report_fails_on_market_state_resolved() {
     });
 }
 
-#[test]
-fn report_fails_if_reporter_is_not_the_oracle() {
+#[test_case(Some(MarketDisputeMechanism::SimpleDisputes); "with_dispute_mechanism")]
+#[test_case(None; "without_dispute_mechanism")]
+fn does_trigger_market_transition_api(dispute_mechanism: Option<MarketDisputeMechanism>) {
     ExtBuilder::default().build().execute_with(|| {
+        StateTransitionMock::ensure_empty_state();
+        let mut deadlines = get_deadlines();
+
+        if dispute_mechanism.is_none() {
+            deadlines.dispute_duration = Zero::zero();
+        }
+
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
             BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
-            MarketPeriod::Timestamp(0..100_000_000),
-            get_deadlines(),
+            MarketPeriod::Block(0..2),
+            deadlines,
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            dispute_mechanism,
             ScoringRule::Lmsr
         ));
+
         let market = MarketCommons::market(&0).unwrap();
-        set_timestamp_for_on_initialize(100_000_000);
-        // Trigger hooks which close the market.
-        run_to_block(2);
-        let grace_period: u64 = market.deadlines.grace_period * MILLISECS_PER_BLOCK as u64;
-        set_timestamp_for_on_initialize(100_000_000 + grace_period + MILLISECS_PER_BLOCK as u64);
-        assert_noop!(
-            PredictionMarkets::report(
-                RuntimeOrigin::signed(CHARLIE),
-                0,
-                OutcomeReport::Categorical(1)
-            ),
-            Error::<Runtime>::ReporterNotOracle,
-        );
+        run_to_block(2 + market.deadlines.grace_period + market.deadlines.oracle_duration + 1);
+        assert_ok!(PredictionMarkets::report(
+            RuntimeOrigin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        assert!(StateTransitionMock::on_report_triggered());
     });
 }

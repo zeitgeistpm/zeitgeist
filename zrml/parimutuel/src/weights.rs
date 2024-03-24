@@ -117,11 +117,36 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(3))
     }
 
+    /// Storage: MarketCommons Markets (r:1 w:0)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(676), added: 3151, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:64 w:64)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     fn on_activation() -> Weight {
-        Weight::from_all(10_000_000_000)
+        // Proof Size summary in bytes:
+        //  Measured:  `1187`
+        //  Estimated: `175951`
+        // Minimum execution time: 159_784 nanoseconds.
+        Weight::from_parts(161_183_000, 175951)
+            .saturating_add(T::DbWeight::get().reads(65))
+            .saturating_add(T::DbWeight::get().writes(64))
     }
-
+    /// Storage: MarketCommons Markets (r:1 w:0)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(676), added: 3151, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:64 w:64)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
+    /// Storage: AssetRouter DestroyAssets (r:1 w:1)
+    /// Proof: AssetRouter DestroyAssets (max_values: Some(1), max_size: Some(40962), added: 41457, mode: MaxEncodedLen)
+    /// Storage: Tokens TotalIssuance (r:64 w:0)
+    /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
+    /// Storage: AssetRouter IndestructibleAssets (r:1 w:0)
+    /// Proof: AssetRouter IndestructibleAssets (max_values: Some(1), max_size: Some(38914), added: 39409, mode: MaxEncodedLen)
     fn on_resolution() -> Weight {
-        Weight::from_all(10_000_000_000)
+        // Proof Size summary in bytes:
+        //  Measured:  `18377`
+        //  Estimated: `417969`
+        // Minimum execution time: 367_119 nanoseconds.
+        Weight::from_parts(370_038_000, 417969)
+            .saturating_add(T::DbWeight::get().reads(131))
+            .saturating_add(T::DbWeight::get().writes(65))
     }
 }

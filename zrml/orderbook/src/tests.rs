@@ -371,6 +371,37 @@ fn fill_order_partially_fills_order() {
 }
 
 #[test]
+fn fill_order_does_work_with_reserves_after_funding_order_account() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let mut market = market_mock::<Runtime>();
+        market.base_asset = BaseAsset::Ztg;
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset.into();
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+        let taker_amount = 10 * BASE;
+        let maker_amount = 250 * BASE;
+
+        assert_ok!(AssetManager::deposit(maker_asset, &ALICE, maker_amount));
+        assert_ok!(AssetManager::deposit(taker_asset, &BOB, taker_amount));
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            maker_asset,
+            maker_amount,
+            taker_asset,
+            taker_amount,
+        ));
+
+        let reserved_funds = AssetManager::reserved_balance(maker_asset, &ALICE);
+        assert_eq!(reserved_funds, maker_amount);
+        assert_ok!(AssetManager::deposit(maker_asset, &Orderbook::order_account(0), BASE));
+        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(BOB), 0, None));
+    });
+}
+
+#[test]
 fn place_order_fails_if_market_base_asset_not_present() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
@@ -1029,6 +1060,39 @@ fn remove_order_fails_if_not_order_creator() {
             Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_id),
             Error::<Runtime>::NotOrderCreator
         );
+    });
+}
+
+#[test]
+fn remove_order_does_work_with_reserves_after_funding_order_account() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let mut market = market_mock::<Runtime>();
+        market.base_asset = BaseAsset::Ztg;
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset.into();
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+        let taker_amount = 10 * BASE;
+        let maker_amount = 250 * BASE;
+
+        assert_ok!(AssetManager::deposit(maker_asset, &ALICE, maker_amount));
+        assert_ok!(AssetManager::deposit(taker_asset, &BOB, taker_amount));
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            maker_asset,
+            maker_amount,
+            taker_asset,
+            taker_amount,
+        ));
+
+        let mut reserved_funds = AssetManager::reserved_balance(maker_asset, &ALICE);
+        assert_eq!(reserved_funds, maker_amount);
+        assert_ok!(AssetManager::deposit(maker_asset, &Orderbook::order_account(0), BASE));
+        assert_ok!(Orderbook::remove_order(RuntimeOrigin::signed(ALICE), 0));
+        reserved_funds = AssetManager::reserved_balance(maker_asset, &ALICE);
+        assert_eq!(reserved_funds, 0);
     });
 }
 

@@ -17,8 +17,7 @@
 
 use super::*;
 
-/// The `BaseAssets` enum represents all assets that can be used as collateral in
-/// prediction markets.
+/// The `ParimutuelAssetClass` enum represents all assets that are specific to parimutuel markets.
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]

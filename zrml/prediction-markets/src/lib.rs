@@ -58,7 +58,7 @@ mod pallet {
     #[cfg(feature = "parachain")]
     use {
         orml_traits::asset_registry::Inspect as RegistryInspect,
-        zeitgeist_primitives::types::{CustomMetadata, XcmAsset},
+        zeitgeist_primitives::types::{CurrencyClass, CustomMetadata},
     };
 
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
@@ -1562,7 +1562,7 @@ mod pallet {
 
         #[cfg(feature = "parachain")]
         type AssetRegistry: RegistryInspect<
-                AssetId = XcmAsset,
+                AssetId = CurrencyClass<MarketIdOf<Self>>,
                 Balance = BalanceOf<Self>,
                 CustomMetadata = CustomMetadata,
             >;
@@ -1726,7 +1726,7 @@ mod pallet {
         /// The origin that is allowed to reject pending advised markets.
         type RejectOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        /// Additional handler during state transitions
+        /// Additional handler during state transitions.
         type OnStateTransition: MarketTransitionApi<MarketIdOf<Self>>;
 
         /// The base amount of currency that must be bonded to ensure the oracle reports
@@ -2962,7 +2962,10 @@ mod pallet {
                 BaseAsset::Ztg => true,
                 #[cfg(feature = "parachain")]
                 BaseAsset::ForeignAsset(id) => {
-                    if let Some(metadata) = T::AssetRegistry::metadata(&XcmAsset::ForeignAsset(id))
+                    if let Some(metadata) =
+                        T::AssetRegistry::metadata(&CurrencyClass::<MarketIdOf<T>>::ForeignAsset(
+                            id,
+                        ))
                     {
                         metadata.additional.allow_as_base_asset
                     } else {
