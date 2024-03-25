@@ -401,7 +401,7 @@ mod pallet {
             if !T::AssetManager::reserved_balance_named(&Self::reserve_id(), maker_asset, &maker)
                 .is_zero()
             {
-                T::AssetManager::repatriate_reserved_named(
+                let missing = T::AssetManager::repatriate_reserved_named(
                     &Self::reserve_id(),
                     maker_asset,
                     &maker,
@@ -409,6 +409,18 @@ mod pallet {
                     taker_fill,
                     BalanceStatus::Free,
                 )?;
+
+                unreachable_non_terminating!(
+                    missing.is_zero(),
+                    LOG_TARGET,
+                    "Could not repatriate all of the amount. reserve_id: {:?}, asset: {:?} who: \
+                     {:?}, amount: {:?}, missing: {:?}",
+                    Self::reserve_id(),
+                    maker_asset,
+                    maker,
+                    taker_fill,
+                    missing,
+                );
             } else {
                 T::AssetManager::transfer(maker_asset, &order_account, &taker, taker_fill)?;
             }
