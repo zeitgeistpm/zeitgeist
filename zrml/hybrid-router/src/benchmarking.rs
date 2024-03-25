@@ -36,8 +36,8 @@ use sp_runtime::{Perbill, SaturatedConversion};
 use types::Strategy;
 use zeitgeist_primitives::{
     constants::{base_multiples::*, CENT},
-    math::fixed::{BaseProvider, ZeitgeistBase},
-    traits::{CompleteSetOperationsApi, DeployPoolApi, HybridRouterOrderBookApi},
+    math::fixed::{BaseProvider, FixedDiv, ZeitgeistBase},
+    traits::{CompleteSetOperationsApi, DeployPoolApi, HybridRouterOrderbookApi},
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -57,12 +57,14 @@ macro_rules! assert_ok_with_transaction {
 }
 
 fn create_spot_prices<T: Config>(asset_count: u16) -> Vec<BalanceOf<T>> {
-    let mut result = vec![MIN_SPOT_PRICE.saturated_into(); (asset_count - 1) as usize];
-    // Price distribution has no bearing on the benchmarks.
-    let remaining_u128 =
-        ZeitgeistBase::<u128>::get().unwrap() - (asset_count - 1) as u128 * MIN_SPOT_PRICE;
-    result.push(remaining_u128.saturated_into());
-    result
+    let base = ZeitgeistBase::<u128>::get().unwrap();
+    let amount = base / asset_count as u128;
+    let remainder = (base % asset_count as u128).saturated_into::<BalanceOf<T>>();
+
+    let mut amounts = vec![amount.saturated_into::<BalanceOf<T>>(); asset_count as usize];
+    amounts[0] += remainder;
+
+    amounts
 }
 
 fn create_market<T>(caller: T::AccountId, base_asset: AssetOf<T>, asset_count: u16) -> MarketIdOf<T>
@@ -123,7 +125,7 @@ mod benchmarks {
     use super::*;
 
     #[benchmark]
-    fn buy(n: Linear<2, 128>, o: Linear<0, 100>) {
+    fn buy(n: Linear<2, 16>, o: Linear<0, 10>) {
         let buyer: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
         let asset_count = n.try_into().unwrap();
@@ -131,31 +133,36 @@ mod benchmarks {
             buyer.clone(),
             base_asset,
             asset_count,
-            _10.saturated_into(),
+            _100.saturated_into(),
         );
 
         let asset = Asset::CategoricalOutcome(market_id, 0u16);
         let amount_in = _1000.saturated_into();
         assert_ok!(T::AssetManager::deposit(base_asset, &buyer, amount_in));
 
+        let spot_prices = create_spot_prices::<T>(asset_count);
+        let first_spot_price = spot_prices[0];
+
         let max_price = _9_10.saturated_into();
         let orders = (0u128..o as u128).collect::<Vec<_>>();
         let maker_asset = asset;
-        let maker_amount = _1000.saturated_into();
+        let maker_amount = _20.saturated_into();
         let taker_asset = base_asset;
-        let taker_amount = _1_100.saturated_into();
-        for order_id in &orders {
+        let taker_amount: BalanceOf<T> = _11.saturated_into();
+        assert!(taker_amount.bdiv_floor(maker_amount).unwrap() > first_spot_price);
+        for (i, order_id) in orders.iter().enumerate() {
             let order_creator: T::AccountId = account("order_creator", *order_id as u32, 0);
+            let surplus = ((i + 1) as u128) * _1_2;
+            let taker_amount = taker_amount + surplus.saturated_into::<BalanceOf<T>>();
             assert_ok!(T::AssetManager::deposit(maker_asset, &order_creator, maker_amount));
-            T::OrderBook::place_order(
-                &order_creator,
+            assert_ok!(T::OrderBook::place_order(
+                order_creator,
                 market_id,
                 maker_asset,
                 maker_amount,
                 taker_asset,
                 taker_amount,
-            )
-            .unwrap();
+            ));
         }
         let strategy = Strategy::LimitOrder;
 
@@ -179,7 +186,7 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn sell(n: Linear<2, 128>, o: Linear<0, 100>) {
+    fn sell(n: Linear<2, 10>, o: Linear<0, 10>) {
         let seller: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
         let asset_count = n.try_into().unwrap();
@@ -187,31 +194,35 @@ mod benchmarks {
             seller.clone(),
             base_asset,
             asset_count,
-            _444.saturated_into(),
+            _100.saturated_into(),
         );
 
-        // this is used to have a higher spot price for the amm than on the order book
-        let highest_spot_price_asset_index = n as u16 - 1u16;
-        let asset = Asset::CategoricalOutcome(market_id, highest_spot_price_asset_index);
-        let amount_in = _1000.saturated_into();
+        let asset = Asset::CategoricalOutcome(market_id, 0u16);
+        let amount_in = (_1000 * 100).saturated_into();
         assert_ok!(T::AssetManager::deposit(asset, &seller, amount_in));
-        // seller base asset amount needs to exist, 
+        // seller base asset amount needs to exist,
         // otherwise repatriate_reserved_named from order book fails
         // with DeadAccount for base asset repatriate to seller beneficiary
         let min_balance = T::AssetManager::minimum_balance(base_asset);
         assert_ok!(T::AssetManager::deposit(base_asset, &seller, min_balance));
 
+        let spot_prices = create_spot_prices::<T>(asset_count);
+        let first_spot_price = spot_prices[0];
+
         let min_price = _1_100.saturated_into();
         let orders = (0u128..o as u128).collect::<Vec<_>>();
         let maker_asset = base_asset;
-        let maker_amount = _1_100.saturated_into();
+        let maker_amount: BalanceOf<T> = _9.saturated_into();
         let taker_asset = asset;
-        let taker_amount = _1.saturated_into();
-        for order_id in &orders {
+        let taker_amount = _100.saturated_into();
+        assert!(maker_amount.bdiv_floor(taker_amount).unwrap() < first_spot_price);
+        for (i, order_id) in orders.iter().enumerate() {
             let order_creator: T::AccountId = account("order_creator", *order_id as u32, 0);
+            let surplus = ((i + 1) as u128) * _1_2;
+            let taker_amount = taker_amount + surplus.saturated_into::<BalanceOf<T>>();
             assert_ok!(T::AssetManager::deposit(maker_asset, &order_creator, maker_amount));
             T::OrderBook::place_order(
-                &order_creator,
+                order_creator,
                 market_id,
                 maker_asset,
                 maker_amount,
