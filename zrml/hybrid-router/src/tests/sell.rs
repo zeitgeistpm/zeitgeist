@@ -831,7 +831,7 @@ fn sell_fails_if_cancel_strategy_applied() {
         let orders = vec![];
         let strategy = Strategy::ImmediateOrCancel;
         assert_noop!(
-            HybridRouter::buy(
+            HybridRouter::sell(
                 RuntimeOrigin::signed(ALICE),
                 market_id,
                 asset_count,
@@ -858,7 +858,7 @@ fn sell_fails_if_market_does_not_exist() {
         let orders = vec![];
         let strategy = Strategy::ImmediateOrCancel;
         assert_noop!(
-            HybridRouter::buy(
+            HybridRouter::sell(
                 RuntimeOrigin::signed(ALICE),
                 market_id,
                 asset_count,
