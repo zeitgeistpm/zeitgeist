@@ -54,9 +54,9 @@ use zeitgeist_primitives::{
     },
     traits::DisputeApi,
     types::{
-        AccountIdTest, Asset, Deadlines, GlobalDisputeItem, Market, MarketBonds, MarketCreation,
-        MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report,
-        ScoringRule,
+        AccountIdTest, BaseAsset, Deadlines, GlobalDisputeItem, Market, MarketBonds,
+        MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
+        OutcomeReport, Report, ScoringRule,
     },
 };
 use zrml_market_commons::{Error as MError, MarketCommonsPalletApi};
@@ -64,7 +64,7 @@ use zrml_market_commons::{Error as MError, MarketCommonsPalletApi};
 const ORACLE_REPORT: OutcomeReport = OutcomeReport::Scalar(u128::MAX);
 
 const DEFAULT_MARKET: MarketOf<Runtime> = Market {
-    base_asset: Asset::Ztg,
+    base_asset: BaseAsset::Ztg,
     creation: MarketCreation::Permissionless,
     creator_fee: sp_runtime::Perbill::zero(),
     creator: 0,

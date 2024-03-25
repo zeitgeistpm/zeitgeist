@@ -60,7 +60,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
     types::{
-        Asset, GlobalDisputeItem, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
+        BaseAsset, GlobalDisputeItem, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
         ResultWithWeightInfo,
     },
 };
@@ -219,7 +219,7 @@ mod pallet {
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
-        Asset<MarketIdOf<T>>,
+        BaseAsset,
     >;
     pub(crate) type HashOf<T> = <T as frame_system::Config>::Hash;
     pub(crate) type AccountIdLookupOf<T> =
