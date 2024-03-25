@@ -23,10 +23,9 @@ use orml_currencies::Error as CurrenciesError;
 use orml_tokens::Error as TokensError;
 use orml_traits::MultiCurrency;
 use sp_runtime::{Perbill, SaturatedConversion};
-use test_case::test_case;
 use zeitgeist_primitives::{
     constants::{base_multiples::*, BASE, CENT},
-    order_book::Order,
+    orderbook::Order,
     types::{
         AccountIdTest, Asset, Deadlines, MarketCreation, MarketPeriod, MarketStatus, MarketType,
         MultiHash, ScoringRule,
@@ -38,7 +37,6 @@ use zrml_orderbook::Orders;
 
 mod buy;
 mod sell;
-mod trade;
 
 #[cfg(not(feature = "parachain"))]
 const BASE_ASSET: Asset<MarketIdOf<Runtime>> = Asset::Ztg;
