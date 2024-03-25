@@ -39,8 +39,8 @@ pub enum Strategy {
     LimitOrder,
 }
 
-#[derive(Copy, Clone)]
-pub(crate) enum TxType {
+#[derive(Clone, Copy, Debug, Decode, Encode, PartialEq, TypeInfo)]
+pub enum TxType {
     Buy,
     Sell,
 }

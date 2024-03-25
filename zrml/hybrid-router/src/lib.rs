@@ -60,8 +60,8 @@ mod pallet {
             checked_ops_res::CheckedSubRes,
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
-        order_book::{Order, OrderId},
-        traits::{HybridRouterAmmApi, HybridRouterOrderBookApi},
+        orderbook::{Order, OrderId},
+        traits::{HybridRouterAmmApi, HybridRouterOrderbookApi},
         types::{Asset, Market, MarketType, ScalarPosition},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -91,7 +91,7 @@ mod pallet {
         type MaxOrders: Get<u32>;
 
         /// The API to handle the order book.
-        type OrderBook: HybridRouterOrderBookApi<
+        type OrderBook: HybridRouterOrderbookApi<
                 AccountId = AccountIdOf<Self>,
                 MarketId = MarketIdOf<Self>,
                 Balance = BalanceOf<Self>,
@@ -357,11 +357,17 @@ mod pallet {
             if !amm_amount_in.is_zero() {
                 match tx_type {
                     TxType::Buy => {
-                        T::Amm::buy(&who, market_id, asset, amm_amount_in, BalanceOf::<T>::zero())?;
+                        T::Amm::buy(
+                            who.clone(),
+                            market_id,
+                            asset,
+                            amm_amount_in,
+                            BalanceOf::<T>::zero(),
+                        )?;
                     }
                     TxType::Sell => {
                         T::Amm::sell(
-                            &who,
+                            who.clone(),
                             market_id,
                             asset,
                             amm_amount_in,
@@ -447,7 +453,7 @@ mod pallet {
                 let (_taker_fill, maker_fill) =
                     order.taker_and_maker_fill_from_taker_amount(remaining)?;
                 // and the `maker_partial_fill` of `fill_order` is specified in `taker_asset`
-                T::OrderBook::fill_order(who, order_id, Some(maker_fill))?;
+                T::OrderBook::fill_order(who.clone(), order_id, Some(maker_fill))?;
                 // `maker_fill` is the amount the order owner (maker) wants to receive
                 remaining = remaining.checked_sub_res(&maker_fill)?;
             }
@@ -482,7 +488,7 @@ mod pallet {
                 }
                 Strategy::LimitOrder => {
                     T::OrderBook::place_order(
-                        who,
+                        who.clone(),
                         market_id,
                         maker_asset,
                         maker_amount,
