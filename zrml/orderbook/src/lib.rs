@@ -301,7 +301,9 @@ mod pallet {
             let asset = order_data.maker_asset;
             let amount = order_data.maker_amount;
 
-            if !T::AssetManager::reserved_balance(asset, &maker).is_zero() {
+            if !T::AssetManager::reserved_balance_named(&Self::reserve_id(), asset, &maker)
+                .is_zero()
+            {
                 let missing =
                     T::AssetManager::unreserve_named(&Self::reserve_id(), asset, maker, amount);
 
@@ -396,7 +398,9 @@ mod pallet {
             let taker_fill = Self::get_taker_fill(&order_data, maker_fill)?;
             let order_account = Self::order_account(order_id);
 
-            if !T::AssetManager::reserved_balance(maker_asset, &maker).is_zero() {
+            if !T::AssetManager::reserved_balance_named(&Self::reserve_id(), maker_asset, &maker)
+                .is_zero()
+            {
                 T::AssetManager::repatriate_reserved_named(
                     &Self::reserve_id(),
                     maker_asset,
