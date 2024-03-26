@@ -1399,6 +1399,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
                     list_benchmark!(list, extra, zrml_orderbook, Orderbook);
                     list_benchmark!(list, extra, zrml_parimutuel, Parimutuel);
+                    list_benchmark!(list, extra, zrml_hybrid_router, HybridRouter);
                     #[cfg(not(feature = "parachain"))]
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
                     list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
@@ -1503,6 +1504,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
                     add_benchmark!(params, batches, zrml_orderbook, Orderbook);
                     add_benchmark!(params, batches, zrml_parimutuel, Parimutuel);
+                    add_benchmark!(params, batches, zrml_hybrid_router, HybridRouter);
                     #[cfg(not(feature = "parachain"))]
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
                     add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
