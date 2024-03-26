@@ -1419,7 +1419,7 @@ mod pallet {
             let pool_len = pool.len() as u32;
             debug_assert!(!inflation_period.is_zero());
             let current_period_index =
-                now.checked_div(&inflation_period.saturating_add(One::one()));
+                now.checked_div(&inflation_period).map(|x| x.saturating_sub(One::one()));
             let eligible_stake = |pool_item: &CourtPoolItemOf<T>| match current_period_index {
                 Some(index) if index != pool_item.uneligible_index => pool_item.stake,
                 _ => pool_item.stake.saturating_sub(pool_item.uneligible_stake),
