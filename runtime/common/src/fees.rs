@@ -95,7 +95,7 @@ macro_rules! impl_foreign_fees {
         // It does calculate foreign fees by extending transactions to include an optional
         // `AssetId` that specifies the asset to be used for payment (defaulting to the native
         // token on `None`), such that for each transaction the asset id can be specified.
-        // For real ZTG `None` is used and for DOT `Some(Currencies::Foreign(0))` is used.
+        // For real ZTG `None` is used and for DOT `Some(Currencies::ForeignAsset(0))` is used.
 
         pub(crate) fn calculate_fee(
             native_fee: Balance,
@@ -118,7 +118,7 @@ macro_rules! impl_foreign_fees {
 
         #[cfg(feature = "parachain")]
         pub(crate) fn get_fee_factor(
-            currency: Currencies,
+            currency: XcmAsset,
         ) -> Result<Balance, TransactionValidityError> {
             let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&currency).ok_or(
                 TransactionValidityError::Invalid(InvalidTransaction::Custom(
@@ -142,7 +142,7 @@ macro_rules! impl_foreign_fees {
             ) -> Result<Balance, Self::Error> {
                 #[cfg(feature = "parachain")]
                 {
-                    let currency = Currencies::ForeignAsset(currency_id);
+                    let currency = XcmAsset::ForeignAsset(currency_id);
                     let fee_factor = get_fee_factor(currency)?;
                     let converted_fee = calculate_fee(native_fee, fee_factor)?;
                     Ok(converted_fee)
@@ -387,7 +387,7 @@ macro_rules! fee_tests {
                         };
                         let dot = Currencies::ForeignAsset(0);
 
-                        assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta.clone(), Some(dot)));
+                        assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta.clone(), Some(Assets::from(dot).try_into().unwrap())));
 
 
                         assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(dot, &Treasury::account_id(), BASE));
@@ -454,7 +454,7 @@ macro_rules! fee_tests {
                         additional: custom_metadata,
                     };
                     let dot_asset_id = 0u32;
-                    let dot = Currencies::ForeignAsset(dot_asset_id);
+                    let dot = XcmAsset::ForeignAsset(dot_asset_id);
 
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),
@@ -476,7 +476,7 @@ macro_rules! fee_tests {
                     {
                         // no registering of dot
                         assert_noop!(
-                            get_fee_factor(Currencies::ForeignAsset(0)),
+                            get_fee_factor(XcmAsset::ForeignAsset(0)),
                             TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8))
                         );
                     }
@@ -505,7 +505,7 @@ macro_rules! fee_tests {
                         additional: custom_metadata,
                     };
                     let dot_asset_id = 0u32;
-                    let dot = Currencies::ForeignAsset(dot_asset_id);
+                    let dot = XcmAsset::ForeignAsset(dot_asset_id);
 
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),
@@ -539,12 +539,12 @@ macro_rules! fee_tests {
                         location: None,
                         additional: custom_metadata,
                     };
-                    let non_location_token = Currencies::ForeignAsset(1);
+                    let non_location_token = XcmAsset::ForeignAsset(1);
 
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),
                         meta,
-                        Some(non_location_token)
+                        Some(Assets::from(non_location_token).try_into().unwrap())
                     ));
 
                     assert_eq!(get_fee_factor(non_location_token).unwrap(), 10_393);
@@ -579,7 +579,7 @@ macro_rules! fee_tests {
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),
                         meta,
-                        Some(dot)
+                        Some(Assets::from(dot).try_into().unwrap())
                     ));
 
                     let fees_and_tips = <Tokens as Balanced<AccountId>>::issue(dot, 0);

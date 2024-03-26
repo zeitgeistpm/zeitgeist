@@ -27,7 +27,7 @@ use xcm::{
     latest::{Junction::Parachain, Junctions::X2, MultiLocation},
     VersionedMultiLocation,
 };
-use zeitgeist_primitives::types::{Currencies, CustomMetadata};
+use zeitgeist_primitives::types::{CustomMetadata, XcmAsset};
 
 pub(super) struct ExtBuilder {
     balances: Vec<(AccountId, Assets, Balance)>,
@@ -106,10 +106,10 @@ pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
 pub const PARA_ID_SIBLING: u32 = 3000;
 
 /// IDs that are used to represent tokens from other chains
-pub const FOREIGN_ZTG_ID: Currencies = Currencies::ForeignAsset(0);
-pub const FOREIGN_PARENT_ID: Currencies = Currencies::ForeignAsset(1);
-pub const FOREIGN_SIBLING_ID: Currencies = Currencies::ForeignAsset(2);
-pub const BTC_ID: Currencies = Currencies::ForeignAsset(3);
+pub const FOREIGN_ZTG_ID: XcmAsset = XcmAsset::ForeignAsset(0);
+pub const FOREIGN_PARENT_ID: XcmAsset = XcmAsset::ForeignAsset(1);
+pub const FOREIGN_SIBLING_ID: XcmAsset = XcmAsset::ForeignAsset(2);
+pub const BTC_ID: XcmAsset = XcmAsset::ForeignAsset(3);
 
 #[inline]
 pub(super) const fn ztg(amount: Balance) -> Balance {

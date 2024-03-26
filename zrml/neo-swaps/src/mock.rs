@@ -543,7 +543,7 @@ impl pallet_treasury::Config for Runtime {
 #[cfg(feature = "parachain")]
 zrml_prediction_markets::impl_mock_registry! {
     MockRegistry,
-    Currencies,
+    zeitgeist_primitives::types::XcmAsset,
     Balance,
     zeitgeist_primitives::types::CustomMetadata
 }
