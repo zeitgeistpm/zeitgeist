@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
-
 use super::*;
 
 #[test]
@@ -41,7 +39,7 @@ fn sell_to_amm_and_then_fill_specified_order() {
 
         let order_maker_amount = _6;
         let order_taker_amount = _12;
-        assert_ok!(AssetManager::deposit(asset, &CHARLIE, order_maker_amount));
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &CHARLIE, order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
@@ -77,7 +75,7 @@ fn sell_to_amm_and_then_fill_specified_order() {
                 amount_in: amm_amount_in,
                 amount_out: 2832089506,
                 swap_fee_amount: 28320895,
-                external_fee_amount: 0,
+                external_fee_amount: 28320895,
             }
             .into(),
         );
@@ -124,7 +122,7 @@ fn sell_to_amm_if_specified_order_has_lower_prices_than_the_amm() {
 
         let order_maker_amount = _1;
         let order_taker_amount = _2;
-        assert_ok!(AssetManager::deposit(asset, &CHARLIE, order_maker_amount));
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &CHARLIE, order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
@@ -191,7 +189,7 @@ fn sell_fill_multiple_orders_if_amm_spot_price_lower_than_order_prices() {
 
         let order_maker_amount = _1_2;
         let order_taker_amount = _1;
-        assert_ok!(AssetManager::deposit(asset, &CHARLIE, 2 * order_maker_amount));
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &CHARLIE, 2 * order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
@@ -252,7 +250,7 @@ fn sell_fill_specified_order_partially_if_amm_spot_price_lower() {
 
         let order_maker_amount = _4;
         let order_taker_amount = _8;
-        assert_ok!(AssetManager::deposit(asset, &CHARLIE, order_maker_amount));
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &CHARLIE, order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
@@ -373,7 +371,7 @@ fn sell_fails_if_order_price_below_min_price() {
         let amount = _2;
 
         let order_maker_amount = _1;
-        assert_ok!(AssetManager::deposit(asset, &CHARLIE, order_maker_amount));
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &CHARLIE, order_maker_amount));
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
@@ -451,7 +449,7 @@ fn sell_to_amm() {
                 amount_in: 20000000000,
                 amount_out: 9653703575,
                 swap_fee_amount: 96537036,
-                external_fee_amount: 0,
+                external_fee_amount: 96537035,
             }
             .into(),
         );
@@ -628,7 +626,7 @@ fn sell_to_amm_only() {
                 amount_in: 20000000000,
                 amount_out: 9653703575,
                 swap_fee_amount: 96537036,
-                external_fee_amount: 0,
+                external_fee_amount: 96537035,
             }
             .into(),
         );
@@ -729,16 +727,14 @@ fn sell_fails_if_balance_too_low() {
 #[test]
 fn sell_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
-        let required_asset_count = match &market.market_type {
-            MarketType::Scalar(_) => panic!("Categorical market type is expected!"),
-            MarketType::Categorical(categories) => *categories,
-        };
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market);
+        let asset_count = 2u16;
+        let market_id = create_market(
+            MARKET_CREATOR,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            ScoringRule::AmmCdaHybrid,
+        );
 
-        let asset_count = required_asset_count;
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = 10 * BASE;
 

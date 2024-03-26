@@ -49,8 +49,8 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_hybrid_router (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn buy(n: u32, o: u32, ) -> Weight;
-    fn sell(n: u32, o: u32, ) -> Weight;
+    fn buy(n: u32, o: u32) -> Weight;
+    fn sell(n: u32, o: u32) -> Weight;
 }
 
 /// Weight functions for zrml_hybrid_router (automatically generated)
@@ -76,7 +76,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Balances Reserves (max_values: None, max_size: Some(1249), added: 3724, mode: MaxEncodedLen)
     /// The range of component `n` is `[2, 16]`.
     /// The range of component `o` is `[0, 10]`.
-    fn buy(n: u32, o: u32, ) -> Weight {
+    fn buy(n: u32, o: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `2979 + n * (197 ±0) + o * (610 ±0)`
         //  Estimated: `162420 + o * (11573 ±0) + n * (5116 ±0)`
@@ -92,8 +92,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(7))
             .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(n.into())))
             .saturating_add(T::DbWeight::get().writes((4_u64).saturating_mul(o.into())))
-           .saturating_add(Weight::from_parts(0, 11573).saturating_mul(o.into()))
-           .saturating_add(Weight::from_parts(0, 5116).saturating_mul(n.into()))
+            .saturating_add(Weight::from_parts(0, 11573).saturating_mul(o.into()))
+            .saturating_add(Weight::from_parts(0, 5116).saturating_mul(n.into()))
     }
     /// Storage: MarketCommons Markets (r:1 w:0)
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
@@ -115,7 +115,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Tokens Reserves (max_values: None, max_size: Some(1276), added: 3751, mode: MaxEncodedLen)
     /// The range of component `n` is `[2, 10]`.
     /// The range of component `o` is `[0, 10]`.
-    fn sell(n: u32, o: u32, ) -> Weight {
+    fn sell(n: u32, o: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `3118 + n * (196 ±0) + o * (421 ±0)`
         //  Estimated: `162447 + n * (5116 ±0) + o * (11546 ±0)`
@@ -131,7 +131,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(7))
             .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(n.into())))
             .saturating_add(T::DbWeight::get().writes((4_u64).saturating_mul(o.into())))
-           .saturating_add(Weight::from_parts(0, 5116).saturating_mul(n.into()))
-           .saturating_add(Weight::from_parts(0, 11546).saturating_mul(o.into()))
+            .saturating_add(Weight::from_parts(0, 5116).saturating_mul(n.into()))
+            .saturating_add(Weight::from_parts(0, 11546).saturating_mul(o.into()))
     }
 }

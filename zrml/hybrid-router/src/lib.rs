@@ -41,10 +41,10 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         ensure,
-        pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
+        pallet_prelude::DispatchError,
         require_transactional,
         traits::{IsType, StorageVersion},
-        BoundedVec, RuntimeDebug,
+        PalletId,
     };
     use frame_system::{
         ensure_signed,
@@ -52,9 +52,11 @@ mod pallet {
     };
     use orml_traits::MultiCurrency;
     use sp_runtime::{
-        traits::{CheckedSub, Get, SaturatedConversion, Zero},
-        ArithmeticError, DispatchResult,
+        traits::{Get, Zero},
+        DispatchResult,
     };
+    #[cfg(feature = "runtime-benchmarks")]
+    use zeitgeist_primitives::traits::{CompleteSetOperationsApi, DeployPoolApi};
     use zeitgeist_primitives::{
         math::{
             checked_ops_res::CheckedSubRes,
@@ -70,6 +72,20 @@ mod pallet {
     pub trait Config: frame_system::Config {
         /// The API to handle different asset classes.
         type AssetManager: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
+
+        #[cfg(feature = "runtime-benchmarks")]
+        type AmmPoolDeployer: DeployPoolApi<
+                AccountId = AccountIdOf<Self>,
+                Balance = BalanceOf<Self>,
+                MarketId = MarketIdOf<Self>,
+            >;
+
+        #[cfg(feature = "runtime-benchmarks")]
+        type CompleteSetOperations: CompleteSetOperationsApi<
+                AccountId = AccountIdOf<Self>,
+                Balance = BalanceOf<Self>,
+                MarketId = MarketIdOf<Self>,
+            >;
 
         /// The identifier of individual markets.
         type MarketCommons: MarketCommonsPalletApi<
@@ -100,6 +116,8 @@ mod pallet {
                 OrderId = OrderId,
             >;
 
+        type PalletId: Get<PalletId>;
+
         /// The event type for this pallet.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -109,7 +127,6 @@ mod pallet {
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
-    const LOG_TARGET: &str = "runtime::zrml-hybrid-router";
 
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -121,7 +138,6 @@ mod pallet {
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> =
         Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
-    pub(crate) type OrdersOf<T> = BoundedVec<OrderId, <T as Config>::MaxOrders>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -195,7 +211,7 @@ mod pallet {
         ///
         /// Complexity: `O(n)`
         #[pallet::call_index(0)]
-        #[pallet::weight(T::WeightInfo::buy())]
+        #[pallet::weight(T::WeightInfo::buy(*asset_count as u32, orders.len() as u32))]
         #[frame_support::transactional]
         pub fn buy(
             origin: OriginFor<T>,
@@ -250,7 +266,7 @@ mod pallet {
         ///
         /// Complexity: `O(n)`
         #[pallet::call_index(1)]
-        #[pallet::weight(T::WeightInfo::buy())]
+        #[pallet::weight(T::WeightInfo::sell(*asset_count as u32, orders.len() as u32))]
         #[frame_support::transactional]
         pub fn sell(
             origin: OriginFor<T>,
@@ -286,9 +302,9 @@ mod pallet {
     {
         /// Returns a vector of assets corresponding to the given market ID and market type.
         /// For scalar outcomes, the returned vector is [LONG, SHORT].
-        /// For categorical outcomes, 
+        /// For categorical outcomes,
         /// the vector starts with the lowest and ends with the highest categorical outcome.
-        /// 
+        ///
         /// # Arguments
         ///
         /// * `market_id` - The ID of the market.
