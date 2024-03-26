@@ -85,7 +85,7 @@ where
                                 // however, if not use the current period index
                                 // 5_184_000 is the block of the inflation reward distribution
                                 // 5_184_000 / 216_000 (blocks per 30 day inflation period) = 24
-                                .unwrap_or(24u64.saturated_into::<BlockNumberOf<T>>()),
+                                .unwrap_or(0u64.saturated_into::<BlockNumberOf<T>>()),
                             // using old_pool_item.stake leads to all joins in period 24
                             // to be uneligible, which is exactly what we want
                             // if using zero, all joins of period 24 would be eligible,
@@ -102,7 +102,7 @@ where
             Err(e) => log::error!("MigrateCourtPoolItems: Error: {:?}", e),
         }
 
-        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
         StorageVersion::new(COURT_NEXT_STORAGE_VERSION).put::<Court<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
