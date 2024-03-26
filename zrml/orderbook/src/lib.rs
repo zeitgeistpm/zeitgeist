@@ -301,13 +301,9 @@ mod pallet {
             let asset = order_data.maker_asset;
             let amount = order_data.maker_amount;
 
-<<<<<<< HEAD
-            if !T::AssetManager::reserved_balance(asset, &maker).is_zero() {
-=======
             if !T::AssetManager::reserved_balance_named(&Self::reserve_id(), asset, &maker)
                 .is_zero()
             {
->>>>>>> sea212-new-asset-system
                 let missing =
                     T::AssetManager::unreserve_named(&Self::reserve_id(), asset, maker, amount);
 
