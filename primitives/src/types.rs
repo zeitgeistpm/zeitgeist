@@ -104,8 +104,11 @@ pub type Currencies = CurrencyClass<MarketId>;
 /// Asset type representing assets used by prediction markets.
 pub type MarketAsset = MarketAssetClass<MarketId>;
 
-/// Asset type representing types used in parimutuel markets.
+/// Asset type representing assets used in parimutuel markets.
 pub type ParimutuelAsset = ParimutuelAssetClass<MarketId>;
+
+/// Asset type representing assets that can be transferred via XCM.
+pub type XcmAsset = XcmAssetClass;
 
 /// The asset id specifically used for pallet_assets_tx_payment for
 /// paying transaction fees in different assets.
