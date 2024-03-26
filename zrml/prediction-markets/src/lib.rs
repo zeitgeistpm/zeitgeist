@@ -58,7 +58,7 @@ mod pallet {
     #[cfg(feature = "parachain")]
     use {
         orml_traits::asset_registry::Inspect as RegistryInspect,
-        zeitgeist_primitives::types::{XcmAsset, CustomMetadata},
+        zeitgeist_primitives::types::{CustomMetadata, XcmAsset},
     };
 
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
@@ -2962,10 +2962,7 @@ mod pallet {
                 BaseAsset::Ztg => true,
                 #[cfg(feature = "parachain")]
                 BaseAsset::ForeignAsset(id) => {
-                    if let Some(metadata) =
-                        T::AssetRegistry::metadata(&XcmAsset::ForeignAsset(
-                            id,
-                        ))
+                    if let Some(metadata) = T::AssetRegistry::metadata(&XcmAsset::ForeignAsset(id))
                     {
                         metadata.additional.allow_as_base_asset
                     } else {

@@ -67,7 +67,8 @@ use zeitgeist_primitives::{
     types::{
         AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CampaignAsset, CampaignAssetClass, CampaignAssetId, Currencies, CustomAsset, CustomAssetId,
-        Hash, Index, MarketAsset, MarketId, Moment, ResultWithWeightInfo, UncheckedExtrinsicTest, XcmAsset
+        Hash, Index, MarketAsset, MarketId, Moment, ResultWithWeightInfo, UncheckedExtrinsicTest,
+        XcmAsset,
     },
 };
 
