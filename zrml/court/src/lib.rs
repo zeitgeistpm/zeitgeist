@@ -60,6 +60,7 @@ use sp_runtime::{
     traits::{AccountIdConversion, CheckedDiv, Hash, Saturating, StaticLookup, Zero},
     DispatchError, Perbill, SaturatedConversion,
 };
+use zeitgeist_macros::unreachable_non_terminating;
 use zeitgeist_primitives::{
     math::checked_ops_res::{CheckedAddRes, CheckedRemRes, CheckedSubRes},
     traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
@@ -1202,13 +1203,10 @@ mod pallet {
             };
 
             if current_period_index != pool_item.uneligible_index {
-                let uneligible_stake = amount.checked_sub_res(&pool_item.stake)?;
-                Ok(uneligible_stake)
+                amount.checked_sub_res(&pool_item.stake)
             } else {
                 let additional_uneligible_stake = amount.checked_sub_res(&pool_item.stake)?;
-                let uneligible_stake =
-                    pool_item.uneligible_stake.checked_add_res(&additional_uneligible_stake)?;
-                Ok(uneligible_stake)
+                pool_item.uneligible_stake.checked_add_res(&additional_uneligible_stake)
             }
         }
 
@@ -1227,10 +1225,7 @@ mod pallet {
             p: &CourtPoolOf<T>,
             lowest_stake: BalanceOf<T>,
         ) -> bool {
-            let mut sorted = p.clone();
-            sorted.sort_by_key(|pool_item| (pool_item.stake, pool_item.court_participant.clone()));
-            p.len() == sorted.len()
-                && p.iter().zip(sorted.iter()).all(|(a, b)| lowest_stake <= a.stake && a == b)
+            p.windows(2).all(|w| w[0].stake <= w[1].stake && lowest_stake <= w[0].stake)
         }
 
         fn remove_weakest_if_full(
@@ -1242,7 +1237,11 @@ mod pallet {
                 let lowest_stake = lowest_item
                     .map(|pool_item| pool_item.stake)
                     .unwrap_or_else(<BalanceOf<T>>::zero);
-                debug_assert!(Self::is_sorted_and_all_greater_than_lowest(&p, lowest_stake));
+                unreachable_non_terminating!(
+                    Self::is_sorted_and_all_greater_than_lowest(&p, lowest_stake),
+                    LOG_TARGET,
+                    "Pool is not sorted or not all stakes are greater than the lowest stake.",
+                );
                 ensure!(amount > lowest_stake, Error::<T>::AmountBelowLowestJuror);
                 p.remove(0);
             }

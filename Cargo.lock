@@ -14559,6 +14559,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "test-case",
+ "zeitgeist-macros",
  "zeitgeist-primitives",
  "zrml-market-commons",
 ]
