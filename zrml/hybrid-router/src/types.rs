@@ -40,7 +40,7 @@ pub enum Strategy {
     LimitOrder,
 }
 
-#[derive(Copy, Clone, RuntimeDebug, Decode, Encode, TypeInfo, PartialEq)]
+#[derive(Clone, Copy, Debug, Decode, Encode, PartialEq, TypeInfo)]
 pub enum TxType {
     Buy,
     Sell,
