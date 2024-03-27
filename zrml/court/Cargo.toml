@@ -9,6 +9,7 @@ rand_chacha = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
 sp-arithmetic = { workspace = true }
 sp-runtime = { workspace = true }
+zeitgeist-macros = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 zrml-market-commons = { workspace = true }
 

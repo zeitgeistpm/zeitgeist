@@ -26,7 +26,7 @@ use crate::{
     },
     mock_storage::pallet::MarketIdsPerDisputeBlock,
     types::{CourtStatus, Draw, Vote, VoteItem},
-    AppealInfo, BalanceOf, CourtId, CourtIdToMarketId, CourtParticipantInfo,
+    AppealInfo, BalanceOf, BlockNumberOf, CourtId, CourtIdToMarketId, CourtParticipantInfo,
     CourtParticipantInfoOf, CourtPool, CourtPoolItem, CourtPoolOf, Courts, Error, Event,
     MarketIdToCourtId, MarketOf, NegativeImbalanceOf, Participants, RequestBlock, SelectedDraws,
     YearlyInflation,
@@ -225,7 +225,9 @@ fn join_court_successfully_stores_required_data() {
                 stake: amount,
                 court_participant: ALICE,
                 consumed_stake: 0,
-                joined_at
+                joined_at,
+                uneligible_index: 0,
+                uneligible_stake: amount,
             }]
         );
     });
@@ -245,7 +247,9 @@ fn join_court_works_multiple_joins() {
                 stake: amount,
                 court_participant: ALICE,
                 consumed_stake: 0,
-                joined_at: joined_at_0
+                joined_at: joined_at_0,
+                uneligible_index: 0,
+                uneligible_stake: amount,
             }]
         );
         assert_eq!(
@@ -262,6 +266,8 @@ fn join_court_works_multiple_joins() {
             )]
         );
 
+        run_blocks(InflationPeriod::get());
+
         let joined_at_1 = <frame_system::Pallet<Runtime>>::block_number();
         assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount));
         assert_eq!(Balances::locks(BOB), vec![the_lock(amount)]);
@@ -272,13 +278,17 @@ fn join_court_works_multiple_joins() {
                     stake: amount,
                     court_participant: ALICE,
                     consumed_stake: 0,
-                    joined_at: joined_at_0
+                    joined_at: joined_at_0,
+                    uneligible_index: 0,
+                    uneligible_stake: amount,
                 },
                 CourtPoolItem {
                     stake: amount,
                     court_participant: BOB,
                     consumed_stake: 0,
-                    joined_at: joined_at_1
+                    joined_at: joined_at_1,
+                    uneligible_index: 1,
+                    uneligible_stake: amount,
                 }
             ]
         );
@@ -302,6 +312,8 @@ fn join_court_works_multiple_joins() {
             }
         );
 
+        run_blocks(InflationPeriod::get());
+
         let higher_amount = amount + 1;
         assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), higher_amount));
         assert_eq!(Balances::locks(BOB), vec![the_lock(amount)]);
@@ -313,13 +325,17 @@ fn join_court_works_multiple_joins() {
                     stake: amount,
                     court_participant: BOB,
                     consumed_stake: 0,
-                    joined_at: joined_at_1
+                    joined_at: joined_at_1,
+                    uneligible_index: 1,
+                    uneligible_stake: amount,
                 },
                 CourtPoolItem {
                     stake: higher_amount,
                     court_participant: ALICE,
                     consumed_stake: 0,
-                    joined_at: joined_at_0
+                    joined_at: joined_at_0,
+                    uneligible_index: 2,
+                    uneligible_stake: higher_amount - amount,
                 },
             ]
         );
@@ -368,6 +384,8 @@ fn join_court_saves_consumed_stake_and_active_lock_for_double_join() {
             court_participant: ALICE,
             consumed_stake,
             joined_at,
+            uneligible_index: 0,
+            uneligible_stake: amount,
         }];
         CourtPool::<Runtime>::put::<CourtPoolOf<Runtime>>(juror_pool.try_into().unwrap());
 
@@ -471,7 +489,9 @@ fn prepare_exit_court_works() {
                 stake: amount,
                 court_participant: ALICE,
                 consumed_stake: 0,
-                joined_at
+                joined_at,
+                uneligible_index: 0,
+                uneligible_stake: amount,
             }]
         );
 
@@ -607,7 +627,9 @@ fn prepare_exit_court_fails_juror_already_prepared_to_exit() {
                 stake: amount,
                 court_participant: ALICE,
                 consumed_stake: 0,
-                joined_at
+                joined_at,
+                uneligible_index: 0,
+                uneligible_stake: amount,
             }]
         );
 
@@ -3089,30 +3111,288 @@ fn handle_inflation_works() {
                     court_participant: juror,
                     consumed_stake: 0,
                     joined_at,
+                    uneligible_index: 1,
+                    uneligible_stake: 0,
                 })
                 .unwrap();
         }
         <CourtPool<Runtime>>::put(jurors.clone());
 
         let inflation_period = InflationPeriod::get();
-        run_blocks(inflation_period);
-        let now = <frame_system::Pallet<Runtime>>::block_number();
-        Court::handle_inflation(now);
+        run_blocks(inflation_period + 1);
 
         let free_balance_after_0 = Balances::free_balance(jurors_list[0]);
-        assert_eq!(free_balance_after_0 - free_balances_before[&jurors_list[0]], 432_012);
+        assert_eq!(free_balance_after_0 - free_balances_before[&jurors_list[0]], 216_002);
 
         let free_balance_after_1 = Balances::free_balance(jurors_list[1]);
-        assert_eq!(free_balance_after_1 - free_balances_before[&jurors_list[1]], 4_320_129);
+        assert_eq!(free_balance_after_1 - free_balances_before[&jurors_list[1]], 2_160_021);
 
         let free_balance_after_2 = Balances::free_balance(jurors_list[2]);
-        assert_eq!(free_balance_after_2 - free_balances_before[&jurors_list[2]], 43_201_302);
+        assert_eq!(free_balance_after_2 - free_balances_before[&jurors_list[2]], 21_600_219);
 
         let free_balance_after_3 = Balances::free_balance(jurors_list[3]);
-        assert_eq!(free_balance_after_3 - free_balances_before[&jurors_list[3]], 432_013_038);
+        assert_eq!(free_balance_after_3 - free_balances_before[&jurors_list[3]], 216_002_199);
 
         let free_balance_after_4 = Balances::free_balance(jurors_list[4]);
-        assert_eq!(free_balance_after_4 - free_balances_before[&jurors_list[4]], 4_320_130_393);
+        assert_eq!(free_balance_after_4 - free_balances_before[&jurors_list[4]], 2_160_021_996);
+    });
+}
+
+#[test]
+fn block_inflation_reward_after_higher_rejoin() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Court::set_inflation(RuntimeOrigin::root(), Perbill::from_percent(2u32)));
+
+        run_to_block(InflationPeriod::get() - 1);
+
+        let low_risk_stake = MinJurorStake::get();
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), low_risk_stake));
+        let charlie_stake = MinJurorStake::get() * 9;
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(CHARLIE), charlie_stake));
+
+        let free_bob_before = Balances::free_balance(BOB);
+        let free_charlie_before = Balances::free_balance(CHARLIE);
+
+        run_blocks(1);
+
+        let free_bob_after = Balances::free_balance(BOB);
+        assert_eq!(free_bob_after - free_bob_before, 0);
+        let free_charlie_after = Balances::free_balance(CHARLIE);
+        assert_eq!(free_charlie_after - free_charlie_before, 0);
+
+        let high_risk_stake = MinJurorStake::get() * 27;
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), high_risk_stake));
+
+        let free_bob_before = Balances::free_balance(BOB);
+        let free_charlie_before = Balances::free_balance(CHARLIE);
+
+        let inflation_period = InflationPeriod::get();
+        run_blocks(inflation_period);
+
+        let free_bob_after = Balances::free_balance(BOB);
+        let bob_reward = 240000000;
+        assert_eq!(free_bob_after - free_bob_before, bob_reward);
+
+        let free_charlie_after = Balances::free_balance(CHARLIE);
+        let charlie_reward = 2160000000;
+        assert_eq!(free_charlie_after - free_charlie_before, charlie_reward);
+
+        assert_eq!(bob_reward * 9, charlie_reward);
+
+        let free_bob_before = Balances::free_balance(BOB);
+        let free_charlie_before = Balances::free_balance(CHARLIE);
+
+        run_blocks(inflation_period);
+
+        let free_bob_after = Balances::free_balance(BOB);
+        let bob_reward = 1800072000;
+        assert_eq!(free_bob_after - free_bob_before, bob_reward);
+
+        let free_charlie_after = Balances::free_balance(CHARLIE);
+        let charlie_reward = 600024000;
+        assert_eq!(free_charlie_after - free_charlie_before, charlie_reward);
+
+        assert_eq!(bob_reward, charlie_reward * 3);
+    });
+}
+
+fn gain_equal(
+    account: AccountIdTest,
+    free_before: BalanceOf<Runtime>,
+    gain: BalanceOf<Runtime>,
+) -> BalanceOf<Runtime> {
+    let free_after = Balances::free_balance(account);
+    assert_eq!(free_after - free_before, gain);
+    gain
+}
+
+struct Params {
+    stake: BalanceOf<Runtime>,
+    uneligible_index: BlockNumberOf<Runtime>,
+    uneligible_stake: BalanceOf<Runtime>,
+}
+
+fn check_pool_item_bob(params: Params) {
+    let jurors = <CourtPool<Runtime>>::get();
+    let pool_item_bob = jurors.iter().find(|juror| juror.court_participant == BOB).unwrap().clone();
+
+    assert_eq!(pool_item_bob.stake, params.stake);
+    assert_eq!(pool_item_bob.uneligible_index, params.uneligible_index);
+    assert_eq!(pool_item_bob.uneligible_stake, params.uneligible_stake);
+}
+
+#[test]
+fn reward_inflation_correct_for_multiple_rejoins() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Court::set_inflation(RuntimeOrigin::root(), Perbill::from_percent(2u32)));
+
+        let alice_amount = MinJurorStake::get();
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), alice_amount));
+
+        let amount_0 = MinJurorStake::get();
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount_0));
+
+        check_pool_item_bob(Params {
+            stake: amount_0,
+            uneligible_index: 0,
+            uneligible_stake: amount_0,
+        });
+
+        let free_alice_before = Balances::free_balance(ALICE);
+        let free_bob_before = Balances::free_balance(BOB);
+
+        // period 0 over
+        run_to_block(InflationPeriod::get());
+
+        gain_equal(ALICE, free_alice_before, 0);
+        gain_equal(BOB, free_bob_before, 0);
+
+        let inflation_period = InflationPeriod::get();
+        run_blocks(inflation_period - 1);
+
+        let amount_1 = MinJurorStake::get() * 2;
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount_1));
+
+        check_pool_item_bob(Params {
+            stake: amount_1,
+            uneligible_index: 1,
+            uneligible_stake: amount_1 - amount_0,
+        });
+
+        let free_alice_before = Balances::free_balance(ALICE);
+        let free_bob_before = Balances::free_balance(BOB);
+
+        // period 1 over
+        run_blocks(1);
+
+        let gain_alice = gain_equal(ALICE, free_alice_before, 1200000000);
+        let gain_bob = gain_equal(BOB, free_bob_before, 1200000000);
+        // Alice and Bob gain the same reward, although Bob joined with a higher stake
+        // but Bob's higher stake is not present for more than one inflation period
+        // so his stake is not considered for the reward
+        assert_eq!(gain_alice, gain_bob);
+
+        let free_alice_before = Balances::free_balance(ALICE);
+        let free_bob_before = Balances::free_balance(BOB);
+
+        // period 2 over
+        run_blocks(InflationPeriod::get());
+
+        let amount_2 = MinJurorStake::get() * 3;
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount_2));
+
+        check_pool_item_bob(Params {
+            stake: amount_2,
+            uneligible_index: 3,
+            uneligible_stake: amount_2 - amount_1,
+        });
+
+        let gain_alice = gain_equal(ALICE, free_alice_before, 800031999);
+        let gain_bob = gain_equal(BOB, free_bob_before, 1600063999);
+        // reward for period 2:
+        // Bob's higher stake is now present, because of a full inflation period waiting time
+        assert_eq!(gain_alice * 2 + 1, gain_bob);
+
+        let free_alice_before = Balances::free_balance(ALICE);
+        let free_bob_before = Balances::free_balance(BOB);
+
+        // period 3 over
+        run_blocks(InflationPeriod::get());
+
+        check_pool_item_bob(Params {
+            stake: amount_2,
+            uneligible_index: 3,
+            uneligible_stake: amount_2 - amount_1,
+        });
+
+        let gain_alice = gain_equal(ALICE, free_alice_before, 800063999);
+        let gain_bob = gain_equal(BOB, free_bob_before, 1600127999);
+        // reward for period 3:
+        // inflation reward is based on the join with amount_1
+        // no join in period 2, so use amount_1
+        assert_eq!(gain_alice * 2 + 1, gain_bob);
+
+        let free_alice_before = Balances::free_balance(ALICE);
+        let free_bob_before = Balances::free_balance(BOB);
+
+        // period 4 over
+        run_blocks(InflationPeriod::get());
+
+        check_pool_item_bob(Params {
+            stake: amount_2,
+            uneligible_index: 3,
+            uneligible_stake: amount_2 - amount_1,
+        });
+
+        let gain_alice = gain_equal(ALICE, free_alice_before, 600072000);
+        let gain_bob = gain_equal(BOB, free_bob_before, 1800216000);
+        // reward for period 4:
+        // inflation reward is based on the last join (amount_2)
+        assert_eq!(gain_alice * 3, gain_bob);
+    });
+}
+
+#[test]
+fn stake_information_is_properly_stored() {
+    ExtBuilder::default().build().execute_with(|| {
+        let joined_at_0 = <frame_system::Pallet<Runtime>>::block_number();
+        let amount_0 = MinJurorStake::get();
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount_0));
+
+        let jurors = <CourtPool<Runtime>>::get();
+        let pool_item_bob =
+            jurors.iter().find(|juror| juror.court_participant == BOB).unwrap().clone();
+        assert_eq!(
+            pool_item_bob,
+            CourtPoolItem {
+                stake: amount_0,
+                court_participant: BOB,
+                consumed_stake: BalanceOf::<Runtime>::zero(),
+                joined_at: joined_at_0,
+                uneligible_index: 0,
+                uneligible_stake: amount_0,
+            }
+        );
+
+        run_blocks(InflationPeriod::get());
+
+        let amount_1 = MinJurorStake::get() * 2;
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount_1));
+
+        let jurors = <CourtPool<Runtime>>::get();
+        let pool_item_bob =
+            jurors.iter().find(|juror| juror.court_participant == BOB).unwrap().clone();
+
+        assert_eq!(
+            pool_item_bob,
+            CourtPoolItem {
+                stake: amount_1,
+                court_participant: BOB,
+                consumed_stake: BalanceOf::<Runtime>::zero(),
+                joined_at: joined_at_0,
+                uneligible_index: 1,
+                uneligible_stake: amount_1 - amount_0,
+            }
+        );
+
+        let amount_2 = MinJurorStake::get() * 3;
+        assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount_2));
+
+        let jurors = <CourtPool<Runtime>>::get();
+        let pool_item_bob =
+            jurors.iter().find(|juror| juror.court_participant == BOB).unwrap().clone();
+
+        assert_eq!(
+            pool_item_bob,
+            CourtPoolItem {
+                stake: amount_2,
+                court_participant: BOB,
+                consumed_stake: BalanceOf::<Runtime>::zero(),
+                joined_at: joined_at_0,
+                uneligible_index: 1,
+                uneligible_stake: amount_2 - amount_0,
+            }
+        );
     });
 }
 
@@ -3149,6 +3429,8 @@ fn handle_inflation_without_waiting_one_inflation_period() {
                     court_participant: juror,
                     consumed_stake: 0,
                     joined_at,
+                    uneligible_index: 0,
+                    uneligible_stake: stake,
                 })
                 .unwrap();
         }

@@ -29,6 +29,7 @@ use crate::{
 };
 use alloc::{
     collections::{BTreeMap, BTreeSet},
+    format,
     vec::Vec,
 };
 use core::marker::PhantomData;
@@ -57,11 +58,12 @@ use sp_arithmetic::{
     traits::{CheckedRem, One},
 };
 use sp_runtime::{
-    traits::{AccountIdConversion, Hash, Saturating, StaticLookup, Zero},
+    traits::{AccountIdConversion, CheckedDiv, Hash, Saturating, StaticLookup, Zero},
     DispatchError, Perbill, SaturatedConversion,
 };
+use zeitgeist_macros::unreachable_non_terminating;
 use zeitgeist_primitives::{
-    math::checked_ops_res::CheckedRemRes,
+    math::checked_ops_res::{CheckedAddRes, CheckedRemRes, CheckedSubRes},
     traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
     types::{
         Asset, GlobalDisputeItem, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
@@ -203,7 +205,7 @@ mod pallet {
     /// Number of draws for the initial court round.
     const INITIAL_DRAWS_NUM: usize = 31;
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
     const LOG_TARGET: &str = "runtime::zrml-court";
     /// Weight used to increase the number of jurors for subsequent appeals
     /// of the same court.
@@ -212,6 +214,7 @@ mod pallet {
     const APPEAL_BOND_BASIS: u32 = 2;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
     pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
     pub(crate) type NegativeImbalanceOf<T> =
         <<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
@@ -482,6 +485,8 @@ mod pallet {
     pub enum UnexpectedError {
         /// The binary search by key functionality failed to find an element, although expected.
         BinarySearchByKeyFailed,
+        /// The inflation period is zero.
+        InflationPeriodIsZero,
     }
 
     #[pallet::hooks]
@@ -1188,6 +1193,88 @@ mod pallet {
     where
         T: Config,
     {
+        fn get_uneligible_stake(
+            pool_item_opt: Option<&CourtPoolItemOf<T>>,
+            amount: BalanceOf<T>,
+            current_period_index: BlockNumberFor<T>,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let pool_item = match pool_item_opt {
+                Some(pool_item) => pool_item,
+                None => return Ok(amount),
+            };
+
+            if current_period_index != pool_item.uneligible_index {
+                amount.checked_sub_res(&pool_item.stake)
+            } else {
+                let additional_uneligible_stake = amount.checked_sub_res(&pool_item.stake)?;
+                pool_item.uneligible_stake.checked_add_res(&additional_uneligible_stake)
+            }
+        }
+
+        fn get_initial_joined_at(
+            prev_pool_item: Option<&CourtPoolItemOf<T>>,
+            now: BlockNumberFor<T>,
+        ) -> BlockNumberFor<T> {
+            match prev_pool_item {
+                Some(i) => i.joined_at,
+                None => now,
+            }
+        }
+
+        #[inline]
+        fn is_sorted_and_all_greater_than_lowest(
+            p: &CourtPoolOf<T>,
+            lowest_stake: BalanceOf<T>,
+        ) -> bool {
+            p.windows(2).all(|w| w[0].stake <= w[1].stake && lowest_stake <= w[0].stake)
+        }
+
+        fn remove_weakest_if_full(
+            mut p: CourtPoolOf<T>,
+            amount: BalanceOf<T>,
+        ) -> Result<CourtPoolOf<T>, DispatchError> {
+            if p.is_full() {
+                let lowest_item = p.first();
+                let lowest_stake = lowest_item
+                    .map(|pool_item| pool_item.stake)
+                    .unwrap_or_else(<BalanceOf<T>>::zero);
+                unreachable_non_terminating!(
+                    Self::is_sorted_and_all_greater_than_lowest(&p, lowest_stake),
+                    LOG_TARGET,
+                    "Pool is not sorted or not all stakes are greater than the lowest stake.",
+                );
+                ensure!(amount > lowest_stake, Error::<T>::AmountBelowLowestJuror);
+                p.remove(0);
+            }
+
+            Ok(p)
+        }
+
+        fn handle_existing_participant(
+            who: &T::AccountId,
+            amount: BalanceOf<T>,
+            mut pool: CourtPoolOf<T>,
+            prev_p_info: &CourtParticipantInfoOf<T>,
+        ) -> Result<(CourtPoolOf<T>, BalanceOf<T>, Option<CourtPoolItemOf<T>>), DispatchError>
+        {
+            ensure!(amount >= prev_p_info.stake, Error::<T>::AmountBelowLastJoin);
+
+            if let Some((index, pool_item)) = Self::get_pool_item(&pool, prev_p_info.stake, who)? {
+                let consumed_stake = pool_item.consumed_stake;
+                let prev_pool_item = Some(pool_item.clone());
+
+                pool.remove(index);
+
+                Ok((pool, consumed_stake, prev_pool_item))
+            } else {
+                let consumed_stake = prev_p_info.active_lock;
+
+                let pool = Self::remove_weakest_if_full(pool, amount)?;
+
+                Ok((pool, consumed_stake, None))
+            }
+        }
+
         fn do_join_court(
             who: &T::AccountId,
             amount: BalanceOf<T>,
@@ -1201,57 +1288,31 @@ mod pallet {
 
             let now = <frame_system::Pallet<T>>::block_number();
 
-            let remove_weakest_if_full =
-                |mut p: CourtPoolOf<T>| -> Result<CourtPoolOf<T>, DispatchError> {
-                    if p.is_full() {
-                        let lowest_item = p.first();
-                        let lowest_stake = lowest_item
-                            .map(|pool_item| pool_item.stake)
-                            .unwrap_or_else(<BalanceOf<T>>::zero);
-                        debug_assert!({
-                            let mut sorted = p.clone();
-                            sorted.sort_by_key(|pool_item| {
-                                (pool_item.stake, pool_item.court_participant.clone())
-                            });
-                            p.len() == sorted.len()
-                                && p.iter()
-                                    .zip(sorted.iter())
-                                    .all(|(a, b)| lowest_stake <= a.stake && a == b)
-                        });
-                        ensure!(amount > lowest_stake, Error::<T>::AmountBelowLowestJuror);
-                        // remove the lowest staked court participant
-                        p.remove(0);
+            let (prev_pool_item_opt, active_lock, consumed_stake) =
+                match <Participants<T>>::get(who) {
+                    Some(prev_p_info) => {
+                        let (pruned_pool, old_consumed_stake, prev_pool_item_opt) =
+                            Self::handle_existing_participant(who, amount, pool, &prev_p_info)?;
+                        pool = pruned_pool;
+                        (prev_pool_item_opt, prev_p_info.active_lock, old_consumed_stake)
                     }
-
-                    Ok(p)
+                    None => {
+                        pool = Self::remove_weakest_if_full(pool, amount)?;
+                        (None, BalanceOf::<T>::zero(), BalanceOf::<T>::zero())
+                    }
                 };
 
-            let mut active_lock = BalanceOf::<T>::zero();
-            let mut consumed_stake = BalanceOf::<T>::zero();
-            let mut joined_at = now;
+            let inflation_period = T::InflationPeriod::get();
+            let current_period_index = now
+                .checked_div(&inflation_period)
+                .ok_or(Error::<T>::Unexpected(UnexpectedError::InflationPeriodIsZero))?;
 
-            if let Some(prev_p_info) = <Participants<T>>::get(who) {
-                ensure!(amount >= prev_p_info.stake, Error::<T>::AmountBelowLastJoin);
-
-                if let Some((index, pool_item)) =
-                    Self::get_pool_item(&pool, prev_p_info.stake, who)?
-                {
-                    active_lock = prev_p_info.active_lock;
-                    consumed_stake = pool_item.consumed_stake;
-                    joined_at = pool_item.joined_at;
-
-                    pool.remove(index);
-                } else {
-                    active_lock = prev_p_info.active_lock;
-                    consumed_stake = prev_p_info.active_lock;
-
-                    pool = remove_weakest_if_full(pool)?;
-                }
-            } else {
-                pool = remove_weakest_if_full(pool)?;
-            }
-
-            let (active_lock, consumed_stake, joined_at) = (active_lock, consumed_stake, joined_at);
+            let uneligible_stake = Self::get_uneligible_stake(
+                prev_pool_item_opt.as_ref(),
+                amount,
+                current_period_index,
+            )?;
+            let joined_at = Self::get_initial_joined_at(prev_pool_item_opt.as_ref(), now);
 
             match pool.binary_search_by_key(&(amount, who), |pool_item| {
                 (pool_item.stake, &pool_item.court_participant)
@@ -1272,6 +1333,8 @@ mod pallet {
                             court_participant: who.clone(),
                             consumed_stake,
                             joined_at,
+                            uneligible_index: current_period_index,
+                            uneligible_stake,
                         },
                     )
                     .map_err(|_| {
@@ -1325,11 +1388,11 @@ mod pallet {
 
             let yearly_inflation_amount = yearly_inflation_amount.saturated_into::<BalanceOf<T>>();
             let issue_per_block = issue_per_block.saturated_into::<BalanceOf<T>>();
-            let inflation_period =
+            let inflation_period_balance =
                 inflation_period.saturated_into::<u128>().saturated_into::<BalanceOf<T>>();
 
             // example: 7979867607 * 7200 * 30 = 1723651403112000
-            let inflation_period_mint = issue_per_block.saturating_mul(inflation_period);
+            let inflation_period_mint = issue_per_block.saturating_mul(inflation_period_balance);
 
             // inflation_period_mint shouldn't exceed 0.5% of the total issuance
             let log_threshold = Perbill::from_perthousand(5u32)
@@ -1355,34 +1418,41 @@ mod pallet {
 
             let pool = <CourtPool<T>>::get();
             let pool_len = pool.len() as u32;
-            let at_least_one_inflation_period =
-                |joined_at| now.saturating_sub(joined_at) >= T::InflationPeriod::get();
-            let total_stake = pool
-                .iter()
-                .filter(|pool_item| at_least_one_inflation_period(pool_item.joined_at))
-                .fold(0u128, |acc, pool_item| {
-                    acc.saturating_add(pool_item.stake.saturated_into::<u128>())
+            debug_assert!(!inflation_period.is_zero());
+            let current_period_index =
+                now.checked_div(&inflation_period).map(|x| x.saturating_sub(One::one()));
+            let eligible_stake = |pool_item: &CourtPoolItemOf<T>| match current_period_index {
+                Some(index) if index != pool_item.uneligible_index => pool_item.stake,
+                _ => pool_item.stake.saturating_sub(pool_item.uneligible_stake),
+            };
+            let total_eligible_stake =
+                pool.iter().fold(BalanceOf::<T>::zero(), |acc, pool_item| {
+                    eligible_stake(pool_item).saturating_add(acc)
                 });
-            if total_stake.is_zero() {
+            if total_eligible_stake.is_zero() {
                 return T::WeightInfo::handle_inflation(0u32);
             }
 
             let mut total_mint = T::Currency::issue(inflation_period_mint);
 
-            for CourtPoolItem { stake, court_participant, joined_at, .. } in pool {
-                if !at_least_one_inflation_period(joined_at) {
-                    // participants who joined and didn't wait
-                    // at least one full inflation period won't get a reward
+            for pool_item in pool {
+                let eligible_stake = eligible_stake(&pool_item);
+                if eligible_stake.is_zero() {
                     continue;
                 }
-                let share = Perquintill::from_rational(stake.saturated_into::<u128>(), total_stake);
+                let share = Perquintill::from_rational(
+                    eligible_stake.saturated_into::<u128>(),
+                    total_eligible_stake.saturated_into::<u128>(),
+                );
                 let mint = share.mul_floor(inflation_period_mint.saturated_into::<u128>());
                 let (mint_imb, remainder) = total_mint.split(mint.saturated_into::<BalanceOf<T>>());
                 let mint_amount = mint_imb.peek();
                 total_mint = remainder;
-                if let Ok(()) = T::Currency::resolve_into_existing(&court_participant, mint_imb) {
+                if let Ok(()) =
+                    T::Currency::resolve_into_existing(&pool_item.court_participant, mint_imb)
+                {
                     Self::deposit_event(Event::MintedInCourt {
-                        court_participant: court_participant.clone(),
+                        court_participant: pool_item.court_participant.clone(),
                         amount: mint_amount,
                     });
                 }
