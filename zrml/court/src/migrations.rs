@@ -18,8 +18,6 @@
 use crate::{
     AccountIdOf, BalanceOf, BlockNumberOf, Config, CourtPoolItemOf, CourtPoolOf, Pallet as Court,
 };
-#[cfg(feature = "try-runtime")]
-use alloc::vec;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use frame_support::{
@@ -82,9 +80,6 @@ where
                                 .joined_at
                                 .checked_div(&T::InflationPeriod::get())
                                 // because inflation period is not zero checked_div is safe
-                                // however, if not use the current period index
-                                // 5_184_000 is the block of the inflation reward distribution
-                                // 5_184_000 / 216_000 (blocks per 30 day inflation period) = 24
                                 .unwrap_or(0u64.saturated_into::<BlockNumberOf<T>>()),
                             // using old_pool_item.stake leads to all joins in period 24
                             // to be uneligible, which is exactly what we want
@@ -113,15 +108,40 @@ where
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
         log::info!("MigrateCourtPoolItems: Preparing to migrate old pool items...");
-        Ok(vec![])
+        let court_pool = CourtPool::<T>::get();
+        log::info!(
+            "MigrateCourtPoolItems: pre-upgrade executed. Migrating {:?} pool items",
+            court_pool.len()
+        );
+        Ok(court_pool.encode())
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(_previous_state: Vec<u8>) -> Result<(), &'static str> {
-        let court_pool = crate::CourtPool::<T>::get();
+    fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
+        let old_court_pool: OldCourtPoolOf<T> =
+            OldCourtPoolOf::<T>::decode(&mut previous_state.as_slice())
+                .map_err(|_| "MigrateCourtPoolItems: failed to decode old court pool")?;
+        let new_court_pool = crate::CourtPool::<T>::get();
+        assert_eq!(old_court_pool.len(), new_court_pool.len());
+        old_court_pool.iter().zip(new_court_pool.iter()).try_for_each(
+            |(old, new)| -> Result<(), &'static str> {
+                assert_eq!(old.stake, new.stake);
+                assert_eq!(old.court_participant, new.court_participant);
+                assert_eq!(old.consumed_stake, new.consumed_stake);
+                assert_eq!(old.joined_at, new.joined_at);
+                let uneligible_index = old
+                    .joined_at
+                    .checked_div(&T::InflationPeriod::get())
+                    .ok_or("MigrateCourtPoolItems: failed to divide by inflation period")?;
+                assert_eq!(new.uneligible_index, uneligible_index);
+                assert_eq!(new.uneligible_stake, old.stake);
+
+                Ok(())
+            },
+        )?;
         log::info!(
             "MigrateCourtPoolItems: post-upgrade executed. Migrated {:?} pool items",
-            court_pool.len()
+            new_court_pool.len()
         );
         Ok(())
     }
