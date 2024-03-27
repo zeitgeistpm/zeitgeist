@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -18,7 +18,7 @@
 use frame_support::dispatch::DispatchError;
 use num_traits::{checked_pow, One};
 use sp_arithmetic::{
-    traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub},
+    traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedRem, CheckedSub},
     ArithmeticError,
 };
 
@@ -55,6 +55,13 @@ where
     Self: Sized,
 {
     fn checked_pow_res(&self, exp: usize) -> Result<Self, DispatchError>;
+}
+
+pub trait CheckedRemRes
+where
+    Self: Sized,
+{
+    fn checked_rem_res(&self, other: &Self) -> Result<Self, DispatchError>;
 }
 
 impl<T> CheckedAddRes for T
@@ -104,5 +111,15 @@ where
     #[inline]
     fn checked_pow_res(&self, exp: usize) -> Result<Self, DispatchError> {
         checked_pow(*self, exp).ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))
+    }
+}
+
+impl<T> CheckedRemRes for T
+where
+    T: CheckedRem,
+{
+    #[inline]
+    fn checked_rem_res(&self, other: &Self) -> Result<Self, DispatchError> {
+        self.checked_rem(other).ok_or(DispatchError::Arithmetic(ArithmeticError::DivisionByZero))
     }
 }

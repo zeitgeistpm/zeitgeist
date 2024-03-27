@@ -1,4 +1,5 @@
-// Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2021-2022, 2024 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
 //
@@ -14,6 +15,8 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
+#![allow(clippy::useless_vec)]
 
 use frame_support::assert_err;
 use hashbrown::HashMap;

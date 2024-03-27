@@ -1,5 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -18,6 +17,7 @@
 
 #![cfg(test)]
 #![allow(dead_code)]
+#![allow(unused_imports)]
 
 #[frame_support::pallet]
 pub(crate) mod pallet {

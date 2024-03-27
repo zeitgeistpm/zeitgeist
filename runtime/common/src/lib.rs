@@ -55,12 +55,13 @@ macro_rules! decl_common_types {
         use orml_traits::MultiCurrency;
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
+        use zrml_court::migrations::MigrateCourtPoolItems;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = ();
+        type Migrations = (MigrateCourtPoolItems<Runtime>,);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -966,8 +967,10 @@ macro_rules! impl_config_traits {
                     ),
                     ProxyType::ProvideLiquidity => matches!(
                         c,
-                        RuntimeCall::Swaps(zrml_swaps::Call::pool_join { .. })
-                            | RuntimeCall::Swaps(zrml_swaps::Call::pool_exit { .. })
+                        RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::join { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::exit { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::deploy_pool { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::withdraw_fees { .. })
                     ),
                     ProxyType::BuySellCompleteSets => matches!(
                         c,
@@ -979,18 +982,20 @@ macro_rules! impl_config_traits {
                     ),
                     ProxyType::Trading => matches!(
                         c,
-                        RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_in { .. })
-                            | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out { .. })
+                        RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::sell { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::place_order { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::fill_order { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::remove_order { .. })
                     ),
                     ProxyType::HandleAssets => matches!(
                         c,
-                        RuntimeCall::Swaps(zrml_swaps::Call::pool_join { .. })
-                            | RuntimeCall::Swaps(zrml_swaps::Call::pool_exit { .. })
-                            | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_in { .. })
-                            | RuntimeCall::Swaps(zrml_swaps::Call::swap_exact_amount_out { .. })
+                        RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::join { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::exit { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::sell { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::deploy_pool { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::withdraw_fees { .. })
                             | RuntimeCall::PredictionMarkets(
                                 zrml_prediction_markets::Call::buy_complete_set { .. }
                             )
@@ -1357,8 +1362,6 @@ macro_rules! impl_config_traits {
             type ExitFee = ExitFee;
             type MinAssets = MinAssets;
             type MaxAssets = MaxAssets;
-            type MaxInRatio = MaxInRatio;
-            type MaxOutRatio = MaxOutRatio;
             type MaxSwapFee = MaxSwapFee;
             type MaxTotalWeight = MaxTotalWeight;
             type MaxWeight = MaxWeight;

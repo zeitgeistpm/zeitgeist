@@ -1,0 +1,29 @@
+endpoint: wss://bsr.zeitgeist.pm
+mock-signature-host: true
+db: ./tmp/bs_db_mba.sqlite
+# wasm-override: battery-station-runtime.compact.compressed.wasm
+
+import-storage:
+    Sudo:
+        Key: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY" # Alice
+    System:
+        Account:
+            - - - 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+              - providers: 1
+                data:
+                    free: "100000000000000000000000"
+    AdvisoryCommittee:
+        Members: [5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY]
+    AdvisoryCommitteeMembership:
+        Members: [5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY]
+    Council:
+        Members: [5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY]
+    CouncilMembership:
+        Members: [5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY]
+    TechnicalCommittee:
+        Members: [5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY]
+    TechnicalCommitteeMembership:
+        Members: [5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY]
+    AuthorFilter:
+        EligibleRatio: 100
+        EligibleCount: 100
