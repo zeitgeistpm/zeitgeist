@@ -26,7 +26,7 @@ use crate::{
     },
     mock_storage::pallet::MarketIdsPerDisputeBlock,
     types::{CourtStatus, Draw, Vote, VoteItem},
-    AppealInfo, BalanceOf, CourtId, CourtIdToMarketId, CourtParticipantInfo,
+    AppealInfo, BalanceOf, BlockNumberOf, CourtId, CourtIdToMarketId, CourtParticipantInfo,
     CourtParticipantInfoOf, CourtPool, CourtPoolItem, CourtPoolOf, Courts, Error, Event,
     MarketIdToCourtId, MarketOf, NegativeImbalanceOf, Participants, RequestBlock, SelectedDraws,
     YearlyInflation,
@@ -3196,6 +3196,31 @@ fn block_inflation_reward_after_higher_rejoin() {
     });
 }
 
+fn gain_equal(
+    account: AccountIdTest,
+    free_before: BalanceOf<Runtime>,
+    gain: BalanceOf<Runtime>,
+) -> BalanceOf<Runtime> {
+    let free_after = Balances::free_balance(account);
+    assert_eq!(free_after - free_before, gain);
+    gain
+}
+
+struct Params {
+    stake: BalanceOf<Runtime>,
+    uneligible_index: BlockNumberOf<Runtime>,
+    uneligible_stake: BalanceOf<Runtime>,
+}
+
+fn check_pool_item_bob(params: Params) {
+    let jurors = <CourtPool<Runtime>>::get();
+    let pool_item_bob = jurors.iter().find(|juror| juror.court_participant == BOB).unwrap().clone();
+
+    assert_eq!(pool_item_bob.stake, params.stake);
+    assert_eq!(pool_item_bob.uneligible_index, params.uneligible_index);
+    assert_eq!(pool_item_bob.uneligible_stake, params.uneligible_stake);
+}
+
 #[test]
 fn reward_inflation_correct_for_multiple_rejoins() {
     ExtBuilder::default().build().execute_with(|| {
@@ -3204,24 +3229,14 @@ fn reward_inflation_correct_for_multiple_rejoins() {
         let alice_amount = MinJurorStake::get();
         assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), alice_amount));
 
-        let joined_at_0 = <frame_system::Pallet<Runtime>>::block_number();
         let amount_0 = MinJurorStake::get();
         assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount_0));
 
-        let jurors = <CourtPool<Runtime>>::get();
-        let pool_item_bob =
-            jurors.iter().find(|juror| juror.court_participant == BOB).unwrap().clone();
-        assert_eq!(
-            pool_item_bob,
-            CourtPoolItem {
-                stake: amount_0,
-                court_participant: BOB,
-                consumed_stake: BalanceOf::<Runtime>::zero(),
-                joined_at: joined_at_0,
-                uneligible_index: 0,
-                uneligible_stake: amount_0,
-            }
-        );
+        check_pool_item_bob(Params {
+            stake: amount_0,
+            uneligible_index: 0,
+            uneligible_stake: amount_0,
+        });
 
         let free_alice_before = Balances::free_balance(ALICE);
         let free_bob_before = Balances::free_balance(BOB);
@@ -3229,12 +3244,8 @@ fn reward_inflation_correct_for_multiple_rejoins() {
         // period 0 over
         run_to_block(InflationPeriod::get());
 
-        let free_alice_after = Balances::free_balance(ALICE);
-        let free_bob_after = Balances::free_balance(BOB);
-        let gain_alice = free_alice_after - free_alice_before;
-        let gain_bob = free_bob_after - free_bob_before;
-        assert_eq!(gain_alice, 0);
-        assert_eq!(gain_bob, 0);
+        gain_equal(ALICE, free_alice_before, 0);
+        gain_equal(BOB, free_bob_before, 0);
 
         let inflation_period = InflationPeriod::get();
         run_blocks(inflation_period - 1);
@@ -3242,21 +3253,11 @@ fn reward_inflation_correct_for_multiple_rejoins() {
         let amount_1 = MinJurorStake::get() * 2;
         assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount_1));
 
-        let jurors = <CourtPool<Runtime>>::get();
-        let pool_item_bob =
-            jurors.iter().find(|juror| juror.court_participant == BOB).unwrap().clone();
-
-        assert_eq!(
-            pool_item_bob,
-            CourtPoolItem {
-                stake: amount_1,
-                court_participant: BOB,
-                consumed_stake: BalanceOf::<Runtime>::zero(),
-                joined_at: joined_at_0,
-                uneligible_index: 1,
-                uneligible_stake: amount_1 - amount_0,
-            }
-        );
+        check_pool_item_bob(Params {
+            stake: amount_1,
+            uneligible_index: 1,
+            uneligible_stake: amount_1 - amount_0,
+        });
 
         let free_alice_before = Balances::free_balance(ALICE);
         let free_bob_before = Balances::free_balance(BOB);
@@ -3264,12 +3265,8 @@ fn reward_inflation_correct_for_multiple_rejoins() {
         // period 1 over
         run_blocks(1);
 
-        let free_alice_after = Balances::free_balance(ALICE);
-        let free_bob_after = Balances::free_balance(BOB);
-        let gain_alice = free_alice_after - free_alice_before;
-        let gain_bob = free_bob_after - free_bob_before;
-        assert_eq!(gain_alice, 1200000000);
-        assert_eq!(gain_bob, 1200000000);
+        let gain_alice = gain_equal(ALICE, free_alice_before, 1200000000);
+        let gain_bob = gain_equal(BOB, free_bob_before, 1200000000);
         // Alice and Bob gain the same reward, although Bob joined with a higher stake
         // but Bob's higher stake is not present for more than one inflation period
         // so his stake is not considered for the reward
@@ -3284,28 +3281,14 @@ fn reward_inflation_correct_for_multiple_rejoins() {
         let amount_2 = MinJurorStake::get() * 3;
         assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount_2));
 
-        let jurors = <CourtPool<Runtime>>::get();
-        let pool_item_bob =
-            jurors.iter().find(|juror| juror.court_participant == BOB).unwrap().clone();
+        check_pool_item_bob(Params {
+            stake: amount_2,
+            uneligible_index: 3,
+            uneligible_stake: amount_2 - amount_1,
+        });
 
-        assert_eq!(
-            pool_item_bob,
-            CourtPoolItem {
-                stake: amount_2,
-                court_participant: BOB,
-                consumed_stake: BalanceOf::<Runtime>::zero(),
-                joined_at: joined_at_0,
-                uneligible_index: 3,
-                uneligible_stake: amount_2 - amount_1,
-            }
-        );
-
-        let free_alice_after = Balances::free_balance(ALICE);
-        let free_bob_after = Balances::free_balance(BOB);
-        let gain_alice = free_alice_after - free_alice_before;
-        let gain_bob = free_bob_after - free_bob_before;
-        assert_eq!(gain_alice, 800031999);
-        assert_eq!(gain_bob, 1600063999);
+        let gain_alice = gain_equal(ALICE, free_alice_before, 800031999);
+        let gain_bob = gain_equal(BOB, free_bob_before, 1600063999);
         // reward for period 2:
         // Bob's higher stake is now present, because of a full inflation period waiting time
         assert_eq!(gain_alice * 2 + 1, gain_bob);
@@ -3316,29 +3299,14 @@ fn reward_inflation_correct_for_multiple_rejoins() {
         // period 3 over
         run_blocks(InflationPeriod::get());
 
-        let jurors = <CourtPool<Runtime>>::get();
-        let pool_item_bob =
-            jurors.iter().find(|juror| juror.court_participant == BOB).unwrap().clone();
+        check_pool_item_bob(Params {
+            stake: amount_2,
+            uneligible_index: 3,
+            uneligible_stake: amount_2 - amount_1,
+        });
 
-        assert_eq!(
-            pool_item_bob,
-            CourtPoolItem {
-                stake: amount_2,
-                court_participant: BOB,
-                consumed_stake: BalanceOf::<Runtime>::zero(),
-                joined_at: joined_at_0,
-                uneligible_index: 3,
-                uneligible_stake: amount_2 - amount_1,
-            }
-        );
-
-        let free_alice_after = Balances::free_balance(ALICE);
-        let free_bob_after = Balances::free_balance(BOB);
-        let gain_alice = free_alice_after - free_alice_before;
-        let gain_bob = free_bob_after - free_bob_before;
-
-        assert_eq!(gain_alice, 800063999);
-        assert_eq!(gain_bob, 1600127999);
+        let gain_alice = gain_equal(ALICE, free_alice_before, 800063999);
+        let gain_bob = gain_equal(BOB, free_bob_before, 1600127999);
         // reward for period 3:
         // inflation reward is based on the join with amount_1
         // no join in period 2, so use amount_1
@@ -3350,29 +3318,14 @@ fn reward_inflation_correct_for_multiple_rejoins() {
         // period 4 over
         run_blocks(InflationPeriod::get());
 
-        let jurors = <CourtPool<Runtime>>::get();
-        let pool_item_bob =
-            jurors.iter().find(|juror| juror.court_participant == BOB).unwrap().clone();
+        check_pool_item_bob(Params {
+            stake: amount_2,
+            uneligible_index: 3,
+            uneligible_stake: amount_2 - amount_1,
+        });
 
-        assert_eq!(
-            pool_item_bob,
-            CourtPoolItem {
-                stake: amount_2,
-                court_participant: BOB,
-                consumed_stake: BalanceOf::<Runtime>::zero(),
-                joined_at: joined_at_0,
-                uneligible_index: 3,
-                uneligible_stake: amount_2 - amount_1,
-            }
-        );
-
-        let free_alice_after = Balances::free_balance(ALICE);
-        let free_bob_after = Balances::free_balance(BOB);
-        let gain_alice = free_alice_after - free_alice_before;
-        let gain_bob = free_bob_after - free_bob_before;
-
-        assert_eq!(gain_alice, 600072000);
-        assert_eq!(gain_bob, 1800216000);
+        let gain_alice = gain_equal(ALICE, free_alice_before, 600072000);
+        let gain_bob = gain_equal(BOB, free_bob_before, 1800216000);
         // reward for period 4:
         // inflation reward is based on the last join (amount_2)
         assert_eq!(gain_alice * 3, gain_bob);
