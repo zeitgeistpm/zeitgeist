@@ -440,7 +440,7 @@ mod pallet {
                 filled_taker_amount: maker_fill,
                 unfilled_maker_amount: order_data.maker_amount,
                 unfilled_taker_amount: order_data.taker_amount,
-                external_fee,
+                external_fee: external_fee.clone(),
             });
 
             Ok(OrderbookTrade {

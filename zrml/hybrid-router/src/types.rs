@@ -15,8 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::{AmmTradeOf, BalanceOf, Config, OrderTradeOf};
 use frame_support::pallet_prelude::*;
 use scale_info::TypeInfo;
+use sp_runtime::traits::Zero;
+use zeitgeist_primitives::math::checked_ops_res::{CheckedAddRes, CheckedSubRes};
 
 /// Represents the strategy used when placing an order in a trading environment.
 #[derive(
@@ -44,4 +47,67 @@ pub enum Strategy {
 pub enum TxType {
     Buy,
     Sell,
+}
+
+#[derive(Clone, Debug, Decode, Encode, PartialEq, TypeInfo)]
+pub enum Trade<'a, T: Config> {
+    Orderbook(&'a OrderTradeOf<T>),
+    Amm(AmmTradeOf<T>),
+}
+
+#[derive(Clone, Copy, Debug, Decode, Encode, PartialEq, TypeInfo)]
+pub struct TradeEventInfo<T: Config> {
+    amount_out: BalanceOf<T>,
+    external_fee_amount: BalanceOf<T>,
+    swap_fee_amount: BalanceOf<T>,
+}
+
+impl<T: Config> TradeEventInfo<T> {
+    pub fn new() -> Self {
+        Self {
+            amount_out: BalanceOf::<T>::zero(),
+            external_fee_amount: BalanceOf::<T>::zero(),
+            swap_fee_amount: BalanceOf::<T>::zero(),
+        }
+    }
+
+    pub fn add_amount_out_minus_fees(
+        &mut self,
+        amount: BalanceOf<T>,
+        external_fee_amount: BalanceOf<T>,
+        swap_fee_amount: BalanceOf<T>,
+    ) -> Result<(), DispatchError> {
+        self.external_fee_amount.checked_add_res(&external_fee_amount)?;
+        self.swap_fee_amount.checked_add_res(&swap_fee_amount)?;
+        let fees = external_fee_amount.checked_add_res(&swap_fee_amount)?;
+        let amount_minus_fees = amount.checked_sub_res(&fees)?;
+        self.amount_out.checked_add_res(&amount_minus_fees)?;
+
+        Ok(())
+    }
+
+    pub fn add_amount_out_and_fees(
+        &mut self,
+        amount: BalanceOf<T>,
+        external_fee_amount: BalanceOf<T>,
+        swap_fee_amount: BalanceOf<T>,
+    ) -> Result<(), DispatchError> {
+        self.external_fee_amount.checked_add_res(&external_fee_amount)?;
+        self.swap_fee_amount.checked_add_res(&swap_fee_amount)?;
+        self.amount_out.checked_add_res(&amount)?;
+
+        Ok(())
+    }
+
+    pub fn amount_out(&self) -> BalanceOf<T> {
+        self.amount_out
+    }
+
+    pub fn external_fee_amount(&self) -> BalanceOf<T> {
+        self.external_fee_amount
+    }
+
+    pub fn swap_fee_amount(&self) -> BalanceOf<T> {
+        self.swap_fee_amount
+    }
 }

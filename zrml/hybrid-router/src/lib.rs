@@ -34,7 +34,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        types::{Strategy, TxType},
+        types::{Strategy, Trade, TradeEventInfo, TxType},
         weights::WeightInfoZeitgeist,
     };
     use alloc::{vec, vec::Vec};
@@ -44,7 +44,7 @@ mod pallet {
         pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
         require_transactional,
         traits::{IsType, StorageVersion},
-        BoundedVec, RuntimeDebug, PalletId,
+        BoundedVec, PalletId, RuntimeDebug,
     };
     use frame_system::{
         ensure_signed,
@@ -167,12 +167,13 @@ mod pallet {
             asset_in: AssetOf<T>,
             /// The amount of the `asset_in` provided by the trader.
             /// It includes swap and external fees.
+            /// It is an amount before fees are deducted.
             amount_in: BalanceOf<T>,
             /// The asset received by the trader.
             asset_out: AssetOf<T>,
             /// The aggregated amount of the `asset_out` already received
             /// by the trader from AMM and orderbook.
-            /// It is the amount going out after all fees were paid.
+            /// It is an amount after fees are deducted.
             amount_out: BalanceOf<T>,
             /// The external fee amount paid in the base asset.
             external_fee_amount: BalanceOf<T>,
@@ -322,9 +323,9 @@ mod pallet {
     {
         /// Returns a vector of assets corresponding to the given market ID and market type.
         /// For scalar outcomes, the returned vector is [LONG, SHORT].
-        /// For categorical outcomes, 
+        /// For categorical outcomes,
         /// the vector starts with the lowest and ends with the highest categorical outcome.
-        /// 
+        ///
         /// # Arguments
         ///
         /// * `market_id` - The ID of the market.
@@ -643,65 +644,41 @@ mod pallet {
                 )?;
             }
 
-            enum Trade<T: Config> {
-                Orderbook(OrderTradeOf<T>),
-                Amm(AmmTradeOf<T>),
-            }
-
-            struct TradeEventInfo<T: Config> {
-                amount_out: BalanceOf<T>,
-                external_fee_amount: BalanceOf<T>,
-                swap_fee_amount: BalanceOf<T>,
-            }
-
-            let TradeEventInfo { amount_out, external_fee_amount, swap_fee_amount } =
-                orderbook_trades
-                    .iter()
-                    .map(Trade::Orderbook)
-                    .chain(amm_trades.iter().map(Trade::Amm))
-                    .fold(
-                        Ok(TradeEventInfo {
-                            amount_out: BalanceOf::<T>::zero(),
-                            external_fee_amount: BalanceOf::<T>::zero(),
-                            swap_fee_amount: BalanceOf::<T>::zero(),
-                        }),
-                        |event_info, trade| match trade {
-                            Trade::Orderbook(orderbook_trade) => {
-                                let amount_out = event_info
-                                    .amount_out
-                                    .checked_add_res(orderbook_trade.filled_maker_amount)?;
-                                let external_fee_amount =
-                                    if orderbook_trade.external_fee.account == &who {
-                                        event_info
-                                            .external_fee_amount
-                                            .checked_add_res(orderbook_trade.external_fee.amount)
-                                    } else {
-                                        event_info.external_fee_amount
-                                    };
-                                Ok(TradeEventInfo {
-                                    amount_out,
-                                    external_fee_amount,
-                                    swap_fee_amount: event_info.swap_fee_amount,
-                                })
+            let event_info = orderbook_trades
+                .iter()
+                .map(|trade| Trade::<T>::Orderbook(trade))
+                .chain(amm_trades.iter().map(|trade| Trade::Amm(*trade)))
+                .fold(
+                    Ok(TradeEventInfo::<T>::new()),
+                    |event_info: Result<TradeEventInfo<T>, DispatchError>, trade| match event_info {
+                        Ok(mut event_info) => {
+                            match trade {
+                                Trade::Orderbook(orderbook_trade) => {
+                                    let external_fee_amount =
+                                        if orderbook_trade.external_fee.account == who {
+                                            orderbook_trade.external_fee.amount
+                                        } else {
+                                            BalanceOf::<T>::zero()
+                                        };
+                                    event_info.add_amount_out_minus_fees(
+                                        orderbook_trade.filled_maker_amount,
+                                        external_fee_amount,
+                                        BalanceOf::<T>::zero(),
+                                    )?;
+                                }
+                                Trade::Amm(amm_trade) => {
+                                    event_info.add_amount_out_and_fees(
+                                        amm_trade.amount_out,
+                                        amm_trade.external_fee_amount,
+                                        amm_trade.swap_fee_amount,
+                                    )?;
+                                }
                             }
-                            Trade::Amm(amm_trade) => {
-                                // TODO For Sell the AMM says on the SellExecuted event that amount_out is with fees not yet deducted. We need to be sure what amount_out is (with regards to order book too. Is the fee included in amount_out there?)
-                                let amount_out =
-                                    event_info.amount_out.checked_add_res(amm_trade.amount_out)?;
-                                let external_fee_amount = event_info
-                                    .external_fee_amount
-                                    .checked_add_res(amm_trade.external_fee_amount)?;
-                                let swap_fee_amount = event_info
-                                    .swap_fee_amount
-                                    .checked_add_res(amm_trade.swap_fee_amount)?;
-                                Ok(TradeEventInfo {
-                                    amount_out,
-                                    external_fee_amount,
-                                    swap_fee_amount,
-                                })
-                            }
-                        },
-                    )?;
+                            Ok(event_info)
+                        }
+                        Err(e) => return Err(e),
+                    },
+                )?;
 
             Self::deposit_event(Event::HybridRouterExecuted {
                 tx_type,
@@ -711,9 +688,9 @@ mod pallet {
                 asset_in,
                 amount_in,
                 asset_out,
-                amount_out,
-                external_fee_amount,
-                swap_fee_amount,
+                amount_out: event_info.amount_out(),
+                external_fee_amount: event_info.external_fee_amount(),
+                swap_fee_amount: event_info.swap_fee_amount(),
             });
 
             Ok(())

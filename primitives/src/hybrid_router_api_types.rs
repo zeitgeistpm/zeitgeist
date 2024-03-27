@@ -15,7 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+use frame_support::pallet_prelude::*;
+use scale_info::TypeInfo;
+
+#[derive(Clone, Copy, PartialEq, Eq, Encode, Decode, Debug, TypeInfo)]
 pub struct AmmTrade<Balance> {
     pub amount_in: Balance,
     pub amount_out: Balance,
@@ -23,13 +26,13 @@ pub struct AmmTrade<Balance> {
     pub external_fee_amount: Balance,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Encode, Decode, Debug, TypeInfo)]
 pub struct ExternalFee<AccountId, Balance> {
     pub account: AccountId,
     pub amount: Balance,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Encode, Decode, Debug, TypeInfo)]
 pub struct OrderbookTrade<AccountId, Balance> {
     pub filled_maker_amount: Balance,
     pub filled_taker_amount: Balance,

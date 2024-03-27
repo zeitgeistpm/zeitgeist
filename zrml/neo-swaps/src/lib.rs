@@ -166,8 +166,7 @@ mod pallet {
             external_fee_amount: BalanceOf<T>,
         },
         /// Informant sold a position. `amount_out` is the amount of collateral received by `who`,
-        /// with swap and external fees not yet deducted. The actual amount received is
-        /// `amount_out - swap_fee_amount - external_fee_amount`.
+        /// with swap and external fees already deducted.
         SellExecuted {
             who: T::AccountId,
             market_id: MarketIdOf<T>,
@@ -656,11 +655,16 @@ mod pallet {
                     market_id,
                     asset_in,
                     amount_in,
-                    amount_out,
+                    amount_out: amount_out_minus_fees,
                     swap_fee_amount,
                     external_fee_amount,
                 });
-                Ok(AmmTrade { amount_in, amount_out, swap_fee_amount, external_fee_amount })
+                Ok(AmmTrade {
+                    amount_in,
+                    amount_out: amount_out_minus_fees,
+                    swap_fee_amount,
+                    external_fee_amount,
+                })
             })
         }
 
