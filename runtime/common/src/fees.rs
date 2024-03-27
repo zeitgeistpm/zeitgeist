@@ -89,8 +89,10 @@ macro_rules! impl_foreign_fees {
         };
         use pallet_asset_tx_payment::HandleCredit;
         use sp_runtime::traits::{Convert, DispatchInfoOf, PostDispatchInfoOf};
-        use zeitgeist_primitives::{math::fixed::FixedMul, types::Assets};
-        use zeitgeist_primitives::math::fixed::FixedDiv;
+        use zeitgeist_primitives::{
+            math::fixed::{FixedDiv, FixedMul},
+            types::Assets,
+        };
 
         #[repr(u8)]
         pub enum CustomTxError {
@@ -126,25 +128,25 @@ macro_rules! impl_foreign_fees {
             Ok(converted_fee)
         }
 
-        fn get_fee_factor_campaign_asset(campaign_asset: CampaignAsset) 
-            -> Result<Balance, TransactionValidityError> 
-        {
+        fn get_fee_factor_campaign_asset(
+            campaign_asset: CampaignAsset,
+        ) -> Result<Balance, TransactionValidityError> {
             let ztg_supply = Balances::total_issuance();
             let campaign_asset_supply = AssetManager::total_issuance(campaign_asset.into());
             let fee_multiplier = Balance::from(CampaignAssetFeeMultiplier::get());
-             
 
             // Use neutral fee multiplier if the ZTG supply is 100x greater than the campaign
             // asset supply.
             if ztg_supply.saturating_div(campaign_asset_supply) >= fee_multiplier {
                 Ok(BASE)
             } else {
-                campaign_asset_supply.saturating_mul(fee_multiplier).bdiv(ztg_supply)
-                    .map_err(|_| {
+                campaign_asset_supply.saturating_mul(fee_multiplier).bdiv(ztg_supply).map_err(
+                    |_| {
                         TransactionValidityError::Invalid(InvalidTransaction::Custom(
                             CustomTxError::FeeConversionArith as u8,
                         ))
-                    })
+                    },
+                )
             }
         }
 
@@ -172,11 +174,12 @@ macro_rules! impl_foreign_fees {
                     )));
                 }
             }
-            let metadata_asset: XcmAsset = Assets::from(foreign_asset).try_into().map_err(|_|
-                TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                    CustomTxError::InvalidAssetType as u8,
-                ))
-            )?;
+            let metadata_asset: XcmAsset =
+                Assets::from(foreign_asset).try_into().map_err(|_| {
+                    TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                        CustomTxError::InvalidAssetType as u8,
+                    ))
+                })?;
 
             let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&metadata_asset)
                 .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(
@@ -220,9 +223,9 @@ macro_rules! impl_foreign_fees {
             fn handle_credit(final_fee: CreditOf<AccountId, AssetRouter>) {
                 let asset = final_fee.asset();
                 if let Ok(campaign_asset) = CampaignAsset::try_from(asset) {
-                    DealWithForeignFees::on_unbalanced(final_fee);
-                } else if let Ok(currency) = Currencies::try_from(asset) {
                     DealWithCampaignFees::on_unbalanced(final_fee);
+                } else if let Ok(currency) = Currencies::try_from(asset) {
+                    DealWithForeignFees::on_unbalanced(final_fee);
                 }
             }
         }
@@ -235,7 +238,7 @@ macro_rules! impl_foreign_fees {
 
             fn withdraw_fee(
                 who: &AccountId,
-                call: &RuntimeCall,
+                _call: &RuntimeCall,
                 _dispatch_info: &DispatchInfoOf<RuntimeCall>,
                 asset_id: Self::AssetId,
                 native_fee: Self::Balance,
@@ -338,7 +341,12 @@ macro_rules! impl_market_creator_fees {
 macro_rules! fee_tests {
     () => {
         use crate::*;
-        use frame_support::{assert_noop, assert_ok, dispatch::DispatchClass, weights::Weight};
+        use frame_support::{
+            assert_noop, assert_ok,
+            dispatch::DispatchClass,
+            traits::{fungible::Unbalanced, fungibles::Create},
+            weights::Weight,
+        };
         use orml_traits::MultiCurrency;
         use pallet_asset_tx_payment::OnChargeAssetTransaction;
         use sp_core::H256;
@@ -381,18 +389,123 @@ macro_rules! fee_tests {
                 frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
             t.execute_with(|| {
                 let fee_and_tip_balance = 10 * ExistentialDeposit::get();
-                let fees_and_tips = <Tokens as Balanced<AccountId>>::issue(
-                    Currencies::ForeignAsset(0),
-                    fee_and_tip_balance,
-                );
+                let fees_and_tips = AssetRouter::issue(Asset::ForeignAsset(0), fee_and_tip_balance);
                 assert!(
-                    Tokens::free_balance(Currencies::ForeignAsset(0), &Treasury::account_id()).is_zero()
+                    AssetRouter::free_balance(Asset::ForeignAsset(0), &Treasury::account_id())
+                        .is_zero()
                 );
                 DealWithForeignFees::on_unbalanced(fees_and_tips);
                 assert_eq!(
-                    Tokens::free_balance(Currencies::ForeignAsset(0), &Treasury::account_id()),
+                    AssetRouter::free_balance(Asset::ForeignAsset(0), &Treasury::account_id()),
                     fee_and_tip_balance,
                 );
+            });
+        }
+
+        #[test]
+        fn fee_payment_campaign_assets_withdraws_correct_amount() {
+            let mut t: sp_io::TestExternalities =
+                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+            t.execute_with(|| {
+                let asset = Asset::CampaignAsset(0);
+                let alice = AccountId::from([0u8; 32]);
+                let initial_balance: Balance = 1_000_000_000_000;
+                let native_fee: Balance = 1_000_000;
+                let fee_multiplier: Balance = CampaignAssetFeeMultiplier::get().into();
+
+                let ztg_supply = initial_balance * fee_multiplier - 1;
+                let fee_factor =
+                    initial_balance.saturating_mul(fee_multiplier).bdiv(ztg_supply).unwrap();
+                let expected_fee = calculate_fee(native_fee, fee_factor).unwrap();
+                let mock_call = RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
+
+                Balances::set_total_issuance(ztg_supply);
+                assert_ok!(AssetRouter::create(asset, alice.clone(), true, 1));
+                assert_ok!(AssetManager::deposit(asset, &alice, initial_balance));
+
+                assert_eq!(
+                    TxCharger::withdraw_fee(
+                        &alice,
+                        &mock_call,
+                        &Default::default(),
+                        asset,
+                        native_fee,
+                        0
+                    )
+                    .unwrap()
+                    .peek(),
+                    expected_fee
+                );
+                assert_eq!(
+                    AssetManager::total_balance(asset, &alice),
+                    initial_balance - expected_fee
+                );
+            });
+        }
+
+        fn campaign_asset_throttled_fee_common() -> CreditOf<AccountId, AssetRouter> {
+            let asset = Asset::CampaignAsset(0);
+            let alice = AccountId::from([0u8; 32]);
+            let initial_balance: Balance = 1_000_000_000_000;
+            let native_fee: Balance = 1_000_000;
+            let fee_multiplier: Balance = CampaignAssetFeeMultiplier::get().into();
+
+            let ztg_supply = initial_balance.bmul(fee_multiplier * initial_balance + 1).unwrap();
+            let mock_call = RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
+
+            Balances::set_total_issuance(ztg_supply);
+            assert_ok!(AssetRouter::create(asset, alice.clone(), true, 1));
+            assert_ok!(AssetManager::deposit(asset, &alice, initial_balance));
+
+            let withdrawn = TxCharger::withdraw_fee(
+                &alice,
+                &mock_call,
+                &Default::default(),
+                asset,
+                native_fee,
+                0,
+            )
+            .unwrap();
+            assert_eq!(withdrawn.peek(), native_fee);
+            assert_eq!(AssetManager::total_balance(asset, &alice), initial_balance - native_fee);
+
+            withdrawn
+        }
+
+        #[test]
+        fn fee_payment_campaign_assets_withdraws_correct_amount_throttled() {
+            let mut t: sp_io::TestExternalities =
+                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+            t.execute_with(|| {
+                let _ = campaign_asset_throttled_fee_common();
+            });
+        }
+
+        #[test]
+        fn fee_payment_campaign_assets_corrects_reimburses_and_burns_fees_properly() {
+            let mut t: sp_io::TestExternalities =
+                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+            t.execute_with(|| {
+                let asset = Asset::CampaignAsset(0);
+                let withdrawn = campaign_asset_throttled_fee_common();
+                let amount = withdrawn.peek();
+                let native_fee_adjusted: Balance = 1_000_000 / 2;
+                let alice = AccountId::from([0u8; 32]);
+                let initial_balance: Balance = 1_000_000_000_000;
+                let fee_multiplier = get_fee_factor(asset).unwrap();
+                let fee = calculate_fee(native_fee_adjusted, fee_multiplier).unwrap();
+                let expected = initial_balance - fee;
+
+                assert_ok!(TxCharger::correct_and_deposit_fee(
+                    &alice,
+                    &Default::default(),
+                    &Default::default(),
+                    native_fee_adjusted,
+                    0,
+                    withdrawn
+                ));
+                assert_eq!(AssetManager::total_balance(asset, &alice), expected);
+                assert_eq!(AssetManager::total_issuance(Asset::CampaignAsset(0)), expected);
             });
         }
 
@@ -421,65 +534,59 @@ macro_rules! fee_tests {
                     .unwrap()
                     .into();
                 t.execute_with(|| {
-                    {
-                        let alice =  AccountId::from([0u8; 32]);
-                        let fee_factor = 143_120_520;
-                        let custom_metadata = CustomMetadata {
-                            xcm: XcmMetadata { fee_factor: Some(fee_factor) },
-                            ..Default::default()
-                        };
-                        let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-                            decimals: 10,
-                            name: "Polkadot".into(),
-                            symbol: "DOT".into(),
-                            existential_deposit: ExistentialDeposit::get(),
-                            location: Some(xcm::VersionedMultiLocation::V3(xcm::latest::MultiLocation::parent())),
-                            additional: custom_metadata,
-                        };
-                        let dot = Currencies::ForeignAsset(0);
+                    let alice = AccountId::from([0u8; 32]);
+                    let fee_factor = 143_120_520;
+                    let custom_metadata = CustomMetadata {
+                        xcm: XcmMetadata { fee_factor: Some(fee_factor) },
+                        ..Default::default()
+                    };
+                    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+                        decimals: 10,
+                        name: "Polkadot".into(),
+                        symbol: "DOT".into(),
+                        existential_deposit: ExistentialDeposit::get(),
+                        location: Some(xcm::VersionedMultiLocation::V3(
+                            xcm::latest::MultiLocation::parent(),
+                        )),
+                        additional: custom_metadata,
+                    };
+                    let dot = Asset::ForeignAsset(0);
 
-                        assert_ok!(AssetRegistry::register_asset(RuntimeOrigin::root(), meta.clone(), Some(Assets::from(dot).try_into().unwrap())));
+                    assert_ok!(AssetRegistry::register_asset(
+                        RuntimeOrigin::root(),
+                        meta.clone(),
+                        Some(dot.try_into().unwrap())
+                    ));
+                    assert_ok!(AssetManager::deposit(dot, &Treasury::account_id(), BASE));
 
+                    let free_balance_treasury_before =
+                        AssetManager::free_balance(dot, &Treasury::account_id());
+                    let free_balance_alice_before = AssetManager::free_balance(dot, &alice);
+                    let corrected_native_fee = BASE;
+                    let paid = AssetRouter::issue(dot, 2 * BASE);
+                    let paid_balance = paid.peek();
+                    let tip = 0u128;
+                    assert_ok!(TxCharger::correct_and_deposit_fee(
+                        &alice,
+                        &Default::default(),
+                        &Default::default(),
+                        corrected_native_fee,
+                        tip,
+                        paid,
+                    ));
 
-                        assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(dot, &Treasury::account_id(), BASE));
+                    let treasury_gain = AssetManager::free_balance(dot, &Treasury::account_id())
+                        - free_balance_treasury_before;
+                    let alice_gain =
+                        AssetManager::free_balance(dot, &alice) - free_balance_alice_before;
 
-                        let mock_call = RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
-                        let mock_dispatch_info = frame_support::dispatch::DispatchInfo {
-                            weight:  frame_support::dispatch::Weight::zero(),
-                            class: DispatchClass::Normal,
-                            pays_fee:  frame_support::dispatch::Pays::Yes,
-                        };
-                        let mock_post_info = frame_support::dispatch::PostDispatchInfo {
-                            actual_weight:  Some(frame_support::dispatch::Weight::zero()),
-                            pays_fee:  frame_support::dispatch::Pays::Yes,
-                        };
+                    let decimals = meta.decimals;
+                    let base = 10u128.checked_pow(decimals).unwrap();
 
-                        let free_balance_treasury_before = Tokens::free_balance(dot, &Treasury::account_id());
-                        let free_balance_alice_before = Tokens::free_balance(dot, &alice);
-                        let corrected_native_fee = BASE;
-                        let paid = <Tokens as Balanced<AccountId>>::issue(dot, 2 * BASE);
-                        let paid_balance = paid.peek();
-                        let tip = 0u128;
-                        assert_ok!(<TxCharger as OnChargeAssetTransaction<Runtime>>::correct_and_deposit_fee(
-                            &alice,
-                            &mock_dispatch_info,
-                            &mock_post_info,
-                            corrected_native_fee,
-                            tip,
-                            paid,
-                        ));
-
-                        let treasury_gain = Tokens::free_balance(dot, &Treasury::account_id()) - free_balance_treasury_before;
-                        let alice_gain = Tokens::free_balance(dot, &alice) - free_balance_alice_before;
-
-                        let decimals = meta.decimals;
-                        let base = 10u128.checked_pow(decimals).unwrap();
-
-                        let dot_fee = ((corrected_native_fee * fee_factor) + (base / 2)) / base;
-                        assert_eq!(dot_fee, treasury_gain);
-                        assert_eq!(143_120_520, treasury_gain);
-                        assert_eq!(paid_balance - treasury_gain, alice_gain);
-                    }
+                    let dot_fee = ((corrected_native_fee * fee_factor) + (base / 2)) / base;
+                    assert_eq!(dot_fee, treasury_gain);
+                    assert_eq!(143_120_520, treasury_gain);
+                    assert_eq!(paid_balance - treasury_gain, alice_gain);
                 });
             }
 
@@ -513,7 +620,7 @@ macro_rules! fee_tests {
                         Some(dot)
                     ));
 
-                    assert_eq!(get_fee_factor(dot).unwrap(), 143_120_520u128);
+                    assert_eq!(get_fee_factor(dot.into()).unwrap(), 143_120_520u128);
                 });
             }
 
@@ -527,7 +634,7 @@ macro_rules! fee_tests {
                     {
                         // no registering of dot
                         assert_noop!(
-                            get_fee_factor(XcmAsset::ForeignAsset(0)),
+                            get_fee_factor(Asset::ForeignAsset(0)),
                             TransactionValidityError::Invalid(InvalidTransaction::Custom(2u8))
                         );
                     }
@@ -565,7 +672,7 @@ macro_rules! fee_tests {
                     ));
 
                     assert_noop!(
-                        get_fee_factor(dot),
+                        get_fee_factor(dot.into()),
                         TransactionValidityError::Invalid(InvalidTransaction::Custom(3u8))
                     );
                 });
@@ -598,7 +705,7 @@ macro_rules! fee_tests {
                         Some(Assets::from(non_location_token).try_into().unwrap())
                     ));
 
-                    assert_eq!(get_fee_factor(non_location_token).unwrap(), 10_393);
+                    assert_eq!(get_fee_factor(non_location_token.into()).unwrap(), 10_393);
                 });
             }
 
@@ -625,34 +732,25 @@ macro_rules! fee_tests {
                         additional: custom_metadata,
                     };
                     let dot_asset_id = 0u32;
-                    let dot = Currencies::ForeignAsset(dot_asset_id);
+                    let dot = Asset::ForeignAsset(dot_asset_id);
 
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),
                         meta,
-                        Some(Assets::from(dot).try_into().unwrap())
+                        Some(dot.try_into().unwrap())
                     ));
 
-                    let fees_and_tips = <Tokens as Balanced<AccountId>>::issue(dot, 0);
-                    assert_ok!(<Tokens as MultiCurrency<AccountId>>::deposit(
-                        dot,
-                        &Treasury::account_id(),
-                        BASE
-                    ));
+                    let fees_and_tips = AssetRouter::issue(dot, 0);
+                    assert_ok!(AssetManager::deposit(dot, &Treasury::account_id(), BASE));
 
                     let mock_call =
                         RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
-                    let mock_dispatch_info = frame_support::dispatch::DispatchInfo {
-                        weight: frame_support::dispatch::Weight::zero(),
-                        class: DispatchClass::Normal,
-                        pays_fee: frame_support::dispatch::Pays::Yes,
-                    };
                     assert_eq!(
-                        <TxCharger as OnChargeAssetTransaction<Runtime>>::withdraw_fee(
+                        TxCharger::withdraw_fee(
                             &Treasury::account_id(),
                             &mock_call,
-                            &mock_dispatch_info,
-                            dot_asset_id,
+                            &Default::default(),
+                            dot,
                             BASE / 2,
                             0,
                         )
@@ -663,5 +761,5 @@ macro_rules! fee_tests {
                 });
             }
         }
-    }
+    };
 }
