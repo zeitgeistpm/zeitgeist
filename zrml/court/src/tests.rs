@@ -3333,7 +3333,7 @@ fn reward_inflation_correct_for_multiple_rejoins() {
 }
 
 #[test]
-fn reassign_same_pre_period_join_at_and_stake() {
+fn stake_information_is_properly_stored() {
     ExtBuilder::default().build().execute_with(|| {
         let joined_at_0 = <frame_system::Pallet<Runtime>>::block_number();
         let amount_0 = MinJurorStake::get();
