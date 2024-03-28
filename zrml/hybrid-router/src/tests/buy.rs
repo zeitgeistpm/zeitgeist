@@ -71,9 +71,9 @@ fn buy_from_amm_and_then_fill_specified_order() {
                 market_id,
                 asset_out: asset,
                 amount_in: amm_amount_in,
-                amount_out: 5608094333,
+                amount_out: 5664741768,
                 swap_fee_amount: 28326580,
-                external_fee_amount: 28326579,
+                external_fee_amount: 0,
             }
             .into(),
         );

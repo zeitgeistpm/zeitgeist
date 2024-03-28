@@ -75,7 +75,7 @@ fn sell_to_amm_and_then_fill_specified_order() {
                 amount_in: amm_amount_in,
                 amount_out: 2832089506,
                 swap_fee_amount: 28320895,
-                external_fee_amount: 28320895,
+                external_fee_amount: 0,
             }
             .into(),
         );
@@ -449,7 +449,7 @@ fn sell_to_amm() {
                 amount_in: 20000000000,
                 amount_out: 9653703575,
                 swap_fee_amount: 96537036,
-                external_fee_amount: 96537035,
+                external_fee_amount: 0,
             }
             .into(),
         );
@@ -626,7 +626,7 @@ fn sell_to_amm_only() {
                 amount_in: 20000000000,
                 amount_out: 9653703575,
                 swap_fee_amount: 96537036,
-                external_fee_amount: 96537035,
+                external_fee_amount: 0,
             }
             .into(),
         );
