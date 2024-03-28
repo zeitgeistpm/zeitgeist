@@ -126,9 +126,15 @@ macro_rules! impl_foreign_fees {
             let campaign_asset_supply = AssetManager::total_issuance(campaign_asset.into());
             let fee_multiplier = Balance::from(CampaignAssetFeeMultiplier::get());
 
+            let ztg_div_campaign_supply = ztg_supply.checked_div(campaign_asset_supply).ok_or(
+                TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                    CustomTxError::FeeConversionArith as u8,
+                ))
+            )?;
+
             // Use neutral fee multiplier if the ZTG supply is 100x greater than the campaign
             // asset supply.
-            if ztg_supply.saturating_div(campaign_asset_supply) >= fee_multiplier {
+            if ztg_div_campaign_supply >= fee_multiplier {
                 Ok(BASE)
             } else {
                 campaign_asset_supply.saturating_mul(fee_multiplier).bdiv(ztg_supply).map_err(
