@@ -57,15 +57,6 @@ macro_rules! impl_fee_types {
                 debug_assert!(res.is_ok());
             }
         }
-
-        /// Disregards the fees.
-        pub struct DealWithCampaignFees;
-        impl OnUnbalanced<CreditOf<AccountId, AssetRouter>> for DealWithCampaignFees {
-            fn on_unbalanced(_fees_and_tips: CreditOf<AccountId, AssetRouter>) {
-                // Handled by type OnDropCredit
-                return;
-            }
-        }
     };
 }
 
@@ -222,9 +213,10 @@ macro_rules! impl_foreign_fees {
         impl HandleCredit<AccountId, AssetRouter> for TTCHandleCredit {
             fn handle_credit(final_fee: CreditOf<AccountId, AssetRouter>) {
                 let asset = final_fee.asset();
-                if let Ok(campaign_asset) = CampaignAsset::try_from(asset) {
-                    DealWithCampaignFees::on_unbalanced(final_fee);
-                } else if let Ok(currency) = Currencies::try_from(asset) {
+
+                if CampaignAsset::try_from(asset).is_ok() {
+                    drop(final_fee);
+                } else if Currencies::try_from(asset).is_ok() {
                     DealWithForeignFees::on_unbalanced(final_fee);
                 }
             }
