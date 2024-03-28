@@ -650,33 +650,33 @@ mod pallet {
                 .chain(amm_trades.iter().map(|trade| Trade::Amm(*trade)))
                 .fold(
                     Ok(TradeEventInfo::<T>::new()),
-                    |event_info: Result<TradeEventInfo<T>, DispatchError>, trade| match event_info {
-                        Ok(mut event_info) => {
-                            match trade {
-                                Trade::Orderbook(orderbook_trade) => {
-                                    let external_fee_amount =
-                                        if orderbook_trade.external_fee.account == who {
-                                            orderbook_trade.external_fee.amount
-                                        } else {
-                                            BalanceOf::<T>::zero()
-                                        };
-                                    event_info.add_amount_out_minus_fees(
-                                        orderbook_trade.filled_maker_amount,
-                                        external_fee_amount,
-                                        BalanceOf::<T>::zero(),
-                                    )?;
-                                }
-                                Trade::Amm(amm_trade) => {
-                                    event_info.add_amount_out_and_fees(
-                                        amm_trade.amount_out,
-                                        amm_trade.external_fee_amount,
-                                        amm_trade.swap_fee_amount,
-                                    )?;
-                                }
+                    |event_info: Result<TradeEventInfo<T>, DispatchError>, trade| {
+                        let mut event_info = event_info?;
+
+                        match trade {
+                            Trade::Orderbook(orderbook_trade) => {
+                                let external_fee_amount =
+                                    if orderbook_trade.external_fee.account == who {
+                                        orderbook_trade.external_fee.amount
+                                    } else {
+                                        BalanceOf::<T>::zero()
+                                    };
+                                event_info.add_amount_out_minus_fees(
+                                    orderbook_trade.filled_maker_amount,
+                                    external_fee_amount,
+                                    BalanceOf::<T>::zero(),
+                                )?;
                             }
-                            Ok(event_info)
+                            Trade::Amm(amm_trade) => {
+                                event_info.add_amount_out_and_fees(
+                                    amm_trade.amount_out,
+                                    amm_trade.external_fee_amount,
+                                    amm_trade.swap_fee_amount,
+                                )?;
+                            }
                         }
-                        Err(e) => return Err(e),
+
+                        Ok(event_info)
                     },
                 )?;
 
