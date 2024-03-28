@@ -453,6 +453,7 @@ impl Default for ExtBuilder {
                 (CHARLIE, INITIAL_BALANCE),
                 (DAVE, INITIAL_BALANCE),
                 (EVE, INITIAL_BALANCE),
+                (FEE_ACCOUNT, INITIAL_BALANCE),
             ],
         }
     }
@@ -471,7 +472,10 @@ impl ExtBuilder {
         {
             use frame_support::traits::GenesisBuild;
             orml_tokens::GenesisConfig::<Runtime> {
-                balances: vec![(ALICE, FOREIGN_ASSET, INITIAL_BALANCE)],
+                balances: vec![
+                    (ALICE, FOREIGN_ASSET, INITIAL_BALANCE),
+                    (FEE_ACCOUNT, FOREIGN_ASSET, INITIAL_BALANCE),
+                ],
             }
             .assimilate_storage(&mut t)
             .unwrap();

@@ -213,6 +213,7 @@ mod pallet {
         #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::buy(*asset_count as u32, orders.len() as u32))]
         #[frame_support::transactional]
+        #[allow(clippy::too_many_arguments)]
         pub fn buy(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
@@ -233,7 +234,7 @@ mod pallet {
                 asset,
                 amount_in,
                 max_price,
-                orders,
+                &orders,
                 strategy,
             )?;
 
@@ -268,6 +269,7 @@ mod pallet {
         #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::sell(*asset_count as u32, orders.len() as u32))]
         #[frame_support::transactional]
+        #[allow(clippy::too_many_arguments)]
         pub fn sell(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
@@ -288,7 +290,7 @@ mod pallet {
                 asset,
                 amount_in,
                 min_price,
-                orders,
+                &orders,
                 strategy,
             )?;
 
@@ -410,6 +412,7 @@ mod pallet {
         /// * `base_asset` - The base asset of the market.
         /// * `asset` - The asset to be traded.
         /// * `price_limit` - The maximum or minimum price at which the trade can be executed.
+        #[allow(clippy::too_many_arguments)]
         fn maybe_fill_orders(
             tx_type: TxType,
             orders: &[OrderId],
@@ -532,6 +535,7 @@ mod pallet {
         /// * `orders` - A list of orders from the order book.
         /// * `strategy` - The strategy to handle the remaining non-zero amount when the `max_price` is reached.
         #[require_transactional]
+        #[allow(clippy::too_many_arguments)]
         pub(crate) fn do_trade(
             tx_type: TxType,
             who: AccountIdOf<T>,
@@ -540,7 +544,7 @@ mod pallet {
             asset: AssetOf<T>,
             amount_in: BalanceOf<T>,
             price_limit: BalanceOf<T>,
-            orders: Vec<OrderId>,
+            orders: &[OrderId],
             strategy: Strategy,
         ) -> DispatchResult {
             ensure!(amount_in > BalanceOf::<T>::zero(), Error::<T>::AmountIsZero);
@@ -563,7 +567,7 @@ mod pallet {
 
             remaining = Self::maybe_fill_orders(
                 tx_type,
-                &orders,
+                orders,
                 remaining,
                 &who,
                 market_id,
