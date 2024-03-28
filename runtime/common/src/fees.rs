@@ -154,17 +154,12 @@ macro_rules! impl_foreign_fees {
         fn get_fee_factor_foreign_asset(
             foreign_asset: Currencies,
         ) -> Result<Balance, TransactionValidityError> {
-            match foreign_asset {
-                Currencies::ForeignAsset(_) => (),
-                Currencies::CategoricalOutcome(_, _)
-                | Currencies::ScalarOutcome(_, _)
-                | Currencies::PoolShare(_)
-                | Currencies::ParimutuelShare(_, _) => {
-                    return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                        CustomTxError::InvalidAssetType as u8,
-                    )));
-                }
-            }
+            ensure!(
+                foreign_asset.is_foreign_asset(),
+                TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                    CustomTxError::InvalidAssetType as u8,
+                ))
+            );
             let metadata_asset: XcmAsset =
                 Assets::from(foreign_asset).try_into().map_err(|_| {
                     TransactionValidityError::Invalid(InvalidTransaction::Custom(
