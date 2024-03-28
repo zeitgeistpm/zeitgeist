@@ -57,9 +57,9 @@ pub enum Trade<'a, T: Config> {
 
 #[derive(Clone, Copy, Debug, Decode, Encode, PartialEq, TypeInfo)]
 pub struct TradeEventInfo<T: Config> {
-    amount_out: BalanceOf<T>,
-    external_fee_amount: BalanceOf<T>,
-    swap_fee_amount: BalanceOf<T>,
+    pub amount_out: BalanceOf<T>,
+    pub external_fee_amount: BalanceOf<T>,
+    pub swap_fee_amount: BalanceOf<T>,
 }
 
 impl<T: Config> TradeEventInfo<T> {
@@ -71,43 +71,23 @@ impl<T: Config> TradeEventInfo<T> {
         }
     }
 
-    pub fn add_amount_out_minus_fees(
-        &mut self,
-        amount: BalanceOf<T>,
-        external_fee_amount: BalanceOf<T>,
-        swap_fee_amount: BalanceOf<T>,
-    ) -> Result<(), DispatchError> {
-        self.external_fee_amount.checked_add_res(&external_fee_amount)?;
-        self.swap_fee_amount.checked_add_res(&swap_fee_amount)?;
-        let fees = external_fee_amount.checked_add_res(&swap_fee_amount)?;
-        let amount_minus_fees = amount.checked_sub_res(&fees)?;
-        self.amount_out.checked_add_res(&amount_minus_fees)?;
+    pub fn add_amount_out_minus_fees(&mut self, additional: Self) -> Result<(), DispatchError> {
+        self.external_fee_amount =
+            self.external_fee_amount.checked_add_res(&additional.external_fee_amount)?;
+        self.swap_fee_amount = self.swap_fee_amount.checked_add_res(&additional.swap_fee_amount)?;
+        let fees = additional.external_fee_amount.checked_add_res(&additional.swap_fee_amount)?;
+        let amount_minus_fees = additional.amount_out.checked_sub_res(&fees)?;
+        self.amount_out = self.amount_out.checked_add_res(&amount_minus_fees)?;
 
         Ok(())
     }
 
-    pub fn add_amount_out_and_fees(
-        &mut self,
-        amount: BalanceOf<T>,
-        external_fee_amount: BalanceOf<T>,
-        swap_fee_amount: BalanceOf<T>,
-    ) -> Result<(), DispatchError> {
-        self.external_fee_amount.checked_add_res(&external_fee_amount)?;
-        self.swap_fee_amount.checked_add_res(&swap_fee_amount)?;
-        self.amount_out.checked_add_res(&amount)?;
+    pub fn add_amount_out_and_fees(&mut self, additional: Self) -> Result<(), DispatchError> {
+        self.external_fee_amount =
+            self.external_fee_amount.checked_add_res(&additional.external_fee_amount)?;
+        self.swap_fee_amount = self.swap_fee_amount.checked_add_res(&additional.swap_fee_amount)?;
+        self.amount_out = self.amount_out.checked_add_res(&additional.amount_out)?;
 
         Ok(())
-    }
-
-    pub fn amount_out(&self) -> BalanceOf<T> {
-        self.amount_out
-    }
-
-    pub fn external_fee_amount(&self) -> BalanceOf<T> {
-        self.external_fee_amount
-    }
-
-    pub fn swap_fee_amount(&self) -> BalanceOf<T> {
-        self.swap_fee_amount
     }
 }

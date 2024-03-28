@@ -25,6 +25,7 @@ use sp_runtime::{Perbill, Perquintill};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
+    hybrid_router_api_types::ExternalFee,
     types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
 };
 use zrml_market_commons::{Error as MError, MarketCommonsPalletApi, Markets};
@@ -570,6 +571,8 @@ fn it_fills_order_fully_maker_outcome_asset() {
         let reserved_bob = AssetManager::reserved_balance(maker_asset, &BOB);
         assert_eq!(reserved_bob, 0);
 
+        let external_fee = ExternalFee { account: BOB, amount: taker_fees };
+
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
                 order_id,
@@ -579,7 +582,7 @@ fn it_fills_order_fully_maker_outcome_asset() {
                 filled_taker_amount: taker_amount,
                 unfilled_maker_amount: 0,
                 unfilled_taker_amount: 0,
-                external_fee_amount: taker_fees,
+                external_fee,
             }
             .into(),
         );
@@ -629,6 +632,7 @@ fn it_fills_order_fully_maker_base_asset() {
         assert_eq!(reserved_bob, 0);
 
         let external_fee_amount = calculate_fee::<Runtime>(maker_amount);
+        let external_fee = ExternalFee { account: BOB, amount: external_fee_amount };
 
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
@@ -639,7 +643,7 @@ fn it_fills_order_fully_maker_base_asset() {
                 filled_taker_amount: taker_amount,
                 unfilled_taker_amount: 0,
                 unfilled_maker_amount: 0,
-                external_fee_amount,
+                external_fee,
             }
             .into(),
         );
@@ -717,6 +721,8 @@ fn it_fills_order_partially_maker_base_asset() {
             }
         );
 
+        let external_fee = ExternalFee { account: BOB, amount: external_fee_amount };
+
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
                 order_id,
@@ -726,7 +732,7 @@ fn it_fills_order_partially_maker_base_asset() {
                 filled_taker_amount: alice_portion,
                 unfilled_maker_amount,
                 unfilled_taker_amount,
-                external_fee_amount: external_fee_amount,
+                external_fee,
             }
             .into(),
         );
@@ -817,6 +823,7 @@ fn it_fills_order_partially_maker_outcome_asset() {
 
         let reserved_bob = AssetManager::reserved_balance(maker_asset, &BOB);
         assert_eq!(reserved_bob, filled_maker_amount);
+        let external_fee = ExternalFee { account: BOB, amount: external_fee_amount };
 
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
@@ -828,7 +835,7 @@ fn it_fills_order_partially_maker_outcome_asset() {
                 filled_taker_amount: alice_portion,
                 unfilled_maker_amount: filled_maker_amount,
                 unfilled_taker_amount: taker_amount - alice_portion,
-                external_fee_amount,
+                external_fee,
             }
             .into(),
         );

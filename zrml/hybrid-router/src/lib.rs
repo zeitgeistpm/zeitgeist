@@ -41,10 +41,10 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         ensure,
-        pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
+        pallet_prelude::DispatchError,
         require_transactional,
         traits::{IsType, StorageVersion},
-        BoundedVec, PalletId, RuntimeDebug,
+        PalletId,
     };
     use frame_system::{
         ensure_signed,
@@ -52,15 +52,15 @@ mod pallet {
     };
     use orml_traits::MultiCurrency;
     use sp_runtime::{
-        traits::{CheckedSub, Get, SaturatedConversion, Zero},
-        ArithmeticError, DispatchResult,
+        traits::{Get, Zero},
+        DispatchResult,
     };
     #[cfg(feature = "runtime-benchmarks")]
     use zeitgeist_primitives::traits::{CompleteSetOperationsApi, DeployPoolApi};
     use zeitgeist_primitives::{
-        hybrid_router_api_types::{AmmTrade, ExternalFee, OrderbookTrade},
+        hybrid_router_api_types::{AmmTrade, OrderbookTrade},
         math::{
-            checked_ops_res::{CheckedAddRes, CheckedSubRes},
+            checked_ops_res::CheckedSubRes,
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
         orderbook::{Order, OrderId},
@@ -139,7 +139,6 @@ mod pallet {
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> =
         Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
-    pub(crate) type OrdersOf<T> = BoundedVec<OrderId, <T as Config>::MaxOrders>;
     pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
     pub(crate) type OrderTradeOf<T> = OrderbookTrade<AccountIdOf<T>, BalanceOf<T>>;
 
@@ -479,7 +478,10 @@ mod pallet {
                     remaining,
                     order_price,
                 )?;
-                amm_trade_info.1.map(|t| amm_trades.push(t));
+
+                if let Some(t) = amm_trade_info.1 {
+                    amm_trades.push(t);
+                }
                 remaining = amm_trade_info.0;
 
                 if remaining.is_zero() {
@@ -644,41 +646,8 @@ mod pallet {
                 )?;
             }
 
-            let event_info = orderbook_trades
-                .iter()
-                .map(|trade| Trade::<T>::Orderbook(trade))
-                .chain(amm_trades.iter().map(|trade| Trade::Amm(*trade)))
-                .fold(
-                    Ok(TradeEventInfo::<T>::new()),
-                    |event_info: Result<TradeEventInfo<T>, DispatchError>, trade| {
-                        let mut event_info = event_info?;
-
-                        match trade {
-                            Trade::Orderbook(orderbook_trade) => {
-                                let external_fee_amount =
-                                    if orderbook_trade.external_fee.account == who {
-                                        orderbook_trade.external_fee.amount
-                                    } else {
-                                        BalanceOf::<T>::zero()
-                                    };
-                                event_info.add_amount_out_minus_fees(
-                                    orderbook_trade.filled_maker_amount,
-                                    external_fee_amount,
-                                    BalanceOf::<T>::zero(),
-                                )?;
-                            }
-                            Trade::Amm(amm_trade) => {
-                                event_info.add_amount_out_and_fees(
-                                    amm_trade.amount_out,
-                                    amm_trade.external_fee_amount,
-                                    amm_trade.swap_fee_amount,
-                                )?;
-                            }
-                        }
-
-                        Ok(event_info)
-                    },
-                )?;
+            let TradeEventInfo { amount_out, external_fee_amount, swap_fee_amount } =
+                Self::get_event_info(&who, &orderbook_trades, &amm_trades)?;
 
             Self::deposit_event(Event::HybridRouterExecuted {
                 tx_type,
@@ -688,12 +657,56 @@ mod pallet {
                 asset_in,
                 amount_in,
                 asset_out,
-                amount_out: event_info.amount_out(),
-                external_fee_amount: event_info.external_fee_amount(),
-                swap_fee_amount: event_info.swap_fee_amount(),
+                amount_out,
+                external_fee_amount,
+                swap_fee_amount,
             });
 
             Ok(())
+        }
+
+        fn get_event_info(
+            who: &AccountIdOf<T>,
+            orderbook_trades: &[OrderTradeOf<T>],
+            amm_trades: &[AmmTradeOf<T>],
+        ) -> Result<TradeEventInfo<T>, DispatchError> {
+            orderbook_trades
+                .iter()
+                .map(|trade| Trade::<T>::Orderbook(trade))
+                .chain(amm_trades.iter().map(|trade| Trade::Amm(*trade)))
+                .try_fold(TradeEventInfo::<T>::new(), |event_info: TradeEventInfo<T>, trade| {
+                    Self::update_event_info(who, trade, event_info)
+                })
+        }
+
+        fn update_event_info(
+            who: &AccountIdOf<T>,
+            trade: Trade<T>,
+            mut event_info: TradeEventInfo<T>,
+        ) -> Result<TradeEventInfo<T>, DispatchError> {
+            match trade {
+                Trade::Orderbook(orderbook_trade) => {
+                    let external_fee_amount = if &orderbook_trade.external_fee.account == who {
+                        orderbook_trade.external_fee.amount
+                    } else {
+                        BalanceOf::<T>::zero()
+                    };
+                    event_info.add_amount_out_minus_fees(TradeEventInfo::<T> {
+                        amount_out: orderbook_trade.filled_maker_amount,
+                        external_fee_amount,
+                        swap_fee_amount: BalanceOf::<T>::zero(),
+                    })?;
+                }
+                Trade::Amm(amm_trade) => {
+                    event_info.add_amount_out_and_fees(TradeEventInfo::<T> {
+                        amount_out: amm_trade.amount_out,
+                        external_fee_amount: amm_trade.external_fee_amount,
+                        swap_fee_amount: amm_trade.swap_fee_amount,
+                    })?;
+                }
+            }
+
+            Ok(event_info)
         }
     }
 }
