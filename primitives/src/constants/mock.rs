@@ -175,20 +175,12 @@ parameter_types! {
     pub const GetNativeCurrencyId: Assets = Asset::Ztg;
 }
 
-// Will be removed once asset-system is completely integerated
 parameter_type_with_key! {
-    pub ExistentialDeposits: |currency_id: Assets| -> Balance {
-        match currency_id {
-            Asset::Ztg => ExistentialDeposit::get(),
-            _ => 10
-        }
-    };
+    pub ExistentialDeposits: |_currency_id: Currencies| -> Balance {2};
 }
 
 parameter_type_with_key! {
-    pub ExistentialDepositsNew: |_currency_id: Currencies| -> Balance {
-        2
-    };
+    pub ExistentialDepositsAssets: |_asset_id: Assets| -> Balance {2};
 }
 
 // System
