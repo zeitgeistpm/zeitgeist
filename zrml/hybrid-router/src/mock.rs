@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
+#![cfg(feature = "mock")]
 #![allow(
     // Mocks are only used for fuzzing and unit tests
     clippy::arithmetic_side_effects,
@@ -36,7 +36,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, Get, IdentityLookup, Zero},
-    DispatchResult, Percent, SaturatedConversion,
+    Perbill, Percent, SaturatedConversion,
 };
 #[cfg(feature = "parachain")]
 use zeitgeist_primitives::types::Asset;
@@ -47,18 +47,18 @@ use zeitgeist_primitives::{
         CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
         CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
         ExistentialDeposit, ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId,
-        GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
-        LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations,
-        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
-        MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners,
-        MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinCategories,
-        MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod,
-        NeoMaxSwapFee, NeoSwapsPalletId, OrderbookPalletId, OutcomeBond, OutcomeFactor,
-        OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId,
-        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT, MAX_ASSETS,
+        GlobalDisputeLockId, GlobalDisputesPalletId, HybridRouterPalletId, InflationPeriod,
+        LiquidityMiningPalletId, LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants,
+        MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
+        MaxGlobalDisputeVotes, MaxGracePeriod, MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime,
+        MaxOracleDuration, MaxOrders, MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws,
+        MaxYearlyInflation, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
+        MinOutcomeVoteAmount, MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OrderbookPalletId,
+        OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
+        SimpleDisputesPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
+        MAX_ASSETS,
     },
-    math::fixed::FixedMul,
-    traits::{DeployPoolApi, DistributeFees},
+    traits::DistributeFees,
     types::{
         AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
         Hash, Index, MarketId, Moment, UncheckedExtrinsicTest,
@@ -101,6 +101,14 @@ parameter_types! {
     pub const MaxCategories: u16 = MAX_ASSETS + 1;
 }
 
+pub fn fee_percentage() -> Perbill {
+    Perbill::from_rational(EXTERNAL_FEES, BASE)
+}
+
+pub fn calculate_fee<T: crate::Config>(amount: BalanceOf<T>) -> BalanceOf<T> {
+    fee_percentage().mul_floor(amount.saturated_into::<BalanceOf<T>>())
+}
+
 pub struct ExternalFees<T, F>(PhantomData<T>, PhantomData<F>);
 
 impl<T: crate::Config, F> DistributeFees for ExternalFees<T, F>
@@ -118,11 +126,15 @@ where
         account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance {
-        let fees = amount.bmul(EXTERNAL_FEES.saturated_into()).unwrap();
+        let fees = calculate_fee::<T>(amount);
         match T::AssetManager::transfer(asset, account, &F::get(), fees) {
             Ok(_) => fees,
             Err(_) => Zero::zero(),
         }
+    }
+
+    fn fee_percentage(_market_id: Self::MarketId) -> Perbill {
+        fee_percentage()
     }
 }
 
@@ -165,10 +177,16 @@ construct_runtime!(
 
 impl crate::Config for Runtime {
     type AssetManager = AssetManager;
-    type MarketCommons = MarketCommons;
+    #[cfg(feature = "runtime-benchmarks")]
+    type AmmPoolDeployer = NeoSwaps;
     type Amm = NeoSwaps;
+    #[cfg(feature = "runtime-benchmarks")]
+    type CompleteSetOperations = PredictionMarkets;
+    type MarketCommons = MarketCommons;
     type OrderBook = OrderBook;
     type RuntimeEvent = RuntimeEvent;
+    type MaxOrders = MaxOrders;
+    type PalletId = HybridRouterPalletId;
     type WeightInfo = zrml_hybrid_router::weights::WeightInfo<Runtime>;
 }
 
@@ -435,6 +453,7 @@ impl Default for ExtBuilder {
                 (CHARLIE, INITIAL_BALANCE),
                 (DAVE, INITIAL_BALANCE),
                 (EVE, INITIAL_BALANCE),
+                (FEE_ACCOUNT, INITIAL_BALANCE),
             ],
         }
     }
@@ -453,7 +472,10 @@ impl ExtBuilder {
         {
             use frame_support::traits::GenesisBuild;
             orml_tokens::GenesisConfig::<Runtime> {
-                balances: vec![(ALICE, FOREIGN_ASSET, INITIAL_BALANCE)],
+                balances: vec![
+                    (ALICE, FOREIGN_ASSET, INITIAL_BALANCE),
+                    (FEE_ACCOUNT, FOREIGN_ASSET, INITIAL_BALANCE),
+                ],
             }
             .assimilate_storage(&mut t)
             .unwrap();

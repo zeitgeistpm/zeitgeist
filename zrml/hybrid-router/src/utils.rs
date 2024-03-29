@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#[cfg(any(feature = "runtime-benchmarks", test))]
+#![cfg(all(feature = "mock", test))]
 pub(crate) fn market_mock<T>(creator: T::AccountId) -> crate::MarketOf<T>
 where
     T: crate::Config,

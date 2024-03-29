@@ -42,8 +42,6 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
-pub const MIN_SPOT_PRICE: u128 = CENT / 2;
-
 // Same behavior as `assert_ok!`, except that it wraps the call inside a transaction layer. Required
 // when calling into functions marked `require_transactional` to avoid a `Transactional(NoLayer)`
 // error.

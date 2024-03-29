@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
-
 use super::*;
 
 #[test]
@@ -73,9 +71,9 @@ fn buy_from_amm_and_then_fill_specified_order() {
                 market_id,
                 asset_out: asset,
                 amount_in: amm_amount_in,
-                amount_out: 5664741768,
+                amount_out: 5608094333,
                 swap_fee_amount: 28326580,
-                external_fee_amount: 0,
+                external_fee_amount: 28326579,
             }
             .into(),
         );
@@ -305,14 +303,16 @@ fn buy_fails_if_asset_not_equal_to_order_book_maker_asset() {
 
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
+        let order_maker_amount = _1;
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &CHARLIE, order_maker_amount));
 
         assert_ok!(OrderBook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
             BASE_ASSET,
-            10000000000,
+            order_maker_amount,
             Asset::CategoricalOutcome(market_id, 0),
-            20000000000,
+            _2,
         ));
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
@@ -696,16 +696,14 @@ fn buy_fails_if_balance_too_low() {
 #[test]
 fn buy_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0;
-        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
-        let required_asset_count = match &market.market_type {
-            MarketType::Scalar(_) => panic!("Categorical market type is expected!"),
-            MarketType::Categorical(categories) => *categories,
-        };
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(market_id, market);
+        let asset_count = 2u16;
+        let market_id = create_market(
+            MARKET_CREATOR,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            ScoringRule::AmmCdaHybrid,
+        );
 
-        let asset_count = required_asset_count;
         let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = 10 * BASE;
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();

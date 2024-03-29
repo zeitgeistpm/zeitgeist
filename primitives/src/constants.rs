@@ -81,6 +81,10 @@ pub const GLOBAL_DISPUTES_PALLET_ID: PalletId = PalletId(*b"zge/gldp");
 /// Lock identifier, mainly used for the locks on the accounts.
 pub const GLOBAL_DISPUTES_LOCK_ID: [u8; 8] = *b"zge/gdlk";
 
+// Hybrid Router
+/// Pallet identifier, mainly used for named balance reserves.
+pub const HYBRID_ROUTER_PALLET_ID: PalletId = PalletId(*b"zge/hybr");
+
 // Liqudity Mining
 /// Pallet identifier, mainly used for named balance reserves.
 pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
