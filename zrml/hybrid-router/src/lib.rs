@@ -495,14 +495,25 @@ mod pallet {
                 let (_taker_fill, maker_fill) =
                     order.taker_and_maker_fill_from_taker_amount(remaining)?;
                 // and the `maker_partial_fill` of `fill_order` is specified in `taker_asset`
-                let order_trade =
-                    T::OrderBook::fill_order(who.clone(), order_id, Some(maker_fill))?;
+                let order_trade = Self::handle_fill_order(who.clone(), order_id, maker_fill)?;
                 order_trades.push(order_trade);
                 // `maker_fill` is the amount the order owner (maker) wants to receive
                 remaining = remaining.checked_sub_res(&maker_fill)?;
             }
 
             Ok(OrderAmmTradesInfo { remaining, order_trades, amm_trades })
+        }
+
+        fn handle_fill_order(
+            who: AccountIdOf<T>,
+            order_id: OrderId,
+            maker_fill: BalanceOf<T>,
+        ) -> Result<OrderTradeOf<T>, DispatchError> {
+            T::OrderBook::fill_order(who, order_id, Some(maker_fill)).map_err(|err| {
+                if let Err(DispatchError::Module(ModuleError { index: })) = err {
+                    e
+                }
+            })
         }
 
         /// Places a limit order if the strategy is `Strategy::LimitOrder`.
