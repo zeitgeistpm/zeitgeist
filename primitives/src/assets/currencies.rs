@@ -47,7 +47,7 @@ impl<MI> CurrencyClass<MI> {
     pub fn is_foreign_asset(&self) -> bool {
         match self {
             Self::ForeignAsset(_) => true,
-            _ => false
+            _ => false,
         }
     }
 }

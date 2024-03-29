@@ -129,7 +129,7 @@ macro_rules! impl_foreign_fees {
             let ztg_div_campaign_supply = ztg_supply.checked_div(campaign_asset_supply).ok_or(
                 TransactionValidityError::Invalid(InvalidTransaction::Custom(
                     CustomTxError::FeeConversionArith as u8,
-                ))
+                )),
             )?;
 
             // Use neutral fee multiplier if the ZTG supply is 100x greater than the campaign
