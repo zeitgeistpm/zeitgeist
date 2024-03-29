@@ -30,6 +30,7 @@ zrml-neo-swaps = { workspace = true, optional = true }
 zrml-orderbook = { workspace = true, optional = true }
 zrml-prediction-markets = { workspace = true, optional = true }
 zrml-simple-disputes = { workspace = true, optional = true }
+zrml-swaps = { workspace = true, optional = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
@@ -57,6 +58,7 @@ mock = [
     "zrml-prediction-markets/default",
     "zrml-prediction-markets/mock",
     "zrml-simple-disputes/default",
+    "zrml-swaps/default",
     "zrml-authorized/default",
     "zrml-court/default",
     "zrml-global-disputes/default",

@@ -14622,6 +14622,7 @@ dependencies = [
  "zrml-orderbook",
  "zrml-prediction-markets",
  "zrml-simple-disputes",
+ "zrml-swaps",
 ]
 
 [[package]]
