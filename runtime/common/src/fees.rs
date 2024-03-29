@@ -63,6 +63,8 @@ macro_rules! impl_fee_types {
 #[macro_export]
 macro_rules! impl_foreign_fees {
     () => {
+        #[cfg(feature = "parachain")]
+        use frame_support::ensure;
         use frame_support::{
             pallet_prelude::InvalidTransaction,
             traits::{
