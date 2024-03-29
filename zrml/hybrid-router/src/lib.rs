@@ -254,7 +254,7 @@ mod pallet {
                 asset,
                 amount_in,
                 max_price,
-                orders,
+                &orders,
                 strategy,
             )?;
 
@@ -310,7 +310,7 @@ mod pallet {
                 asset,
                 amount_in,
                 min_price,
-                orders,
+                &orders,
                 strategy,
             )?;
 
@@ -569,7 +569,7 @@ mod pallet {
             asset: AssetOf<T>,
             amount_in: BalanceOf<T>,
             price_limit: BalanceOf<T>,
-            orders: Vec<OrderId>,
+            orders: &[OrderId],
             strategy: Strategy,
         ) -> DispatchResult {
             ensure!(amount_in > BalanceOf::<T>::zero(), Error::<T>::AmountIsZero);
@@ -593,7 +593,7 @@ mod pallet {
 
             let order_amm_trades_info = Self::maybe_fill_orders(
                 tx_type,
-                &orders,
+                orders,
                 remaining,
                 &who,
                 market_id,
