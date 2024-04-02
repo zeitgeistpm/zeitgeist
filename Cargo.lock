@@ -1697,7 +1697,7 @@ dependencies = [
  "sc-client-api",
  "sc-consensus",
  "sp-consensus",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-maybe-compressed-blob",
  "sp-runtime",
  "tracing",
 ]
@@ -5864,7 +5864,7 @@ dependencies = [
 [[package]]
 name = "pallet-assets"
 version = "4.0.0-dev"
-source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-assets-managed-destroy#135cfbdb68429e2d860f5054463a2a094908eeb4"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7554,7 +7554,7 @@ dependencies = [
  "polkadot-node-subsystem-util",
  "polkadot-primitives",
  "sp-core",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-maybe-compressed-blob",
  "thiserror",
  "tracing-gum 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
 ]
@@ -7657,7 +7657,7 @@ dependencies = [
  "polkadot-node-subsystem",
  "polkadot-parachain",
  "polkadot-primitives",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-maybe-compressed-blob",
  "tracing-gum 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
 ]
 
@@ -7771,7 +7771,7 @@ dependencies = [
  "sp-core",
  "sp-externalities",
  "sp-io",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-maybe-compressed-blob",
  "sp-tracing",
  "sp-wasm-interface",
  "tempfile",
@@ -7924,7 +7924,7 @@ dependencies = [
  "sp-consensus-vrf",
  "sp-core",
  "sp-keystore",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-maybe-compressed-blob",
  "thiserror",
  "zstd",
 ]
@@ -9553,7 +9553,7 @@ dependencies = [
 [[package]]
 name = "sc-allocator"
 version = "4.1.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "log",
  "sp-core",
@@ -9956,10 +9956,10 @@ dependencies = [
 [[package]]
 name = "sc-executor-common"
 version = "0.10.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "sc-allocator",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-maybe-compressed-blob",
  "sp-wasm-interface",
  "thiserror",
  "wasm-instrument 0.3.0",
@@ -9982,7 +9982,7 @@ dependencies = [
 [[package]]
 name = "sc-executor-wasmtime"
 version = "0.10.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "cfg-if",
  "libc",
@@ -11337,7 +11337,7 @@ dependencies = [
 [[package]]
 name = "sp-core"
 version = "7.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "array-bytes 4.2.0",
  "base58",
@@ -11379,7 +11379,7 @@ dependencies = [
 [[package]]
 name = "sp-core-hashing"
 version = "5.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "blake2",
  "byteorder",
@@ -11393,7 +11393,7 @@ dependencies = [
 [[package]]
 name = "sp-core-hashing-proc-macro"
 version = "5.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -11413,7 +11413,7 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "5.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -11423,7 +11423,7 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.13.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -11519,16 +11519,7 @@ dependencies = [
 [[package]]
 name = "sp-maybe-compressed-blob"
 version = "4.1.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
-dependencies = [
- "thiserror",
- "zstd",
-]
-
-[[package]]
-name = "sp-maybe-compressed-blob"
-version = "4.1.0-dev"
-source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-fix-new-rustc-build#310d70a2b46907901dd3bb6e6d373b5f49115f38"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "thiserror",
  "zstd",
@@ -11621,7 +11612,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface"
 version = "7.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
@@ -11639,7 +11630,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "6.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "Inflector",
  "proc-macro-crate",
@@ -11697,12 +11688,12 @@ dependencies = [
 [[package]]
 name = "sp-std"
 version = "5.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 
 [[package]]
 name = "sp-storage"
 version = "7.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -11730,7 +11721,7 @@ dependencies = [
 [[package]]
 name = "sp-tracing"
 version = "6.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "parity-scale-codec",
  "sp-std",
@@ -11818,7 +11809,7 @@ dependencies = [
 [[package]]
 name = "sp-wasm-interface"
 version = "7.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "impl-trait-for-tuples",
  "log",
@@ -12129,13 +12120,13 @@ dependencies = [
 [[package]]
 name = "substrate-wasm-builder"
 version = "5.0.0-dev"
-source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-fix-new-rustc-build#310d70a2b46907901dd3bb6e6d373b5f49115f38"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "ansi_term",
  "build-helper",
  "cargo_metadata",
  "filetime",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-fix-new-rustc-build)",
+ "sp-maybe-compressed-blob",
  "strum",
  "tempfile",
  "toml",
