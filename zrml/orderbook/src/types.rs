@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, Encode, HasCompact, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use zeitgeist_primitives::types::Asset;
@@ -23,7 +23,7 @@ use zeitgeist_primitives::types::Asset;
 pub type OrderId = u128;
 
 #[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen> {
+pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen + HasCompact> {
     pub market_id: MarketId,
     pub maker: AccountId,
     pub maker_asset: Asset<MarketId>,

@@ -35,7 +35,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::weights::*;
-    use alloc::{format, vec, vec::Vec};
+    use alloc::{collections::BTreeMap, format, vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Pays, Weight},
@@ -44,16 +44,22 @@ mod pallet {
         require_transactional,
         storage::{with_transaction, TransactionOutcome},
         traits::{
-            tokens::BalanceStatus, Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType,
-            NamedReservableCurrency, OnUnbalanced, StorageVersion,
+            fungibles::{Create, Inspect},
+            tokens::BalanceStatus,
+            Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType, NamedReservableCurrency,
+            OnUnbalanced, StorageVersion,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use pallet_assets::ManagedDestroy;
     use sp_runtime::traits::AccountIdConversion;
 
     #[cfg(feature = "parachain")]
-    use {orml_traits::asset_registry::Inspect, zeitgeist_primitives::types::CustomMetadata};
+    use {
+        orml_traits::asset_registry::Inspect as RegistryInspect,
+        zeitgeist_primitives::types::{CustomMetadata, XcmAsset},
+    };
 
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
@@ -65,13 +71,13 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{
             CompleteSetOperationsApi, DeployPoolApi, DisputeApi, DisputeMaxWeightApi,
-            DisputeResolutionApi, ZeitgeistAssetManager,
+            DisputeResolutionApi, MarketTransitionApi,
         },
         types::{
-            Asset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem, Market,
-            MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-            MarketType, MultiHash, OutcomeReport, Report, ResultWithWeightInfo, ScalarPosition,
-            ScoringRule,
+            Asset, BaseAsset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem,
+            Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+            MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ResultWithWeightInfo,
+            ScalarPosition, ScoringRule,
         },
     };
     use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
@@ -86,7 +92,6 @@ mod pallet {
     /// the automatic market openings and closings from a chain stall.
     /// Currently 10 blocks is 2 minutes (assuming block time is 12 seconds).
     pub(crate) const MAX_RECOVERY_TIME_FRAMES: TimeFrame = 10;
-
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <T as zrml_market_commons::Config>::Balance;
@@ -100,7 +105,7 @@ mod pallet {
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
-        AssetOf<T>,
+        BaseAsset,
     >;
     pub(crate) type MomentOf<T> =
         <<T as zrml_market_commons::Config>::Timestamp as frame_support::traits::Time>::Moment;
@@ -440,11 +445,27 @@ mod pallet {
                     Error::<T>::MarketEditRequestAlreadyInProgress
                 );
                 m.status = new_status;
+
+                if m.is_redeemable() {
+                    for outcome in m.outcome_assets(market_id) {
+                        let admin = Self::market_account(market_id);
+                        let is_sufficient = true;
+                        let min_balance = 1u8;
+                        T::AssetCreator::create(
+                            outcome.into(),
+                            admin,
+                            is_sufficient,
+                            min_balance.into(),
+                        )?;
+                    }
+                }
+
                 Ok(())
             })?;
 
             Self::unreserve_creation_bond(&market_id)?;
 
+            T::OnStateTransition::on_activation(&market_id).result?;
             Self::deposit_event(Event::MarketApproved(market_id, new_status));
             // The ApproveOrigin should not pay fees for providing this service
             let default_weight: Option<Weight> = None;
@@ -520,7 +541,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
             Self::do_buy_complete_set(sender, market_id, amount)?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            let assets = Self::outcome_assets(market_id, &market);
+            let assets = market.outcome_assets(market_id);
             let assets_len: u32 = assets.len().saturated_into();
             Ok(Some(T::WeightInfo::buy_complete_set(assets_len)).into())
         }
@@ -578,6 +599,7 @@ mod pallet {
                 Ok(())
             })?;
 
+            T::OnStateTransition::on_dispute(&market_id).result?;
             Self::deposit_event(Event::MarketDisputed(market_id, MarketStatus::Disputed, who));
             Ok((Some(weight)).into())
         }
@@ -593,7 +615,7 @@ mod pallet {
         #[transactional]
         pub fn create_market(
             origin: OriginFor<T>,
-            base_asset: AssetOf<T>,
+            base_asset: BaseAsset,
             creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -645,7 +667,7 @@ mod pallet {
         #[transactional]
         pub fn edit_market(
             origin: OriginFor<T>,
-            base_asset: AssetOf<T>,
+            base_asset: BaseAsset,
             market_id: MarketIdOf<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -731,7 +753,7 @@ mod pallet {
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        T::AssetManager::free_balance(market.base_asset, &market_account)
+                        T::AssetManager::free_balance(market.base_asset.into(), &market_account)
                             >= winning_balance,
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
@@ -785,7 +807,7 @@ mod pallet {
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        T::AssetManager::free_balance(market.base_asset, &market_account)
+                        T::AssetManager::free_balance(market.base_asset.into(), &market_account)
                             >= long_payout.saturating_add(short_payout),
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
@@ -811,18 +833,25 @@ mod pallet {
 
                 // Pay out the winner.
                 let remaining_bal =
-                    T::AssetManager::free_balance(market.base_asset, &market_account);
+                    T::AssetManager::free_balance(market.base_asset.into(), &market_account);
                 let actual_payout = payout.min(remaining_bal);
 
                 T::AssetManager::transfer(
-                    market.base_asset,
+                    market.base_asset.into(),
                     &market_account,
                     &sender,
                     actual_payout,
                 )?;
+
                 // The if-check prevents scalar markets to emit events even if sender only owns one
                 // of the outcome tokens.
                 if balance != BalanceOf::<T>::zero() {
+                    if T::AssetManager::total_issuance(currency_id).is_zero() {
+                        // Ensure managed_destroy does not error during lazy migration because
+                        // it tried to delete an old outcome asset from orml-tokens
+                        let _ = T::AssetDestroyer::managed_destroy(currency_id, None);
+                    }
+
                     Self::deposit_event(Event::TokensRedeemed(
                         market_id,
                         currency_id,
@@ -933,7 +962,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
             Self::do_sell_complete_set(sender, market_id, amount)?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
-            let assets = Self::outcome_assets(market_id, &market);
+            let assets = market.outcome_assets(market_id);
             let assets_len: u32 = assets.len().saturated_into();
             Ok(Some(T::WeightInfo::sell_complete_set(assets_len)).into())
         }
@@ -1031,6 +1060,7 @@ mod pallet {
                     m.status = MarketStatus::Disputed;
                     Ok(())
                 })?;
+                T::OnStateTransition::on_dispute(&market_id).result?;
             }
 
             // global disputes uses DisputeResolution API to control its resolution
@@ -1058,7 +1088,7 @@ mod pallet {
         #[pallet::call_index(17)]
         pub fn create_market_and_deploy_pool(
             origin: OriginFor<T>,
-            base_asset: AssetOf<T>,
+            base_asset: BaseAsset,
             creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -1515,17 +1545,24 @@ mod pallet {
         /// The origin that is allowed to approve / reject pending advised markets.
         type ApproveOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<
+        /// The module handling the creation of market assets.
+        type AssetCreator: Create<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
+
+        /// The module handling the destruction of market assets.
+        type AssetDestroyer: ManagedDestroy<Self::AccountId, AssetId = AssetOf<Self>, Balance = BalanceOf<Self>>;
+
+        /// The module managing collateral and market assets.
+        type AssetManager: MultiCurrency<Self::AccountId, Balance = BalanceOf<Self>, CurrencyId = AssetOf<Self>>
+            + NamedMultiReservableCurrency<
                 Self::AccountId,
                 Balance = BalanceOf<Self>,
-                CurrencyId = Asset<MarketIdOf<Self>>,
+                CurrencyId = AssetOf<Self>,
                 ReserveIdentifier = [u8; 8],
             >;
 
         #[cfg(feature = "parachain")]
-        type AssetRegistry: Inspect<
-                AssetId = Asset<MarketIdOf<Self>>,
+        type AssetRegistry: RegistryInspect<
+                AssetId = XcmAsset,
                 Balance = BalanceOf<Self>,
                 CustomMetadata = CustomMetadata,
             >;
@@ -1688,6 +1725,9 @@ mod pallet {
 
         /// The origin that is allowed to reject pending advised markets.
         type RejectOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
+        /// Additional handler during state transitions.
+        type OnStateTransition: MarketTransitionApi<MarketIdOf<Self>>;
 
         /// The base amount of currency that must be bonded to ensure the oracle reports
         ///  in a timely manner.
@@ -1907,7 +1947,6 @@ mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
         fn on_initialize(now: T::BlockNumber) -> Weight {
             let mut total_weight: Weight = Weight::zero();
 
@@ -2080,7 +2119,7 @@ mod pallet {
         #[require_transactional]
         fn do_create_market(
             who: T::AccountId,
-            base_asset: AssetOf<T>,
+            base_asset: BaseAsset,
             creator_fee: Perbill,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -2130,30 +2169,31 @@ mod pallet {
 
             let market_id = <zrml_market_commons::Pallet<T>>::push_market(market.clone())?;
             let market_account = Self::market_account(market_id);
+            match market.status {
+                MarketStatus::Active => {
+                    if market.is_redeemable() {
+                        for outcome in market.outcome_assets(market_id) {
+                            let admin = market_account.clone();
+                            let is_sufficient = true;
+                            let min_balance = 1u8;
+                            T::AssetCreator::create(
+                                outcome.into(),
+                                admin,
+                                is_sufficient,
+                                min_balance.into(),
+                            )?;
+                        }
+                    }
+
+                    T::OnStateTransition::on_activation(&market_id).result?
+                }
+                MarketStatus::Proposed => T::OnStateTransition::on_proposal(&market_id).result?,
+                _ => (),
+            }
 
             let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
-
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
-
             Ok((ids_amount, market_id))
-        }
-
-        pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
-            match market.market_type {
-                MarketType::Categorical(categories) => {
-                    let mut assets = Vec::new();
-                    for i in 0..categories {
-                        assets.push(Asset::CategoricalOutcome(market_id, i));
-                    }
-                    assets
-                }
-                MarketType::Scalar(_) => {
-                    vec![
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
-                    ]
-                }
-            }
         }
 
         fn insert_auto_close(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
@@ -2270,25 +2310,25 @@ mod pallet {
 
             let market_account = Self::market_account(market_id);
             ensure!(
-                T::AssetManager::free_balance(market.base_asset, &market_account) >= amount,
+                T::AssetManager::free_balance(market.base_asset.into(), &market_account) >= amount,
                 "Market account does not have sufficient reserves.",
             );
 
-            let assets = Self::outcome_assets(market_id, &market);
+            let assets = market.outcome_assets(market_id);
 
             // verify first.
             for asset in assets.iter() {
                 // Ensures that the sender has sufficient amount of each
                 // share in the set.
                 ensure!(
-                    T::AssetManager::free_balance(*asset, &who) >= amount,
+                    T::AssetManager::free_balance((*asset).into(), &who) >= amount,
                     Error::<T>::InsufficientShareBalance,
                 );
             }
 
             // write last.
             for asset in assets.iter() {
-                let missing = T::AssetManager::slash(*asset, &who, amount);
+                let missing = T::AssetManager::slash((*asset).into(), &who, amount);
                 debug_assert!(
                     missing.is_zero(),
                     "Could not slash all of the amount. asset {:?}, who: {:?}, amount: {:?}.",
@@ -2298,7 +2338,7 @@ mod pallet {
                 );
             }
 
-            T::AssetManager::transfer(market.base_asset, &market_account, &who, amount)?;
+            T::AssetManager::transfer(market.base_asset.into(), &market_account, &who, amount)?;
 
             Self::deposit_event(Event::SoldCompleteSet(market_id, amount, who));
 
@@ -2314,18 +2354,18 @@ mod pallet {
             ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             ensure!(
-                T::AssetManager::free_balance(market.base_asset, &who) >= amount,
+                T::AssetManager::free_balance(market.base_asset.into(), &who) >= amount,
                 Error::<T>::NotEnoughBalance
             );
             ensure!(market.is_redeemable(), Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
 
             let market_account = Self::market_account(market_id);
-            T::AssetManager::transfer(market.base_asset, &who, &market_account, amount)?;
+            T::AssetManager::transfer(market.base_asset.into(), &who, &market_account, amount)?;
 
-            let assets = Self::outcome_assets(market_id, &market);
+            let assets = market.outcome_assets(market_id);
             for asset in assets.iter() {
-                T::AssetManager::deposit(*asset, &who, amount)?;
+                T::AssetManager::deposit((*asset).into(), &who, amount)?;
             }
 
             Self::deposit_event(Event::BoughtCompleteSet(market_id, amount, who));
@@ -2510,9 +2550,12 @@ mod pallet {
                 market.status = MarketStatus::Closed;
                 Ok(())
             })?;
-            let mut total_weight = T::DbWeight::get().reads_writes(1, 1);
+
+            let mut total_weight = T::DbWeight::get().reads_writes(1, 2);
+            let on_state_transition_result = T::OnStateTransition::on_closure(market_id);
+            on_state_transition_result.result?;
+            total_weight = total_weight.saturating_add(on_state_transition_result.weight);
             Self::deposit_event(Event::MarketClosed(*market_id));
-            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             Ok(total_weight)
         }
 
@@ -2757,20 +2800,44 @@ mod pallet {
             // Following call should return weight consumed by it.
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
-            // NOTE: Currently we don't clean up outcome assets.
-            // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
+            let mut updated_market = market.clone();
+
             <zrml_market_commons::Pallet<T>>::mutate_market(market_id, |m| {
                 m.status = MarketStatus::Resolved;
                 m.resolved_outcome = Some(resolved_outcome.clone());
+                updated_market = m.clone();
                 Ok(())
             })?;
+
+            let winning_outcome = updated_market.resolved_outcome_into_asset(*market_id);
+            if market.is_redeemable() {
+                if let Some(winning_outcome_inner) = winning_outcome {
+                    // Destroy losing assets.
+                    let assets_to_destroy = BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
+                        market
+                            .outcome_assets(*market_id)
+                            .into_iter()
+                            .filter(|outcome| *outcome != winning_outcome_inner)
+                            .map(|asset| (AssetOf::<T>::from(asset), None)),
+                    );
+                    // Ensure managed_destroy_multi does not error during lazy migration because
+                    // it tried to delete an old outcome asset from orml-tokens
+                    let _ = T::AssetDestroyer::managed_destroy_multi(assets_to_destroy);
+                }
+            }
+
+            let on_state_transition_result = T::OnStateTransition::on_resolution(market_id);
+            on_state_transition_result.result?;
+            total_weight = total_weight.saturating_add(on_state_transition_result.weight);
+            total_weight =
+                total_weight.saturating_add(Self::calculate_internal_resolve_weight(market));
 
             Self::deposit_event(Event::MarketResolved(
                 *market_id,
                 MarketStatus::Resolved,
                 resolved_outcome,
             ));
-            Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(market)))
+            Ok(total_weight)
         }
 
         /// The reserve ID of the prediction-markets pallet.
@@ -2873,7 +2940,7 @@ mod pallet {
         }
 
         fn construct_market(
-            base_asset: AssetOf<T>,
+            base_asset: BaseAsset,
             creator: T::AccountId,
             creator_fee: Perbill,
             oracle: T::AccountId,
@@ -2889,16 +2956,21 @@ mod pallet {
             bonds: MarketBondsOf<T>,
         ) -> Result<MarketOf<T>, DispatchError> {
             let valid_base_asset = match base_asset {
-                Asset::Ztg => true,
+                BaseAsset::CampaignAsset(idx) => {
+                    T::AssetCreator::asset_exists(BaseAsset::CampaignAsset(idx).into())
+                }
+                BaseAsset::Ztg => true,
                 #[cfg(feature = "parachain")]
-                Asset::ForeignAsset(fa) => {
-                    if let Some(metadata) = T::AssetRegistry::metadata(&Asset::ForeignAsset(fa)) {
+                BaseAsset::ForeignAsset(id) => {
+                    if let Some(metadata) = T::AssetRegistry::metadata(&XcmAsset::ForeignAsset(id))
+                    {
                         metadata.additional.allow_as_base_asset
                     } else {
                         return Err(Error::<T>::UnregisteredForeignAsset.into());
                     }
                 }
-                _ => false,
+                #[cfg(not(feature = "parachain"))]
+                BaseAsset::ForeignAsset(_) => false,
             };
 
             ensure!(creator_fee <= T::MaxCreatorFee::get(), Error::<T>::FeeTooHigh);
@@ -3002,6 +3074,7 @@ mod pallet {
                 Ok(())
             })?;
 
+            T::OnStateTransition::on_report(&market_id).result?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             let block_after_dispute_duration =
                 report.at.saturating_add(market.deadlines.dispute_duration);
@@ -3030,6 +3103,7 @@ mod pallet {
                 market.status = MarketStatus::Reported;
                 Ok(())
             })?;
+            T::OnStateTransition::on_report(&market_id).result?;
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id)?;
             Self::on_resolution(&market_id, &market)?;
             Ok(Some(T::WeightInfo::report_trusted_market()).into())

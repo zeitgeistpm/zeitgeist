@@ -37,7 +37,7 @@ fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
@@ -64,7 +64,7 @@ fn create_market_fails_on_min_dispute_period() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
@@ -91,7 +91,7 @@ fn create_market_fails_on_min_oracle_duration() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
@@ -118,7 +118,7 @@ fn create_market_fails_on_max_dispute_period() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
@@ -145,7 +145,7 @@ fn create_market_fails_on_max_grace_period() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
@@ -172,7 +172,7 @@ fn create_market_fails_on_max_oracle_duration() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
@@ -204,7 +204,7 @@ fn create_market_with_foreign_assets() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::ForeignAsset(420),
+                BaseAsset::ForeignAsset(420),
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
@@ -221,7 +221,7 @@ fn create_market_with_foreign_assets() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::ForeignAsset(50),
+                BaseAsset::ForeignAsset(50),
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(123..456),
@@ -237,7 +237,7 @@ fn create_market_with_foreign_assets() {
         // As per Mock asset_registry genesis ForeignAsset(100) has allow_as_base_asset set to true.
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::ForeignAsset(100),
+            BaseAsset::ForeignAsset(100),
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(123..456),
@@ -249,7 +249,7 @@ fn create_market_with_foreign_assets() {
             ScoringRule::Lmsr,
         ));
         let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.base_asset, Asset::ForeignAsset(100));
+        assert_eq!(market.base_asset, BaseAsset::ForeignAsset(100));
     });
 }
 
@@ -259,7 +259,7 @@ fn it_does_not_create_market_with_too_few_categories() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(0..100),
@@ -281,7 +281,7 @@ fn it_does_not_create_market_with_too_many_categories() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(0..100),
@@ -310,7 +310,7 @@ fn create_categorical_market_fails_if_market_period_is_invalid(
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 period,
@@ -334,7 +334,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(0..end_block),
@@ -352,7 +352,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Timestamp(0..end_time),
@@ -381,7 +381,7 @@ fn create_market_succeeds_if_market_duration_is_maximal_in_blocks() {
         );
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(start..end),
@@ -409,7 +409,7 @@ fn create_market_suceeds_if_market_duration_is_maximal_in_moments() {
         );
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(start..end),
@@ -437,7 +437,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_blocks() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(start..end),
@@ -468,7 +468,7 @@ fn create_market_fails_if_market_duration_is_too_long_in_moments() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Timestamp(start..end),
@@ -532,7 +532,7 @@ fn create_market_sets_the_correct_market_parameters_and_reserves_the_correct_amo
         let creator_fee = Perbill::from_parts(1);
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(creator),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             creator_fee,
             oracle,
             period.clone(),
@@ -567,7 +567,7 @@ fn create_market_fails_on_trusted_market_with_non_zero_dispute_period() {
         assert_noop!(
             PredictionMarkets::create_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 Perbill::zero(),
                 BOB,
                 MarketPeriod::Block(1..2),
@@ -591,7 +591,7 @@ fn create_market_fails_on_trusted_market_with_non_zero_dispute_period() {
 fn create_categorical_market_deposits_the_correct_event() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             1..2,
             ScoringRule::Lmsr,
@@ -607,7 +607,7 @@ fn create_categorical_market_deposits_the_correct_event() {
 fn create_scalar_market_deposits_the_correct_event() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_scalar_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             1..2,
             ScoringRule::Lmsr,
@@ -616,5 +616,33 @@ fn create_scalar_market_deposits_the_correct_event() {
         let market = MarketCommons::market(&market_id).unwrap();
         let market_account = PredictionMarkets::market_account(market_id);
         System::assert_last_event(Event::MarketCreated(0, market_account, market).into());
+    });
+}
+
+#[test]
+fn does_trigger_market_transition_api() {
+    ExtBuilder::default().build().execute_with(|| {
+        StateTransitionMock::ensure_empty_state();
+        simple_create_categorical_market(
+            BaseAsset::Ztg,
+            MarketCreation::Advised,
+            1..2,
+            ScoringRule::Lmsr,
+        );
+        assert!(StateTransitionMock::on_proposal_triggered());
+    });
+}
+
+#[test]
+fn does_trigger_market_transition_api_permissionless() {
+    ExtBuilder::default().build().execute_with(|| {
+        StateTransitionMock::ensure_empty_state();
+        simple_create_categorical_market(
+            BaseAsset::Ztg,
+            MarketCreation::Permissionless,
+            1..2,
+            ScoringRule::Lmsr,
+        );
+        assert!(StateTransitionMock::on_activation_triggered());
     });
 }

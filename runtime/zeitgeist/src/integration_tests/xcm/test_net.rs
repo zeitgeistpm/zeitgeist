@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Centrifuge GmbH (centrifuge.io).
 //
 // This file is part of Zeitgeist.
@@ -17,8 +17,8 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    parameters::ZeitgeistTreasuryAccount, xcm_config::config::zeitgeist, CurrencyId, DmpQueue,
-    Runtime, RuntimeOrigin, XcmpQueue,
+    parameters::ZeitgeistTreasuryAccount, xcm_config::config::zeitgeist, Assets, DmpQueue, Runtime,
+    RuntimeOrigin, XcmpQueue,
 };
 use frame_support::{traits::GenesisBuild, weights::Weight};
 use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
@@ -99,9 +99,9 @@ pub(super) fn relay_ext() -> sp_io::TestExternalities {
 pub(super) fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
     ExtBuilder::default()
         .set_balances(vec![
-            (ALICE, CurrencyId::Ztg, ztg(10)),
-            (ALICE, FOREIGN_PARENT_ID, dot(10)),
-            (ZeitgeistTreasuryAccount::get(), FOREIGN_PARENT_ID, dot(10)),
+            (ALICE, Assets::Ztg, ztg(10)),
+            (ALICE, FOREIGN_PARENT_ID.into(), dot(10)),
+            (ZeitgeistTreasuryAccount::get(), FOREIGN_PARENT_ID.into(), dot(10)),
         ])
         .set_parachain_id(parachain_id)
         .build()

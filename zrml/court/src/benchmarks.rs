@@ -41,7 +41,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     traits::{DisputeApi, DisputeResolutionApi},
     types::{
-        Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+        BaseAsset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
         MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
     },
 };
@@ -54,7 +54,7 @@ where
     T: Config,
 {
     Market {
-        base_asset: Asset::Ztg,
+        base_asset: BaseAsset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),
         creator: account("creator", 0, 0),

@@ -18,6 +18,8 @@ decentralized court.
 
 ## Modules
 
+- [asset-router](./zrml/asset-router) - Routes all asset classes to the
+  respective pallets and provides a garbage collection for destructible assets.
 - [authorized](./zrml/authorized) - Offers authorized resolution of disputes.
 - [court](./zrml/court) - An implementation of a court mechanism used to resolve
   disputes in a decentralized fashion.

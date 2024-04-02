@@ -67,6 +67,8 @@ pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:66 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:1 w:1)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:131 w:131)
@@ -90,6 +92,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:2 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:3 w:3)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -107,6 +111,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:2 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:1 w:1)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:3 w:3)
@@ -124,6 +130,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:66 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:1 w:1)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:131 w:131)
@@ -145,6 +153,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:2 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:1 w:1)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:3 w:3)
@@ -160,6 +170,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:2 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:1 w:1)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:3 w:3)
@@ -175,6 +187,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:2 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:4 w:4)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
@@ -190,6 +204,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     /// Storage: Swaps Pools (r:1 w:0)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:2 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:4 w:4)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
@@ -208,7 +224,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// The range of component `a` is `[2, 65]`.
     fn open_pool(a: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `168 + a * (54 ±0)`
+        //  Measured:  `167 + a * (54 ±0)`
         //  Estimated: `6054`
         // Minimum execution time: 18_030 nanoseconds.
         Weight::from_parts(19_889_995, 6054)
@@ -222,7 +238,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// The range of component `a` is `[2, 65]`.
     fn close_pool(a: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `168 + a * (54 ±0)`
+        //  Measured:  `167 + a * (54 ±0)`
         //  Estimated: `6054`
         // Minimum execution time: 17_140 nanoseconds.
         Weight::from_parts(19_467_788, 6054)
@@ -233,6 +249,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     /// Storage: Swaps Pools (r:1 w:1)
     /// Proof: Swaps Pools (max_values: None, max_size: Some(3579), added: 6054, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:65 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:65 w:65)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)

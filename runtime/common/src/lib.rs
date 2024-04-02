@@ -90,6 +90,11 @@ macro_rules! decl_common_types {
         pub type UncheckedExtrinsic =
             generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 
+        // Asset instances
+        type CustomAssetsInstance = pallet_assets::Instance1;
+        type CampaignAssetsInstance = pallet_assets::Instance2;
+        type MarketAssetsInstance = pallet_assets::Instance3;
+
         // Governance
         type AdvisoryCommitteeInstance = pallet_collective::Instance1;
         type AdvisoryCommitteeMembershipInstance = pallet_membership::Instance1;
@@ -281,6 +286,9 @@ macro_rules! create_runtime {
                 Multisig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
                 AssetTxPayment: pallet_asset_tx_payment::{Event<T>, Pallet} = 16,
+                CustomAssets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>} = 17,
+                CampaignAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>} = 18,
+                MarketAssets: pallet_assets::<Instance3>::{Call, Pallet, Storage, Event<T>} = 19,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
@@ -315,6 +323,7 @@ macro_rules! create_runtime {
                 NeoSwaps: zrml_neo_swaps::{Call, Event<T>, Pallet, Storage} = 60,
                 Orderbook: zrml_orderbook::{Call, Event<T>, Pallet, Storage} = 61,
                 Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
+                AssetRouter: zrml_asset_router::{Pallet} = 63,
 
                 $($additional_pallets)*
             }
@@ -558,7 +567,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl orml_asset_registry::Config for Runtime {
-            type AssetId = CurrencyId;
+            type AssetId = XcmAsset;
             type AssetProcessor = CustomAssetProcessor;
             type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrTwoThirdsCouncil>;
             type Balance = Balance;
@@ -569,14 +578,14 @@ macro_rules! impl_config_traits {
 
         impl orml_currencies::Config for Runtime {
             type GetNativeCurrencyId = GetNativeCurrencyId;
-            type MultiCurrency = Tokens;
+            type MultiCurrency = AssetRouter;
             type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
             type WeightInfo = weights::orml_currencies::WeightInfo<Runtime>;
         }
 
         pub struct CurrencyHooks<R>(sp_std::marker::PhantomData<R>);
         impl<C: orml_tokens::Config>
-            orml_traits::currency::MutationHooks<AccountId, CurrencyId, Balance>
+            orml_traits::currency::MutationHooks<AccountId, Currencies, Balance>
             for CurrencyHooks<C>
         {
             type OnDust = orml_tokens::TransferDust<Runtime, ZeitgeistTreasuryAccount>;
@@ -593,7 +602,7 @@ macro_rules! impl_config_traits {
             type Amount = Amount;
             type Balance = Balance;
             type CurrencyHooks = CurrencyHooks<Runtime>;
-            type CurrencyId = CurrencyId;
+            type CurrencyId = Currencies;
             type DustRemovalWhitelist = DustRemovalWhitelist;
             type RuntimeEvent = RuntimeEvent;
             type ExistentialDeposits = ExistentialDeposits;
@@ -613,7 +622,7 @@ macro_rules! impl_config_traits {
             type AccountIdToMultiLocation = AccountIdToMultiLocation;
             type Balance = Balance;
             type BaseXcmWeight = BaseXcmWeight;
-            type CurrencyId = CurrencyId;
+            type CurrencyId = XcmAsset;
             type CurrencyIdConvert = AssetConvert;
             type RuntimeEvent = RuntimeEvent;
             type MaxAssetsForTransfer = MaxAssetsForTransfer;
@@ -624,6 +633,109 @@ macro_rules! impl_config_traits {
             type UniversalLocation = UniversalLocation;
             type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
+        }
+
+        // Required for runtime benchmarks
+        pallet_assets::runtime_benchmarks_enabled! {
+            pub struct AssetsBenchmarkHelper;
+
+            impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter>
+                for AssetsBenchmarkHelper
+            where
+                AssetIdParameter: From<u128>,
+            {
+                fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
+                    (id as u128).into()
+                }
+            }
+        }
+
+        impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
+            type ApprovalDeposit = CustomAssetsApprovalDeposit;
+            type AssetAccountDeposit = CustomAssetsAccountDeposit;
+            type AssetDeposit = CustomAssetsDeposit;
+            type AssetId = CustomAsset;
+            type AssetIdParameter = Compact<CustomAssetId>;
+            type Balance = Balance;
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = AssetsBenchmarkHelper;
+            type CallbackHandle = ();
+            type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+            type Currency = Balances;
+            type Destroyer = AssetRouter;
+            type Extra = ();
+            type ForceOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+            type Freezer = ();
+            type MetadataDepositBase = CustomAssetsMetadataDepositBase;
+            type MetadataDepositPerByte = CustomAssetsMetadataDepositPerByte;
+            // TODO(#1176): Figure out sensible number after benchmark on reference machine
+            type RemoveItemsLimit = ConstU32<{ 50 }>;
+            type RuntimeEvent = RuntimeEvent;
+            type StringLimit = CustomAssetsStringLimit;
+            type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
+        }
+
+        impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
+            type ApprovalDeposit = CampaignAssetsApprovalDeposit;
+            type AssetAccountDeposit = CampaignAssetsAccountDeposit;
+            type AssetDeposit = CampaignAssetsDeposit;
+            type AssetId = CampaignAsset;
+            type AssetIdParameter = Compact<CampaignAssetId>;
+            type Balance = Balance;
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = AssetsBenchmarkHelper;
+            type CallbackHandle = ();
+            type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
+            type Currency = Balances;
+            type Destroyer = AssetRouter;
+            type Extra = ();
+            type ForceOrigin = EnsureRootOrTwoThirdsCouncil;
+            type Freezer = ();
+            type MetadataDepositBase = CampaignAssetsMetadataDepositBase;
+            type MetadataDepositPerByte = CampaignAssetsMetadataDepositPerByte;
+            // TODO(#1176): Figure out sensible number after benchmark on reference machine
+            type RemoveItemsLimit = ConstU32<{ 50 }>;
+            type RuntimeEvent = RuntimeEvent;
+            type StringLimit = CampaignAssetsStringLimit;
+            type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
+        }
+
+        // Required for runtime benchmarks
+        pallet_assets::runtime_benchmarks_enabled! {
+            pub struct MarketAssetsBenchmarkHelper;
+
+            impl pallet_assets::BenchmarkHelper<MarketAsset>
+                for MarketAssetsBenchmarkHelper
+            {
+                fn create_asset_id_parameter(id: u32) -> MarketAsset {
+                    MarketAsset::CategoricalOutcome(0, id as CategoryIndex)
+                }
+            }
+        }
+
+        impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
+            type ApprovalDeposit = MarketAssetsApprovalDeposit;
+            type AssetAccountDeposit = MarketAssetsAccountDeposit;
+            type AssetDeposit = MarketAssetsDeposit;
+            type AssetId = MarketAsset;
+            type AssetIdParameter = MarketAsset;
+            type Balance = Balance;
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = MarketAssetsBenchmarkHelper;
+            type CallbackHandle = ();
+            type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
+            type Currency = Balances;
+            type Destroyer = AssetRouter;
+            type Extra = ();
+            type ForceOrigin = EnsureRootOrAllTechnicalCommittee;
+            type Freezer = ();
+            type MetadataDepositBase = MarketAssetsMetadataDepositBase;
+            type MetadataDepositPerByte = MarketAssetsMetadataDepositPerByte;
+            // TODO(#1176): Figure out sensible number after benchmark on reference machine
+            type RemoveItemsLimit = ConstU32<{ 50 }>;
+            type RuntimeEvent = RuntimeEvent;
+            type StringLimit = MarketAssetsStringLimit;
+            type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
         }
 
         impl pallet_balances::Config for Runtime {
@@ -983,8 +1095,8 @@ macro_rules! impl_config_traits {
 
         impl pallet_asset_tx_payment::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
-            type Fungibles = Tokens;
-            type OnChargeAssetTransaction = TokensTxCharger;
+            type Fungibles = AssetRouter;
+            type OnChargeAssetTransaction = TxCharger;
         }
 
         impl pallet_transaction_payment::Config for Runtime {
@@ -1054,6 +1166,22 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl parachain_info::Config for Runtime {}
+
+        impl zrml_asset_router::Config for Runtime {
+            type AssetType = Assets;
+            type Balance = Balance;
+            type CurrencyType = Currencies;
+            type Currencies = Tokens;
+            type CampaignAssetType = CampaignAsset;
+            type CampaignAssets = CampaignAssets;
+            type CustomAssetType = CustomAsset;
+            type CustomAssets = CustomAssets;
+            type DestroyAccountWeight = DestroyAccountWeight;
+            type DestroyApprovalWeight = DestroyApprovalWeight;
+            type DestroyFinishWeight = DestroyFinishWeight;
+            type MarketAssetType = MarketAsset;
+            type MarketAssets = MarketAssets;
+        }
 
         impl zrml_authorized::Config for Runtime {
             type AuthorizedDisputeResolutionOrigin = EnsureRootOrMoreThanHalfAdvisoryCommittee;
@@ -1132,7 +1260,12 @@ macro_rules! impl_config_traits {
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
             type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
+            type AssetCreator = AssetRouter;
+            type AssetDestroyer = AssetRouter;
             type ApproveOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
+            type AssetManager = AssetManager;
+            #[cfg(feature = "parachain")]
+            type AssetRegistry = AssetRegistry;
             type Authorized = Authorized;
             type Currency = Balances;
             type Court = Court;
@@ -1163,6 +1296,8 @@ macro_rules! impl_config_traits {
             type MinCategories = MinCategories;
             type MaxEditReasonLen = MaxEditReasonLen;
             type MaxRejectReasonLen = MaxRejectReasonLen;
+            // Can be a tuple of hooks
+            type OnStateTransition = (Parimutuel,);
             type OracleBond = OracleBond;
             type OutsiderBond = OutsiderBond;
             type PalletId = PmPalletId;
@@ -1171,9 +1306,6 @@ macro_rules! impl_config_traits {
             type RejectOrigin = EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee;
             type RequestEditOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type ResolveOrigin = EnsureRoot<AccountId>;
-            type AssetManager = AssetManager;
-            #[cfg(feature = "parachain")]
-            type AssetRegistry = AssetRegistry;
             type SimpleDisputes = SimpleDisputes;
             type Slash = Treasury;
             type ValidityBond = ValidityBond;
@@ -1225,7 +1357,7 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_swaps::Config for Runtime {
-            type Asset = Asset<MarketId>;
+            type Asset = Assets;
             type RuntimeEvent = RuntimeEvent;
             type ExitFee = ExitFee;
             type MinAssets = MinAssets;
@@ -1270,12 +1402,14 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_parimutuel::Config for Runtime {
-            type ExternalFees = MarketCreatorFee;
-            type RuntimeEvent = RuntimeEvent;
-            type MarketCommons = MarketCommons;
+            type AssetCreator = AssetRouter;
+            type AssetDestroyer = AssetRouter;
             type AssetManager = AssetManager;
+            type ExternalFees = MarketCreatorFee;
+            type MarketCommons = MarketCommons;
             type MinBetSize = MinBetSize;
             type PalletId = ParimutuelPalletId;
+            type RuntimeEvent = RuntimeEvent;
             type WeightInfo = zrml_parimutuel::weights::WeightInfo<Runtime>;
         }
     };
@@ -1366,6 +1500,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
                     orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
                     orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
+                    list_benchmark!(list, extra, pallet_assets, CustomAssets);
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_bounties, Bounties);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
@@ -1470,6 +1605,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
                     orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
                     orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
+                    add_benchmark!(params, batches, pallet_assets, CustomAssets);
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_bounties, Bounties);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
@@ -1778,16 +1914,16 @@ macro_rules! create_runtime_api {
                     asset_in: &Asset<MarketId>,
                     asset_out: &Asset<MarketId>,
                     with_fees: bool,
-                ) -> SerdeWrapper<Balance> {
-                    SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0))
+                ) -> Balance {
+                    Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0)
                 }
 
                 fn pool_account_id(pool_id: &PoolId) -> AccountId {
                     Swaps::pool_account_id(pool_id)
                 }
 
-                fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
-                    Asset::PoolShare(SerdeWrapper(pool_id))
+                fn pool_shares_id(pool_id: PoolId) -> Asset<MarketId> {
+                    Asset::PoolShare(pool_id)
                 }
             }
 
@@ -1857,7 +1993,7 @@ macro_rules! create_common_benchmark_logic {
             pub(crate) mod currencies {
                 use super::utils::{lookup_of_account, set_balance};
                 use crate::{
-                    AccountId, Amount, AssetManager, Balance, CurrencyId, ExistentialDeposit,
+                    AccountId, Amount, AssetManager, Balance, Assets, ExistentialDeposit,
                     GetNativeCurrencyId, Runtime
                 };
                 use frame_benchmarking::{account, vec, whitelisted_caller};
@@ -1871,8 +2007,8 @@ macro_rules! create_common_benchmark_logic {
                 };
 
                 const SEED: u32 = 0;
-                const NATIVE: CurrencyId = GetNativeCurrencyId::get();
-                const ASSET: CurrencyId = Asset::CategoricalOutcome(0, 0);
+                const NATIVE: Assets = GetNativeCurrencyId::get();
+                const ASSET: Assets = Asset::CategoricalOutcome(0, 0);
 
                 runtime_benchmarks! {
                     { Runtime, orml_currencies }
@@ -1972,15 +2108,15 @@ macro_rules! create_common_benchmark_logic {
 
             pub(crate) mod tokens {
                 use super::utils::{lookup_of_account, set_balance as update_balance};
-                use crate::{AccountId, Balance, CurrencyId, Tokens, Runtime};
+                use crate::{AccountId, Balance, Tokens, Runtime};
                 use frame_benchmarking::{account, vec, whitelisted_caller};
                 use frame_system::RawOrigin;
                 use orml_benchmarking::runtime_benchmarks;
                 use orml_traits::MultiCurrency;
-                use zeitgeist_primitives::{constants::BASE, types::Asset};
+                use zeitgeist_primitives::{constants::BASE, types::Currencies};
 
                 const SEED: u32 = 0;
-                const ASSET: CurrencyId = Asset::CategoricalOutcome(0, 0);
+                const ASSET: Currencies = Currencies::ForeignAsset(7);
 
                 runtime_benchmarks! {
                     { Runtime, orml_tokens }
@@ -1989,7 +2125,7 @@ macro_rules! create_common_benchmark_logic {
                         let amount: Balance = BASE;
 
                         let from: AccountId = whitelisted_caller();
-                        update_balance(ASSET, &from, amount);
+                        update_balance(ASSET.into(), &from, amount);
 
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to.clone());
@@ -2002,7 +2138,7 @@ macro_rules! create_common_benchmark_logic {
                         let amount: Balance = BASE;
 
                         let from: AccountId = whitelisted_caller();
-                        update_balance(ASSET, &from, amount);
+                        update_balance(ASSET.into(), &from, amount);
 
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to);
@@ -2013,7 +2149,7 @@ macro_rules! create_common_benchmark_logic {
 
                     transfer_keep_alive {
                         let from: AccountId = whitelisted_caller();
-                        update_balance(ASSET, &from, 2 * BASE);
+                        update_balance(ASSET.into(), &from, 2 * BASE);
 
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to.clone());
@@ -2025,7 +2161,7 @@ macro_rules! create_common_benchmark_logic {
                     force_transfer {
                         let from: AccountId = account("from", 0, SEED);
                         let from_lookup = lookup_of_account(from.clone());
-                        update_balance(ASSET, &from, 2 * BASE);
+                        update_balance(ASSET.into(), &from, 2 * BASE);
 
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to.clone());
@@ -2055,7 +2191,7 @@ macro_rules! create_common_benchmark_logic {
             }
 
             pub(crate) mod utils {
-                use crate::{AccountId, AssetManager, Balance, CurrencyId, Runtime,
+                use crate::{AccountId, AssetManager, Balance, Assets, Runtime,
                 };
                 use frame_support::assert_ok;
                 use orml_traits::MultiCurrencyExtended;
@@ -2067,7 +2203,7 @@ macro_rules! create_common_benchmark_logic {
                     <Runtime as frame_system::Config>::Lookup::unlookup(who)
                 }
 
-                pub fn set_balance(currency_id: CurrencyId, who: &AccountId, balance: Balance) {
+                pub fn set_balance(currency_id: Assets, who: &AccountId, balance: Balance) {
                     assert_ok!(<AssetManager as MultiCurrencyExtended<_>>::update_balance(
                         currency_id,
                         who,

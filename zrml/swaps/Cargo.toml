@@ -2,6 +2,7 @@
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+orml-tokens = { workspace = true }
 orml-traits = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
@@ -14,7 +15,6 @@ zeitgeist-primitives = { workspace = true }
 
 env_logger = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
-orml-tokens = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
 sp-api = { workspace = true, optional = true }
@@ -32,7 +32,6 @@ zrml-swaps = { workspace = true, features = ["mock"] }
 default = ["std"]
 mock = [
     "orml-currencies/default",
-    "orml-tokens/default",
     "pallet-balances/default",
     "pallet-timestamp/default",
     "sp-api/default",
@@ -52,6 +51,7 @@ std = [
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
+    "orml-tokens/default",
     "orml-traits/std",
     "parity-scale-codec/std",
     "sp-runtime/std",

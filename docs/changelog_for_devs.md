@@ -12,27 +12,114 @@ As of 0.3.9, the changelog's format is based on
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
+## v0.5.1
+
+[#1197]: https://github.com/zeitgeistpm/zeitgeist/pull/1197
+[pallet-asset]:
+  https://github.com/paritytech/polkadot-sdk/tree/master/substrate/frame/assets
+
+### Added
+
+- [#1197] New asset classes:
+  - `CampaignAssetClass` - Can be registered by gov and council and be used in
+    markets and to pay transaction fees.
+  - `CustomAssetClass` - Allows any user to register their custom assets (can't
+    be used in markets yet).
+  - `MarketAssetClass` - Contains all asset types used in markets.
+  - `CurrencyClass` - Contains all non-ztg currencies, currently only
+    `ForeignAsset`. Temporarily also contains outcome asset types as they are
+    being lazily migrated to `MarketAssetClass`
+  - Subclasses (they are composites of multiple types from potentially various
+    asset classes):
+    - `BaseAssetClass` - Contains all assets that can be used as base asset /
+      collateral in prediction markets.
+    - `XcmAssetClass` - Contains all assets that can be transferred via XCM
+      (used in XCM related pallets like XTokens).
+    - `ParimutuelAssetClass` - Contains all assets that can be used in
+      parimutuel markets.
+  - All asset classes can be converted into the overarching asset class `Assets`
+    (that contains all asset types) by using `Into` or simply decoding their
+    scale codec representation into the `Assets` type.
+  - `Assets` provides `TryInto` into all other asset classes, which fails if the
+    asset type is not existent in the asset class.
+- [#1197] Added [pallet-asset], which is a Substrate pallet that provides fine
+  grained control over asset creation, destruction, management (mint, burn,
+  freeze, admin account) and much more. It is used for `CampaignAssetClass`,
+  `CustomAssetClass` and `MarketAssetClass`.
+- [#1197] Added zrml-asset-router (AssetRouter). This pallet is an abstraction
+  layer over multiple pallets (like orml-tokens and pallet-assets) that handles
+  routing calls, managing asset destruction and the lazy migrating market assets
+  from `CurrencyClass` to `MarketAssetClass`. It does not have any dispatchable
+  calls or events, but custom errors that might be relayed to the dispatchable
+  calls of the pallets that it uses within it's routing mechanism.
+  `orml-currencies` (AssetManager) is ought to be used when interacting with the
+  chain via transactions and can be used when developing pallets. In the latter
+  case, some functionalities can only be used when directly interacting with
+  zrml-asset-router.
+- [#1197] Campaign assets have to be created and destroyed by gov or the
+  council. Custom assets have to be created and destroyed via transactions.
+  Market assets are automatically created and destroyed. In all non automatic
+  cases, destroying is achieved by calling `start_destroy`.
+- [#1197] Transaction fee payment is now possible with campaign assets. The fee
+  is calculated as follows (with `CampaignAssetFeeMultiplier = 100`):
+
+```rust
+if ztg_supply / campaign_asset_supply >= 100 {
+    return native_fee;
+} else {
+  return native_fee * campaign_asset_supply * 100 / ztg_supply;
+}
+```
+
+### Changed
+
+- [#1197] `Assets` does not contain the `CombinatorialOutcome` asset type
+  anymore, but has been extended by all existing asset types.
+- [#1197] The transaction fee asset type has been changed from `u32` to
+  `Assets`.
+- [#1197] The prediction market base asset type has been changed in the `Market`
+  storage and market creation dispatchable calls to `BaseAssetClass`.
+- [#1197] The asset type for XCM has been changed to `XcmAssetClass`. It is used
+  in `orml-xtokens` (XTokens) and `orml-asset-registry` (AssetRegistry).
+
+### Removed
+
+- [#1197] `SerdeWrapper` has been removed.
+
+### Deprecated
+
+- [#1197] Market outcome asset types are no longer handled by `orml-tokens`
+  (Tokens), except for existing markets which still used market asset types
+  within `CurrencyClass`. `pallet-assets` (MarketAssets) now handles market
+  outcome asset types from the `MarketAssetClass`.
+
 ## v0.5.0
 
 [#1197]: https://github.com/zeitgeistpm/zeitgeist/pull/1197
 [#1178]: https://github.com/zeitgeistpm/zeitgeist/pull/1178
 
-### Changes
+### Changed
 
-- ⚠️ Move the `zeitgeist_primitives::Pool` struct to `zrml_swaps::types::Pool` and change the following fields ([#1197]):
-    - Remove `market_id`
-    - Make `swap_fee` non-optional
-    - Remove `total_subsidy`
-    - Make `total_weight` non-optional
-    - Make `weights` non-optional
-- ⚠️ Change the type of `liquidity_shares_manager` in `zrml_neo_swaps::types::Pool` from `zrml_neo_swaps::types::SoloLp` to `zrml_neo_swaps::types::LiquidityTree`. Details on the liquidity tree can be found in the `README.md` of zrml-neo-swaps and the documentation of the `LiquidityTree` object ([#1179]).
+- ⚠️ Move the `zeitgeist_primitives::Pool` struct to `zrml_swaps::types::Pool`
+  and change the following fields ([#1197]):
+  - Remove `market_id`
+  - Make `swap_fee` non-optional
+  - Remove `total_subsidy`
+  - Make `total_weight` non-optional
+  - Make `weights` non-optional
+- ⚠️ Change the type of `liquidity_shares_manager` in
+  `zrml_neo_swaps::types::Pool` from `zrml_neo_swaps::types::SoloLp` to
+  `zrml_neo_swaps::types::LiquidityTree`. Details on the liquidity tree can be
+  found in the `README.md` of zrml-neo-swaps and the documentation of the
+  `LiquidityTree` object ([#1179]).
 
 ### Migrations
 
 - Closed all CPMM pools. Withdrawals are still allowed. Creating new pools will
   be impossible until further updates are deployed. ([#1197])
 - Remove all Rikiddo storage elements. ([#1197])
-- Migrate neo-swaps `Pools` storage. The market creator's liquidity position is translated into a position in the liquidity tree of the same value ([#1178]).
+- Migrate neo-swaps `Pools` storage. The market creator's liquidity position is
+  translated into a position in the liquidity tree of the same value ([#1178]).
 
 ### Removed
 

@@ -22,7 +22,9 @@ mod dispute_api;
 mod distribute_fees;
 mod market_commons_pallet_api;
 mod market_id;
+mod market_transition_api;
 mod swaps;
+mod weights;
 mod zeitgeist_asset;
 mod zeitgeist_multi_reservable_currency;
 
@@ -32,6 +34,8 @@ pub use dispute_api::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi};
 pub use distribute_fees::DistributeFees;
 pub use market_commons_pallet_api::MarketCommonsPalletApi;
 pub use market_id::MarketId;
+pub use market_transition_api::MarketTransitionApi;
 pub use swaps::Swaps;
+pub use weights::CheckedDivPerComponent;
 pub use zeitgeist_asset::*;
 pub use zeitgeist_multi_reservable_currency::ZeitgeistAssetManager;
