@@ -41,7 +41,7 @@ use zeitgeist_primitives::{
     constants::mock::{
         AssetsAccountDeposit, AssetsApprovalDeposit, AssetsDeposit, AssetsMetadataDepositBase,
         AssetsMetadataDepositPerByte, AssetsStringLimit, BlockHashCount, DestroyAccountWeight,
-        DestroyApprovalWeight, DestroyFinishWeight, ExistentialDepositsNew, GetNativeCurrencyId,
+        DestroyApprovalWeight, DestroyFinishWeight, ExistentialDeposits, GetNativeCurrencyId,
         MaxReserves, MinBetSize, MinimumPeriod, ParimutuelPalletId, BASE,
     },
     traits::DistributeFees,
@@ -277,7 +277,7 @@ impl orml_tokens::Config for Runtime {
     type CurrencyId = Currencies;
     type DustRemovalWhitelist = Everything;
     type RuntimeEvent = RuntimeEvent;
-    type ExistentialDeposits = ExistentialDepositsNew;
+    type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
     type CurrencyHooks = ();

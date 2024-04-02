@@ -17,4 +17,9 @@ jobs:
       - name: Install build tools
         run: ./scripts/init.sh
 
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+
       - run: ./scripts/runtime-upgrade/test_runtime_upgrade.sh ${{ github.event.inputs.block }}

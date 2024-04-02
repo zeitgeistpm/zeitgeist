@@ -44,7 +44,7 @@ class Copyright:
         if year == self.years[-1].end + 1:
             self.years[-1].end = year
         else:
-            self.years.push(Years(year, year))
+            self.years.append(Years(year, year))
 
 
 @dataclasses.dataclass

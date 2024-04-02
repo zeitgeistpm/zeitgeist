@@ -53,7 +53,7 @@ use zeitgeist_primitives::{
         CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
         CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
         DestroyAccountWeight, DestroyApprovalWeight, DestroyFinishWeight, ExistentialDeposit,
-        ExistentialDepositsNew, GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId,
+        ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId,
         GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId, LockId, MaxAppeals,
         MaxApprovals, MaxCategories, MaxCourtParticipants, MaxCreatorFee, MaxDelegations,
         MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
@@ -133,8 +133,8 @@ impl MarketTransitionApi<MarketId> for StateTransitionMock {
 }
 
 thread_local! {
-    pub static DEPLOY_POOL_CALL_DATA: RefCell<Vec<DeployPoolArgs>> = RefCell::new(vec![]);
-    pub static DEPLOY_POOL_RETURN_VALUE: RefCell<DispatchResult> = RefCell::new(Ok(()));
+    pub static DEPLOY_POOL_CALL_DATA: RefCell<Vec<DeployPoolArgs>> = const { RefCell::new(vec![]) };
+    pub static DEPLOY_POOL_RETURN_VALUE: RefCell<DispatchResult> = const { RefCell::new(Ok(())) };
 }
 
 #[allow(unused)]
@@ -323,7 +323,7 @@ impl orml_tokens::Config for Runtime {
     type CurrencyId = Currencies;
     type DustRemovalWhitelist = Everything;
     type RuntimeEvent = RuntimeEvent;
-    type ExistentialDeposits = ExistentialDepositsNew;
+    type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
     type CurrencyHooks = ();

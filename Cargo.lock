@@ -532,7 +532,7 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
 name = "battery-station-runtime"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "cfg-if",
  "common-runtime",
@@ -1208,7 +1208,7 @@ dependencies = [
 
 [[package]]
 name = "common-runtime"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "cfg-if",
  "cumulus-pallet-xcmp-queue",
@@ -14297,11 +14297,11 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-macros"
-version = "0.4.3"
+version = "0.5.0"
 
 [[package]]
 name = "zeitgeist-node"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "battery-station-runtime",
  "cfg-if",
@@ -14393,7 +14393,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-primitives"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "arbitrary",
  "fixed",
@@ -14417,7 +14417,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-runtime"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "cfg-if",
  "common-runtime",
@@ -14563,7 +14563,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-authorized"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14581,7 +14581,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-court"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "arrayvec 0.7.4",
  "env_logger 0.10.1",
@@ -14600,13 +14600,14 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "test-case",
+ "zeitgeist-macros",
  "zeitgeist-primitives",
  "zrml-market-commons",
 ]
 
 [[package]]
 name = "zrml-global-disputes"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14627,7 +14628,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-liquidity-mining"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14646,7 +14647,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-market-commons"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "env_logger 0.10.1",
  "frame-support",
@@ -14664,7 +14665,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-neo-swaps"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "cfg-if",
  "env_logger 0.10.1",
@@ -14704,14 +14705,12 @@ dependencies = [
  "zrml-neo-swaps",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
- "zrml-rikiddo",
  "zrml-simple-disputes",
- "zrml-swaps",
 ]
 
 [[package]]
 name = "zrml-orderbook"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14749,7 +14748,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-parimutuel"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14774,7 +14773,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14808,9 +14807,7 @@ dependencies = [
  "zrml-market-commons",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
- "zrml-rikiddo",
  "zrml-simple-disputes",
- "zrml-swaps",
 ]
 
 [[package]]
@@ -14828,7 +14825,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-runtime-api"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -14837,7 +14834,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-rikiddo"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "arbitrary",
  "cfg-if",
@@ -14871,7 +14868,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-simple-disputes"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14892,7 +14889,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-styx"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14909,7 +14906,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14931,7 +14928,6 @@ dependencies = [
  "test-case",
  "zeitgeist-macros",
  "zeitgeist-primitives",
- "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
@@ -14953,7 +14949,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-rpc"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -14966,7 +14962,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-runtime-api"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
