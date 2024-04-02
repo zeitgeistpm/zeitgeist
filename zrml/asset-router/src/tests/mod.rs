@@ -45,3 +45,4 @@ mod multi_currency;
 mod multi_lockable_currency;
 mod multi_reservable_currency;
 mod named_multi_reservable_currency;
+mod unbalanced;

@@ -57,10 +57,10 @@ pub(super) const CURRENCY: Assets = Assets::ForeignAsset(0);
 pub(super) const CURRENCY_OLD_OUTCOME: Assets = Assets::CategoricalOutcome(7, 8);
 pub(super) const CURRENCY_INTERNAL: Currencies = Currencies::ForeignAsset(0);
 
-pub(super) const CAMPAIGN_ASSET_MIN_BALANCE: Balance = 1;
-pub(super) const CUSTOM_ASSET_MIN_BALANCE: Balance = 2;
-pub(super) const MARKET_ASSET_MIN_BALANCE: Balance = 3;
-pub(super) const CURRENCY_MIN_BALANCE: Balance = 4;
+pub(super) const CAMPAIGN_ASSET_MIN_BALANCE: Balance = 2;
+pub(super) const CUSTOM_ASSET_MIN_BALANCE: Balance = 3;
+pub(super) const MARKET_ASSET_MIN_BALANCE: Balance = 4;
+pub(super) const CURRENCY_MIN_BALANCE: Balance = 5;
 
 pub(super) const CAMPAIGN_ASSET_INITIAL_AMOUNT: Balance = 10;
 pub(super) const CUSTOM_ASSET_INITIAL_AMOUNT: Balance = 20;

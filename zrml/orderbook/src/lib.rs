@@ -301,8 +301,7 @@ mod pallet {
             let asset = order_data.maker_asset;
             let amount = order_data.maker_amount;
 
-            if !T::AssetManager::reserved_balance_named(&Self::reserve_id(), asset, maker)
-                .is_zero()
+            if !T::AssetManager::reserved_balance_named(&Self::reserve_id(), asset, maker).is_zero()
             {
                 let missing =
                     T::AssetManager::unreserve_named(&Self::reserve_id(), asset, maker, amount);
