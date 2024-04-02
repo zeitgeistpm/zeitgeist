@@ -41,18 +41,21 @@ pub struct OrderbookTrade<AccountId, Balance> {
 
 pub trait FailSoft {}
 
+#[derive(Debug)]
 pub enum AmmSoftFail {
     Numerical,
 }
 
 impl FailSoft for AmmSoftFail {}
 
+#[derive(Debug)]
 pub enum OrderbookSoftFail {
     BelowMinimumBalance,
 }
 
 impl FailSoft for OrderbookSoftFail {}
 
+#[derive(Debug)]
 pub enum ApiError<S: FailSoft> {
     SoftFailure(S),
     HardFailure(DispatchError),

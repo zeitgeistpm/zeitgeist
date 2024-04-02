@@ -65,7 +65,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
-        hybrid_router_api_types::AmmTrade,
+        hybrid_router_api_types::{AmmSoftFail, AmmTrade, ApiError},
         math::{
             checked_ops_res::{CheckedAddRes, CheckedSubRes},
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
@@ -1005,6 +1005,27 @@ mod pallet {
                 external_fee_percentage.mul_floor(ZeitgeistBase::<BalanceOf<T>>::get()?);
             swap_fee.checked_add_res(&external_fee_fractional)
         }
+
+        fn match_failure(error: DispatchError) -> ApiError<AmmSoftFail> {
+            // TODO what else should be a soft failure for the Hybrid Router?
+            let spot_price_too_low: DispatchError =
+                Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceTooLow).into();
+            let spot_price_slipped_too_low: DispatchError =
+                Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow).into();
+            let max_amount_exceeded: DispatchError =
+                Error::<T>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded).into();
+            let min_amount_not_met: DispatchError =
+                Error::<T>::NumericalLimits(NumericalLimitsError::MinAmountNotMet).into();
+            if spot_price_too_low == error
+                || spot_price_slipped_too_low == error
+                || max_amount_exceeded == error
+                || min_amount_not_met == error
+            {
+                ApiError::SoftFailure(AmmSoftFail::Numerical)
+            } else {
+                ApiError::HardFailure(error)
+            }
+        }
     }
 
     impl<T: Config> HybridRouterAmmApi for Pallet<T> {
@@ -1047,8 +1068,9 @@ mod pallet {
             asset_out: Self::Asset,
             amount_in: Self::Balance,
             min_amount_out: Self::Balance,
-        ) -> Result<AmmTradeOf<T>, DispatchError> {
+        ) -> Result<AmmTradeOf<T>, ApiError<AmmSoftFail>> {
             Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)
+                .map_err(Self::match_failure)
         }
 
         fn calculate_sell_amount_until(
@@ -1066,8 +1088,9 @@ mod pallet {
             asset_out: Self::Asset,
             amount_in: Self::Balance,
             min_amount_out: Self::Balance,
-        ) -> Result<AmmTradeOf<T>, DispatchError> {
+        ) -> Result<AmmTradeOf<T>, ApiError<AmmSoftFail>> {
             Self::do_sell(who, market_id, asset_out, amount_in, min_amount_out)
+                .map_err(Self::match_failure)
         }
     }
 }
