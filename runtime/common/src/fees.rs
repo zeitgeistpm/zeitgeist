@@ -72,6 +72,8 @@ macro_rules! impl_fee_types {
 #[macro_export]
 macro_rules! impl_foreign_fees {
     () => {
+        #[cfg(feature = "parachain")]
+        use frame_support::ensure;
         use frame_support::{
             pallet_prelude::InvalidTransaction,
             traits::{
@@ -135,9 +137,15 @@ macro_rules! impl_foreign_fees {
             let campaign_asset_supply = AssetManager::total_issuance(campaign_asset.into());
             let fee_multiplier = Balance::from(CampaignAssetFeeMultiplier::get());
 
+            let ztg_div_campaign_supply = ztg_supply.checked_div(campaign_asset_supply).ok_or(
+                TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                    CustomTxError::FeeConversionArith as u8,
+                )),
+            )?;
+
             // Use neutral fee multiplier if the ZTG supply is 100x greater than the campaign
             // asset supply.
-            if ztg_supply.saturating_div(campaign_asset_supply) >= fee_multiplier {
+            if ztg_div_campaign_supply >= fee_multiplier {
                 Ok(BASE)
             } else {
                 campaign_asset_supply.saturating_mul(fee_multiplier).bdiv(ztg_supply).map_err(
@@ -163,17 +171,12 @@ macro_rules! impl_foreign_fees {
         fn get_fee_factor_foreign_asset(
             foreign_asset: Currencies,
         ) -> Result<Balance, TransactionValidityError> {
-            match foreign_asset {
-                Currencies::ForeignAsset(_) => (),
-                Currencies::CategoricalOutcome(_, _)
-                | Currencies::ScalarOutcome(_, _)
-                | Currencies::PoolShare(_)
-                | Currencies::ParimutuelShare(_, _) => {
-                    return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                        CustomTxError::InvalidAssetType as u8,
-                    )));
-                }
-            }
+            ensure!(
+                foreign_asset.is_foreign_asset(),
+                TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                    CustomTxError::InvalidAssetType as u8,
+                ))
+            );
             let metadata_asset: XcmAsset =
                 Assets::from(foreign_asset).try_into().map_err(|_| {
                     TransactionValidityError::Invalid(InvalidTransaction::Custom(
@@ -222,9 +225,10 @@ macro_rules! impl_foreign_fees {
         impl HandleCredit<AccountId, AssetRouter> for TTCHandleCredit {
             fn handle_credit(final_fee: CreditOf<AccountId, AssetRouter>) {
                 let asset = final_fee.asset();
-                if let Ok(campaign_asset) = CampaignAsset::try_from(asset) {
-                    DealWithCampaignFees::on_unbalanced(final_fee);
-                } else if let Ok(currency) = Currencies::try_from(asset) {
+
+                if CampaignAsset::try_from(asset).is_ok() {
+                    drop(final_fee);
+                } else if Currencies::try_from(asset).is_ok() {
                     DealWithForeignFees::on_unbalanced(final_fee);
                 }
             }

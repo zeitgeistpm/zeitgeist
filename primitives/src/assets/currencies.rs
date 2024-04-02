@@ -43,6 +43,12 @@ pub enum CurrencyClass<MI> {
     ParimutuelShare(MI, CategoryIndex),
 }
 
+impl<MI> CurrencyClass<MI> {
+    pub fn is_foreign_asset(&self) -> bool {
+        matches!(self, Self::ForeignAsset(_))
+    }
+}
+
 impl<MI> Default for CurrencyClass<MI> {
     fn default() -> Self {
         Self::ForeignAsset(u32::default())
