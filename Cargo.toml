@@ -336,8 +336,26 @@ opt-level = 3
 panic = "unwind"
 
 [patch."https://github.com/paritytech/substrate"]
-pallet-assets = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-assets-managed-destroy" }
-substrate-wasm-builder = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-fix-new-rustc-build" }
+# pallet-asset adjustments (managed asset destruction)
+pallet-assets = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+
+# fix that allow to build with recent rustc
+substrate-wasm-builder = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+
+# increase wasm instance limit (otherwise benchmarks fail)
+sc-allocator = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+sc-executor-common = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+sc-executor-wasmtime = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+sp-core = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+sp-core-hashing-proc-macro = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+sp-debug-derive = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+sp-externalities = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+sp-maybe-compressed-blob = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+sp-runtime-interface = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+sp-std = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+sp-storage = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+sp-tracing = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
+sp-wasm-interface = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
 
 [patch."https://github.com/paritytech/polkadot"]
 pallet-xcm = { git = "https://github.com/zeitgeistpm/polkadot.git", branch = "v0.9.38-recent-bootnodes" }
