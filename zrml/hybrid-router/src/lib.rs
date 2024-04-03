@@ -564,9 +564,7 @@ mod pallet {
             taker_amount: BalanceOf<T>,
         ) -> Result<bool, DispatchError> {
             match strategy {
-                Strategy::ImmediateOrCancel => {
-                    return Err(Error::<T>::CancelStrategyApplied.into());
-                }
+                Strategy::ImmediateOrCancel => Err(Error::<T>::CancelStrategyApplied.into()),
                 Strategy::LimitOrder => {
                     match T::OrderBook::place_order(
                         who.clone(),
