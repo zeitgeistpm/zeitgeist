@@ -1007,7 +1007,6 @@ mod pallet {
         }
 
         fn match_failure(error: DispatchError) -> ApiError<AmmSoftFail> {
-            // TODO what else should be a soft failure for the Hybrid Router?
             let spot_price_too_low: DispatchError =
                 Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceTooLow).into();
             let spot_price_slipped_too_low: DispatchError =

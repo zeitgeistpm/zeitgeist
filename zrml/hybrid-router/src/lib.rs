@@ -533,7 +533,10 @@ mod pallet {
         ) -> Result<Option<OrderTradeOf<T>>, DispatchError> {
             match T::OrderBook::fill_order(who, order_id, Some(maker_fill)) {
                 Ok(order_trade) => Ok(Some(order_trade)),
-                Err(ApiError::SoftFailure(OrderbookSoftFail::BelowMinimumBalance)) => Ok(None),
+                Err(ApiError::SoftFailure(OrderbookSoftFail::BelowMinimumBalance))
+                | Err(ApiError::SoftFailure(
+                    OrderbookSoftFail::PartialFillNearFullFillNotAllowed,
+                )) => Ok(None),
                 Err(ApiError::HardFailure(dispatch_error)) => Err(dispatch_error),
             }
         }
@@ -574,9 +577,10 @@ mod pallet {
                         taker_amount,
                     ) {
                         Ok(()) => Ok(true),
-                        Err(ApiError::SoftFailure(OrderbookSoftFail::BelowMinimumBalance)) => {
-                            Ok(false)
-                        }
+                        Err(ApiError::SoftFailure(OrderbookSoftFail::BelowMinimumBalance))
+                        | Err(ApiError::SoftFailure(
+                            OrderbookSoftFail::PartialFillNearFullFillNotAllowed,
+                        )) => Ok(false),
                         Err(ApiError::HardFailure(dispatch_error)) => Err(dispatch_error),
                     }
                 }

@@ -511,8 +511,12 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         fn match_failure(error: DispatchError) -> ApiError<OrderbookSoftFail> {
             let below_minimum_balance: DispatchError = Error::<T>::BelowMinimumBalance.into();
+            let partial_fill_near_full_fill_not_allowed: DispatchError =
+                Error::<T>::PartialFillNearFullFillNotAllowed.into();
             if error == below_minimum_balance {
                 ApiError::SoftFailure(OrderbookSoftFail::BelowMinimumBalance)
+            } else if error == partial_fill_near_full_fill_not_allowed {
+                ApiError::SoftFailure(OrderbookSoftFail::PartialFillNearFullFillNotAllowed)
             } else {
                 ApiError::HardFailure(error)
             }

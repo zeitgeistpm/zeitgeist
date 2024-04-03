@@ -51,6 +51,7 @@ impl FailSoft for AmmSoftFail {}
 #[derive(Debug)]
 pub enum OrderbookSoftFail {
     BelowMinimumBalance,
+    PartialFillNearFullFillNotAllowed,
 }
 
 impl FailSoft for OrderbookSoftFail {}
