@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -283,8 +283,13 @@ pub struct CourtPoolItem<AccountId, Balance, BlockNumber> {
     /// The consumed amount of the stake for all draws. This is useful to reduce the probability
     /// of a court participant to be selected again.
     pub consumed_stake: Balance,
-    /// The block number at which the participant joined.
+    /// The block number at which the participant initially joined.
     pub joined_at: BlockNumber,
+    /// The index of the inflation period in which the court participant increased the stake lastly.
+    /// The court participant can increase the stake by joining the court with a higher stake.
+    pub uneligible_index: BlockNumber,
+    /// The additional stake added in the inflation period of the uneligible index.
+    pub uneligible_stake: Balance,
 }
 
 /// The information about an internal selected draw of a juror or delegator.

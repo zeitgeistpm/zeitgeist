@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -30,9 +30,7 @@ use sc_service::{
     error::Error as ServiceError, ChainSpec, Configuration, PartialComponents, TaskManager,
 };
 #[cfg(feature = "parachain")]
-pub use service_parachain::{
-    new_full, new_partial, FullBackend, FullClient, ParachainPartialComponents,
-};
+pub use service_parachain::{new_full, new_partial, FullBackend, FullClient};
 #[cfg(not(feature = "parachain"))]
 pub use service_standalone::{new_full, new_partial, FullBackend, FullClient};
 use sp_api::ConstructRuntimeApi;

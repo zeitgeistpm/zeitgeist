@@ -27,7 +27,7 @@ use sp_runtime::DispatchError;
 fn it_allows_request_edit_origin_to_request_edits_for_markets() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             2..4,
             ScoringRule::Lmsr,
@@ -68,7 +68,7 @@ fn request_edit_fails_on_bad_origin() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         // Creates an advised market.
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             2..4,
             ScoringRule::Lmsr,
@@ -92,7 +92,7 @@ fn edit_request_fails_if_edit_reason_is_too_long() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::Lmsr,

@@ -29,7 +29,7 @@ use zeitgeist_primitives::{
         MaxAssets, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinWeight, BASE, CENT,
     },
     traits::Swaps as SwapsTrait,
-    types::{Asset, PoolId, ScalarPosition, SerdeWrapper},
+    types::{Asset, PoolId, ScalarPosition},
 };
 use zrml_swaps::mock::Swaps;
 
@@ -43,7 +43,7 @@ pub fn construct_asset(seed: (u8, u128, u16)) -> Asset<u128> {
                 if seed1 % 2 == 0 { ScalarPosition::Long } else { ScalarPosition::Short };
             Asset::ScalarOutcome(seed0, scalar_position)
         }
-        2 => Asset::PoolShare(SerdeWrapper(seed0)),
+        2 => Asset::PoolShare(seed0),
         _ => Asset::Ztg,
     }
 }

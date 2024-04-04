@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2017-2020 Parity Technologies (UK) Ltd.
 //
@@ -38,8 +38,8 @@ use sp_runtime::{
 };
 use sp_storage::{ChildInfo, StorageData, StorageKey};
 use std::sync::Arc;
-pub use zeitgeist_primitives::types::{AccountId, Balance, BlockNumber, Hash, Index};
 use zeitgeist_primitives::types::{Block, Header};
+pub use zeitgeist_primitives::types::{BlockNumber, Hash};
 #[cfg(feature = "with-battery-station-runtime")]
 use {
     super::service::BatteryStationExecutor,

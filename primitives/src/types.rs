@@ -16,12 +16,194 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-pub mod multi_hash;
-pub mod result_with_weight_info;
-pub mod type_aliases;
-pub mod xcm_metadata;
+pub use crate::{
+    assets::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, proxy_type::*,
+};
+#[cfg(feature = "arbitrary")]
+use arbitrary::{Arbitrary, Result, Unstructured};
+use frame_support::dispatch::Weight;
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
+use sp_runtime::{
+    generic,
+    traits::{BlakeTwo256, IdentifyAccount, Verify},
+    MultiSignature, OpaqueExtrinsic,
+};
 
-pub use multi_hash::*;
-pub use result_with_weight_info::*;
-pub use type_aliases::*;
-pub use xcm_metadata::*;
+/// Signed counter-part of Balance
+pub type Amount = i128;
+
+/// Some way of identifying an account on the chain. We intentionally make it equivalent
+/// to the public key of our transaction signing scheme.
+pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+
+/// The type for looking up accounts. We don't expect more than 4 billion of them, but you
+/// never know...
+pub type AccountIndex = u64;
+
+/// Balance of an account.
+pub type Balance = u128;
+
+/// Block type.
+pub type Block = generic::Block<Header, OpaqueExtrinsic>;
+
+/// An index to a block.
+pub type BlockNumber = u64;
+
+/// The index of the category for a `CategoricalOutcome` asset.
+pub type CategoryIndex = u16;
+
+/// Multihash for digest sizes up to 384 bit.
+/// The multicodec encoding the hash algorithm uses only 1 byte,
+/// effecitvely limiting the number of available hash types.
+/// HashType (1B) + DigestSize (1B) + Hash (48B).
+#[derive(TypeInfo, Clone, Debug, Decode, Encode, Eq, PartialEq)]
+pub enum MultiHash {
+    Sha3_384([u8; 50]),
+}
+
+// Implementation for the fuzzer
+#[cfg(feature = "arbitrary")]
+impl<'a> Arbitrary<'a> for MultiHash {
+    fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
+        let mut rand_bytes = <[u8; 50] as Arbitrary<'a>>::arbitrary(u)?;
+        rand_bytes[0] = 0x15;
+        rand_bytes[1] = 0x30;
+        Ok(MultiHash::Sha3_384(rand_bytes))
+    }
+
+    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
+        (50, Some(50))
+    }
+}
+
+/// ORML adapter.
+pub type BasicCurrencyAdapter<R, B> = orml_currencies::BasicCurrencyAdapter<R, B, Amount, Balance>;
+
+/// ID type for any asset class.
+pub type Assets = Asset<MarketId>;
+
+/// Asset type representing base assets used by prediction markets.
+pub type BaseAsset = BaseAssetClass;
+
+/// Asset type representing campaign assets.
+pub type CampaignAsset = CampaignAssetClass;
+
+// ID type of the campaign asset class.
+pub type CampaignAssetId = u128;
+
+/// Asset type representing custom assets.
+pub type CustomAsset = CustomAssetClass;
+
+// ID type of the custom asset class.
+pub type CustomAssetId = u128;
+
+// Asset type representing currencies (excluding ZTG).
+pub type Currencies = CurrencyClass<MarketId>;
+
+/// Asset type representing assets used by prediction markets.
+pub type MarketAsset = MarketAssetClass<MarketId>;
+
+/// Asset type representing assets used in parimutuel markets.
+pub type ParimutuelAsset = ParimutuelAssetClass<MarketId>;
+
+/// Asset type representing assets that can be transferred via XCM.
+pub type XcmAsset = XcmAssetClass;
+
+/// The asset id specifically used for pallet_assets_tx_payment for
+/// paying transaction fees in different assets.
+/// Since the polkadot extension and wallets can't handle custom asset ids other than just u32,
+/// we are using a u32 as on the asset-hubs here.
+pub type TxPaymentAssetId = u32;
+
+/// Index of a transaction in the chain.
+pub type Index = u64;
+
+/// A hash of some data used by the chain.
+pub type Hash = sp_core::H256;
+
+/// Block header type as expected by this runtime.
+pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+
+/// Digest item type.
+pub type DigestItem = generic::DigestItem;
+
+/// The market identifier type.
+pub type MarketId = u128;
+
+/// Time
+pub type Moment = u64;
+
+/// The identifier type for pools.
+pub type PoolId = u128;
+
+/// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
+pub type Signature = MultiSignature;
+
+// Tests
+
+pub type AccountIdTest = u128;
+
+#[cfg(feature = "std")]
+pub type BlockTest<R> = frame_system::mocking::MockBlock<R>;
+
+#[cfg(feature = "std")]
+pub type UncheckedExtrinsicTest<R> = frame_system::mocking::MockUncheckedExtrinsic<R>;
+
+#[derive(sp_runtime::RuntimeDebug, Clone, Decode, Encode, Eq, PartialEq, TypeInfo)]
+pub struct ResultWithWeightInfo<R> {
+    pub result: R,
+    pub weight: Weight,
+}
+
+impl<R> ResultWithWeightInfo<R> {
+    pub fn new(result: R, weight: Weight) -> Self {
+        ResultWithWeightInfo { result, weight }
+    }
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Default,
+    Encode,
+    Eq,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+)]
+/// Custom XC asset metadata
+pub struct CustomMetadata {
+    /// XCM-related metadata.
+    pub xcm: XcmMetadata,
+
+    /// Whether an asset can be used as base_asset in pools.
+    pub allow_as_base_asset: bool,
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Default,
+    Encode,
+    Eq,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+)]
+pub struct XcmMetadata {
+    /// The factor used to determine the fee.
+    /// It is multiplied by the fee that would have been paid in native currency, so it represents
+    /// the ratio `native_price / other_asset_price`. It is a fixed point decimal number containing
+    /// as many fractional decimals as the asset it is used for contains.
+    /// Should be updated regularly.
+    pub fee_factor: Option<Balance>,
+}
