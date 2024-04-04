@@ -30,7 +30,7 @@ fn dispute_early_close_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
             ScoringRule::Lmsr,
@@ -55,7 +55,7 @@ fn dispute_early_close_from_market_creator_works() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -129,7 +129,7 @@ fn dispute_early_close_fails_if_scheduled_as_sudo() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -161,7 +161,7 @@ fn dispute_early_close_fails_if_already_disputed() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -199,7 +199,7 @@ fn dispute_early_close_fails_if_already_rejected() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -239,7 +239,7 @@ fn settles_early_close_bonds_with_resolution_in_state_disputed() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -302,7 +302,7 @@ fn settles_early_close_bonds_with_resolution_in_state_scheduled_as_market_creato
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -350,7 +350,7 @@ fn schedule_early_close_disputed_sudo_schedule_and_settle_bonds() {
         let old_period = MarketPeriod::Block(0..end);
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             old_period.clone(),

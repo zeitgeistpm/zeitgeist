@@ -1,0 +1,44 @@
+{
+    "settings": {
+        "timeout": 1000,
+        "provider": "native"
+    },
+    "relaychain": {
+        "chain": "rococo-dev",
+        "default_command": "./tmp/polkadot",
+        "default_args": ["--no-hardware-benchmarks", "-lparachain=debug", "--database=paritydb", "--no-beefy"],
+        "nodes": [
+            {
+                "name": "charlie",
+                "ws_port": 9947,
+                "validator": true
+            },
+            {
+                "name": "bob",
+                "validator": true
+            }
+        ]
+    },
+    "parachains": [
+        {
+            "id": 2101,
+            "chain": "dev",
+            "collators": [
+                {
+                    "name": "alice",
+                    "command": "../target/release/zeitgeist",
+                    "ws_port": 9944,
+                    "p2p_port": 33049,
+                    "args": ["-lparachain=debug", "--force-authoring"]
+                }
+            ]
+        }
+    ],
+    "types": {
+        "Header": {
+            "number": "u64",
+            "parent_hash": "Hash",
+            "post_state": "Hash"
+        }
+    }
+}

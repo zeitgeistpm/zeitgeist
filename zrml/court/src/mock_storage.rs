@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -17,6 +17,7 @@
 
 #![cfg(test)]
 #![allow(dead_code)]
+#![allow(unused_imports)]
 
 pub use pallet::*;
 use parity_scale_codec::Encode;

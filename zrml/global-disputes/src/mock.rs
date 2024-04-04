@@ -36,7 +36,7 @@ use zeitgeist_primitives::{
     },
     traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketId,
+        AccountIdTest, Balance, BaseAsset, BlockNumber, BlockTest, Hash, Index, Market, MarketId,
         Moment, UncheckedExtrinsicTest,
     },
 };
@@ -80,7 +80,7 @@ impl DisputeResolutionApi for NoopResolution {
             Self::Balance,
             Self::BlockNumber,
             Self::Moment,
-            Asset<Self::MarketId>,
+            BaseAsset,
         >,
     ) -> Result<Weight, DispatchError> {
         Ok(Weight::zero())

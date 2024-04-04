@@ -41,7 +41,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     traits::{DisputeApi, DisputeResolutionApi},
     types::{
-        Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+        BaseAsset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
         MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
     },
 };
@@ -54,7 +54,7 @@ where
     T: Config,
 {
     Market {
-        base_asset: Asset::Ztg,
+        base_asset: BaseAsset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),
         creator: account("creator", 0, 0),
@@ -122,8 +122,14 @@ where
             },
         );
         let consumed_stake = BalanceOf::<T>::zero();
-        let pool_item =
-            CourtPoolItem { stake, court_participant: juror.clone(), consumed_stake, joined_at };
+        let pool_item = CourtPoolItem {
+            stake,
+            court_participant: juror.clone(),
+            consumed_stake,
+            joined_at,
+            uneligible_index: 0u64.saturated_into::<T::BlockNumber>(),
+            uneligible_stake: BalanceOf::<T>::zero(),
+        };
         match pool.binary_search_by_key(&(stake, &juror), |pool_item| {
             (pool_item.stake, &pool_item.court_participant)
         }) {
@@ -670,7 +676,7 @@ benchmarks! {
         let j in 1..T::MaxCourtParticipants::get();
         fill_pool::<T>(j)?;
 
-        <frame_system::Pallet<T>>::set_block_number(T::InflationPeriod::get());
+        <frame_system::Pallet<T>>::set_block_number(T::InflationPeriod::get().saturating_mul(2u32.into()));
         let now = <frame_system::Pallet<T>>::block_number();
         YearlyInflation::<T>::put(Perbill::from_percent(2));
     }: {

@@ -126,8 +126,8 @@ mod pallet {
 
         type WeightInfo: WeightInfoZeitgeist;
 
-        /// The maximum allowed liquidity tree depth per pool. Each pool can support `2^(depth + 1)
-        /// - 1` liquidity providers. **Must** be less than 16.
+        /// The maximum allowed liquidity tree depth per pool. Each pool can support
+        /// `2^(depth + 1) - 1` liquidity providers. **Must** be less than 16.
         #[pallet::constant]
         type MaxLiquidityTreeDepth: Get<u32>;
 
@@ -164,7 +164,8 @@ mod pallet {
             external_fee_amount: BalanceOf<T>,
         },
         /// Informant sold a position. `amount_out` is the amount of collateral received by `who`,
-        /// including swap and external fees.
+        /// with swap and external fees not yet deducted. The actual amount received is
+        /// `amount_out - swap_fee_amount - external_fee_amount`.
         SellExecuted {
             who: T::AccountId,
             market_id: MarketIdOf<T>,
@@ -870,7 +871,7 @@ mod pallet {
             let pool = Pool {
                 account_id: pool_account_id.clone(),
                 reserves: reserves.clone().try_into().map_err(|_| Error::<T>::Unexpected)?,
-                collateral,
+                collateral: collateral.into(),
                 liquidity_parameter,
                 liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
                 swap_fee,
@@ -881,7 +882,7 @@ mod pallet {
                 pool.collateral,
                 &who,
                 &pool.account_id,
-                T::MultiCurrency::minimum_balance(collateral),
+                T::MultiCurrency::minimum_balance(collateral.into()),
             )?;
             Pools::<T>::insert(market_id, pool);
             Self::deposit_event(Event::<T>::PoolDeployed {
@@ -889,7 +890,7 @@ mod pallet {
                 market_id,
                 account_id: pool_account_id,
                 reserves,
-                collateral,
+                collateral: collateral.into(),
                 liquidity_parameter,
                 pool_shares_amount: amount,
                 swap_fee,
