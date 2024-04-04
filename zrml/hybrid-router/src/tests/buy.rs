@@ -696,18 +696,46 @@ fn buy_fails_if_balance_too_low() {
 #[test]
 fn buy_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
+        let liquidity = _10;
+        let pivot = _1_100;
+        let spot_prices = vec![_1_2 + pivot, _1_2 - pivot];
+        let swap_fee = CENT;
         let asset_count = 2u16;
-        let market_id = create_market(
-            MARKET_CREATOR,
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
             BASE_ASSET,
             MarketType::Categorical(asset_count),
-            ScoringRule::AmmCdaHybrid,
+            liquidity,
+            spot_prices.clone(),
+            swap_fee,
         );
 
         let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount_in = 10 * BASE;
-        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
-        let orders = vec![];
+        let amount_in = _1000 * 100;
+
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &ALICE, amount_in));
+
+        let max_price = _9_10.saturated_into::<BalanceOf<Runtime>>();
+        let orders = (0u128..10u128).collect::<Vec<_>>();
+        let maker_asset = asset;
+        let maker_amount: BalanceOf<Runtime> = _20.saturated_into();
+        let taker_asset = BASE_ASSET;
+        let taker_amount = _11.saturated_into::<BalanceOf<Runtime>>();
+        for (i, _) in orders.iter().enumerate() {
+            let order_creator = i as AccountIdTest;
+            let surplus = ((i + 1) as u128) * _1_2;
+            let taker_amount = taker_amount + surplus.saturated_into::<BalanceOf<Runtime>>();
+            assert_ok!(AssetManager::deposit(maker_asset, &order_creator, maker_amount));
+            assert_ok!(OrderBook::place_order(
+                RuntimeOrigin::signed(order_creator),
+                market_id,
+                maker_asset,
+                maker_amount,
+                taker_asset,
+                taker_amount,
+            ));
+        }
+
         let strategy = Strategy::LimitOrder;
         assert_ok!(HybridRouter::buy(
             RuntimeOrigin::signed(ALICE),
@@ -729,6 +757,9 @@ fn buy_emits_event() {
                 asset_in: BASE_ASSET,
                 amount_in,
                 asset_out: asset,
+                amount_out: 2301256894490,
+                external_fee_amount: 3423314400,
+                swap_fee_amount: 2273314407,
             }
             .into(),
         );

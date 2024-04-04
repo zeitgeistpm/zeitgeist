@@ -65,6 +65,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
+        hybrid_router_api_types::AmmTrade,
         math::{
             checked_ops_res::{CheckedAddRes, CheckedSubRes},
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
@@ -100,6 +101,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
     pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>>;
+    pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -164,8 +166,7 @@ mod pallet {
             external_fee_amount: BalanceOf<T>,
         },
         /// Informant sold a position. `amount_out` is the amount of collateral received by `who`,
-        /// with swap and external fees not yet deducted. The actual amount received is
-        /// `amount_out - swap_fee_amount - external_fee_amount`.
+        /// with swap and external fees already deducted.
         SellExecuted {
             who: T::AccountId,
             market_id: MarketIdOf<T>,
@@ -324,7 +325,7 @@ mod pallet {
             let who = ensure_signed(origin)?;
             let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
-            Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)?;
+            let _ = Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)?;
             Ok(Some(T::WeightInfo::buy(asset_count as u32)).into())
         }
 
@@ -368,7 +369,7 @@ mod pallet {
             let who = ensure_signed(origin)?;
             let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
-            Self::do_sell(who, market_id, asset_in, amount_in, min_amount_out)?;
+            let _ = Self::do_sell(who, market_id, asset_in, amount_in, min_amount_out)?;
             Ok(Some(T::WeightInfo::sell(asset_count as u32)).into())
         }
 
@@ -535,7 +536,7 @@ mod pallet {
             asset_out: AssetOf<T>,
             amount_in: BalanceOf<T>,
             min_amount_out: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> Result<AmmTradeOf<T>, DispatchError> {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
@@ -584,7 +585,7 @@ mod pallet {
                     swap_fee_amount,
                     external_fee_amount,
                 });
-                Ok(())
+                Ok(AmmTrade { amount_in, amount_out, swap_fee_amount, external_fee_amount })
             })
         }
 
@@ -595,7 +596,7 @@ mod pallet {
             asset_in: AssetOf<T>,
             amount_in: BalanceOf<T>,
             min_amount_out: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> Result<AmmTradeOf<T>, DispatchError> {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
@@ -654,11 +655,16 @@ mod pallet {
                     market_id,
                     asset_in,
                     amount_in,
-                    amount_out,
+                    amount_out: amount_out_minus_fees,
                     swap_fee_amount,
                     external_fee_amount,
                 });
-                Ok(())
+                Ok(AmmTrade {
+                    amount_in,
+                    amount_out: amount_out_minus_fees,
+                    swap_fee_amount,
+                    external_fee_amount,
+                })
             })
         }
 
@@ -1041,7 +1047,7 @@ mod pallet {
             asset_out: Self::Asset,
             amount_in: Self::Balance,
             min_amount_out: Self::Balance,
-        ) -> DispatchResult {
+        ) -> Result<AmmTradeOf<T>, DispatchError> {
             Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)
         }
 
@@ -1060,7 +1066,7 @@ mod pallet {
             asset_out: Self::Asset,
             amount_in: Self::Balance,
             min_amount_out: Self::Balance,
-        ) -> DispatchResult {
+        ) -> Result<AmmTradeOf<T>, DispatchError> {
             Self::do_sell(who, market_id, asset_out, amount_in, min_amount_out)
         }
     }

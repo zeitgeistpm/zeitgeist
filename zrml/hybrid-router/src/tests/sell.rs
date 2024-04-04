@@ -73,7 +73,7 @@ fn sell_to_amm_and_then_fill_specified_order() {
                 market_id,
                 asset_in: asset,
                 amount_in: amm_amount_in,
-                amount_out: 2832089506,
+                amount_out: 2775447716,
                 swap_fee_amount: 28320895,
                 external_fee_amount: 28320895,
             }
@@ -447,7 +447,7 @@ fn sell_to_amm() {
                 market_id,
                 asset_in: asset,
                 amount_in: 20000000000,
-                amount_out: 9653703575,
+                amount_out: 9460629504,
                 swap_fee_amount: 96537036,
                 external_fee_amount: 96537035,
             }
@@ -624,7 +624,7 @@ fn sell_to_amm_only() {
                 market_id,
                 asset_in: asset,
                 amount_in: 20000000000,
-                amount_out: 9653703575,
+                amount_out: 9460629504,
                 swap_fee_amount: 96537036,
                 external_fee_amount: 96537035,
             }
@@ -727,21 +727,48 @@ fn sell_fails_if_balance_too_low() {
 #[test]
 fn sell_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
+        let liquidity = _10;
+        let pivot = _1_100;
+        let spot_prices = vec![_1_2 + pivot, _1_2 - pivot];
+        let swap_fee = CENT;
         let asset_count = 2u16;
-        let market_id = create_market(
-            MARKET_CREATOR,
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
             BASE_ASSET,
             MarketType::Categorical(asset_count),
-            ScoringRule::AmmCdaHybrid,
+            liquidity,
+            spot_prices.clone(),
+            swap_fee,
         );
 
         let asset = Asset::CategoricalOutcome(market_id, 0);
-        let amount_in = 10 * BASE;
+        let amount_in = _1000 * 100;
+
+        let min_price = _1_100.saturated_into::<BalanceOf<Runtime>>();
+        let orders = (0u128..50u128).collect::<Vec<_>>();
+        let maker_asset = BASE_ASSET;
+        let maker_amount: BalanceOf<Runtime> = _9.saturated_into();
+        let taker_asset = asset;
+        let taker_amount = _100.saturated_into::<BalanceOf<Runtime>>();
+        for (i, _) in orders.iter().enumerate() {
+            let order_creator = i as AccountIdTest;
+            let surplus = ((i + 1) as u128) * _1_2;
+            let taker_amount = taker_amount + surplus.saturated_into::<BalanceOf<Runtime>>();
+            assert_ok!(AssetManager::deposit(maker_asset, &order_creator, maker_amount));
+            assert_ok!(OrderBook::place_order(
+                RuntimeOrigin::signed(order_creator),
+                market_id,
+                maker_asset,
+                maker_amount,
+                taker_asset,
+                taker_amount,
+            ));
+        }
+
+        let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
 
         assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), ALICE, asset, amount_in, 0));
 
-        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
-        let orders = vec![];
         let strategy = Strategy::LimitOrder;
         assert_ok!(HybridRouter::sell(
             RuntimeOrigin::signed(ALICE),
@@ -749,8 +776,8 @@ fn sell_emits_event() {
             asset_count,
             asset,
             amount_in,
-            max_price,
-            orders,
+            min_price,
+            order_ids,
             strategy,
         ));
 
@@ -759,10 +786,13 @@ fn sell_emits_event() {
                 tx_type: TxType::Sell,
                 who: ALICE,
                 market_id,
-                price_limit: max_price,
+                price_limit: min_price,
                 asset_in: asset,
                 amount_in,
                 asset_out: BASE_ASSET,
+                amount_out: 4551619284973,
+                external_fee_amount: 45985911066,
+                swap_fee_amount: 985911072,
             }
             .into(),
         );

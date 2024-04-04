@@ -34,7 +34,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        types::{Strategy, TxType},
+        types::{OrderAmmTradesInfo, Strategy, Trade, TradeEventInfo, TxType},
         weights::WeightInfoZeitgeist,
     };
     use alloc::{vec, vec::Vec};
@@ -58,6 +58,7 @@ mod pallet {
     #[cfg(feature = "runtime-benchmarks")]
     use zeitgeist_primitives::traits::{CompleteSetOperationsApi, DeployPoolApi};
     use zeitgeist_primitives::{
+        hybrid_router_api_types::{AmmTrade, OrderbookTrade},
         math::{
             checked_ops_res::CheckedSubRes,
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
@@ -138,6 +139,8 @@ mod pallet {
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> =
         Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
+    pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
+    pub(crate) type OrderTradeOf<T> = OrderbookTrade<AccountIdOf<T>, BalanceOf<T>>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -151,13 +154,30 @@ mod pallet {
     {
         /// A trade was executed.
         HybridRouterExecuted {
+            /// The type of transaction (Buy or Sell).
             tx_type: TxType,
+            /// The account ID of the user performing the trade.
             who: AccountIdOf<T>,
+            /// The ID of the market.
             market_id: MarketIdOf<T>,
+            /// The maximum price limit for buying or the minimum price limit for selling.
             price_limit: BalanceOf<T>,
+            /// The asset provided by the trader.
             asset_in: AssetOf<T>,
+            /// The amount of the `asset_in` provided by the trader.
+            /// It includes swap and external fees.
+            /// It is an amount before fees are deducted.
             amount_in: BalanceOf<T>,
+            /// The asset received by the trader.
             asset_out: AssetOf<T>,
+            /// The aggregated amount of the `asset_out` already received
+            /// by the trader from AMM and orderbook.
+            /// It is an amount after fees are deducted.
+            amount_out: BalanceOf<T>,
+            /// The external fee amount paid in the base asset.
+            external_fee_amount: BalanceOf<T>,
+            /// The swap fee amount paid in the base asset.
+            swap_fee_amount: BalanceOf<T>,
         },
     }
 
@@ -347,56 +367,52 @@ mod pallet {
             asset: AssetOf<T>,
             amount_in: BalanceOf<T>,
             price_limit: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
+        ) -> Result<(BalanceOf<T>, Option<AmmTradeOf<T>>), DispatchError> {
             if !T::Amm::pool_exists(market_id) {
-                return Ok(amount_in);
+                return Ok((amount_in, None));
             }
 
             let spot_price = T::Amm::get_spot_price(market_id, asset)?;
 
-            let mut remaining = amount_in;
             let amm_amount_in = match tx_type {
                 TxType::Buy => {
                     if spot_price >= price_limit {
-                        return Ok(amount_in);
+                        return Ok((amount_in, None));
                     }
                     T::Amm::calculate_buy_amount_until(market_id, asset, price_limit)?
                 }
                 TxType::Sell => {
                     if spot_price <= price_limit {
-                        return Ok(amount_in);
+                        return Ok((amount_in, None));
                     }
                     T::Amm::calculate_sell_amount_until(market_id, asset, price_limit)?
                 }
             };
 
-            let amm_amount_in = amm_amount_in.min(remaining);
+            let amm_amount_in = amm_amount_in.min(amount_in);
 
-            if !amm_amount_in.is_zero() {
-                match tx_type {
-                    TxType::Buy => {
-                        T::Amm::buy(
-                            who.clone(),
-                            market_id,
-                            asset,
-                            amm_amount_in,
-                            BalanceOf::<T>::zero(),
-                        )?;
-                    }
-                    TxType::Sell => {
-                        T::Amm::sell(
-                            who.clone(),
-                            market_id,
-                            asset,
-                            amm_amount_in,
-                            BalanceOf::<T>::zero(),
-                        )?;
-                    }
-                }
-                remaining = remaining.checked_sub_res(&amm_amount_in)?;
+            if amm_amount_in.is_zero() {
+                return Ok((amount_in, None));
             }
 
-            Ok(remaining)
+            let amm_trade_info = match tx_type {
+                TxType::Buy => T::Amm::buy(
+                    who.clone(),
+                    market_id,
+                    asset,
+                    amm_amount_in,
+                    BalanceOf::<T>::zero(),
+                )?,
+                TxType::Sell => T::Amm::sell(
+                    who.clone(),
+                    market_id,
+                    asset,
+                    amm_amount_in,
+                    BalanceOf::<T>::zero(),
+                )?,
+            };
+
+            Ok((amount_in.checked_sub_res(&amm_amount_in)?, Some(amm_trade_info)))
         }
 
         /// Fills the order from the order book if it exists and meets the price conditions.
@@ -422,7 +438,9 @@ mod pallet {
             base_asset: AssetOf<T>,
             asset: AssetOf<T>,
             price_limit: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
+        ) -> Result<OrderAmmTradesInfo<T>, DispatchError> {
+            let mut amm_trades = Vec::new();
+            let mut order_trades = Vec::new();
             for &order_id in orders {
                 if remaining.is_zero() {
                     break;
@@ -454,7 +472,7 @@ mod pallet {
                     }
                 }
 
-                remaining = Self::maybe_fill_from_amm(
+                let amm_trade_info = Self::maybe_fill_from_amm(
                     tx_type,
                     who,
                     market_id,
@@ -462,6 +480,11 @@ mod pallet {
                     remaining,
                     order_price,
                 )?;
+
+                if let Some(t) = amm_trade_info.1 {
+                    amm_trades.push(t);
+                }
+                remaining = amm_trade_info.0;
 
                 if remaining.is_zero() {
                     break;
@@ -472,12 +495,14 @@ mod pallet {
                 let (_taker_fill, maker_fill) =
                     order.taker_and_maker_fill_from_taker_amount(remaining)?;
                 // and the `maker_partial_fill` of `fill_order` is specified in `taker_asset`
-                T::OrderBook::fill_order(who.clone(), order_id, Some(maker_fill))?;
+                let order_trade =
+                    T::OrderBook::fill_order(who.clone(), order_id, Some(maker_fill))?;
+                order_trades.push(order_trade);
                 // `maker_fill` is the amount the order owner (maker) wants to receive
                 remaining = remaining.checked_sub_res(&maker_fill)?;
             }
 
-            Ok(remaining)
+            Ok(OrderAmmTradesInfo { remaining, order_trades, amm_trades })
         }
 
         /// Places a limit order if the strategy is `Strategy::LimitOrder`.
@@ -563,9 +588,10 @@ mod pallet {
             };
             T::AssetManager::ensure_can_withdraw(asset_in, &who, amount_in)?;
 
+            let mut amm_trades: Vec<AmmTradeOf<T>> = Vec::new();
             let mut remaining = amount_in;
 
-            remaining = Self::maybe_fill_orders(
+            let order_amm_trades_info = Self::maybe_fill_orders(
                 tx_type,
                 orders,
                 remaining,
@@ -576,8 +602,12 @@ mod pallet {
                 price_limit,
             )?;
 
+            remaining = order_amm_trades_info.remaining;
+            amm_trades.extend(order_amm_trades_info.amm_trades);
+            let orderbook_trades = order_amm_trades_info.order_trades;
+
             if !remaining.is_zero() {
-                remaining = Self::maybe_fill_from_amm(
+                let amm_trade_info = Self::maybe_fill_from_amm(
                     tx_type,
                     &who,
                     market_id,
@@ -585,6 +615,9 @@ mod pallet {
                     remaining,
                     price_limit,
                 )?;
+
+                amm_trades.extend(amm_trade_info.1);
+                remaining = amm_trade_info.0;
             }
 
             if !remaining.is_zero() {
@@ -616,6 +649,9 @@ mod pallet {
                 )?;
             }
 
+            let TradeEventInfo { amount_out, external_fee_amount, swap_fee_amount } =
+                Self::get_event_info(&who, &orderbook_trades, &amm_trades)?;
+
             Self::deposit_event(Event::HybridRouterExecuted {
                 tx_type,
                 who,
@@ -624,9 +660,56 @@ mod pallet {
                 asset_in,
                 amount_in,
                 asset_out,
+                amount_out,
+                external_fee_amount,
+                swap_fee_amount,
             });
 
             Ok(())
+        }
+
+        fn get_event_info(
+            who: &AccountIdOf<T>,
+            orderbook_trades: &[OrderTradeOf<T>],
+            amm_trades: &[AmmTradeOf<T>],
+        ) -> Result<TradeEventInfo<T>, DispatchError> {
+            orderbook_trades
+                .iter()
+                .map(|trade| Trade::<T>::Orderbook(trade))
+                .chain(amm_trades.iter().map(|trade| Trade::Amm(*trade)))
+                .try_fold(TradeEventInfo::<T>::new(), |event_info: TradeEventInfo<T>, trade| {
+                    Self::update_event_info(who, trade, event_info)
+                })
+        }
+
+        fn update_event_info(
+            who: &AccountIdOf<T>,
+            trade: Trade<T>,
+            mut event_info: TradeEventInfo<T>,
+        ) -> Result<TradeEventInfo<T>, DispatchError> {
+            match trade {
+                Trade::Orderbook(orderbook_trade) => {
+                    let external_fee_amount = if &orderbook_trade.external_fee.account == who {
+                        orderbook_trade.external_fee.amount
+                    } else {
+                        BalanceOf::<T>::zero()
+                    };
+                    event_info.add_amount_out_minus_fees(TradeEventInfo::<T> {
+                        amount_out: orderbook_trade.filled_maker_amount,
+                        external_fee_amount,
+                        swap_fee_amount: BalanceOf::<T>::zero(),
+                    })?;
+                }
+                Trade::Amm(amm_trade) => {
+                    event_info.add_amount_out_and_fees(TradeEventInfo::<T> {
+                        amount_out: amm_trade.amount_out,
+                        external_fee_amount: amm_trade.external_fee_amount,
+                        swap_fee_amount: amm_trade.swap_fee_amount,
+                    })?;
+                }
+            }
+
+            Ok(event_info)
         }
     }
 }

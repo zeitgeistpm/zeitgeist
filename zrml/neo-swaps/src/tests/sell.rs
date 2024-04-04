@@ -81,7 +81,7 @@ fn sell_works() {
                 market_id,
                 asset_in,
                 amount_in,
-                amount_out: expected_amount_out,
+                amount_out: expected_amount_out_minus_fees,
                 swap_fee_amount: expected_swap_fee_amount,
                 external_fee_amount: expected_external_fee_amount,
             }

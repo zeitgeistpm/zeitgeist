@@ -15,7 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::dispatch::{DispatchError, DispatchResult};
+use crate::hybrid_router_api_types::AmmTrade;
+use frame_support::dispatch::DispatchError;
+
+/// A type alias for the return struct of AMM buy and sell.
+pub type AmmTradeOf<T> = AmmTrade<<T as HybridRouterAmmApi>::Balance>;
 
 /// Trait for handling the AMM part of the hybrid router.
 pub trait HybridRouterAmmApi {
@@ -82,14 +86,14 @@ pub trait HybridRouterAmmApi {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` if the buy is successful, or an error if the buy fails.
+    /// Returns information about the buy trade made.
     fn buy(
         who: Self::AccountId,
         market_id: Self::MarketId,
         asset_out: Self::Asset,
         amount_in: Self::Balance,
         min_amount_out: Self::Balance,
-    ) -> DispatchResult;
+    ) -> Result<AmmTradeOf<Self>, DispatchError>;
 
     /// Calculates the amount a user has to sell to move the price of `asset` to `until`. Returns
     /// zero if the current spot price is below or equal to `until`.
@@ -122,12 +126,12 @@ pub trait HybridRouterAmmApi {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` if the sell is successful, or an error if the sell fails.
+    /// Returns information about the sell trade made.
     fn sell(
         who: Self::AccountId,
         market_id: Self::MarketId,
         asset_in: Self::Asset,
         amount_in: Self::Balance,
         min_amount_out: Self::Balance,
-    ) -> DispatchResult;
+    ) -> Result<AmmTradeOf<Self>, DispatchError>;
 }
