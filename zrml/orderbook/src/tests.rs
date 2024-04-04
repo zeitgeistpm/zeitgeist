@@ -632,7 +632,7 @@ fn it_fills_order_fully_maker_base_asset() {
         assert_eq!(reserved_bob, 0);
 
         let external_fee_amount = calculate_fee::<Runtime>(maker_amount);
-        let external_fee = ExternalFee { account: BOB, amount: external_fee_amount };
+        let external_fee = ExternalFee { account: ALICE, amount: external_fee_amount };
 
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
@@ -721,7 +721,7 @@ fn it_fills_order_partially_maker_base_asset() {
             }
         );
 
-        let external_fee = ExternalFee { account: BOB, amount: external_fee_amount };
+        let external_fee = ExternalFee { account: ALICE, amount: external_fee_amount };
 
         System::assert_last_event(
             Event::<Runtime>::OrderFilled {
