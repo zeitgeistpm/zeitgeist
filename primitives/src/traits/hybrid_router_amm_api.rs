@@ -89,7 +89,7 @@ pub trait HybridRouterAmmApi {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` if the buy is successful, or an error if the buy fails.
+    /// Returns information about the buy trade made.
     fn buy(
         who: Self::AccountId,
         market_id: Self::MarketId,
@@ -129,7 +129,7 @@ pub trait HybridRouterAmmApi {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` if the sell is successful, or an error if the sell fails.
+    /// Returns information about the sell trade made.
     fn sell(
         who: Self::AccountId,
         market_id: Self::MarketId,
