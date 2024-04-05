@@ -26,7 +26,7 @@ use crate::{
     },
     mock_storage::pallet::MarketIdsPerDisputeBlock,
     types::{CourtStatus, Draw, Vote, VoteItem},
-    AppealInfo, BalanceOf, BlockNumberOf, CourtId, CourtIdToMarketId, CourtParticipantInfo,
+    AppealInfo, BalanceOf, CourtId, CourtIdToMarketId, CourtParticipantInfo,
     CourtParticipantInfoOf, CourtPool, CourtPoolItem, CourtPoolOf, Courts, Error, Event,
     MarketIdToCourtId, MarketOf, NegativeImbalanceOf, Participants, RequestBlock, SelectedDraws,
     YearlyInflation,
@@ -60,6 +60,8 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_market_commons::{Error as MError, MarketCommonsPalletApi};
+
+type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
 
 const ORACLE_REPORT: OutcomeReport = OutcomeReport::Scalar(u128::MAX);
 
