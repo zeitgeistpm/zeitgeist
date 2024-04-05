@@ -27,7 +27,7 @@ use crate::{MarketIdsForEdit, MarketIdsPerCloseBlock};
 fn it_allows_the_advisory_origin_to_reject_markets() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             4..6,
             ScoringRule::Lmsr,
@@ -58,7 +58,7 @@ fn reject_errors_if_reject_reason_is_too_long() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::Lmsr,
@@ -82,7 +82,7 @@ fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::Lmsr,
@@ -110,7 +110,7 @@ fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
 #[test]
 fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
-    let test = |base_asset: AssetOf<Runtime>| {
+    let test = |base_asset: BaseAsset| {
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Advised,
@@ -163,11 +163,14 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
         assert_eq!(balance_treasury_after, slash_amount_advisory_bond);
     };
     ExtBuilder::default().build().execute_with(|| {
-        test(Asset::Ztg);
+        test(BaseAsset::CampaignAsset(100));
+    });
+    ExtBuilder::default().build().execute_with(|| {
+        test(BaseAsset::Ztg);
     });
     #[cfg(feature = "parachain")]
     ExtBuilder::default().build().execute_with(|| {
-        test(Asset::ForeignAsset(100));
+        test(BaseAsset::ForeignAsset(100));
     });
 }
 
@@ -177,19 +180,19 @@ fn reject_market_clears_auto_close_blocks() {
     // can not be deployed on pending advised pools.
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             33..66,
             ScoringRule::Lmsr,
         );
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             22..66,
             ScoringRule::Lmsr,
         );
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             22..33,
             ScoringRule::Lmsr,
@@ -209,7 +212,7 @@ fn reject_market_fails_on_permissionless_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..2,
             ScoringRule::Lmsr,
@@ -228,7 +231,7 @@ fn reject_market_fails_on_approved_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::Lmsr,

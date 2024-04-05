@@ -3,6 +3,7 @@ arbitrary = { workspace = true, optional = true }
 fixed = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+impl-trait-for-tuples = { workspace = true }
 num-traits = { workspace = true }
 orml-currencies = { workspace = true }
 orml-tokens = { workspace = true }
@@ -39,4 +40,4 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-primitives"
-version = "0.5.0"
+version = "0.5.1"

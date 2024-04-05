@@ -22,7 +22,7 @@
     clippy::arithmetic_side_effects
 )]
 
-use super::{Runtime, VERSION};
+use super::{CampaignAssetsInstance, Runtime, VERSION};
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
@@ -35,6 +35,7 @@ use frame_support::{
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::parameter_type_with_key;
+use pallet_assets::WeightInfo;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_runtime::{
     traits::{AccountIdConversion, Bounded},
@@ -63,6 +64,44 @@ parameter_types! {
 }
 
 parameter_types! {
+    // Asset-Router
+    pub DestroyAccountWeight: Weight =
+        <Runtime as pallet_assets::Config<CampaignAssetsInstance>>::WeightInfo::destroy_accounts(1);
+    pub DestroyApprovalWeight: Weight =
+        <Runtime as pallet_assets::Config<CampaignAssetsInstance>>::WeightInfo::destroy_approvals(1);
+    pub DestroyFinishWeight: Weight =
+        <Runtime as pallet_assets::Config<CampaignAssetsInstance>>::WeightInfo::finish_destroy();
+
+    // Assets (Campaign)
+    pub const CampaignAssetsAccountDeposit: Balance = deposit(1, 16);
+    pub const CampaignAssetsApprovalDeposit: Balance = ExistentialDeposit::get();
+    /// The amount of native currency that is frozen during the whole lifetime
+    /// of an asset class. Freezing happens at asset class creation.
+    /// Irrelevant - No origin can successfully call the associated dispatchable call.
+    pub const CampaignAssetsDeposit: Balance = 400 * BASE;
+    pub const CampaignAssetsStringLimit: u32 = 256;
+    pub const CampaignAssetsMetadataDepositBase: Balance = deposit(1, 68);
+    pub const CampaignAssetsMetadataDepositPerByte: Balance = deposit(0, 1);
+
+    // Assets (Custom)
+    pub const CustomAssetsAccountDeposit: Balance = deposit(1, 16);
+    pub const CustomAssetsApprovalDeposit: Balance = ExistentialDeposit::get();
+    pub const CustomAssetsDeposit: Balance = 400 * BASE;
+    pub const CustomAssetsStringLimit: u32 = 50;
+    pub const CustomAssetsMetadataDepositBase: Balance = deposit(1, 68);
+    pub const CustomAssetsMetadataDepositPerByte: Balance = deposit(0, 1);
+
+    // Assets (Market)
+    pub const MarketAssetsAccountDeposit: Balance = deposit(1, 16);
+    pub const MarketAssetsApprovalDeposit: Balance = ExistentialDeposit::get();
+    /// The amount of native currency that is frozen during the whole lifetime
+    /// if an asset class. Freezing happens at asset class creation.
+    /// Irrelevant - No origin can successfully call the associated dispatchable call.
+    pub const MarketAssetsDeposit: Balance = 400 * BASE;
+    pub const MarketAssetsStringLimit: u32 = 50;
+    pub const MarketAssetsMetadataDepositBase: Balance = deposit(1, 68);
+    pub const MarketAssetsMetadataDepositPerByte: Balance = deposit(0, 1);
+
     // Authorized
     pub const AuthorizedPalletId: PalletId = AUTHORIZED_PALLET_ID;
     pub const CorrectionPeriod: BlockNumber = BLOCKS_PER_DAY;
@@ -198,7 +237,7 @@ parameter_types! {
     pub const MaxLiquidityTreeDepth: u32 = 9u32;
 
     // ORML
-    pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
+    pub const GetNativeCurrencyId: Assets = Asset::Ztg;
 
     // Prediction Market parameters
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
@@ -357,6 +396,8 @@ parameter_types! {
     .build_or_panic();
 
     // Transaction payment
+    /// A fee multiplier applied to the calculated fee factor for `CampaignAsset`
+    pub const CampaignAssetFeeMultiplier: u32 = 100;
     /// A fee mulitplier for Operational extrinsics to compute “virtual tip”
     /// to boost their priority.
     pub const OperationalFeeMultiplier: u8 = 5;
@@ -464,17 +505,17 @@ parameter_type_with_key! {
     // are cleaned up automatically. In case of scalar outcomes, the market account can have dust.
     // Unless LPs use `pool_exit_with_exact_asset_amount`, there can be some dust pool shares remaining.
     // Explicit match arms are used to ensure new asset types are respected.
-    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+    pub ExistentialDeposits: |currency_id: Currencies| -> Balance {
         match currency_id {
-            Asset::CategoricalOutcome(_,_) => ExistentialDeposit::get(),
-            Asset::CombinatorialOutcome => ExistentialDeposit::get(),
-            Asset::PoolShare(_)  => ExistentialDeposit::get(),
-            Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
+            Currencies::CategoricalOutcome(_, _) => ExistentialDeposit::get(),
+            Currencies::ParimutuelShare(_, _) => ExistentialDeposit::get(),
+            Currencies::PoolShare(_) => ExistentialDeposit::get(),
+            Currencies::ScalarOutcome(_, _) => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]
-            Asset::ForeignAsset(id) => {
+            Currencies::ForeignAsset(id) => {
                 let maybe_metadata = <
                     orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect
-                >::metadata(&Asset::ForeignAsset(*id));
+                >::metadata(&XcmAsset::ForeignAsset(*id));
 
                 if let Some(metadata) = maybe_metadata {
                     return metadata.existential_deposit;
@@ -483,9 +524,7 @@ parameter_type_with_key! {
                 1
             }
             #[cfg(not(feature = "parachain"))]
-            Asset::ForeignAsset(_) => ExistentialDeposit::get(),
-            Asset::Ztg => ExistentialDeposit::get(),
-            Asset::ParimutuelShare(_, _) => ExistentialDeposit::get(),
+            Currencies::ForeignAsset(_) => ExistentialDeposit::get(),
         }
     };
 }
