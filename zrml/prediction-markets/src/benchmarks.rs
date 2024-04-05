@@ -456,10 +456,10 @@ benchmarks! {
             Some(MarketDisputeMechanism::Court),
         )?;
 
-        let approve_origin = T::RequestEditOrigin::try_successful_origin().unwrap();
+        let request_edit_origin = T::RequestEditOrigin::try_successful_origin().unwrap();
         let edit_reason = vec![0_u8; r as usize];
         let call = Call::<T>::request_edit{ market_id, edit_reason };
-    }: { call.dispatch_bypass_filter(approve_origin)? } verify {}
+    }: { call.dispatch_bypass_filter(request_edit_origin)? } verify {}
 
     buy_complete_set {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
