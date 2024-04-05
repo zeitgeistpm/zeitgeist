@@ -21,11 +21,11 @@
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: `2024-01-15`, STEPS: `50`, REPEAT: `20`, LOW RANGE: `[]`, HIGH RANGE: `[]`
 //! WORST CASE MAP SIZE: `1000000`
-//! HOSTNAME: `zeitgeist-benchmark`, CPU: `AMD EPYC 7601 32-Core Processor`
-//! EXECUTION: `Some(Wasm)`, WASM-EXECUTION: `Compiled`, CHAIN: `Some("dev")`, DB CACHE: `1024`
+//! HOSTNAME: `zafoi`, CPU: `AMD Ryzen 9 5900X 12-Core Processor`
+//! EXECUTION: `Some(Native)`, WASM-EXECUTION: `Compiled`, CHAIN: `Some("dev")`, DB CACHE: `1024`
 
 // Executed Command:
-// ./target/production/zeitgeist
+// ./target/release/zeitgeist
 // benchmark
 // pallet
 // --chain=dev
@@ -33,7 +33,7 @@
 // --repeat=20
 // --pallet=zrml_authorized
 // --extrinsic=*
-// --execution=wasm
+// --execution=native
 // --wasm-execution=compiled
 // --heap-pages=4096
 // --template=./misc/weight_template.hbs
@@ -87,7 +87,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Authorized AuthorizedOutcomeReports (max_values: None, max_size: Some(49), added: 2524, mode: MaxEncodedLen)
     fn authorize_market_outcome_existing_report() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `577`
+        //  Measured:  `610`
         //  Estimated: `5677`
         // Minimum execution time: 35_410 nanoseconds.
         Weight::from_parts(36_251_000, 5677)
@@ -105,7 +105,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Authorized AuthorizedOutcomeReports (max_values: None, max_size: Some(49), added: 2524, mode: MaxEncodedLen)
     fn on_resolution_weight() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `217`
+        //  Measured:  `250`
         //  Estimated: `2524`
         // Minimum execution time: 10_110 nanoseconds.
         Weight::from_parts(12_690_000, 2524)
@@ -123,7 +123,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Authorized AuthorizedOutcomeReports (max_values: None, max_size: Some(49), added: 2524, mode: MaxEncodedLen)
     fn get_auto_resolve_weight() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `217`
+        //  Measured:  `250`
         //  Estimated: `2524`
         // Minimum execution time: 9_200 nanoseconds.
         Weight::from_parts(9_520_000, 2524).saturating_add(T::DbWeight::get().reads(1))

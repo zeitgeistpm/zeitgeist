@@ -21,11 +21,11 @@
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: `2024-01-15`, STEPS: `50`, REPEAT: `20`, LOW RANGE: `[]`, HIGH RANGE: `[]`
 //! WORST CASE MAP SIZE: `1000000`
-//! HOSTNAME: `zeitgeist-benchmark`, CPU: `AMD EPYC 7601 32-Core Processor`
-//! EXECUTION: `Some(Wasm)`, WASM-EXECUTION: `Compiled`, CHAIN: `Some("dev")`, DB CACHE: `1024`
+//! HOSTNAME: `zafoi`, CPU: `AMD Ryzen 9 5900X 12-Core Processor`
+//! EXECUTION: `Some(Native)`, WASM-EXECUTION: `Compiled`, CHAIN: `Some("dev")`, DB CACHE: `1024`
 
 // Executed Command:
-// ./target/production/zeitgeist
+// ./target/release/zeitgeist
 // benchmark
 // pallet
 // --chain=dev
@@ -33,7 +33,7 @@
 // --repeat=20
 // --pallet=zrml_parimutuel
 // --extrinsic=*
-// --execution=wasm
+// --execution=native
 // --wasm-execution=compiled
 // --heap-pages=4096
 // --template=./misc/weight_template.hbs
@@ -52,6 +52,8 @@ pub trait WeightInfoZeitgeist {
     fn buy() -> Weight;
     fn claim_rewards() -> Weight;
     fn claim_refunds() -> Weight;
+    fn on_activation() -> Weight;
+    fn on_resolution() -> Weight;
 }
 
 /// Weight functions for zrml_parimutuel (automatically generated)
@@ -61,6 +63,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:1 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:1 w:1)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -76,6 +80,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     /// Storage: MarketCommons Markets (r:1 w:0)
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:1 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:1 w:1)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:1 w:1)
@@ -93,6 +99,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     /// Storage: MarketCommons Markets (r:1 w:0)
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:2 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:2 w:1)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:1 w:1)
@@ -107,5 +115,38 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         Weight::from_parts(132_660_000, 13394)
             .saturating_add(T::DbWeight::get().reads(5))
             .saturating_add(T::DbWeight::get().writes(3))
+    }
+
+    /// Storage: MarketCommons Markets (r:1 w:0)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(676), added: 3151, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:64 w:64)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
+    fn on_activation() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `1187`
+        //  Estimated: `175951`
+        // Minimum execution time: 159_784 nanoseconds.
+        Weight::from_parts(161_183_000, 175951)
+            .saturating_add(T::DbWeight::get().reads(65))
+            .saturating_add(T::DbWeight::get().writes(64))
+    }
+    /// Storage: MarketCommons Markets (r:1 w:0)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(676), added: 3151, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:64 w:64)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
+    /// Storage: AssetRouter DestroyAssets (r:1 w:1)
+    /// Proof: AssetRouter DestroyAssets (max_values: Some(1), max_size: Some(40962), added: 41457, mode: MaxEncodedLen)
+    /// Storage: Tokens TotalIssuance (r:64 w:0)
+    /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
+    /// Storage: AssetRouter IndestructibleAssets (r:1 w:0)
+    /// Proof: AssetRouter IndestructibleAssets (max_values: Some(1), max_size: Some(38914), added: 39409, mode: MaxEncodedLen)
+    fn on_resolution() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `18377`
+        //  Estimated: `417969`
+        // Minimum execution time: 367_119 nanoseconds.
+        Weight::from_parts(370_038_000, 417969)
+            .saturating_add(T::DbWeight::get().reads(131))
+            .saturating_add(T::DbWeight::get().writes(65))
     }
 }

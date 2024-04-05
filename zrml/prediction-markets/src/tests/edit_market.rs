@@ -29,7 +29,7 @@ use crate::MarketIdsForEdit;
 fn only_creator_can_edit_market() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::Lmsr,
@@ -54,7 +54,7 @@ fn only_creator_can_edit_market() {
         assert_noop!(
             PredictionMarkets::edit_market(
                 RuntimeOrigin::signed(BOB),
-                Asset::Ztg,
+                BaseAsset::Ztg,
                 0,
                 CHARLIE,
                 MarketPeriod::Block(0..2),
@@ -73,7 +73,7 @@ fn only_creator_can_edit_market() {
 fn edit_cycle_for_proposed_markets() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             2..4,
             ScoringRule::Lmsr,
@@ -97,7 +97,7 @@ fn edit_cycle_for_proposed_markets() {
         // After this edit its changed to ALICE
         assert_ok!(PredictionMarkets::edit_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             0,
             CHARLIE,
             MarketPeriod::Block(2..4),
@@ -122,7 +122,7 @@ fn edit_market_with_foreign_asset() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::Lmsr,
@@ -148,7 +148,7 @@ fn edit_market_with_foreign_asset() {
         assert_noop!(
             PredictionMarkets::edit_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::ForeignAsset(50),
+                BaseAsset::ForeignAsset(50),
                 0,
                 CHARLIE,
                 MarketPeriod::Block(0..2),
@@ -164,7 +164,7 @@ fn edit_market_with_foreign_asset() {
         assert_noop!(
             PredictionMarkets::edit_market(
                 RuntimeOrigin::signed(ALICE),
-                Asset::ForeignAsset(420),
+                BaseAsset::ForeignAsset(420),
                 0,
                 CHARLIE,
                 MarketPeriod::Block(0..2),
@@ -179,7 +179,7 @@ fn edit_market_with_foreign_asset() {
         // As per Mock asset_registry genesis ForeignAsset(100) has allow_as_base_asset set to true.
         assert_ok!(PredictionMarkets::edit_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::ForeignAsset(100),
+            BaseAsset::ForeignAsset(100),
             0,
             CHARLIE,
             MarketPeriod::Block(0..2),
@@ -190,6 +190,6 @@ fn edit_market_with_foreign_asset() {
             ScoringRule::Lmsr
         ));
         let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.base_asset, Asset::ForeignAsset(100));
+        assert_eq!(market.base_asset, BaseAsset::ForeignAsset(100));
     });
 }

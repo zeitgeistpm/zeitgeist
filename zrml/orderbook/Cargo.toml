@@ -8,37 +8,43 @@ orml-traits = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
 sp-runtime = { workspace = true }
+zeitgeist-macros = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 
 # Mock
 env_logger = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
+pallet-assets = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
+zrml-asset-router = { workspace = true, optional = true }
 zrml-market-commons = { workspace = true, optional = true }
 
 [dev-dependencies]
 test-case = { workspace = true }
-zrml-orderbook = { workspace = true, features = ["mock", "default"] }
+zrml-orderbook = { workspace = true, features = ["default", "mock"] }
 
 [features]
 default = ["std"]
 mock = [
+    "env_logger/default",
+    "orml-currencies/default",
     "orml-tokens/default",
+    "pallet-assets/default",
     "pallet-balances/default",
     "pallet-timestamp/default",
-    "zrml-market-commons/default",
-    "orml-currencies/default",
     "sp-io/default",
     "zeitgeist-primitives/mock",
-    "env_logger/default",
+    "zrml-asset-router",
+    "zrml-market-commons/default",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "pallet-assets?/runtime-benchmarks",
 ]
 std = [
     "frame-benchmarking?/std",

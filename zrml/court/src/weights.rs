@@ -21,11 +21,11 @@
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: `2024-01-15`, STEPS: `50`, REPEAT: `20`, LOW RANGE: `[]`, HIGH RANGE: `[]`
 //! WORST CASE MAP SIZE: `1000000`
-//! HOSTNAME: `zeitgeist-benchmark`, CPU: `AMD EPYC 7601 32-Core Processor`
-//! EXECUTION: `Some(Wasm)`, WASM-EXECUTION: `Compiled`, CHAIN: `Some("dev")`, DB CACHE: `1024`
+//! HOSTNAME: `zafoi`, CPU: `AMD Ryzen 9 5900X 12-Core Processor`
+//! EXECUTION: `Some(Native)`, WASM-EXECUTION: `Compiled`, CHAIN: `Some("dev")`, DB CACHE: `1024`
 
 // Executed Command:
-// ./target/production/zeitgeist
+// ./target/release/zeitgeist
 // benchmark
 // pallet
 // --chain=dev
@@ -33,7 +33,7 @@
 // --repeat=20
 // --pallet=zrml_court
 // --extrinsic=*
-// --execution=wasm
+// --execution=native
 // --wasm-execution=compiled
 // --heap-pages=4096
 // --template=./misc/weight_template.hbs
@@ -137,7 +137,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
     fn exit_court_remove() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `307`
+        //  Measured:  `340`
         //  Estimated: `6500`
         // Minimum execution time: 42_610 nanoseconds.
         Weight::from_parts(44_230_000, 6500)
@@ -150,7 +150,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
     fn exit_court_set() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `307`
+        //  Measured:  `340`
         //  Estimated: `6500`
         // Minimum execution time: 37_370 nanoseconds.
         Weight::from_parts(43_080_000, 6500)
@@ -295,18 +295,14 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: Court YearlyInflation (r:1 w:0)
     /// Proof: Court YearlyInflation (max_values: Some(1), max_size: Some(4), added: 499, mode: MaxEncodedLen)
     /// The range of component `j` is `[1, 1000]`.
-    fn handle_inflation(j: u32) -> Weight {
+    fn handle_inflation(_j: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `0 + j * (243 ±0)`
-        //  Estimated: `72996 + j * (2607 ±0)`
-        // Minimum execution time: 33_280 nanoseconds.
-        Weight::from_parts(34_480_000, 72996)
-            // Standard Error: 9_174
-            .saturating_add(Weight::from_parts(19_968_654, 0).saturating_mul(j.into()))
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(j.into())))
-            .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(j.into())))
-            .saturating_add(Weight::from_parts(0, 2607).saturating_mul(j.into()))
+        //  Measured:  `264 + j * (243 ±0)`
+        //  Estimated: `2679996`
+        // Minimum execution time: 15_180 nanoseconds.
+        Weight::from_parts(6_159_567_000, 2679996)
+            .saturating_add(T::DbWeight::get().reads(1002))
+            .saturating_add(T::DbWeight::get().writes(1000))
     }
     /// Storage: Court CourtPool (r:1 w:1)
     /// Proof: Court CourtPool (max_values: Some(1), max_size: Some(72002), added: 72497, mode: MaxEncodedLen)
@@ -425,7 +421,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Court Courts (max_values: None, max_size: Some(349), added: 2824, mode: MaxEncodedLen)
     fn get_auto_resolve() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `423`
+        //  Measured:  `456`
         //  Estimated: `5339`
         // Minimum execution time: 12_750 nanoseconds.
         Weight::from_parts(15_520_000, 5339).saturating_add(T::DbWeight::get().reads(2))
@@ -442,7 +438,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
     fn has_failed() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `3189`
+        //  Measured:  `3222`
         //  Estimated: `83504`
         // Minimum execution time: 38_700 nanoseconds.
         Weight::from_parts(45_630_000, 83504).saturating_add(T::DbWeight::get().reads(5))

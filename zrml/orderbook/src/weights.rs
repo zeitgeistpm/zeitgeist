@@ -33,7 +33,7 @@
 // --repeat=20
 // --pallet=zrml_orderbook
 // --extrinsic=*
-// --execution=wasm
+// --execution=native
 // --wasm-execution=compiled
 // --heap-pages=4096
 // --template=./misc/weight_template.hbs
@@ -74,6 +74,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Orderbook Orders (max_values: None, max_size: Some(142), added: 2617, mode: MaxEncodedLen)
     /// Storage: MarketCommons Markets (r:1 w:0)
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:1 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Balances Reserves (r:1 w:1)
     /// Proof: Balances Reserves (max_values: None, max_size: Some(1249), added: 3724, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
@@ -91,6 +93,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     /// Storage: MarketCommons Markets (r:1 w:0)
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:1 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Orderbook NextOrderId (r:1 w:1)
     /// Proof: Orderbook NextOrderId (max_values: Some(1), max_size: Some(16), added: 511, mode: MaxEncodedLen)
     /// Storage: Balances Reserves (r:1 w:1)

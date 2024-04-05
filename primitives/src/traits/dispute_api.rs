@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -20,11 +20,11 @@ extern crate alloc;
 
 use crate::{
     outcome_report::OutcomeReport,
-    types::{Asset, GlobalDisputeItem, Market, ResultWithWeightInfo},
+    types::{BaseAsset, GlobalDisputeItem, Market, ResultWithWeightInfo},
 };
 use alloc::vec::Vec;
 use frame_support::pallet_prelude::Weight;
-use parity_scale_codec::MaxEncodedLen;
+use parity_scale_codec::{HasCompact, MaxEncodedLen};
 use sp_runtime::DispatchError;
 
 // Abstraction of the market type, which is not a part of `DisputeApi` because Rust doesn't support
@@ -34,7 +34,7 @@ type MarketOfDisputeApi<T> = Market<
     <T as DisputeApi>::Balance,
     <T as DisputeApi>::BlockNumber,
     <T as DisputeApi>::Moment,
-    Asset<<T as DisputeApi>::MarketId>,
+    BaseAsset,
 >;
 
 type GlobalDisputeItemOfDisputeApi<T> =
@@ -45,7 +45,7 @@ pub trait DisputeApi {
     type Balance;
     type NegativeImbalance;
     type BlockNumber;
-    type MarketId: MaxEncodedLen;
+    type MarketId: MaxEncodedLen + HasCompact;
     type Moment;
     type Origin;
 
@@ -150,14 +150,14 @@ type MarketOfDisputeResolutionApi<T> = Market<
     <T as DisputeResolutionApi>::Balance,
     <T as DisputeResolutionApi>::BlockNumber,
     <T as DisputeResolutionApi>::Moment,
-    Asset<<T as DisputeResolutionApi>::MarketId>,
+    BaseAsset,
 >;
 
 pub trait DisputeResolutionApi {
     type AccountId;
     type Balance;
     type BlockNumber;
-    type MarketId: MaxEncodedLen;
+    type MarketId: MaxEncodedLen + HasCompact;
     type Moment;
 
     /// Resolve a market.

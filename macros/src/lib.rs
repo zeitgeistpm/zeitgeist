@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
 /// Creates an `alloc::collections::BTreeMap` from the pattern `{ key => value, ... }`.
 ///
 /// ```ignore
@@ -48,7 +50,7 @@ macro_rules! create_b_tree_map {
 #[macro_export]
 macro_rules! unreachable_non_terminating {
     ($condition: expr, $message: literal, $($message_args: tt)*) => {
-        let message = format!($message, $($message_args)*);
+        let message = alloc::format!($message, $($message_args)*);
 
         #[cfg(test)]
         assert!($condition, "{}", message);
@@ -58,7 +60,7 @@ macro_rules! unreachable_non_terminating {
         }
     };
     ($condition: expr, $log_target: ident, $message: literal, $($message_args: tt)*) => {
-        let message = format!($message, $($message_args)*);
+        let message = alloc::format!($message, $($message_args)*);
 
         #[cfg(test)]
         assert!($condition, "{}", message);
@@ -68,7 +70,7 @@ macro_rules! unreachable_non_terminating {
         }
     };
     ($condition: expr, $extra_code: expr, $message: literal, $($message_args: tt)*) => {
-        let message = format!($message, $($message_args)*);
+        let message = alloc::format!($message, $($message_args)*);
 
         #[cfg(test)]
         assert!($condition, "{}", message);
@@ -79,7 +81,7 @@ macro_rules! unreachable_non_terminating {
         }
     };
     ($condition: expr, $log_target: ident, $extra_code: expr, $message: literal, $($message_args: tt)*) => {
-        let message = format!($message, $($message_args)*);
+        let message = alloc::format!($message, $($message_args)*);
 
         #[cfg(test)]
         assert!($condition, "{}", message);

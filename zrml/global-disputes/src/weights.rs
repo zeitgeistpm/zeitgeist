@@ -21,11 +21,11 @@
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: `2024-01-15`, STEPS: `50`, REPEAT: `20`, LOW RANGE: `[]`, HIGH RANGE: `[]`
 //! WORST CASE MAP SIZE: `1000000`
-//! HOSTNAME: `zeitgeist-benchmark`, CPU: `AMD EPYC 7601 32-Core Processor`
-//! EXECUTION: `Some(Wasm)`, WASM-EXECUTION: `Compiled`, CHAIN: `Some("dev")`, DB CACHE: `1024`
+//! HOSTNAME: `zafoi`, CPU: `AMD Ryzen 9 5900X 12-Core Processor`
+//! EXECUTION: `Some(Native)`, WASM-EXECUTION: `Compiled`, CHAIN: `Some("dev")`, DB CACHE: `1024`
 
 // Executed Command:
-// ./target/production/zeitgeist
+// ./target/release/zeitgeist
 // benchmark
 // pallet
 // --chain=dev
@@ -33,7 +33,7 @@
 // --repeat=20
 // --pallet=zrml_global_disputes
 // --extrinsic=*
-// --execution=wasm
+// --execution=native
 // --wasm-execution=compiled
 // --heap-pages=4096
 // --template=./misc/weight_template.hbs
@@ -108,7 +108,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(3))
             .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(l.into())))
             .saturating_add(T::DbWeight::get().writes(2))
-            .saturating_add(Weight::from_parts(0, 2871).saturating_mul(l.into()))
+            .saturating_add(Weight::from_parts(0, 2870).saturating_mul(l.into()))
     }
     /// Storage: GlobalDisputes Locks (r:1 w:1)
     /// Proof: GlobalDisputes Locks (max_values: None, max_size: Some(1641), added: 4116, mode: MaxEncodedLen)
@@ -133,7 +133,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(3))
             .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(l.into())))
             .saturating_add(T::DbWeight::get().writes(2))
-            .saturating_add(Weight::from_parts(0, 2871).saturating_mul(l.into()))
+            .saturating_add(Weight::from_parts(0, 2870).saturating_mul(l.into()))
     }
     /// Storage: MarketCommons Markets (r:1 w:0)
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
@@ -146,7 +146,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// The range of component `w` is `[1, 10]`.
     fn add_vote_outcome(_w: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `690 + w * (32 ±0)`
+        //  Measured:  `723 + w * (32 ±0)`
         //  Estimated: `11501`
         // Minimum execution time: 69_591 nanoseconds.
         Weight::from_parts(88_511_398, 11501)
@@ -182,7 +182,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
     fn reward_outcome_owner_paid_possession() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `537`
+        //  Measured:  `570`
         //  Estimated: `10955`
         // Minimum execution time: 74_690 nanoseconds.
         Weight::from_parts(90_080_000, 10955)

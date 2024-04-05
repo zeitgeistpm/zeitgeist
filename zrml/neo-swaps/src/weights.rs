@@ -33,7 +33,7 @@
 // --repeat=20
 // --pallet=zrml_neo_swaps
 // --extrinsic=*
-// --execution=wasm
+// --execution=native
 // --wasm-execution=compiled
 // --heap-pages=4096
 // --template=./misc/weight_template.hbs
@@ -68,6 +68,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: NeoSwaps Pools (max_values: None, max_size: Some(144745), added: 147220, mode: MaxEncodedLen)
     /// Storage: System Account (r:3 w:3)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:128 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:129 w:129)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:128 w:128)
@@ -91,6 +93,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
     /// Storage: NeoSwaps Pools (r:1 w:1)
     /// Proof: NeoSwaps Pools (max_values: None, max_size: Some(144745), added: 147220, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:128 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:129 w:129)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:3 w:3)
@@ -116,6 +120,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
     /// Storage: NeoSwaps Pools (r:1 w:1)
     /// Proof: NeoSwaps Pools (max_values: None, max_size: Some(144745), added: 147220, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:128 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:256 w:256)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
@@ -139,6 +145,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
     /// Storage: NeoSwaps Pools (r:1 w:1)
     /// Proof: NeoSwaps Pools (max_values: None, max_size: Some(144745), added: 147220, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:128 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:256 w:256)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
@@ -162,6 +170,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
     /// Storage: NeoSwaps Pools (r:1 w:1)
     /// Proof: NeoSwaps Pools (max_values: None, max_size: Some(144745), added: 147220, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:128 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:256 w:256)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
@@ -185,6 +195,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
     /// Storage: NeoSwaps Pools (r:1 w:1)
     /// Proof: NeoSwaps Pools (max_values: None, max_size: Some(144745), added: 147220, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:128 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:256 w:256)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:0)
@@ -221,6 +233,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
     /// Storage: NeoSwaps Pools (r:1 w:1)
     /// Proof: NeoSwaps Pools (max_values: None, max_size: Some(144745), added: 147220, mode: MaxEncodedLen)
+    /// Storage: MarketAssets Asset (r:128 w:0)
+    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:256 w:256)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)

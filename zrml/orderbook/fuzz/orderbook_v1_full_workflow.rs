@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -19,7 +19,7 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use zeitgeist_primitives::types::{Asset, ScalarPosition, SerdeWrapper};
+use zeitgeist_primitives::types::{Asset, ScalarPosition};
 use zrml_orderbook::mock::{ExtBuilder, Orderbook, RuntimeOrigin};
 
 #[cfg(feature = "arbitrary")]
@@ -92,7 +92,7 @@ fn asset(seed: (u128, u16)) -> Asset<u128> {
                 if seed1 % 2 == 0 { ScalarPosition::Long } else { ScalarPosition::Short };
             Asset::ScalarOutcome(seed0, scalar_position)
         }
-        2 => Asset::PoolShare(SerdeWrapper(seed0)),
+        2 => Asset::PoolShare(seed0),
         _ => Asset::Ztg,
     }
 }
