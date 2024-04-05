@@ -14,13 +14,13 @@ APIs/RPC interface.
 
 ## v0.5.1
 
-[#1197]: https://github.com/zeitgeistpm/zeitgeist/pull/1197
+[#1295]: https://github.com/zeitgeistpm/zeitgeist/pull/1295
 [pallet-asset]:
   https://github.com/paritytech/polkadot-sdk/tree/master/substrate/frame/assets
 
 ### Added
 
-- [#1197] New asset classes:
+- [#1295] New asset classes:
   - `CampaignAssetClass` - Can be registered by gov and council and be used in
     markets and to pay transaction fees.
   - `CustomAssetClass` - Allows any user to register their custom assets (can't
@@ -42,11 +42,11 @@ APIs/RPC interface.
     scale codec representation into the `Assets` type.
   - `Assets` provides `TryInto` into all other asset classes, which fails if the
     asset type is not existent in the asset class.
-- [#1197] Added [pallet-asset], which is a Substrate pallet that provides fine
+- [#1295] Added [pallet-asset], which is a Substrate pallet that provides fine
   grained control over asset creation, destruction, management (mint, burn,
   freeze, admin account) and much more. It is used for `CampaignAssetClass`,
   `CustomAssetClass` and `MarketAssetClass`.
-- [#1197] Added zrml-asset-router (AssetRouter). This pallet is an abstraction
+- [#1295] Added zrml-asset-router (AssetRouter). This pallet is an abstraction
   layer over multiple pallets (like orml-tokens and pallet-assets) that handles
   routing calls, managing asset destruction and the lazy migrating market assets
   from `CurrencyClass` to `MarketAssetClass`. It does not have any dispatchable
@@ -56,11 +56,11 @@ APIs/RPC interface.
   chain via transactions and can be used when developing pallets. In the latter
   case, some functionalities can only be used when directly interacting with
   zrml-asset-router.
-- [#1197] Campaign assets have to be created and destroyed by gov or the
+- [#1295] Campaign assets have to be created and destroyed by gov or the
   council. Custom assets have to be created and destroyed via transactions.
   Market assets are automatically created and destroyed. In all non automatic
   cases, destroying is achieved by calling `start_destroy`.
-- [#1197] Transaction fee payment is now possible with campaign assets. The fee
+- [#1295] Transaction fee payment is now possible with campaign assets. The fee
   is calculated as follows (with `CampaignAssetFeeMultiplier = 100`):
 
 ```rust
@@ -73,22 +73,22 @@ if ztg_supply / campaign_asset_supply >= 100 {
 
 ### Changed
 
-- [#1197] `Assets` does not contain the `CombinatorialOutcome` asset type
+- [#1295] `Assets` does not contain the `CombinatorialOutcome` asset type
   anymore, but has been extended by all existing asset types.
-- [#1197] The transaction fee asset type has been changed from `u32` to
+- [#1295] The transaction fee asset type has been changed from `u32` to
   `Assets`.
-- [#1197] The prediction market base asset type has been changed in the `Market`
+- [#1295] The prediction market base asset type has been changed in the `Market`
   storage and market creation dispatchable calls to `BaseAssetClass`.
-- [#1197] The asset type for XCM has been changed to `XcmAssetClass`. It is used
+- [#1295] The asset type for XCM has been changed to `XcmAssetClass`. It is used
   in `orml-xtokens` (XTokens) and `orml-asset-registry` (AssetRegistry).
 
 ### Removed
 
-- [#1197] `SerdeWrapper` has been removed.
+- [#1295] `SerdeWrapper` has been removed.
 
 ### Deprecated
 
-- [#1197] Market outcome asset types are no longer handled by `orml-tokens`
+- [#1295] Market outcome asset types are no longer handled by `orml-tokens`
   (Tokens), except for existing markets which still used market asset types
   within `CurrencyClass`. `pallet-assets` (MarketAssets) now handles market
   outcome asset types from the `MarketAssetClass`.
