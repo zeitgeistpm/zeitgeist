@@ -55,13 +55,12 @@ macro_rules! decl_common_types {
         use orml_traits::MultiCurrency;
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
-        use zrml_court::migrations::MigrateCourtPoolItems;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (MigrateCourtPoolItems<Runtime>,);
+        type Migrations = ();
 
         pub type Executive = frame_executive::Executive<
             Runtime,
