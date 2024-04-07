@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,6 +17,8 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![allow(clippy::needless_late_init)]
+#![allow(clippy::useless_vec)]
+
 use frame_support::assert_err;
 use substrate_fixed::{traits::ToFixed, types::extra::U64, FixedI128, FixedU128};
 

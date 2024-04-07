@@ -70,7 +70,7 @@ mod pallet {
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
         traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees},
-        types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
+        types::{Asset, MarketStatus, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -126,8 +126,8 @@ mod pallet {
 
         type WeightInfo: WeightInfoZeitgeist;
 
-        /// The maximum allowed liquidity tree depth per pool. Each pool can support `2^(depth + 1)
-        /// - 1` liquidity providers. **Must** be less than 16.
+        /// The maximum allowed liquidity tree depth per pool. Each pool can support
+        /// `2^(depth + 1) - 1` liquidity providers. **Must** be less than 16.
         #[pallet::constant]
         type MaxLiquidityTreeDepth: Get<u32>;
 
@@ -164,7 +164,8 @@ mod pallet {
             external_fee_amount: BalanceOf<T>,
         },
         /// Informant sold a position. `amount_out` is the amount of collateral received by `who`,
-        /// including swap and external fees.
+        /// with swap and external fees not yet deducted. The actual amount received is
+        /// `amount_out - swap_fee_amount - external_fee_amount`.
         SellExecuted {
             who: T::AccountId,
             market_id: MarketIdOf<T>,
@@ -860,17 +861,16 @@ mod pallet {
                 Error::<T>::LiquidityTooLow
             );
             let pool_account_id = Self::pool_account_id(&market_id);
-            let assets = Self::outcomes(market_id)?;
             let mut reserves = BTreeMap::new();
-            for (&amount_in, &asset) in amounts_in.iter().zip(assets.iter()) {
-                T::MultiCurrency::transfer(asset, &who, &pool_account_id, amount_in)?;
-                let _ = reserves.insert(asset, amount_in);
+            for (&amount_in, &asset) in amounts_in.iter().zip(market.outcome_assets().iter()) {
+                T::MultiCurrency::transfer(asset.into(), &who, &pool_account_id, amount_in)?;
+                let _ = reserves.insert(asset.into(), amount_in);
             }
             let collateral = market.base_asset;
             let pool = Pool {
                 account_id: pool_account_id.clone(),
                 reserves: reserves.clone(),
-                collateral,
+                collateral: collateral.into(),
                 liquidity_parameter,
                 liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
                 swap_fee,
@@ -881,7 +881,7 @@ mod pallet {
                 pool.collateral,
                 &who,
                 &pool.account_id,
-                T::MultiCurrency::minimum_balance(collateral),
+                T::MultiCurrency::minimum_balance(collateral.into()),
             )?;
             Pools::<T>::insert(market_id, pool);
             Self::deposit_event(Event::<T>::PoolDeployed {
@@ -889,7 +889,7 @@ mod pallet {
                 market_id,
                 account_id: pool_account_id,
                 reserves,
-                collateral,
+                collateral: collateral.into(),
                 liquidity_parameter,
                 pool_shares_amount: amount,
                 swap_fee,
@@ -925,26 +925,6 @@ mod pallet {
             let total_fees = external_fees.saturating_add(swap_fees);
             let remaining = amount.checked_sub(&total_fees).ok_or(Error::<T>::Unexpected)?;
             Ok(FeeDistribution { remaining, swap_fees, external_fees })
-        }
-
-        // TODO(#1218): Carbon copy of a function in prediction-markets. To be removed later.
-        fn outcomes(market_id: MarketIdOf<T>) -> Result<Vec<AssetOf<T>>, DispatchError> {
-            let market = T::MarketCommons::market(&market_id)?;
-            Ok(match market.market_type {
-                MarketType::Categorical(categories) => {
-                    let mut assets = Vec::new();
-                    for i in 0..categories {
-                        assets.push(Asset::CategoricalOutcome(market_id, i));
-                    }
-                    assets
-                }
-                MarketType::Scalar(_) => {
-                    vec![
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
-                    ]
-                }
-            })
         }
 
         pub(crate) fn try_mutate_pool<R, F>(

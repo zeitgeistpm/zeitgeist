@@ -1,0 +1,39 @@
+[dependencies]
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+log = { workspace = true }
+orml-traits = { workspace = true }
+pallet-assets = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+scale-info = { workspace = true, features = ["derive"] }
+sp-runtime = { workspace = true }
+zeitgeist-macros = { workspace = true }
+zeitgeist-primitives = { workspace = true }
+
+[dev-dependencies]
+orml-tokens = { workspace = true, features = ["default"] }
+pallet-balances = { workspace = true, features = ["default"] }
+sp-io = { workspace = true, features = ["default"] }
+test-case = { workspace = true }
+zeitgeist-primitives = { workspace = true, features = ["default", "mock"] }
+
+[features]
+default = ["std"]
+runtime-benchmarks = ["pallet-assets/runtime-benchmarks"]
+std = [
+    "frame-support/std",
+    "frame-system/std",
+    "orml-traits/std",
+    "pallet-assets/std",
+    "parity-scale-codec/std",
+    "zeitgeist-primitives/std",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+]
+
+[package]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
+edition = "2021"
+name = "zrml-asset-router"
+version = "0.4.1"

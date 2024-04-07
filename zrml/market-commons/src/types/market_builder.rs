@@ -16,16 +16,16 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    AccountIdOf, AssetOf, BalanceOf, BlockNumberOf, Config, DeadlinesOf, EarlyCloseOf, Error,
-    MarketBondsOf, MarketIdOf, MarketOf, MarketPeriodOf, MomentOf, ReportOf,
+    AccountIdOf, BalanceOf, BlockNumberOf, Config, DeadlinesOf, EarlyCloseOf, Error, MarketBondsOf,
+    MarketIdOf, MarketOf, MarketPeriodOf, MomentOf, ReportOf,
 };
 use alloc::vec::Vec;
 use sp_runtime::{DispatchError, Perbill};
 use zeitgeist_primitives::{
     traits::MarketBuilderTrait,
     types::{
-        Market, MarketCreation, MarketDisputeMechanism, MarketStatus, MarketType, OutcomeReport,
-        ScoringRule,
+        BaseAsset, Market, MarketCreation, MarketDisputeMechanism, MarketStatus, MarketType,
+        OutcomeReport, ScoringRule,
     },
 };
 
@@ -36,7 +36,7 @@ where
     T: Config,
 {
     market_id: Option<MarketIdOf<T>>,
-    base_asset: Option<AssetOf<T>>,
+    base_asset: Option<BaseAsset>,
     creator: Option<AccountIdOf<T>>,
     creation: Option<MarketCreation>,
     creator_fee: Option<Perbill>,
@@ -117,7 +117,7 @@ impl<T>
         BalanceOf<T>,
         BlockNumberOf<T>,
         MomentOf<T>,
-        AssetOf<T>,
+        BaseAsset,
         MarketIdOf<T>,
     > for MarketBuilder<T>
 where
@@ -147,7 +147,7 @@ where
 
     impl_builder_methods! {
         market_id: MarketIdOf<T>,
-        base_asset: AssetOf<T>,
+        base_asset: BaseAsset,
         creator: AccountIdOf<T>,
         creation: MarketCreation,
         creator_fee: Perbill,

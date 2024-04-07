@@ -20,7 +20,7 @@
 
 use crate::{
     traits::MarketBuilderTrait,
-    types::{Asset, Market, PoolId},
+    types::{BaseAsset, Market, PoolId},
 };
 use frame_support::{
     dispatch::{fmt::Debug, DispatchError, DispatchResult},
@@ -28,18 +28,17 @@ use frame_support::{
     storage::PrefixIterator,
     Parameter,
 };
-use parity_scale_codec::{FullCodec, MaxEncodedLen};
+use parity_scale_codec::{FullCodec, HasCompact, MaxEncodedLen};
 use sp_runtime::traits::{AtLeast32Bit, AtLeast32BitUnsigned};
 
 // Abstraction of the market type, which is not a part of `MarketCommonsPalletApi` because Rust
 // doesn't support type aliases in traits.
-type AssetOf<T> = Asset<<T as MarketCommonsPalletApi>::MarketId>;
 pub type MarketOf<T> = Market<
     <T as MarketCommonsPalletApi>::AccountId,
     <T as MarketCommonsPalletApi>::Balance,
     <T as MarketCommonsPalletApi>::BlockNumber,
     <T as MarketCommonsPalletApi>::Moment,
-    AssetOf<T>,
+    BaseAsset,
     <T as MarketCommonsPalletApi>::MarketId,
 >;
 
@@ -60,6 +59,7 @@ pub trait MarketCommonsPalletApi {
         + Default
         + MaybeSerializeDeserialize
         + MaxEncodedLen
+        + HasCompact
         + Member
         + Parameter;
     type Moment: AtLeast32Bit + Copy + Default + Parameter + MaxEncodedLen;
@@ -105,7 +105,7 @@ pub trait MarketCommonsPalletApi {
                 Self::Balance,
                 Self::BlockNumber,
                 Self::Moment,
-                AssetOf<Self>,
+                BaseAsset,
                 Self::MarketId,
             >;
 

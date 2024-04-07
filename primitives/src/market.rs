@@ -16,10 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::OutcomeReport;
-use alloc::vec::Vec;
+use crate::types::{MarketAssetClass, OutcomeReport, ScalarPosition};
+use alloc::{vec, vec::Vec};
 use core::ops::{Range, RangeInclusive};
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, Encode, HasCompact, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Perbill;
 use sp_runtime::RuntimeDebug;
@@ -70,7 +70,14 @@ pub struct Market<AI, BA, BN, M, A, MI> {
     pub early_close: Option<EarlyClose<BN, M>>,
 }
 
-impl<AI, BA, BN, M, A, MI> Market<AI, BA, BN, M, A, MI> {
+impl<AI, BA, BN, M, A, MI> Market<AI, BA, BN, M, A, MI>
+where
+    MI: Copy + HasCompact + MaxEncodedLen,
+{
+    /// Returns the `ResolutionMechanism` of market, currently either:
+    /// - `RedeemTokens`, which implies that the module that handles the state transitions of
+    ///    a market is also responsible to provide means for redeeming rewards
+    /// - `Noop`, which implies that another module provides the means for redeeming rewards
     pub fn resolution_mechanism(&self) -> ResolutionMechanism {
         match self.scoring_rule {
             ScoringRule::Lmsr | ScoringRule::Orderbook => ResolutionMechanism::RedeemTokens,
@@ -78,8 +85,108 @@ impl<AI, BA, BN, M, A, MI> Market<AI, BA, BN, M, A, MI> {
         }
     }
 
+    /// Returns whether the market is redeemable, i.e. reward payout is managed within
+    /// the same module that controls the state transitions of the underlying market.
     pub fn is_redeemable(&self) -> bool {
         matches!(self.resolution_mechanism(), ResolutionMechanism::RedeemTokens)
+    }
+
+    /// Returns the number of outcomes for a market.
+    pub fn outcomes(&self) -> u16 {
+        match self.market_type {
+            MarketType::Categorical(categories) => categories,
+            MarketType::Scalar(_) => 2,
+        }
+    }
+
+    /// Check if `outcome_report` matches the type of this market.
+    pub fn matches_outcome_report(&self, outcome_report: &OutcomeReport) -> bool {
+        match outcome_report {
+            OutcomeReport::Categorical(ref inner) => {
+                if let MarketType::Categorical(ref categories) = &self.market_type {
+                    inner < categories
+                } else {
+                    false
+                }
+            }
+            OutcomeReport::Scalar(_) => {
+                matches!(&self.market_type, MarketType::Scalar(_))
+            }
+        }
+    }
+
+    /// Returns a `Vec` of all outcomes for `market_id`.
+    pub fn outcome_assets(&self) -> Vec<MarketAssetClass<MI>> {
+        match self.market_type {
+            MarketType::Categorical(categories) => {
+                let mut assets = Vec::new();
+
+                for i in 0..categories {
+                    match self.scoring_rule {
+                        ScoringRule::Orderbook => assets
+                            .push(MarketAssetClass::<MI>::CategoricalOutcome(self.market_id, i)),
+                        ScoringRule::Lmsr => assets
+                            .push(MarketAssetClass::<MI>::CategoricalOutcome(self.market_id, i)),
+                        ScoringRule::Parimutuel => {
+                            assets.push(MarketAssetClass::<MI>::ParimutuelShare(self.market_id, i))
+                        }
+                    };
+                }
+
+                assets
+            }
+            MarketType::Scalar(_) => {
+                vec![
+                    MarketAssetClass::<MI>::ScalarOutcome(self.market_id, ScalarPosition::Long),
+                    MarketAssetClass::<MI>::ScalarOutcome(self.market_id, ScalarPosition::Short),
+                ]
+            }
+        }
+    }
+
+    /// Tries to convert the reported outcome for `market_id` into an asset,
+    /// returns `None` if not possible. Cases where `None` is returned are:
+    /// - The reported outcome does not exist
+    /// - The reported outcome does not have a corresponding asset type
+    pub fn report_into_asset(&self) -> Option<MarketAssetClass<MI>> {
+        let outcome = if let Some(ref report) = self.report {
+            &report.outcome
+        } else {
+            return None;
+        };
+
+        self.outcome_report_into_asset(outcome)
+    }
+
+    /// Tries to convert the resolved outcome for `market_id` into an asset,
+    /// returns `None` if not possible. Cases where `None` is returned are:
+    /// - The resolved outcome does not exist
+    /// - The resolved outcome does not have a corresponding asset type
+    pub fn resolved_outcome_into_asset(&self) -> Option<MarketAssetClass<MI>> {
+        let outcome = self.resolved_outcome.as_ref()?;
+        self.outcome_report_into_asset(outcome)
+    }
+
+    /// Tries to convert a `outcome_report` for `market_id` into an asset,
+    /// returns `None` if not possible.
+    fn outcome_report_into_asset(
+        &self,
+        outcome_report: &OutcomeReport,
+    ) -> Option<MarketAssetClass<MI>> {
+        match outcome_report {
+            OutcomeReport::Categorical(idx) => match self.scoring_rule {
+                ScoringRule::Orderbook => {
+                    Some(MarketAssetClass::<MI>::CategoricalOutcome(self.market_id, *idx))
+                }
+                ScoringRule::Lmsr => {
+                    Some(MarketAssetClass::<MI>::CategoricalOutcome(self.market_id, *idx))
+                }
+                ScoringRule::Parimutuel => {
+                    Some(MarketAssetClass::<MI>::ParimutuelShare(self.market_id, *idx))
+                }
+            },
+            OutcomeReport::Scalar(_) => None,
+        }
     }
 }
 
@@ -137,32 +244,6 @@ impl<AI, BA> Default for MarketBonds<AI, BA> {
             dispute: None,
             close_request: None,
             close_dispute: None,
-        }
-    }
-}
-
-impl<AI, BA, BN, M, A, MI> Market<AI, BA, BN, M, A, MI> {
-    // Returns the number of outcomes for a market.
-    pub fn outcomes(&self) -> u16 {
-        match self.market_type {
-            MarketType::Categorical(categories) => categories,
-            MarketType::Scalar(_) => 2,
-        }
-    }
-
-    /// Check if `outcome_report` matches the type of this market.
-    pub fn matches_outcome_report(&self, outcome_report: &OutcomeReport) -> bool {
-        match outcome_report {
-            OutcomeReport::Categorical(ref inner) => {
-                if let MarketType::Categorical(ref categories) = &self.market_type {
-                    inner < categories
-                } else {
-                    false
-                }
-            }
-            OutcomeReport::Scalar(_) => {
-                matches!(&self.market_type, MarketType::Scalar(_))
-            }
         }
     }
 }
@@ -349,9 +430,13 @@ pub enum ResolutionMechanism {
 
 #[cfg(test)]
 mod tests {
-    use crate::{market::*, types::Asset};
+    use crate::{
+        market::*,
+        types::{Asset, MarketAsset},
+    };
     use test_case::test_case;
-    type Market = crate::market::Market<u32, u32, u32, u32, Asset<u32>, u32>;
+    type MarketId = u128;
+    type Market = crate::market::Market<u32, u32, u32, u32, Asset<MarketId>, MarketId>;
 
     #[test_case(
         MarketType::Categorical(6),
@@ -414,7 +499,7 @@ mod tests {
             creator_fee: Default::default(),
             oracle: 3,
             metadata: vec![4u8; 5],
-            market_type, // : MarketType::Categorical(6),
+            market_type,
             period: MarketPeriod::Block(7..8),
             deadlines: Deadlines {
                 grace_period: 1_u32,
@@ -430,6 +515,131 @@ mod tests {
             early_close: None,
         };
         assert_eq!(market.matches_outcome_report(&outcome_report), expected);
+    }
+
+    #[test_case(
+        MarketType::Categorical(2),
+        ScoringRule::Lmsr,
+        vec![MarketAsset::CategoricalOutcome(0, 0), MarketAsset::CategoricalOutcome(0, 1)];
+        "categorical_market_lmsr"
+    )]
+    #[test_case(
+        MarketType::Categorical(2),
+        ScoringRule::Orderbook,
+        vec![MarketAsset::CategoricalOutcome(0, 0), MarketAsset::CategoricalOutcome(0, 1)];
+        "categorical_market_orderbook"
+    )]
+    #[test_case(
+        MarketType::Categorical(2),
+        ScoringRule::Parimutuel,
+        vec![MarketAsset::ParimutuelShare(0, 0), MarketAsset::ParimutuelShare(0, 1)];
+        "categorical_market_parimutuel"
+    )]
+    #[test_case(
+        MarketType::Scalar(12..=34),
+        ScoringRule::Lmsr,
+        vec![
+            MarketAsset::ScalarOutcome(0, ScalarPosition::Long),
+            MarketAsset::ScalarOutcome(0, ScalarPosition::Short),
+        ];
+        "scalar_market"
+    )]
+    fn provides_correct_list_of_assets(
+        market_type: MarketType,
+        scoring_rule: ScoringRule,
+        expected: Vec<MarketAsset>,
+    ) {
+        let market = Market {
+            market_id: 0,
+            base_asset: Asset::Ztg,
+            creator: 1,
+            creation: MarketCreation::Permissionless,
+            creator_fee: Default::default(),
+            oracle: 3,
+            metadata: vec![4u8; 5],
+            market_type,
+            period: MarketPeriod::Block(7..8),
+            deadlines: Deadlines {
+                grace_period: 1_u32,
+                oracle_duration: 1_u32,
+                dispute_duration: 1_u32,
+            },
+            scoring_rule,
+            status: MarketStatus::Active,
+            report: None,
+            resolved_outcome: None,
+            dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
+            bonds: MarketBonds::default(),
+            early_close: None,
+        };
+        assert_eq!(market.outcome_assets(), expected);
+    }
+
+    #[test_case(
+        MarketType::Categorical(2),
+        ScoringRule::Lmsr,
+        OutcomeReport::Categorical(2),
+        Some(MarketAsset::CategoricalOutcome(0, 2));
+        "categorical_market_lmsr"
+    )]
+    #[test_case(
+        MarketType::Categorical(2),
+        ScoringRule::Orderbook,
+        OutcomeReport::Categorical(2),
+        Some(MarketAsset::CategoricalOutcome(0, 2));
+        "categorical_market_orderbook"
+    )]
+    #[test_case(
+        MarketType::Categorical(2),
+        ScoringRule::Parimutuel,
+        OutcomeReport::Categorical(2),
+        Some(MarketAsset::ParimutuelShare(0, 2));
+        "categorical_market_parimutuel"
+    )]
+    #[test_case(
+        MarketType::Scalar(12..=34),
+        ScoringRule::Lmsr,
+        OutcomeReport::Scalar(2),
+        None;
+        "scalar_market"
+    )]
+    fn converts_outcome_correctly(
+        market_type: MarketType,
+        scoring_rule: ScoringRule,
+        outcome: OutcomeReport,
+        expected: Option<MarketAsset>,
+    ) {
+        let report = Some(Report {
+            at: Default::default(),
+            by: Default::default(),
+            outcome: outcome.clone(),
+        });
+
+        let market = Market {
+            market_id: 0,
+            base_asset: Asset::Ztg,
+            creator: 1,
+            creation: MarketCreation::Permissionless,
+            creator_fee: Default::default(),
+            oracle: 3,
+            metadata: vec![4u8; 5],
+            market_type,
+            period: MarketPeriod::Block(7..8),
+            deadlines: Deadlines {
+                grace_period: 1_u32,
+                oracle_duration: 1_u32,
+                dispute_duration: 1_u32,
+            },
+            scoring_rule,
+            status: MarketStatus::Active,
+            report,
+            resolved_outcome: Some(outcome),
+            dispute_mechanism: Some(MarketDisputeMechanism::Authorized),
+            bonds: MarketBonds::default(),
+            early_close: None,
+        };
+        assert_eq!(market.resolved_outcome_into_asset(), expected);
+        assert_eq!(market.report_into_asset(), expected);
     }
 
     #[test]

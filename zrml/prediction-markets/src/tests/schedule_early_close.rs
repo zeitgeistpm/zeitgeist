@@ -36,7 +36,7 @@ fn schedule_early_close_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
             ScoringRule::Lmsr,
@@ -68,7 +68,7 @@ fn sudo_schedule_early_close_at_block_works() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -139,7 +139,7 @@ fn sudo_schedule_early_close_at_timeframe_works() {
         let end = start + (42 * MILLISECS_PER_BLOCK) as u64;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(start..end),
@@ -208,7 +208,7 @@ fn schedule_early_close_block_fails_if_early_close_request_too_late() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -240,7 +240,7 @@ fn schedule_early_close_timestamp_fails_if_early_close_request_too_late() {
         let end = start + (42 * MILLISECS_PER_BLOCK) as u64;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(start..end),
@@ -269,7 +269,7 @@ fn schedule_early_close_as_market_creator_works() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),

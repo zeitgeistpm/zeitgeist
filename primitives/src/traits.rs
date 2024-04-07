@@ -23,7 +23,9 @@ mod distribute_fees;
 mod market_builder;
 mod market_commons_pallet_api;
 mod market_id;
+mod market_transition_api;
 mod swaps;
+mod weights;
 mod zeitgeist_asset;
 mod zeitgeist_multi_reservable_currency;
 
@@ -34,6 +36,8 @@ pub use distribute_fees::*;
 pub use market_builder::*;
 pub use market_commons_pallet_api::*;
 pub use market_id::*;
+pub use market_transition_api::*;
 pub use swaps::*;
+pub use weights::*;
 pub use zeitgeist_asset::*;
 pub use zeitgeist_multi_reservable_currency::*;

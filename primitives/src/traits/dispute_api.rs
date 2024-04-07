@@ -20,11 +20,11 @@ extern crate alloc;
 
 use crate::{
     outcome_report::OutcomeReport,
-    types::{Asset, GlobalDisputeItem, Market, ResultWithWeightInfo},
+    types::{BaseAsset, GlobalDisputeItem, Market, ResultWithWeightInfo},
 };
 use alloc::vec::Vec;
 use frame_support::pallet_prelude::Weight;
-use parity_scale_codec::MaxEncodedLen;
+use parity_scale_codec::{HasCompact, MaxEncodedLen};
 use sp_runtime::DispatchError;
 
 // Abstraction of the market type, which is not a part of `DisputeApi` because Rust doesn't support
@@ -34,7 +34,7 @@ pub type MarketOfDisputeApi<T> = Market<
     <T as DisputeApi>::Balance,
     <T as DisputeApi>::BlockNumber,
     <T as DisputeApi>::Moment,
-    Asset<<T as DisputeApi>::MarketId>,
+    BaseAsset,
     <T as DisputeApi>::MarketId,
 >;
 
@@ -46,7 +46,7 @@ pub trait DisputeApi {
     type Balance;
     type NegativeImbalance;
     type BlockNumber;
-    type MarketId: MaxEncodedLen;
+    type MarketId: MaxEncodedLen + HasCompact;
     type Moment;
     type Origin;
 
@@ -151,7 +151,7 @@ pub type MarketOfDisputeResolutionApi<T> = Market<
     <T as DisputeResolutionApi>::Balance,
     <T as DisputeResolutionApi>::BlockNumber,
     <T as DisputeResolutionApi>::Moment,
-    Asset<<T as DisputeResolutionApi>::MarketId>,
+    BaseAsset,
     <T as DisputeResolutionApi>::MarketId,
 >;
 
@@ -159,7 +159,7 @@ pub trait DisputeResolutionApi {
     type AccountId;
     type Balance;
     type BlockNumber;
-    type MarketId: MaxEncodedLen;
+    type MarketId: MaxEncodedLen + HasCompact;
     type Moment;
 
     /// Resolve a market.
