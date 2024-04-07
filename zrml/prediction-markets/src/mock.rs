@@ -34,8 +34,6 @@ use frame_support::{
     },
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
-#[cfg(feature = "parachain")]
-use orml_asset_registry::AssetMetadata;
 use parity_scale_codec::Compact;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
@@ -44,8 +42,6 @@ use sp_runtime::{
     DispatchError, DispatchResult,
 };
 use std::cell::RefCell;
-#[cfg(feature = "parachain")]
-use zeitgeist_primitives::types::XcmAsset;
 use zeitgeist_primitives::{
     constants::mock::{
         AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AssetsAccountDeposit,
@@ -72,6 +68,9 @@ use zeitgeist_primitives::{
         Hash, Index, MarketAsset, MarketId, Moment, ResultWithWeightInfo, UncheckedExtrinsicTest,
     },
 };
+
+#[cfg(feature = "parachain")]
+use {orml_asset_registry::AssetMetadata, zeitgeist_primitives::types::XcmAsset};
 
 pub(super) const ON_PROPOSAL_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x00];
 pub(super) const ON_ACTIVATION_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x01];
