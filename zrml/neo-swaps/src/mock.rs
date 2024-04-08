@@ -101,7 +101,7 @@ parameter_types! {
     pub const OracleBond: Balance = 0;
     pub const ValidityBond: Balance = 0;
     pub const DisputeBond: Balance = 0;
-    pub const MaxCategories: u16 = MAX_ASSETS + 1;
+    pub const MaxCategories: u16 = MAX_ASSETS as u16 + 1;
 }
 
 pub struct DeployPoolNoop;

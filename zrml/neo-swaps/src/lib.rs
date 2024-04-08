@@ -38,11 +38,11 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        consts::{LN_NUMERICAL_LIMIT, MAX_ASSETS},
+        consts::LN_NUMERICAL_LIMIT,
         liquidity_tree::types::{BenchmarkInfo, LiquidityTree, LiquidityTreeError},
         math::{Math, MathOps},
         traits::{pool_operations::PoolOperations, LiquiditySharesManager},
-        types::{FeeDistribution, Pool},
+        types::{FeeDistribution, MaxAssets, Pool},
         weights::*,
     };
     use alloc::{collections::BTreeMap, vec, vec::Vec};
@@ -74,7 +74,7 @@ mod pallet {
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
-    pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
     // These should not be config parameters to avoid misconfigurations.
     pub(crate) const EXIT_FEE: u128 = CENT / 10;
@@ -99,7 +99,7 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
-    pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>>;
+    pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>, MaxAssets>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -267,6 +267,8 @@ mod pallet {
         LiquidityTreeError(LiquidityTreeError),
         /// The relative value of a new LP position is too low.
         MinRelativeLiquidityThresholdViolated,
+        /// Narrowing type conversion occurred.
+        NarrowingConversion,
     }
 
     #[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
@@ -311,7 +313,7 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(0)]
-        #[pallet::weight(T::WeightInfo::buy(*asset_count as u32))]
+        #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))]
         #[transactional]
         pub fn buy(
             origin: OriginFor<T>,
@@ -325,7 +327,7 @@ mod pallet {
             let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
             Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)?;
-            Ok(Some(T::WeightInfo::buy(asset_count as u32)).into())
+            Ok(Some(T::WeightInfo::buy(asset_count.into())).into())
         }
 
         /// Sell outcome tokens to the specified market.
@@ -355,7 +357,7 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(1)]
-        #[pallet::weight(T::WeightInfo::sell(*asset_count as u32))]
+        #[pallet::weight(T::WeightInfo::sell((*asset_count).saturated_into()))]
         #[transactional]
         pub fn sell(
             origin: OriginFor<T>,
@@ -369,7 +371,7 @@ mod pallet {
             let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
             Self::do_sell(who, market_id, asset_in, amount_in, min_amount_out)?;
-            Ok(Some(T::WeightInfo::sell(asset_count as u32)).into())
+            Ok(Some(T::WeightInfo::sell(asset_count.into())).into())
         }
 
         /// Join the liquidity pool for the specified market.
@@ -396,9 +398,9 @@ mod pallet {
         /// providers in the pool.
         #[pallet::call_index(2)]
         #[pallet::weight(
-            T::WeightInfo::join_in_place(max_amounts_in.len() as u32)
-                .max(T::WeightInfo::join_reassigned(max_amounts_in.len() as u32))
-                .max(T::WeightInfo::join_leaf(max_amounts_in.len() as u32))
+            T::WeightInfo::join_in_place(max_amounts_in.len().saturated_into())
+                .max(T::WeightInfo::join_reassigned(max_amounts_in.len().saturated_into()))
+                .max(T::WeightInfo::join_leaf(max_amounts_in.len().saturated_into()))
         )]
         #[transactional]
         pub fn join(
@@ -409,7 +411,11 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
-            ensure!(max_amounts_in.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
+            let asset_count_usize: usize = asset_count.into();
+            // Ensure that the conversion in the weight calculation doesn't saturate.
+            let _: u32 =
+                max_amounts_in.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
+            ensure!(max_amounts_in.len() == asset_count_usize, Error::<T>::IncorrectVecLen);
             Self::do_join(who, market_id, pool_shares_amount, max_amounts_in)
         }
 
@@ -446,7 +452,7 @@ mod pallet {
         /// pool's liquidity tree, or, equivalently, `log_2(m)` where `m` is the number of liquidity
         /// providers in the pool.
         #[pallet::call_index(3)]
-        #[pallet::weight(T::WeightInfo::exit(min_amounts_out.len() as u32))]
+        #[pallet::weight(T::WeightInfo::exit(min_amounts_out.len().saturated_into()))]
         #[transactional]
         pub fn exit(
             origin: OriginFor<T>,
@@ -456,9 +462,12 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
-            ensure!(min_amounts_out.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
+            let asset_count_u32: u32 = asset_count.into();
+            let min_amounts_out_len: u32 =
+                min_amounts_out.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
+            ensure!(min_amounts_out_len == asset_count_u32, Error::<T>::IncorrectVecLen);
             Self::do_exit(who, market_id, pool_shares_amount_out, min_amounts_out)?;
-            Ok(Some(T::WeightInfo::exit(asset_count as u32)).into())
+            Ok(Some(T::WeightInfo::exit(min_amounts_out_len)).into())
         }
 
         /// Withdraw swap fees from the specified market.
@@ -510,7 +519,7 @@ mod pallet {
         ///
         /// `O(n)` where `n` is the number of assets in the pool.
         #[pallet::call_index(5)]
-        #[pallet::weight(T::WeightInfo::deploy_pool(spot_prices.len() as u32))]
+        #[pallet::weight(T::WeightInfo::deploy_pool(spot_prices.len().saturated_into()))]
         #[transactional]
         pub fn deploy_pool(
             origin: OriginFor<T>,
@@ -521,9 +530,12 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
-            ensure!(spot_prices.len() == asset_count as usize, Error::<T>::IncorrectVecLen);
+            let asset_count_u32: u32 = asset_count.into();
+            let spot_prices_len: u32 =
+                spot_prices.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
+            ensure!(spot_prices_len == asset_count_u32, Error::<T>::IncorrectVecLen);
             Self::do_deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
-            Ok(Some(T::WeightInfo::deploy_pool(asset_count as u32)).into())
+            Ok(Some(T::WeightInfo::deploy_pool(spot_prices_len)).into())
         }
     }
 
@@ -672,8 +684,10 @@ mod pallet {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-            let asset_count = max_amounts_in.len() as u32;
-            ensure!(asset_count == market.outcomes() as u32, Error::<T>::IncorrectAssetCount);
+            let asset_count_u16: u16 =
+                max_amounts_in.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
+            let asset_count_u32: u32 = asset_count_u16.into();
+            ensure!(asset_count_u16 == market.outcomes(), Error::<T>::IncorrectAssetCount);
             let benchmark_info = Self::try_mutate_pool(&market_id, |pool| {
                 let ratio =
                     pool_shares_amount.bdiv_ceil(pool.liquidity_shares_manager.total_shares()?)?;
@@ -712,9 +726,9 @@ mod pallet {
                 Ok(benchmark_info)
             })?;
             let weight = match benchmark_info {
-                BenchmarkInfo::InPlace => T::WeightInfo::join_in_place(asset_count),
-                BenchmarkInfo::Reassigned => T::WeightInfo::join_reassigned(asset_count),
-                BenchmarkInfo::Leaf => T::WeightInfo::join_leaf(asset_count),
+                BenchmarkInfo::InPlace => T::WeightInfo::join_in_place(asset_count_u32),
+                BenchmarkInfo::Reassigned => T::WeightInfo::join_reassigned(asset_count_u32),
+                BenchmarkInfo::Leaf => T::WeightInfo::join_leaf(asset_count_u32),
             };
             Ok((Some(weight)).into())
         }
@@ -832,9 +846,11 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             ensure!(market.scoring_rule == ScoringRule::Lmsr, Error::<T>::InvalidTradingMechanism);
-            let asset_count = spot_prices.len();
-            ensure!(asset_count as u16 == market.outcomes(), Error::<T>::IncorrectVecLen);
-            ensure!(market.outcomes() <= MAX_ASSETS, Error::<T>::AssetCountAboveMax);
+            let asset_count_u16: u16 =
+                spot_prices.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
+            let asset_count_u32: u32 = asset_count_u16.into();
+            ensure!(asset_count_u16 == market.outcomes(), Error::<T>::IncorrectVecLen);
+            ensure!(asset_count_u32 <= MaxAssets::get(), Error::<T>::AssetCountAboveMax);
             ensure!(swap_fee >= MIN_SWAP_FEE.saturated_into(), Error::<T>::SwapFeeBelowMin);
             ensure!(swap_fee <= T::MaxSwapFee::get(), Error::<T>::SwapFeeAboveMax);
             ensure!(
@@ -870,7 +886,7 @@ mod pallet {
             let collateral = market.base_asset;
             let pool = Pool {
                 account_id: pool_account_id.clone(),
-                reserves: reserves.clone(),
+                reserves: reserves.clone().try_into().map_err(|_| Error::<T>::Unexpected)?,
                 collateral: collateral.into(),
                 liquidity_parameter,
                 liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,

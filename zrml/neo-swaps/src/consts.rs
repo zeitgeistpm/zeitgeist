@@ -22,7 +22,7 @@ pub(crate) const EXP_NUMERICAL_LIMIT: u128 = 10;
 /// Numerical lower limit for ln arguments (fixed point number).
 pub(crate) const LN_NUMERICAL_LIMIT: u128 = BASE / 10;
 /// The maximum number of assets allowed in a pool.
-pub(crate) const MAX_ASSETS: u16 = 128;
+pub(crate) const MAX_ASSETS: u32 = 128;
 
 pub(crate) const _1: u128 = BASE;
 pub(crate) const _2: u128 = 2 * _1;
