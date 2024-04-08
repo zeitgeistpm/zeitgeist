@@ -19,14 +19,14 @@ use crate::{
     math::fixed::{FixedDiv, FixedMulDiv},
     types::Asset,
 };
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, Encode, HasCompact, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{traits::AtLeast32BitUnsigned, DispatchError, RuntimeDebug};
 
 pub type OrderId = u128;
 
 #[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen> {
+pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen + HasCompact> {
     pub market_id: MarketId,
     pub maker: AccountId,
     pub maker_asset: Asset<MarketId>,
