@@ -340,7 +340,6 @@ impl zrml_prediction_markets::Config for Runtime {
     type Court = Court;
     type Currency = Balances;
     type DeployPool = DeployPoolNoop;
-    type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
     type RuntimeEvent = RuntimeEvent;
     type GlobalDisputes = GlobalDisputes;

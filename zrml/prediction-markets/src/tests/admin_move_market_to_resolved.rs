@@ -57,7 +57,7 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
             outcome_report.clone()
         ));
         assert_ok!(PredictionMarkets::admin_move_market_to_resolved(
-            RuntimeOrigin::signed(SUDO),
+            RuntimeOrigin::signed(ResolveOrigin::get()),
             market_id
         ));
 
@@ -94,7 +94,78 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
     });
 }
 
-// TODO(#1239) resolves disputed market
+#[test]
+fn admin_move_market_to_resolved_resolves_disputed_market() {
+    // NOTE: Bonds are always in ZTG, irrespective of base_asset.
+    let test = |base_asset: BaseAsset| {
+        let end = 33;
+        simple_create_categorical_market(
+            base_asset,
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::Lmsr,
+        );
+        let market_id = 0;
+
+        // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
+        // that the correct bonds are unreserved!
+        assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
+        let balance_free_before = Balances::free_balance(ALICE);
+        let balance_reserved_before =
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
+
+        let market = MarketCommons::market(&0).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        run_to_block(grace_period + 1);
+        let category = 1;
+        let outcome_report = OutcomeReport::Categorical(category);
+        assert_ok!(PredictionMarkets::report(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            OutcomeReport::Categorical(0),
+        ));
+        assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), market_id));
+        assert_ok!(Authorized::authorize_market_outcome(
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
+            market_id,
+            outcome_report.clone(),
+        ));
+        assert_ok!(PredictionMarkets::admin_move_market_to_resolved(
+            RuntimeOrigin::signed(ResolveOrigin::get()),
+            market_id
+        ));
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Resolved);
+        assert_eq!(market.resolved_outcome.unwrap(), outcome_report);
+        System::assert_last_event(
+            Event::MarketResolved(market_id, MarketStatus::Resolved, outcome_report).into(),
+        );
+
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
+            balance_reserved_before
+                - <Runtime as Config>::OracleBond::get()
+                - <Runtime as Config>::ValidityBond::get()
+        );
+        assert_eq!(
+            Balances::free_balance(ALICE),
+            balance_free_before + <Runtime as Config>::ValidityBond::get()
+        );
+    };
+    ExtBuilder::default().build().execute_with(|| {
+        test(BaseAsset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(BaseAsset::ForeignAsset(100));
+    });
+}
 
 #[test_case(MarketStatus::Active)]
 #[test_case(MarketStatus::Closed)]
@@ -116,7 +187,7 @@ fn admin_move_market_to_resolved_fails_if_market_is_not_reported_or_disputed(
         }));
         assert_noop!(
             PredictionMarkets::admin_move_market_to_resolved(
-                RuntimeOrigin::signed(SUDO),
+                RuntimeOrigin::signed(ResolveOrigin::get()),
                 market_id,
             ),
             Error::<Runtime>::InvalidMarketStatus,

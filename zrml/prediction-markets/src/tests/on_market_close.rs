@@ -101,7 +101,7 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
         let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
         assert_ok!(PredictionMarkets::request_edit(
-            RuntimeOrigin::signed(SUDO),
+            RuntimeOrigin::signed(RequestEditOrigin::get()),
             market_id,
             edit_reason
         ));

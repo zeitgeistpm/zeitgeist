@@ -142,9 +142,10 @@ fn dispute_early_close_fails_if_scheduled_as_sudo() {
         ));
 
         let market_id = 0;
-        assert_ok!(
-            PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
-        );
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+            market_id
+        ));
 
         run_blocks(1);
 
@@ -221,7 +222,10 @@ fn dispute_early_close_fails_if_already_rejected() {
 
         assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
 
-        assert_ok!(PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,));
+        assert_ok!(PredictionMarkets::reject_early_close(
+            RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+            market_id
+        ));
 
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.early_close.unwrap().state, EarlyCloseState::Rejected);
@@ -377,9 +381,10 @@ fn schedule_early_close_disputed_sudo_schedule_and_settle_bonds() {
         let free_bob = Balances::free_balance(BOB);
         let free_alice = Balances::free_balance(ALICE);
 
-        assert_ok!(
-            PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
-        );
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+            market_id
+        ));
 
         let reserved_bob_after = Balances::reserved_balance(BOB);
         let reserved_alice_after = Balances::reserved_balance(ALICE);

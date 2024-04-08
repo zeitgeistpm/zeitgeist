@@ -26,9 +26,88 @@ use zeitgeist_primitives::{
     types::{BlockNumber, Bond, MarketBonds, Moment},
 };
 
-// TODO(#1239) FeeTooHigh not verified
-// TODO(#1239) InvalidMultihash not verified
-// TODO(#1239) Creation fails if user can't afford the bonds
+#[test_case(
+    MarketCreation::Advised,
+    <Runtime as Config>::AdvisoryBond::get() + <Runtime as Config>::OracleBond::get() - 1
+)]
+#[test_case(
+    MarketCreation::Permissionless,
+    <Runtime as Config>::ValidityBond::get() + <Runtime as Config>::OracleBond::get() - 1
+)]
+fn fails_if_user_cannot_afford_bonds_advised(
+    market_creation: MarketCreation,
+    balance: BalanceOf<Runtime>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        let creator = 999;
+        assert_ok!(AssetManager::deposit(Asset::Ztg, &creator, balance));
+        assert_noop!(
+            PredictionMarkets::create_market(
+                RuntimeOrigin::signed(creator),
+                BaseAsset::Ztg,
+                <Runtime as Config>::MaxCreatorFee::get(),
+                BOB,
+                MarketPeriod::Block(123..456),
+                get_deadlines(),
+                gen_metadata(2),
+                market_creation,
+                MarketType::Scalar(0..=1),
+                Some(MarketDisputeMechanism::SimpleDisputes),
+                ScoringRule::Lmsr,
+            ),
+            pallet_balances::Error::<Runtime>::InsufficientBalance
+        );
+    });
+}
+
+#[test]
+fn fails_on_fee_too_high() {
+    ExtBuilder::default().build().execute_with(|| {
+        let one_billionth = Perbill::from_rational(1u128, 1_000_000_000u128);
+        assert_noop!(
+            PredictionMarkets::create_market(
+                RuntimeOrigin::signed(ALICE),
+                BaseAsset::Ztg,
+                <Runtime as Config>::MaxCreatorFee::get() + one_billionth,
+                BOB,
+                MarketPeriod::Block(123..456),
+                get_deadlines(),
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Scalar(0..=1),
+                Some(MarketDisputeMechanism::SimpleDisputes),
+                ScoringRule::Lmsr,
+            ),
+            Error::<Runtime>::FeeTooHigh
+        );
+    });
+}
+
+#[test]
+fn fails_on_invalid_multihash() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut metadata = [0xff; 50];
+        metadata[0] = 0x15;
+        metadata[1] = 0x29;
+        let multihash = MultiHash::Sha3_384(metadata);
+        assert_noop!(
+            PredictionMarkets::create_market(
+                RuntimeOrigin::signed(ALICE),
+                BaseAsset::Ztg,
+                <Runtime as Config>::MaxCreatorFee::get(),
+                BOB,
+                MarketPeriod::Block(123..456),
+                get_deadlines(),
+                multihash,
+                MarketCreation::Permissionless,
+                MarketType::Scalar(0..=1),
+                Some(MarketDisputeMechanism::SimpleDisputes),
+                ScoringRule::Lmsr,
+            ),
+            Error::<Runtime>::InvalidMultihash
+        );
+    });
+}
 
 #[test_case(std::ops::RangeInclusive::new(7, 6); "empty range")]
 #[test_case(555..=555; "one element as range")]

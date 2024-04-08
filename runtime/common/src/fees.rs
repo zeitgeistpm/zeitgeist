@@ -57,15 +57,6 @@ macro_rules! impl_fee_types {
                 debug_assert!(res.is_ok());
             }
         }
-
-        /// Disregards the fees.
-        pub struct DealWithCampaignFees;
-        impl OnUnbalanced<CreditOf<AccountId, AssetRouter>> for DealWithCampaignFees {
-            fn on_unbalanced(_fees_and_tips: CreditOf<AccountId, AssetRouter>) {
-                // Handled by type OnDropCredit
-                return;
-            }
-        }
     };
 }
 

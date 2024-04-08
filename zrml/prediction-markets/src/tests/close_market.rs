@@ -22,8 +22,6 @@ use test_case::test_case;
 use crate::MarketIdsPerCloseBlock;
 use sp_runtime::traits::Zero;
 
-// TODO(#1239) MarketDoesNotExist
-
 // TODO(#1239) Split test
 #[test]
 fn close_trusted_market_works() {
@@ -62,11 +60,6 @@ fn close_trusted_market_works() {
         let auto_closes = MarketIdsPerCloseBlock::<Runtime>::get(end);
         assert_eq!(auto_closes.first().cloned().unwrap(), market_id);
 
-        assert_noop!(
-            PredictionMarkets::close_trusted_market(RuntimeOrigin::signed(BOB), market_id),
-            Error::<Runtime>::CallerNotMarketCreator
-        );
-
         assert_ok!(PredictionMarkets::close_trusted_market(
             RuntimeOrigin::signed(market_creator),
             market_id
@@ -77,6 +70,36 @@ fn close_trusted_market_works() {
 
         let auto_closes = MarketIdsPerCloseBlock::<Runtime>::get(end);
         assert_eq!(auto_closes.len(), 0);
+    });
+}
+
+#[test]
+fn fails_if_caller_is_not_market_creator() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 10;
+        let market_creator = ALICE;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(market_creator),
+            BaseAsset::Ztg,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            Deadlines {
+                grace_period: 0,
+                oracle_duration: <Runtime as Config>::MinOracleDuration::get(),
+                dispute_duration: Zero::zero(),
+            },
+            gen_metadata(0x99),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(3),
+            None,
+            ScoringRule::Lmsr,
+        ));
+        run_to_block(end - 1);
+        assert_noop!(
+            PredictionMarkets::close_trusted_market(RuntimeOrigin::signed(BOB), 0),
+            Error::<Runtime>::CallerNotMarketCreator
+        );
     });
 }
 
@@ -161,6 +184,16 @@ fn close_trusted_market_fails_if_invalid_market_state(status: MarketStatus) {
                 market_id
             ),
             Error::<Runtime>::MarketIsNotActive
+        );
+    });
+}
+
+#[test]
+fn fails_if_market_is_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::close_trusted_market(RuntimeOrigin::signed(ALICE), 3),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
         );
     });
 }
