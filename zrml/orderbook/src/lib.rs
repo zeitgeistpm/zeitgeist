@@ -40,7 +40,7 @@ pub use pallet::*;
 use sp_runtime::traits::{AccountIdConversion, Get, Zero};
 use zeitgeist_macros::unreachable_non_terminating;
 use zeitgeist_primitives::{
-    hybrid_router_api_types::{ExternalFee, OrderbookTrade},
+    hybrid_router_api_types::{ApiError, ExternalFee, OrderbookSoftFail, OrderbookTrade},
     math::checked_ops_res::{CheckedAddRes, CheckedSubRes},
     orderbook::{Order, OrderId},
     traits::{DistributeFees, HybridRouterOrderbookApi, MarketCommonsPalletApi},
@@ -544,6 +544,21 @@ mod pallet {
         }
     }
 
+    impl<T: Config> Pallet<T> {
+        fn match_failure(error: DispatchError) -> ApiError<OrderbookSoftFail> {
+            let below_minimum_balance: DispatchError = Error::<T>::BelowMinimumBalance.into();
+            let partial_fill_near_full_fill_not_allowed: DispatchError =
+                Error::<T>::PartialFillNearFullFillNotAllowed.into();
+            if error == below_minimum_balance {
+                ApiError::SoftFailure(OrderbookSoftFail::BelowMinimumBalance)
+            } else if error == partial_fill_near_full_fill_not_allowed {
+                ApiError::SoftFailure(OrderbookSoftFail::PartialFillNearFullFillNotAllowed)
+            } else {
+                ApiError::HardFailure(error)
+            }
+        }
+    }
+
     impl<T: Config> HybridRouterOrderbookApi for Pallet<T> {
         type AccountId = AccountIdOf<T>;
         type MarketId = MarketIdOf<T>;
@@ -560,8 +575,8 @@ mod pallet {
             who: Self::AccountId,
             order_id: Self::OrderId,
             maker_partial_fill: Option<Self::Balance>,
-        ) -> Result<OrderbookTradeOf<T>, DispatchError> {
-            Self::do_fill_order(order_id, who, maker_partial_fill)
+        ) -> Result<OrderbookTradeOf<T>, ApiError<OrderbookSoftFail>> {
+            Self::do_fill_order(order_id, who, maker_partial_fill).map_err(Self::match_failure)
         }
 
         fn place_order(
@@ -571,7 +586,7 @@ mod pallet {
             maker_amount: Self::Balance,
             taker_asset: Self::Asset,
             taker_amount: Self::Balance,
-        ) -> Result<(), DispatchError> {
+        ) -> Result<(), ApiError<OrderbookSoftFail>> {
             Self::do_place_order(
                 who,
                 market_id,
@@ -580,6 +595,7 @@ mod pallet {
                 taker_asset,
                 taker_amount,
             )
+            .map_err(Self::match_failure)
         }
     }
 }

@@ -15,11 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::hybrid_router_api_types::AmmTrade;
+use crate::hybrid_router_api_types::{AmmSoftFail, AmmTrade, ApiError};
 use frame_support::dispatch::DispatchError;
 
 /// A type alias for the return struct of AMM buy and sell.
 pub type AmmTradeOf<T> = AmmTrade<<T as HybridRouterAmmApi>::Balance>;
+
+/// A type alias for the error type of the AMM part of the hybrid router.
+pub type ApiErrorOf = ApiError<AmmSoftFail>;
 
 /// Trait for handling the AMM part of the hybrid router.
 pub trait HybridRouterAmmApi {
@@ -93,7 +96,7 @@ pub trait HybridRouterAmmApi {
         asset_out: Self::Asset,
         amount_in: Self::Balance,
         min_amount_out: Self::Balance,
-    ) -> Result<AmmTradeOf<Self>, DispatchError>;
+    ) -> Result<AmmTradeOf<Self>, ApiErrorOf>;
 
     /// Calculates the amount a user has to sell to move the price of `asset` to `until`. Returns
     /// zero if the current spot price is below or equal to `until`.
@@ -133,5 +136,5 @@ pub trait HybridRouterAmmApi {
         asset_in: Self::Asset,
         amount_in: Self::Balance,
         min_amount_out: Self::Balance,
-    ) -> Result<AmmTradeOf<Self>, DispatchError>;
+    ) -> Result<AmmTradeOf<Self>, ApiErrorOf>;
 }
