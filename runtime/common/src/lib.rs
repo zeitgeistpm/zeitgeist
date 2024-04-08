@@ -172,12 +172,6 @@ macro_rules! decl_common_types {
             EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 2, 3>,
         >;
 
-        // At least 100%
-        type EnsureRootOrAllAdvisoryCommittee = EitherOfDiverse<
-            EnsureRoot<AccountId>,
-            EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 1>,
-        >;
-
         #[cfg(feature = "std")]
         /// The version information used to identify this runtime when compiled natively.
         pub fn native_version() -> NativeVersion {
@@ -1274,7 +1268,6 @@ macro_rules! impl_config_traits {
             type CloseEarlyProtectionTimeFramePeriod = CloseEarlyProtectionTimeFramePeriod;
             type CloseEarlyProtectionBlockPeriod = CloseEarlyProtectionBlockPeriod;
             type CloseEarlyRequestBond = CloseEarlyRequestBond;
-            type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DeployPool = NeoSwaps;
             type DisputeBond = DisputeBond;
             type RuntimeEvent = RuntimeEvent;

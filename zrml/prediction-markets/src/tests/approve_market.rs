@@ -17,12 +17,38 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use test_case::test_case;
 
 use crate::MarketIdsForEdit;
 use sp_runtime::DispatchError;
 
-// TODO(#1239) Be more granular with regards to origins
-// TODO(#1239) Approve fails if market status is not proposed
+#[test_case(MarketStatus::Active)]
+#[test_case(MarketStatus::Closed)]
+#[test_case(MarketStatus::Reported)]
+#[test_case(MarketStatus::Disputed)]
+#[test_case(MarketStatus::Resolved)]
+fn fails_if_market_status_is_not_proposed(market_status: MarketStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market(
+            BaseAsset::Ztg,
+            MarketCreation::Advised,
+            0..2,
+            ScoringRule::Lmsr,
+        );
+        let market_id = 0;
+        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
+            market.status = market_status;
+            Ok(())
+        }));
+        assert_noop!(
+            PredictionMarkets::approve_market(
+                RuntimeOrigin::signed(ApproveOrigin::get()),
+                market_id
+            ),
+            Error::<Runtime>::MarketIsNotProposed
+        );
+    });
+}
 
 #[test]
 fn it_allows_advisory_origin_to_approve_markets() {
@@ -43,8 +69,10 @@ fn it_allows_advisory_origin_to_approve_markets() {
             DispatchError::BadOrigin
         );
 
-        // Now it should work from SUDO
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            0
+        ));
 
         let after_market = MarketCommons::market(&0);
         assert_eq!(after_market.unwrap().status, MarketStatus::Active);
@@ -68,11 +96,15 @@ fn market_with_edit_request_cannot_be_approved() {
 
         let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
-        assert_ok!(PredictionMarkets::request_edit(RuntimeOrigin::signed(SUDO), 0, edit_reason));
+        assert_ok!(PredictionMarkets::request_edit(
+            RuntimeOrigin::signed(RequestEditOrigin::get()),
+            0,
+            edit_reason
+        ));
 
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
         assert_noop!(
-            PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0),
+            PredictionMarkets::approve_market(RuntimeOrigin::signed(ApproveOrigin::get()), 0),
             Error::<Runtime>::MarketEditRequestAlreadyInProgress
         );
     });
@@ -99,7 +131,10 @@ fn approve_market_correctly_unreserves_advisory_bond() {
         let market_id = 0;
         let alice_balance_before = Balances::free_balance(ALICE);
         check_reserve(&ALICE, AdvisoryBond::get() + OracleBond::get());
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), market_id));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            market_id
+        ));
         check_reserve(&ALICE, OracleBond::get());
         assert_eq!(Balances::free_balance(ALICE), alice_balance_before + AdvisoryBond::get());
         let market = MarketCommons::market(&market_id).unwrap();
@@ -127,7 +162,10 @@ fn does_trigger_market_transition_api() {
             1..2,
             ScoringRule::Lmsr,
         );
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            0
+        ));
         assert!(StateTransitionMock::on_activation_triggered());
     });
 }

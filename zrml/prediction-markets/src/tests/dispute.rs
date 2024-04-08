@@ -36,39 +36,34 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
             0..end,
             ScoringRule::Lmsr,
         );
+        let market_id = 0;
 
         // Run to the end of the trading phase.
-        let market = MarketCommons::market(&0).unwrap();
+        let market = MarketCommons::market(&market_id).unwrap();
         let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
 
         assert_ok!(PredictionMarkets::report(
             RuntimeOrigin::signed(BOB),
-            0,
+            market_id,
             OutcomeReport::Categorical(1)
         ));
 
         let dispute_at = grace_period + 2;
         run_to_block(dispute_at);
 
-        assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), 0,));
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(CHARLIE),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
-
-        let market = MarketCommons::market(&0).unwrap();
+        assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), 0));
+        let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
 
-        let disputes = zrml_simple_disputes::Disputes::<Runtime>::get(0);
-        assert_eq!(disputes.len(), 1);
-        let dispute = &disputes[0];
-        assert_eq!(dispute.at, dispute_at);
-        assert_eq!(dispute.by, CHARLIE);
-        assert_eq!(dispute.outcome, OutcomeReport::Categorical(0));
-
-        let dispute_ends_at = dispute_at + market.deadlines.dispute_duration;
+        // Ensure that the MDM interacts correctly with auto resolution.
+        assert_ok!(Authorized::authorize_market_outcome(
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
+            market_id,
+            OutcomeReport::Categorical(0),
+        ));
+        let dispute_ends_at =
+            dispute_at + <Runtime as zrml_authorized::Config>::CorrectionPeriod::get();
         let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(dispute_ends_at);
         assert_eq!(market_ids.len(), 1);
         assert_eq!(market_ids[0], 0);
@@ -107,7 +102,7 @@ fn dispute_fails_disputed_already() {
         let dispute_at = grace_period + 2;
         run_to_block(dispute_at);
 
-        assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), 0,));
+        assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), 0));
 
         assert_noop!(
             PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), 0),

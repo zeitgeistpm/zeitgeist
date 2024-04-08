@@ -1628,9 +1628,6 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
             >;
 
-        /// The origin that is allowed to destroy markets.
-        type DestroyOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-
         /// The base amount of currency that must be bonded in order to create a dispute.
         #[pallet::constant]
         type DisputeBond: Get<BalanceOf<Self>>;
