@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021 Centrifuge Foundation (centrifuge.io).
 //
 // This file is part of Zeitgeist.
@@ -18,8 +18,7 @@
 
 use crate::{
     xcm_config::config::{general_key, zeitgeist},
-    AccountId, AssetRegistry, Balance, CurrencyId, ExistentialDeposit, Runtime, RuntimeOrigin,
-    System,
+    AccountId, AssetRegistry, Assets, Balance, ExistentialDeposit, Runtime, RuntimeOrigin, System,
 };
 use frame_support::{assert_ok, traits::GenesisBuild};
 use orml_traits::asset_registry::AssetMetadata;
@@ -28,10 +27,10 @@ use xcm::{
     latest::{Junction::Parachain, Junctions::X2, MultiLocation},
     VersionedMultiLocation,
 };
-use zeitgeist_primitives::types::{Asset, CustomMetadata};
+use zeitgeist_primitives::types::{CustomMetadata, XcmAsset};
 
 pub(super) struct ExtBuilder {
-    balances: Vec<(AccountId, CurrencyId, Balance)>,
+    balances: Vec<(AccountId, Assets, Balance)>,
     parachain_id: u32,
 }
 
@@ -42,7 +41,7 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-    pub fn set_balances(mut self, balances: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+    pub fn set_balances(mut self, balances: Vec<(AccountId, Assets, Balance)>) -> Self {
         self.balances = balances;
         self
     }
@@ -54,7 +53,7 @@ impl ExtBuilder {
 
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
-        let native_currency_id = CurrencyId::Ztg;
+        let native_currency_id = Assets::Ztg;
         pallet_balances::GenesisConfig::<Runtime> {
             balances: self
                 .balances
@@ -72,6 +71,9 @@ impl ExtBuilder {
                 .balances
                 .into_iter()
                 .filter(|(_, currency_id, _)| *currency_id != native_currency_id)
+                .map(|(account_id, currency_id, initial_balance)| {
+                    (account_id, currency_id.try_into().unwrap(), initial_balance)
+                })
                 .collect::<Vec<_>>(),
         }
         .assimilate_storage(&mut t)
@@ -104,11 +106,11 @@ pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
 pub const PARA_ID_SIBLING: u32 = 3000;
 
 /// IDs that are used to represent tokens from other chains
-pub const FOREIGN_ZTG_ID: Asset<u128> = CurrencyId::ForeignAsset(0);
-pub const FOREIGN_PARENT_ID: Asset<u128> = CurrencyId::ForeignAsset(1);
-pub const FOREIGN_SIBLING_ID: Asset<u128> = CurrencyId::ForeignAsset(2);
-pub const BTC_ID: Asset<u128> = CurrencyId::ForeignAsset(3);
-pub const ETH_ID: Asset<u128> = CurrencyId::ForeignAsset(4);
+pub const FOREIGN_ZTG_ID: XcmAsset = XcmAsset::ForeignAsset(0);
+pub const FOREIGN_PARENT_ID: XcmAsset = XcmAsset::ForeignAsset(1);
+pub const FOREIGN_SIBLING_ID: XcmAsset = XcmAsset::ForeignAsset(2);
+pub const BTC_ID: XcmAsset = XcmAsset::ForeignAsset(3);
+pub const ETH_ID: XcmAsset = XcmAsset::ForeignAsset(4);
 
 #[inline]
 pub(super) const fn ztg(amount: Balance) -> Balance {

@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AccountIdOf, AssetOf, BalanceOf, BlockNumberOf, Config, Markets, MomentOf, Pallet};
+use crate::{AccountIdOf, BalanceOf, BlockNumberOf, Config, Markets, MomentOf, Pallet};
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use frame_support::{
@@ -29,7 +29,7 @@ use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::Perbill;
 use zeitgeist_primitives::types::{
-    Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+    BaseAsset, Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
 
@@ -74,7 +74,7 @@ pub struct OldMarket<AI, BA, BN, M, A> {
 }
 
 type OldMarketOf<T> =
-    OldMarket<AccountIdOf<T>, BalanceOf<T>, BlockNumberOf<T>, MomentOf<T>, AssetOf<T>>;
+    OldMarket<AccountIdOf<T>, BalanceOf<T>, BlockNumberOf<T>, MomentOf<T>, BaseAsset>;
 
 pub struct AddIdToMarket<T>(PhantomData<T>);
 
@@ -182,7 +182,7 @@ mod tests {
         StateVersion, StorageHasher,
     };
     use parity_scale_codec::Encode;
-    use zeitgeist_primitives::types::{Asset, Bond, EarlyCloseState};
+    use zeitgeist_primitives::types::{Bond, EarlyCloseState};
 
     #[test]
     fn on_runtime_upgrade_increments_the_storage_version() {
@@ -233,7 +233,7 @@ mod tests {
     }
 
     fn construct_old_new_tuple() -> (Vec<OldMarketOf<Runtime>>, Vec<MarketOf<Runtime>>) {
-        let base_asset = Asset::Ztg;
+        let base_asset = BaseAsset::Ztg;
         let creation = MarketCreation::Advised;
         let creator_fee = Perbill::from_rational(2u32, 3u32);
         let oracle = 4;

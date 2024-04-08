@@ -18,6 +18,6 @@ id = 2101
 
 [parachains.collator]
 args = ["-lparachain=debug"]
-command = "./target/debug/zeitgeist"
+command = "../target/release/zeitgeist"
 name = "alice"
-ws_port = 9944
+ws_port = 9966

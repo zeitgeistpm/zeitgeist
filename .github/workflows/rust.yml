@@ -36,31 +36,6 @@ jobs:
       - name: Format
         run: ./scripts/tests/format.sh --check
 
-  copyright:
-    name: Copyright Notices
-    if: |
-      github.event_name == 'pull_request' && 
-        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
-        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
-      github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-      - name: Setup Python
-        uses: actions/setup-python@v2
-      - name: Install check-license and dependencies
-        run: |
-          pip install scripts/check-license
-          pip install -r scripts/check-license/requirements.txt
-      - name: Query files changed
-        id: files_changed
-        uses: Ana06/get-changed-files@v1.2
-        with:
-          filter: '*.rs$'
-      - name: Check copyright notices
-        run: check-license ${{ steps.files_changed.outputs.added_modified }}
-
   checks:
     name: Checks
     if: |
@@ -79,6 +54,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
 
       - name: Install build tools
         run: ./scripts/init.sh
@@ -101,6 +81,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+
       - name: Install build tools
         run: ./scripts/init.sh
       
@@ -118,22 +103,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+
       - name: Install build tools
         run: ./scripts/init.sh
-
-      # No disk space: https://github.com/zeitgeistpm/zeitgeist/actions/runs/5085081984/jobs/9144298675?pr=1006
-      # Workaround: https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
-      - name: Free up disk space on GitHub hosted runners
-        run: |
-          # Ensure context is GitHub hosted runner
-          # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
-          if [[ "${{ runner.name }}" == "GitHub Actions"* ]]; then
-            echo "Freeing up space in GitHub hosted runner"
-            sudo rm -rf /usr/share/dotnet
-            sudo rm -rf /opt/ghc
-            sudo rm -rf "/usr/local/share/boost"
-            sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          fi
       
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
@@ -153,22 +129,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+
       - name: Install build tools
         run: ./scripts/init.sh
-
-      # No disk space: https://github.com/zeitgeistpm/zeitgeist/actions/runs/5085081984/jobs/9144298675?pr=1006
-      # Workaround: https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
-      - name: Free up disk space on GitHub hosted runners
-        run: |
-          # Ensure context is GitHub hosted runner
-          # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
-          if [[ "${{ runner.name }}" == "GitHub Actions"* ]]; then
-            echo "Freeing up space in GitHub hosted runner"
-            sudo rm -rf /usr/share/dotnet
-            sudo rm -rf /opt/ghc
-            sudo rm -rf "/usr/local/share/boost"
-            sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          fi
       
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
@@ -187,6 +154,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
 
       - name: Install build tools
         run: ./scripts/init.sh

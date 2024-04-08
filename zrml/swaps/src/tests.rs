@@ -29,14 +29,16 @@ use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     math::calc_out_given_in,
     mock::*,
-    types::PoolStatus,
-    AssetOf, BalanceOf, Config, Error, Event,
+    types::{Pool, PoolStatus},
+    AssetOf, BalanceOf, Config, Error, Event, Pools,
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::MultiCurrency;
+use sp_arithmetic::traits::Zero;
 #[allow(unused_imports)]
 use test_case::test_case;
+use zeitgeist_macros::create_b_tree_map;
 use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
@@ -153,7 +155,7 @@ fn destroy_pool_emits_correct_event() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool(0, true);
         assert_ok!(Swaps::destroy_pool(DEFAULT_POOL_ID));
-        System::assert_last_event(Event::PoolDestroyed(DEFAULT_POOL_ID).into());
+        System::assert_last_event(Event::PoolDestroyed { pool_id: DEFAULT_POOL_ID }.into());
     });
 }
 
@@ -256,7 +258,7 @@ fn assets_must_be_bounded() {
                 Some(1),
                 Some(1)
             ),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
         assert_noop!(
             Swaps::swap_exact_amount_in(
@@ -268,7 +270,7 @@ fn assets_must_be_bounded() {
                 Some(1),
                 Some(1)
             ),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
 
         assert_noop!(
@@ -281,7 +283,7 @@ fn assets_must_be_bounded() {
                 1,
                 Some(1)
             ),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
         assert_noop!(
             Swaps::swap_exact_amount_out(
@@ -293,7 +295,7 @@ fn assets_must_be_bounded() {
                 1,
                 Some(1)
             ),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
 
         assert_noop!(
@@ -304,16 +306,16 @@ fn assets_must_be_bounded() {
                 1,
                 1
             ),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
         assert_noop!(
             Swaps::pool_join_with_exact_pool_amount(alice_signed(), DEFAULT_POOL_ID, ASSET_B, 1, 1),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
 
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(alice_signed(), DEFAULT_POOL_ID, ASSET_B, 1, 1),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
         assert_noop!(
             Swaps::pool_exit_with_exact_asset_amount(
@@ -323,7 +325,7 @@ fn assets_must_be_bounded() {
                 1,
                 1
             ),
-            Error::<Runtime>::AssetNotBound
+            Error::<Runtime>::AssetNotInPool
         );
     });
 }
@@ -358,12 +360,12 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
 
         let pool_account = Swaps::pool_account_id(&DEFAULT_POOL_ID);
         System::assert_last_event(
-            Event::PoolCreate(
-                CommonPoolEventParams { pool_id: next_pool_before, who: BOB },
+            Event::PoolCreate {
+                common: CommonPoolEventParams { pool_id: next_pool_before, who: BOB },
                 pool,
-                amount,
+                pool_amount: amount,
                 pool_account,
-            )
+            }
             .into(),
         );
     });
@@ -1903,7 +1905,7 @@ fn close_pool_succeeds_and_emits_correct_event_if_pool_exists() {
         assert_ok!(Swaps::close_pool(DEFAULT_POOL_ID));
         let pool = Swaps::pool_by_id(DEFAULT_POOL_ID).unwrap();
         assert_eq!(pool.status, PoolStatus::Closed);
-        System::assert_last_event(Event::PoolClosed(DEFAULT_POOL_ID).into());
+        System::assert_last_event(Event::PoolClosed { pool_id: DEFAULT_POOL_ID }.into());
     });
 }
 
@@ -1944,7 +1946,7 @@ fn open_pool_succeeds_and_emits_correct_event_if_pool_exists() {
         assert_ok!(Swaps::open_pool(DEFAULT_POOL_ID));
         let pool = Swaps::pool_by_id(DEFAULT_POOL_ID).unwrap();
         assert_eq!(pool.status, PoolStatus::Open);
-        System::assert_last_event(Event::PoolActive(DEFAULT_POOL_ID).into());
+        System::assert_last_event(Event::PoolActive { pool_id: DEFAULT_POOL_ID }.into());
     });
 }
 
@@ -2563,6 +2565,43 @@ fn pool_exit_with_exact_asset_amount_fails_if_liquidity_drops_too_low() {
             ),
             Error::<Runtime>::PoolDrain,
         );
+    });
+}
+
+#[test]
+fn pool_exit_burns_small_amounts() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Create a mock-up of a closed pool with ZTG balance dusted and winning outcome balance
+        // below ED.
+        let pool_id = 0;
+        let assets = vec![Asset::CategoricalOutcome(0, 3), Asset::Ztg].try_into().unwrap();
+        let weights = create_b_tree_map!({
+            Asset::CategoricalOutcome(0, 3) => 10_000_000_000,
+            Asset::Ztg => 100_000_000_000,
+        })
+        .try_into()
+        .unwrap();
+        let pool = Pool {
+            assets,
+            status: PoolStatus::Closed,
+            swap_fee: Zero::zero(),
+            total_weight: 200_000_000_000,
+            weights,
+        };
+        Pools::<Runtime>::insert(pool_id, pool);
+        let pool_shares_amount = 14_624_689;
+        Currencies::deposit(Swaps::pool_shares_id(pool_id), &ALICE, pool_shares_amount).unwrap();
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
+        let balance = 445_496;
+        Currencies::deposit(Asset::CategoricalOutcome(0, 3), &pool_account_id, balance).unwrap();
+
+        assert_ok!(Swaps::pool_exit(
+            RuntimeOrigin::signed(ALICE),
+            pool_id,
+            pool_shares_amount,
+            vec![0; 2],
+        ));
+        assert_eq!(Currencies::free_balance(Asset::CategoricalOutcome(0, 3), &ALICE), 0);
     });
 }
 

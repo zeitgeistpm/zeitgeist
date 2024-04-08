@@ -42,7 +42,7 @@ mod pallet {
         traits::{Hooks, StorageVersion, Time},
         Blake2_128Concat, Parameter,
     };
-    use parity_scale_codec::{FullCodec, MaxEncodedLen};
+    use parity_scale_codec::{FullCodec, HasCompact, MaxEncodedLen};
     use sp_runtime::{
         traits::{
             AtLeast32Bit, AtLeast32BitUnsigned, MaybeSerializeDeserialize, Member, Saturating,
@@ -52,14 +52,15 @@ mod pallet {
     use zeitgeist_primitives::{
         math::checked_ops_res::CheckedAddRes,
         traits::MarketBuilderTrait,
-        types::{Asset, Deadlines, EarlyClose, Market, MarketBonds, MarketPeriod, PoolId, Report},
+        types::{
+            BaseAsset, Deadlines, EarlyClose, Market, MarketBonds, MarketPeriod, PoolId, Report,
+        },
     };
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(11);
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <T as Config>::Balance;
     pub(crate) type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
     pub(crate) type MarketIdOf<T> = <T as Config>::MarketId;
@@ -68,7 +69,7 @@ mod pallet {
         BalanceOf<T>,
         BlockNumberOf<T>,
         MomentOf<T>,
-        AssetOf<T>,
+        BaseAsset,
         MarketIdOf<T>,
     >;
     pub(crate) type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
@@ -96,6 +97,7 @@ mod pallet {
         type MarketId: AtLeast32Bit
             + Copy
             + Default
+            + HasCompact
             + MaxEncodedLen
             + MaybeSerializeDeserialize
             + Member
@@ -206,7 +208,7 @@ mod pallet {
                     Self::Balance,
                     Self::BlockNumber,
                     Self::Moment,
-                    AssetOf<T>,
+                    BaseAsset,
                     Self::MarketId,
                 >,
         {

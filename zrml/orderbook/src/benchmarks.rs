@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -48,7 +48,7 @@ fn order_common_parameters<T: Config>(
     &'static str,
 > {
     let market = market_mock::<T>();
-    let maker_asset = market.base_asset;
+    let maker_asset = market.base_asset.into();
     let acc = generate_funded_account::<T>(seed, maker_asset)?;
     let maker_amount: BalanceOf<T> = BASE.saturating_mul(1_000).saturated_into();
     let taker_amount: BalanceOf<T> = BASE.saturating_mul(1_000).saturated_into();
@@ -84,7 +84,7 @@ benchmarks! {
         let taker_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(market_id, 0);
         let (_, _, order_id) = place_default_order::<T>(Some(0), taker_asset)?;
         let caller = generate_funded_account::<T>(None, taker_asset)?;
-        let maker_asset = T::MarketCommons::market(&market_id).unwrap().base_asset;
+        let maker_asset = T::MarketCommons::market(&market_id).unwrap().base_asset.into();
         let caller = generate_funded_account::<T>(None, maker_asset)?;
     }: fill_order(RawOrigin::Signed(caller), order_id, None)
 

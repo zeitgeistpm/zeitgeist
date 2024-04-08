@@ -28,7 +28,7 @@ use sp_runtime::DispatchError;
 fn it_allows_advisory_origin_to_approve_markets() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::Lmsr,
@@ -56,7 +56,7 @@ fn market_with_edit_request_cannot_be_approved() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::Lmsr,
@@ -81,7 +81,7 @@ fn market_with_edit_request_cannot_be_approved() {
 #[test]
 fn approve_market_correctly_unreserves_advisory_bond() {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
-    let test = |base_asset: AssetOf<Runtime>| {
+    let test = |base_asset: BaseAsset| {
         reserve_sentinel_amounts();
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
@@ -106,10 +106,28 @@ fn approve_market_correctly_unreserves_advisory_bond() {
         assert!(market.bonds.creation.unwrap().is_settled);
     };
     ExtBuilder::default().build().execute_with(|| {
-        test(Asset::Ztg);
+        test(BaseAsset::CampaignAsset(100));
+    });
+    ExtBuilder::default().build().execute_with(|| {
+        test(BaseAsset::Ztg);
     });
     #[cfg(feature = "parachain")]
     ExtBuilder::default().build().execute_with(|| {
-        test(Asset::ForeignAsset(100));
+        test(BaseAsset::ForeignAsset(100));
+    });
+}
+
+#[test]
+fn does_trigger_market_transition_api() {
+    ExtBuilder::default().build().execute_with(|| {
+        StateTransitionMock::ensure_empty_state();
+        simple_create_categorical_market(
+            BaseAsset::Ztg,
+            MarketCreation::Advised,
+            1..2,
+            ScoringRule::Lmsr,
+        );
+        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert!(StateTransitionMock::on_activation_triggered());
     });
 }
