@@ -42,8 +42,6 @@ use sp_runtime::{
     DispatchError, DispatchResult,
 };
 use std::cell::RefCell;
-#[cfg(feature = "parachain")]
-use zeitgeist_primitives::types::XcmAsset;
 use zeitgeist_primitives::{
     constants::mock::{
         AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AssetsAccountDeposit,
