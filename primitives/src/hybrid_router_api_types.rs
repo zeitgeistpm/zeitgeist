@@ -38,3 +38,26 @@ pub struct OrderbookTrade<AccountId, Balance> {
     pub filled_taker_amount: Balance,
     pub external_fee: ExternalFee<AccountId, Balance>,
 }
+
+pub trait FailSoft {}
+
+#[derive(Debug)]
+pub enum AmmSoftFail {
+    Numerical,
+}
+
+impl FailSoft for AmmSoftFail {}
+
+#[derive(Debug)]
+pub enum OrderbookSoftFail {
+    BelowMinimumBalance,
+    PartialFillNearFullFillNotAllowed,
+}
+
+impl FailSoft for OrderbookSoftFail {}
+
+#[derive(Debug)]
+pub enum ApiError<S: FailSoft> {
+    SoftFailure(S),
+    HardFailure(DispatchError),
+}

@@ -15,15 +15,18 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::dispatch::{DispatchError, DispatchResult};
+use frame_support::dispatch::DispatchError;
 
-use crate::hybrid_router_api_types::OrderbookTrade;
+use crate::hybrid_router_api_types::{ApiError, OrderbookSoftFail, OrderbookTrade};
 
 /// A type alias for the return struct of orderbook trades.
 pub type OrderbookTradeOf<T> = OrderbookTrade<
     <T as HybridRouterOrderbookApi>::AccountId,
     <T as HybridRouterOrderbookApi>::Balance,
 >;
+
+/// A type alias for the error type of the orderbook part of the hybrid router.
+pub type ApiErrorOf = ApiError<OrderbookSoftFail>;
 
 /// Trait for handling the order book part of the hybrid router.
 pub trait HybridRouterOrderbookApi {
@@ -54,7 +57,7 @@ pub trait HybridRouterOrderbookApi {
         who: Self::AccountId,
         order_id: Self::OrderId,
         maker_partial_fill: Option<Self::Balance>,
-    ) -> Result<OrderbookTradeOf<Self>, DispatchError>;
+    ) -> Result<OrderbookTradeOf<Self>, ApiErrorOf>;
 
     /// Places an order on the order book.
     ///
@@ -73,5 +76,5 @@ pub trait HybridRouterOrderbookApi {
         maker_amount: Self::Balance,
         taker_asset: Self::Asset,
         taker_amount: Self::Balance,
-    ) -> DispatchResult;
+    ) -> Result<(), ApiErrorOf>;
 }

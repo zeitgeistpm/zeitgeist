@@ -53,12 +53,14 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{Get, Zero},
-        DispatchResult,
+        DispatchResult, Saturating,
     };
     #[cfg(feature = "runtime-benchmarks")]
     use zeitgeist_primitives::traits::{CompleteSetOperationsApi, DeployPoolApi};
     use zeitgeist_primitives::{
-        hybrid_router_api_types::{AmmTrade, OrderbookTrade},
+        hybrid_router_api_types::{
+            AmmSoftFail, AmmTrade, ApiError, OrderbookSoftFail, OrderbookTrade,
+        },
         math::{
             checked_ops_res::CheckedSubRes,
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
@@ -395,24 +397,42 @@ mod pallet {
                 return Ok((amount_in, None));
             }
 
-            let amm_trade_info = match tx_type {
-                TxType::Buy => T::Amm::buy(
-                    who.clone(),
-                    market_id,
-                    asset,
-                    amm_amount_in,
-                    BalanceOf::<T>::zero(),
-                )?,
-                TxType::Sell => T::Amm::sell(
-                    who.clone(),
-                    market_id,
-                    asset,
-                    amm_amount_in,
-                    BalanceOf::<T>::zero(),
-                )?,
-            };
+            let amm_trade_info = Self::handle_amm_trade(
+                tx_type,
+                who.clone(),
+                market_id,
+                asset,
+                amm_amount_in,
+                BalanceOf::<T>::zero(),
+            )?;
 
-            Ok((amount_in.checked_sub_res(&amm_amount_in)?, Some(amm_trade_info)))
+            Ok((amount_in.checked_sub_res(&amm_amount_in)?, amm_trade_info))
+        }
+
+        fn handle_amm_trade(
+            tx_type: TxType,
+            who: AccountIdOf<T>,
+            market_id: MarketIdOf<T>,
+            asset: AssetOf<T>,
+            amount_in: BalanceOf<T>,
+            min_amount_out: BalanceOf<T>,
+        ) -> Result<Option<AmmTradeOf<T>>, DispatchError> {
+            match tx_type {
+                TxType::Buy => {
+                    match T::Amm::buy(who, market_id, asset, amount_in, min_amount_out) {
+                        Ok(amm_trade) => Ok(Some(amm_trade)),
+                        Err(ApiError::SoftFailure(AmmSoftFail::Numerical)) => Ok(None),
+                        Err(ApiError::HardFailure(dispatch_error)) => Err(dispatch_error),
+                    }
+                }
+                TxType::Sell => {
+                    match T::Amm::sell(who, market_id, asset, amount_in, min_amount_out) {
+                        Ok(amm_trade) => Ok(Some(amm_trade)),
+                        Err(ApiError::SoftFailure(AmmSoftFail::Numerical)) => Ok(None),
+                        Err(ApiError::HardFailure(dispatch_error)) => Err(dispatch_error),
+                    }
+                }
+            }
         }
 
         /// Fills the order from the order book if it exists and meets the price conditions.
@@ -495,18 +515,35 @@ mod pallet {
                 let (_taker_fill, maker_fill) =
                     order.taker_and_maker_fill_from_taker_amount(remaining)?;
                 // and the `maker_partial_fill` of `fill_order` is specified in `taker_asset`
-                let order_trade =
-                    T::OrderBook::fill_order(who.clone(), order_id, Some(maker_fill))?;
-                order_trades.push(order_trade);
-                // `maker_fill` is the amount the order owner (maker) wants to receive
-                remaining = remaining.checked_sub_res(&maker_fill)?;
+                let order_trade_opt = Self::handle_fill_order(who.clone(), order_id, maker_fill)?;
+                if let Some(order_trade) = order_trade_opt {
+                    order_trades.push(order_trade);
+                    // `maker_fill` is the amount the order owner (maker) wants to receive
+                    remaining = remaining.checked_sub_res(&maker_fill)?;
+                }
             }
 
             Ok(OrderAmmTradesInfo { remaining, order_trades, amm_trades })
         }
 
+        fn handle_fill_order(
+            who: AccountIdOf<T>,
+            order_id: OrderId,
+            maker_fill: BalanceOf<T>,
+        ) -> Result<Option<OrderTradeOf<T>>, DispatchError> {
+            match T::OrderBook::fill_order(who, order_id, Some(maker_fill)) {
+                Ok(order_trade) => Ok(Some(order_trade)),
+                Err(ApiError::SoftFailure(OrderbookSoftFail::BelowMinimumBalance))
+                | Err(ApiError::SoftFailure(
+                    OrderbookSoftFail::PartialFillNearFullFillNotAllowed,
+                )) => Ok(None),
+                Err(ApiError::HardFailure(dispatch_error)) => Err(dispatch_error),
+            }
+        }
+
         /// Places a limit order if the strategy is `Strategy::LimitOrder`.
         /// If the strategy is `Strategy::ImmediateOrCancel`, an error is returned.
+        /// A bool is returned to indicate if the order was placed successfully.
         ///
         /// # Arguments
         ///
@@ -525,24 +562,27 @@ mod pallet {
             maker_amount: BalanceOf<T>,
             taker_asset: AssetOf<T>,
             taker_amount: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> Result<bool, DispatchError> {
             match strategy {
-                Strategy::ImmediateOrCancel => {
-                    return Err(Error::<T>::CancelStrategyApplied.into());
-                }
+                Strategy::ImmediateOrCancel => Err(Error::<T>::CancelStrategyApplied.into()),
                 Strategy::LimitOrder => {
-                    T::OrderBook::place_order(
+                    match T::OrderBook::place_order(
                         who.clone(),
                         market_id,
                         maker_asset,
                         maker_amount,
                         taker_asset,
                         taker_amount,
-                    )?;
+                    ) {
+                        Ok(()) => Ok(true),
+                        Err(ApiError::SoftFailure(OrderbookSoftFail::BelowMinimumBalance))
+                        | Err(ApiError::SoftFailure(
+                            OrderbookSoftFail::PartialFillNearFullFillNotAllowed,
+                        )) => Ok(false),
+                        Err(ApiError::HardFailure(dispatch_error)) => Err(dispatch_error),
+                    }
                 }
             }
-
-            Ok(())
         }
 
         /// Executes a trade by routing the order to the Automated Market Maker (AMM) and the Order Book
@@ -620,6 +660,8 @@ mod pallet {
                 remaining = amm_trade_info.0;
             }
 
+            let mut limit_order_was_placed = false;
+
             if !remaining.is_zero() {
                 let (maker_asset, maker_amount, taker_asset, taker_amount) = match tx_type {
                     TxType::Buy => {
@@ -638,7 +680,7 @@ mod pallet {
                     }
                 };
 
-                Self::maybe_place_limit_order(
+                limit_order_was_placed = Self::maybe_place_limit_order(
                     strategy,
                     &who,
                     market_id,
@@ -658,7 +700,11 @@ mod pallet {
                 market_id,
                 price_limit,
                 asset_in,
-                amount_in,
+                amount_in: if limit_order_was_placed {
+                    amount_in
+                } else {
+                    amount_in.saturating_sub(remaining)
+                },
                 asset_out,
                 amount_out,
                 external_fee_amount,
