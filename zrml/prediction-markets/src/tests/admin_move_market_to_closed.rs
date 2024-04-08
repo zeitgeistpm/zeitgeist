@@ -28,7 +28,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_blocknumb
         let now = frame_system::Pallet::<Runtime>::block_number();
         let end = 42;
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             now..end,
             ScoringRule::AmmCdaHybrid,
@@ -36,7 +36,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_blocknumb
         run_blocks(3);
         let market_id = 0;
         assert_ok!(PredictionMarkets::admin_move_market_to_closed(
-            RuntimeOrigin::signed(SUDO),
+            RuntimeOrigin::signed(CloseOrigin::get()),
             market_id
         ));
         let market = MarketCommons::market(&market_id).unwrap();
@@ -59,7 +59,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp
         let end = start + 42u64 * (MILLISECS_PER_BLOCK as u64);
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(start..end),
@@ -81,7 +81,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp
         run_blocks(shift_blocks);
 
         assert_ok!(PredictionMarkets::admin_move_market_to_closed(
-            RuntimeOrigin::signed(SUDO),
+            RuntimeOrigin::signed(CloseOrigin::get()),
             market_id
         ));
         let market = MarketCommons::market(&market_id).unwrap();
@@ -97,7 +97,10 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp
 fn admin_move_market_to_closed_fails_if_market_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PredictionMarkets::admin_move_market_to_closed(RuntimeOrigin::signed(SUDO), 0),
+            PredictionMarkets::admin_move_market_to_closed(
+                RuntimeOrigin::signed(CloseOrigin::get()),
+                0
+            ),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
         );
     });
@@ -111,7 +114,7 @@ fn admin_move_market_to_closed_fails_if_market_does_not_exist() {
 fn admin_move_market_to_closed_fails_if_market_is_not_active(market_status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..2,
             ScoringRule::AmmCdaHybrid,
@@ -122,7 +125,10 @@ fn admin_move_market_to_closed_fails_if_market_is_not_active(market_status: Mark
             Ok(())
         }));
         assert_noop!(
-            PredictionMarkets::admin_move_market_to_closed(RuntimeOrigin::signed(SUDO), market_id),
+            PredictionMarkets::admin_move_market_to_closed(
+                RuntimeOrigin::signed(CloseOrigin::get()),
+                market_id
+            ),
             Error::<Runtime>::MarketIsNotActive,
         );
     });
@@ -134,7 +140,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Block(22..66),
@@ -147,7 +153,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
         ));
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Block(33..66),
@@ -158,7 +164,10 @@ fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
             Some(MarketDisputeMechanism::SimpleDisputes),
             ScoringRule::AmmCdaHybrid,
         ));
-        assert_ok!(PredictionMarkets::admin_move_market_to_closed(RuntimeOrigin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::admin_move_market_to_closed(
+            RuntimeOrigin::signed(CloseOrigin::get()),
+            0
+        ));
 
         let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66).into_inner();
         assert_eq!(auto_close, vec![1]);

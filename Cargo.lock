@@ -532,7 +532,7 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
 name = "battery-station-runtime"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "cfg-if",
  "common-runtime",
@@ -562,6 +562,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-tx-payment",
+ "pallet-assets",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -619,6 +620,7 @@ dependencies = [
  "xcm-emulator",
  "xcm-executor",
  "zeitgeist-primitives",
+ "zrml-asset-router",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
@@ -1207,7 +1209,7 @@ dependencies = [
 
 [[package]]
 name = "common-runtime"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "cfg-if",
  "cumulus-pallet-xcmp-queue",
@@ -1216,6 +1218,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "pallet-asset-tx-payment",
+ "pallet-assets",
  "pallet-author-inherent",
  "pallet-author-mapping",
  "pallet-author-slot-filter",
@@ -1695,7 +1698,7 @@ dependencies = [
  "sc-client-api",
  "sc-consensus",
  "sp-consensus",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-maybe-compressed-blob",
  "sp-runtime",
  "tracing",
 ]
@@ -5860,6 +5863,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-assets"
+version = "4.0.0-dev"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-aura"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
@@ -7537,7 +7555,7 @@ dependencies = [
  "polkadot-node-subsystem-util",
  "polkadot-primitives",
  "sp-core",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-maybe-compressed-blob",
  "thiserror",
  "tracing-gum 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
 ]
@@ -7640,7 +7658,7 @@ dependencies = [
  "polkadot-node-subsystem",
  "polkadot-parachain",
  "polkadot-primitives",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-maybe-compressed-blob",
  "tracing-gum 0.9.38 (git+https://github.com/zeitgeistpm/polkadot.git?branch=v0.9.38-recent-bootnodes)",
 ]
 
@@ -7754,7 +7772,7 @@ dependencies = [
  "sp-core",
  "sp-externalities",
  "sp-io",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-maybe-compressed-blob",
  "sp-tracing",
  "sp-wasm-interface",
  "tempfile",
@@ -7907,7 +7925,7 @@ dependencies = [
  "sp-consensus-vrf",
  "sp-core",
  "sp-keystore",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-maybe-compressed-blob",
  "thiserror",
  "zstd",
 ]
@@ -9536,7 +9554,7 @@ dependencies = [
 [[package]]
 name = "sc-allocator"
 version = "4.1.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "log",
  "sp-core",
@@ -9939,10 +9957,10 @@ dependencies = [
 [[package]]
 name = "sc-executor-common"
 version = "0.10.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "sc-allocator",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38)",
+ "sp-maybe-compressed-blob",
  "sp-wasm-interface",
  "thiserror",
  "wasm-instrument 0.3.0",
@@ -9965,7 +9983,7 @@ dependencies = [
 [[package]]
 name = "sc-executor-wasmtime"
 version = "0.10.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "cfg-if",
  "libc",
@@ -11320,7 +11338,7 @@ dependencies = [
 [[package]]
 name = "sp-core"
 version = "7.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "array-bytes 4.2.0",
  "base58",
@@ -11362,7 +11380,7 @@ dependencies = [
 [[package]]
 name = "sp-core-hashing"
 version = "5.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "blake2",
  "byteorder",
@@ -11376,7 +11394,7 @@ dependencies = [
 [[package]]
 name = "sp-core-hashing-proc-macro"
 version = "5.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -11396,7 +11414,7 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "5.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -11406,7 +11424,7 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.13.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -11502,16 +11520,7 @@ dependencies = [
 [[package]]
 name = "sp-maybe-compressed-blob"
 version = "4.1.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
-dependencies = [
- "thiserror",
- "zstd",
-]
-
-[[package]]
-name = "sp-maybe-compressed-blob"
-version = "4.1.0-dev"
-source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-fix-new-rustc-build#310d70a2b46907901dd3bb6e6d373b5f49115f38"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "thiserror",
  "zstd",
@@ -11604,7 +11613,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface"
 version = "7.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
@@ -11622,7 +11631,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "6.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "Inflector",
  "proc-macro-crate",
@@ -11680,12 +11689,12 @@ dependencies = [
 [[package]]
 name = "sp-std"
 version = "5.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 
 [[package]]
 name = "sp-storage"
 version = "7.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -11713,7 +11722,7 @@ dependencies = [
 [[package]]
 name = "sp-tracing"
 version = "6.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "parity-scale-codec",
  "sp-std",
@@ -11801,7 +11810,7 @@ dependencies = [
 [[package]]
 name = "sp-wasm-interface"
 version = "7.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.38#bcff60a227d455d95b4712b6cb356ce56b1ff672"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "impl-trait-for-tuples",
  "log",
@@ -12112,13 +12121,13 @@ dependencies = [
 [[package]]
 name = "substrate-wasm-builder"
 version = "5.0.0-dev"
-source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-fix-new-rustc-build#310d70a2b46907901dd3bb6e6d373b5f49115f38"
+source = "git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-zeitgeist-adjustments#bd498817bb4479836a47231b4fc36831a19806ae"
 dependencies = [
  "ansi_term",
  "build-helper",
  "cargo_metadata",
  "filetime",
- "sp-maybe-compressed-blob 4.1.0-dev (git+https://github.com/zeitgeistpm/substrate.git?branch=polkadot-v0.9.38-fix-new-rustc-build)",
+ "sp-maybe-compressed-blob",
  "strum",
  "tempfile",
  "toml",
@@ -14280,11 +14289,11 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-macros"
-version = "0.5.0"
+version = "0.5.1"
 
 [[package]]
 name = "zeitgeist-node"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "battery-station-runtime",
  "cfg-if",
@@ -14376,12 +14385,13 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-primitives"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "arbitrary",
  "fixed",
  "frame-support",
  "frame-system",
+ "impl-trait-for-tuples",
  "more-asserts",
  "num-traits",
  "orml-currencies",
@@ -14399,7 +14409,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-runtime"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "cfg-if",
  "common-runtime",
@@ -14429,6 +14439,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-tx-payment",
+ "pallet-assets",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -14485,6 +14496,7 @@ dependencies = [
  "xcm-emulator",
  "xcm-executor",
  "zeitgeist-primitives",
+ "zrml-asset-router",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
@@ -14523,8 +14535,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "zrml-asset-router"
+version = "0.4.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-assets",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "test-case",
+ "zeitgeist-macros",
+ "zeitgeist-primitives",
+]
+
+[[package]]
 name = "zrml-authorized"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14542,7 +14574,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-court"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "arrayvec 0.7.4",
  "env_logger 0.10.1",
@@ -14561,13 +14593,14 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "test-case",
+ "zeitgeist-macros",
  "zeitgeist-primitives",
  "zrml-market-commons",
 ]
 
 [[package]]
 name = "zrml-global-disputes"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14626,7 +14659,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-liquidity-mining"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14645,7 +14678,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-market-commons"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "env_logger 0.10.1",
  "frame-support",
@@ -14663,7 +14696,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-neo-swaps"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "cfg-if",
  "env_logger 0.10.1",
@@ -14677,6 +14710,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "pallet-assets",
  "pallet-balances",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
@@ -14693,6 +14727,7 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "zeitgeist-primitives",
+ "zrml-asset-router",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
@@ -14706,7 +14741,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-orderbook"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14716,6 +14751,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "pallet-assets",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -14723,7 +14759,9 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "test-case",
+ "zeitgeist-macros",
  "zeitgeist-primitives",
+ "zrml-asset-router",
  "zrml-market-commons",
  "zrml-orderbook",
 ]
@@ -14741,7 +14779,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-parimutuel"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14750,6 +14788,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "pallet-assets",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -14757,13 +14796,15 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "test-case",
+ "zeitgeist-macros",
  "zeitgeist-primitives",
+ "zrml-asset-router",
  "zrml-market-commons",
 ]
 
 [[package]]
 name = "zrml-prediction-markets"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14774,6 +14815,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "pallet-assets",
  "pallet-balances",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
@@ -14788,6 +14830,7 @@ dependencies = [
  "test-case",
  "xcm",
  "zeitgeist-primitives",
+ "zrml-asset-router",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
@@ -14813,7 +14856,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-runtime-api"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -14822,7 +14865,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-rikiddo"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "arbitrary",
  "cfg-if",
@@ -14856,7 +14899,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-simple-disputes"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14877,7 +14920,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-styx"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14894,7 +14937,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "env_logger 0.10.1",
  "frame-benchmarking",
@@ -14937,7 +14980,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-rpc"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -14950,7 +14993,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-runtime-api"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

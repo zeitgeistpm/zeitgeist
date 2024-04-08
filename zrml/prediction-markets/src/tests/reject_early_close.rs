@@ -29,7 +29,7 @@ fn reject_early_close_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
             ScoringRule::AmmCdaHybrid,
@@ -44,7 +44,10 @@ fn reject_early_close_emits_event() {
 
         assert_ok!(PredictionMarkets::dispute_early_close(RuntimeOrigin::signed(BOB), market_id,));
 
-        assert_ok!(PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,));
+        assert_ok!(PredictionMarkets::reject_early_close(
+            RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+            market_id
+        ));
 
         System::assert_last_event(Event::MarketEarlyCloseRejected { market_id }.into());
     });
@@ -55,7 +58,7 @@ fn reject_early_close_fails_if_state_is_scheduled_as_market_creator() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
             ScoringRule::AmmCdaHybrid,
@@ -72,7 +75,10 @@ fn reject_early_close_fails_if_state_is_scheduled_as_market_creator() {
         ));
 
         assert_noop!(
-            PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,),
+            PredictionMarkets::reject_early_close(
+                RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+                market_id
+            ),
             Error::<Runtime>::InvalidEarlyCloseState
         );
     });
@@ -83,7 +89,7 @@ fn reject_early_close_fails_if_state_is_rejected() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
             ScoringRule::AmmCdaHybrid,
@@ -94,14 +100,21 @@ fn reject_early_close_fails_if_state_is_rejected() {
 
         let market_id = 0;
 
-        assert_ok!(
-            PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
-        );
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+            market_id
+        ));
 
-        assert_ok!(PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,));
+        assert_ok!(PredictionMarkets::reject_early_close(
+            RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+            market_id
+        ));
 
         assert_noop!(
-            PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,),
+            PredictionMarkets::reject_early_close(
+                RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+                market_id
+            ),
             Error::<Runtime>::InvalidEarlyCloseState
         );
     });
@@ -113,7 +126,7 @@ fn reject_early_close_resets_to_old_market_period() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -126,9 +139,10 @@ fn reject_early_close_resets_to_old_market_period() {
         ));
 
         let market_id = 0;
-        assert_ok!(
-            PredictionMarkets::schedule_early_close(RuntimeOrigin::signed(SUDO), market_id,)
-        );
+        assert_ok!(PredictionMarkets::schedule_early_close(
+            RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+            market_id
+        ));
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
         let new_end = now + <Runtime as Config>::CloseEarlyProtectionBlockPeriod::get();
@@ -137,7 +151,10 @@ fn reject_early_close_resets_to_old_market_period() {
 
         run_blocks(1);
 
-        assert_ok!(PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,));
+        assert_ok!(PredictionMarkets::reject_early_close(
+            RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+            market_id
+        ));
 
         let market_ids_at_new_end = <MarketIdsPerCloseBlock<Runtime>>::get(new_end);
         assert!(market_ids_at_new_end.is_empty());
@@ -153,7 +170,7 @@ fn reject_early_close_settles_bonds() {
         let end = 100;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -180,7 +197,10 @@ fn reject_early_close_settles_bonds() {
         let free_bob = Balances::free_balance(BOB);
         let free_alice = Balances::free_balance(ALICE);
 
-        assert_ok!(PredictionMarkets::reject_early_close(RuntimeOrigin::signed(SUDO), market_id,));
+        assert_ok!(PredictionMarkets::reject_early_close(
+            RuntimeOrigin::signed(CloseMarketEarlyOrigin::get()),
+            market_id
+        ));
 
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.early_close.unwrap().state, EarlyCloseState::Rejected);

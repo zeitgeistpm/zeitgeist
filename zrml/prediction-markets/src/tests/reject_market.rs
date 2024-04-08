@@ -27,7 +27,7 @@ use crate::{MarketIdsForEdit, MarketIdsPerCloseBlock};
 fn it_allows_the_advisory_origin_to_reject_markets() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             4..6,
             ScoringRule::AmmCdaHybrid,
@@ -39,7 +39,7 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
         assert_ok!(PredictionMarkets::reject_market(
-            RuntimeOrigin::signed(SUDO),
+            RuntimeOrigin::signed(RejectOrigin::get()),
             0,
             reject_reason.clone()
         ));
@@ -58,7 +58,7 @@ fn reject_errors_if_reject_reason_is_too_long() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::AmmCdaHybrid,
@@ -71,7 +71,11 @@ fn reject_errors_if_reject_reason_is_too_long() {
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize + 1];
         assert_noop!(
-            PredictionMarkets::reject_market(RuntimeOrigin::signed(SUDO), 0, reject_reason),
+            PredictionMarkets::reject_market(
+                RuntimeOrigin::signed(RejectOrigin::get()),
+                0,
+                reject_reason
+            ),
             Error::<Runtime>::RejectReasonLengthExceedsMaxRejectReasonLen
         );
     });
@@ -82,7 +86,7 @@ fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::AmmCdaHybrid,
@@ -95,9 +99,17 @@ fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
         let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
         let reject_reason = vec![0_u8; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
-        assert_ok!(PredictionMarkets::request_edit(RuntimeOrigin::signed(SUDO), 0, edit_reason));
+        assert_ok!(PredictionMarkets::request_edit(
+            RuntimeOrigin::signed(RequestEditOrigin::get()),
+            0,
+            edit_reason
+        ));
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
-        assert_ok!(PredictionMarkets::reject_market(RuntimeOrigin::signed(SUDO), 0, reject_reason));
+        assert_ok!(PredictionMarkets::reject_market(
+            RuntimeOrigin::signed(RejectOrigin::get()),
+            0,
+            reject_reason
+        ));
         assert!(!MarketIdsForEdit::<Runtime>::contains_key(0));
 
         assert_noop!(
@@ -110,7 +122,7 @@ fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
 #[test]
 fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
-    let test = |base_asset: AssetOf<Runtime>| {
+    let test = |base_asset: BaseAsset| {
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Advised,
@@ -134,7 +146,11 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
 
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
-        assert_ok!(PredictionMarkets::reject_market(RuntimeOrigin::signed(SUDO), 0, reject_reason));
+        assert_ok!(PredictionMarkets::reject_market(
+            RuntimeOrigin::signed(RejectOrigin::get()),
+            0,
+            reject_reason
+        ));
 
         // AdvisoryBond gets slashed after reject_market
         // OracleBond gets unreserved after reject_market
@@ -163,11 +179,14 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
         assert_eq!(balance_treasury_after, slash_amount_advisory_bond);
     };
     ExtBuilder::default().build().execute_with(|| {
-        test(Asset::Ztg);
+        test(BaseAsset::CampaignAsset(100));
+    });
+    ExtBuilder::default().build().execute_with(|| {
+        test(BaseAsset::Ztg);
     });
     #[cfg(feature = "parachain")]
     ExtBuilder::default().build().execute_with(|| {
-        test(Asset::ForeignAsset(100));
+        test(BaseAsset::ForeignAsset(100));
     });
 }
 
@@ -177,26 +196,30 @@ fn reject_market_clears_auto_close_blocks() {
     // can not be deployed on pending advised pools.
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             33..66,
             ScoringRule::AmmCdaHybrid,
         );
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             22..66,
             ScoringRule::AmmCdaHybrid,
         );
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             22..33,
             ScoringRule::AmmCdaHybrid,
         );
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
-        assert_ok!(PredictionMarkets::reject_market(RuntimeOrigin::signed(SUDO), 0, reject_reason));
+        assert_ok!(PredictionMarkets::reject_market(
+            RuntimeOrigin::signed(RejectOrigin::get()),
+            0,
+            reject_reason
+        ));
 
         let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66);
         assert_eq!(auto_close.len(), 1);
@@ -209,7 +232,7 @@ fn reject_market_fails_on_permissionless_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..2,
             ScoringRule::AmmCdaHybrid,
@@ -217,7 +240,11 @@ fn reject_market_fails_on_permissionless_market() {
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
         assert_noop!(
-            PredictionMarkets::reject_market(RuntimeOrigin::signed(SUDO), 0, reject_reason),
+            PredictionMarkets::reject_market(
+                RuntimeOrigin::signed(RejectOrigin::get()),
+                0,
+                reject_reason
+            ),
             Error::<Runtime>::InvalidMarketStatus
         );
     });
@@ -228,16 +255,23 @@ fn reject_market_fails_on_approved_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(
-            Asset::Ztg,
+            BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::AmmCdaHybrid,
         );
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            0
+        ));
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
         assert_noop!(
-            PredictionMarkets::reject_market(RuntimeOrigin::signed(SUDO), 0, reject_reason),
+            PredictionMarkets::reject_market(
+                RuntimeOrigin::signed(RejectOrigin::get()),
+                0,
+                reject_reason
+            ),
             Error::<Runtime>::InvalidMarketStatus
         );
     });

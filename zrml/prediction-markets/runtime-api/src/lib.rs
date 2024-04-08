@@ -1,3 +1,4 @@
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -18,12 +19,12 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_scale_codec::{Codec, MaxEncodedLen};
+use parity_scale_codec::{Codec, HasCompact, MaxEncodedLen};
 use zeitgeist_primitives::types::Asset;
 
 sp_api::decl_runtime_apis! {
     pub trait PredictionMarketsApi<MarketId, Hash> where
-        MarketId: Codec + MaxEncodedLen,
+        MarketId: Codec + HasCompact + MaxEncodedLen,
         Hash: Codec,
     {
         fn market_outcome_share_id(market_id: MarketId, outcome: u16) -> Asset<MarketId>;

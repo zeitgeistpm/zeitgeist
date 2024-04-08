@@ -31,7 +31,7 @@ fn on_initialize_skips_the_genesis_block() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),

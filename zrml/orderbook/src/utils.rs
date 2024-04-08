@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -20,16 +20,18 @@
 use crate::*;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::types::{
-    Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-    MarketType, ScoringRule,
+    BaseAsset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+    MarketStatus, MarketType, ScoringRule,
 };
+
+type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
 type MarketOf<T> = Market<
     <T as frame_system::Config>::AccountId,
     BalanceOf<T>,
     <T as frame_system::Config>::BlockNumber,
     MomentOf<T>,
-    Asset<MarketIdOf<T>>,
+    BaseAsset,
 >;
 
 pub(crate) fn market_mock<T>() -> MarketOf<T>
@@ -37,7 +39,7 @@ where
     T: crate::Config,
 {
     Market {
-        base_asset: Asset::Ztg,
+        base_asset: BaseAsset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),
         creator: T::PalletId::get().into_account_truncating(),

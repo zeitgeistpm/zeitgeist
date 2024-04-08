@@ -352,7 +352,7 @@ fn sell_fails_on_insufficient_funds() {
                 amount_in,
                 u128::MAX,
             ),
-            orml_tokens::Error::<Runtime>::BalanceTooLow,
+            pallet_assets::Error::<Runtime, MarketAssetsInstance>::BalanceLow,
         );
     });
 }

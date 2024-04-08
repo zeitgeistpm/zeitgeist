@@ -80,8 +80,8 @@ mod pallet {
             checked_ops_res::{CheckedAddRes, CheckedMulRes},
             fixed::FixedMul,
         },
-        traits::{PoolSharesId, Swaps, ZeitgeistAssetManager},
-        types::{PoolId, SerdeWrapper},
+        traits::{PoolSharesId, Swaps},
+        types::PoolId,
     };
 
     /// The current storage version.
@@ -359,7 +359,7 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type AssetManager: ZeitgeistAssetManager<Self::AccountId, CurrencyId = Self::Asset>;
+        type AssetManager: MultiCurrency<Self::AccountId, CurrencyId = Self::Asset>;
 
         type Asset: Parameter
             + Member
@@ -368,7 +368,7 @@ mod pallet {
             + MaybeSerializeDeserialize
             + Ord
             + TypeInfo
-            + PoolSharesId<SerdeWrapper<PoolId>>;
+            + PoolSharesId<PoolId>;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -1092,7 +1092,7 @@ mod pallet {
         }
 
         pub(crate) fn pool_shares_id(pool_id: PoolId) -> AssetOf<T> {
-            T::Asset::pool_shares_id(SerdeWrapper(pool_id))
+            T::Asset::pool_shares_id(pool_id)
         }
 
         pub fn pool_by_id(pool_id: PoolId) -> Result<PoolOf<T>, DispatchError>

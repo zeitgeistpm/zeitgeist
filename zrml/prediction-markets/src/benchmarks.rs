@@ -46,8 +46,8 @@ use zeitgeist_primitives::{
     math::fixed::{BaseProvider, ZeitgeistBase},
     traits::DisputeApi,
     types::{
-        Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, MultiHash, OutcomeReport, ScoringRule,
+        Asset, BaseAsset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+        MarketStatus, MarketType, MultiHash, OutcomeReport, ScoringRule,
     },
 };
 use zrml_authorized::Pallet as AuthorizedPallet;
@@ -97,7 +97,7 @@ fn create_market_common<T: Config + pallet_timestamp::Config>(
     let (caller, oracle, deadlines, metadata) =
         create_market_common_parameters::<T>(dispute_mechanism.is_some())?;
     Call::<T>::create_market {
-        base_asset: Asset::Ztg,
+        base_asset: BaseAsset::Ztg,
         creator_fee,
         oracle,
         period,
@@ -280,10 +280,10 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        let resolve_origin = T::ResolveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
-        call.dispatch_bypass_filter(close_origin)?
+        call.dispatch_bypass_filter(resolve_origin)?
     } verify {
         assert_last_event::<T>(Event::MarketResolved::<T>(
             market_id,
@@ -316,10 +316,10 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        let resolve_origin = T::ResolveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
-        call.dispatch_bypass_filter(close_origin)?
+        call.dispatch_bypass_filter(resolve_origin)?
     } verify {
         assert_last_event::<T>(Event::MarketResolved::<T>(
             market_id,
@@ -368,10 +368,10 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        let resolve_origin = T::ResolveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
-        call.dispatch_bypass_filter(close_origin)?
+        call.dispatch_bypass_filter(resolve_origin)?
     } verify {
         assert_last_event::<T>(Event::MarketResolved::<T>(
             market_id,
@@ -421,10 +421,10 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        let resolve_origin = T::ResolveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
-        call.dispatch_bypass_filter(close_origin)?
+        call.dispatch_bypass_filter(resolve_origin)?
     } verify {
         assert_last_event::<T>(Event::MarketResolved::<T>(
             market_id,
@@ -456,10 +456,10 @@ benchmarks! {
             Some(MarketDisputeMechanism::Court),
         )?;
 
-        let approve_origin = T::ApproveOrigin::try_successful_origin().unwrap();
+        let request_edit_origin = T::RequestEditOrigin::try_successful_origin().unwrap();
         let edit_reason = vec![0_u8; r as usize];
         let call = Call::<T>::request_edit{ market_id, edit_reason };
-    }: { call.dispatch_bypass_filter(approve_origin)? } verify {}
+    }: { call.dispatch_bypass_filter(request_edit_origin)? } verify {}
 
     buy_complete_set {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
@@ -491,7 +491,7 @@ benchmarks! {
         }
     }: _(
             RawOrigin::Signed(caller),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             Perbill::zero(),
             oracle,
             period,
@@ -515,7 +515,7 @@ benchmarks! {
         let (caller, oracle, deadlines, metadata) =
             create_market_common_parameters::<T>(true)?;
         Call::<T>::create_market {
-            base_asset: Asset::Ztg,
+            base_asset: BaseAsset::Ztg,
             creator_fee: Perbill::zero(),
             oracle: oracle.clone(),
             period: period.clone(),
@@ -529,10 +529,10 @@ benchmarks! {
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         let market_id = zrml_market_commons::Pallet::<T>::latest_market_id()?;
 
-        let approve_origin = T::ApproveOrigin::try_successful_origin().unwrap();
+        let request_edit_origin = T::RequestEditOrigin::try_successful_origin().unwrap();
         let edit_reason = vec![0_u8; 1024];
         Call::<T>::request_edit{ market_id, edit_reason }
-        .dispatch_bypass_filter(approve_origin)?;
+        .dispatch_bypass_filter(request_edit_origin)?;
 
         for i in 0..m {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
@@ -547,7 +547,7 @@ benchmarks! {
         };
     }: _(
             RawOrigin::Signed(caller),
-            Asset::Ztg,
+            BaseAsset::Ztg,
             market_id,
             oracle,
             period,
@@ -856,7 +856,7 @@ benchmarks! {
         let end: MomentOf<T> = 1_000_000u64.saturated_into();
         let (caller, oracle, _, metadata) = create_market_common_parameters::<T>(false)?;
         Call::<T>::create_market {
-            base_asset: Asset::Ztg,
+            base_asset: BaseAsset::Ztg,
             creator_fee: Perbill::zero(),
             oracle: caller.clone(),
             period: MarketPeriod::Timestamp(start..end),
@@ -1288,7 +1288,7 @@ benchmarks! {
         let m in 0..63; // Number of markets closing on the same block.
         let n in 2..T::MaxCategories::get() as u32; // Number of assets in the market.
 
-        let base_asset = Asset::Ztg;
+        let base_asset = BaseAsset::Ztg;
         let range_start = (5 * MILLISECS_PER_BLOCK) as u64;
         let range_end = (100 * MILLISECS_PER_BLOCK) as u64;
         let period = MarketPeriod::Timestamp(range_start..range_end);
@@ -1298,7 +1298,7 @@ benchmarks! {
         let amount = (10u128 * BASE).saturated_into();
 
         <T as pallet::Config>::AssetManager::deposit(
-            base_asset,
+            base_asset.into(),
             &caller,
             amount,
         )?;

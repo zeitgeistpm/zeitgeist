@@ -24,7 +24,9 @@ mod hybrid_router_amm_api;
 mod hybrid_router_orderbook_api;
 mod market_commons_pallet_api;
 mod market_id;
+mod market_transition_api;
 mod swaps;
+mod weights;
 mod zeitgeist_asset;
 mod zeitgeist_multi_reservable_currency;
 
@@ -36,6 +38,8 @@ pub use hybrid_router_amm_api::HybridRouterAmmApi;
 pub use hybrid_router_orderbook_api::HybridRouterOrderbookApi;
 pub use market_commons_pallet_api::MarketCommonsPalletApi;
 pub use market_id::MarketId;
+pub use market_transition_api::MarketTransitionApi;
 pub use swaps::Swaps;
+pub use weights::CheckedDivPerComponent;
 pub use zeitgeist_asset::*;
 pub use zeitgeist_multi_reservable_currency::ZeitgeistAssetManager;

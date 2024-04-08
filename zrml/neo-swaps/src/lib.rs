@@ -880,7 +880,7 @@ mod pallet {
             let pool = Pool {
                 account_id: pool_account_id.clone(),
                 reserves: reserves.clone(),
-                collateral,
+                collateral: collateral.into(),
                 liquidity_parameter,
                 liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
                 swap_fee,
@@ -891,7 +891,7 @@ mod pallet {
                 pool.collateral,
                 &who,
                 &pool.account_id,
-                T::MultiCurrency::minimum_balance(collateral),
+                T::MultiCurrency::minimum_balance(collateral.into()),
             )?;
             Pools::<T>::insert(market_id, pool);
             Self::deposit_event(Event::<T>::PoolDeployed {
@@ -899,7 +899,7 @@ mod pallet {
                 market_id,
                 account_id: pool_account_id,
                 reserves,
-                collateral,
+                collateral: collateral.into(),
                 liquidity_parameter,
                 pool_shares_amount: amount,
                 swap_fee,
