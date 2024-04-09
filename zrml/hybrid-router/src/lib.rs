@@ -471,7 +471,7 @@ mod pallet {
                     Err(_) => continue,
                 };
 
-                let order_price = order.price(base_asset)?;
+                let order_price = order.price(base_asset.into())?;
 
                 match tx_type {
                     TxType::Buy => {
@@ -665,7 +665,7 @@ mod pallet {
             if !remaining.is_zero() {
                 let (maker_asset, maker_amount, taker_asset, taker_amount) = match tx_type {
                     TxType::Buy => {
-                        let maker_asset = market.base_asset;
+                        let maker_asset = market.base_asset.into();
                         let maker_amount = remaining;
                         let taker_asset = asset;
                         let taker_amount = remaining.bdiv_ceil(price_limit)?;
@@ -674,7 +674,7 @@ mod pallet {
                     TxType::Sell => {
                         let maker_asset = asset;
                         let maker_amount = remaining;
-                        let taker_asset = market.base_asset;
+                        let taker_asset = market.base_asset.into();
                         let taker_amount = price_limit.bmul_floor(remaining)?;
                         (maker_asset, maker_amount, taker_asset, taker_amount)
                     }
