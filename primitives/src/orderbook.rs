@@ -35,8 +35,11 @@ pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen + HasCompact> {
     pub taker_amount: Balance,
 }
 
-impl<AccountId, Balance: AtLeast32BitUnsigned + Copy, MarketId: MaxEncodedLen + PartialEq>
-    Order<AccountId, Balance, MarketId>
+impl<
+    AccountId,
+    Balance: AtLeast32BitUnsigned + Copy,
+    MarketId: MaxEncodedLen + HasCompact + PartialEq,
+> Order<AccountId, Balance, MarketId>
 {
     /// Return the price of the order.
     pub fn price(&self, base_asset: Asset<MarketId>) -> Result<Balance, DispatchError> {
