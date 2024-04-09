@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(all(feature = "mock", test))]
+
 pub(crate) fn market_mock<T>(creator: T::AccountId) -> crate::MarketOf<T>
 where
     T: crate::Config,
@@ -24,13 +25,13 @@ where
     use zeitgeist_primitives::{
         constants::mock::PmPalletId,
         types::{
-            Asset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-            MarketStatus, MarketType, ScoringRule,
+            BaseAssetClass, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism,
+            MarketPeriod, MarketStatus, MarketType, ScoringRule,
         },
     };
 
     zeitgeist_primitives::types::Market {
-        base_asset: Asset::Ztg,
+        base_asset: BaseAssetClass::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),
         creator,

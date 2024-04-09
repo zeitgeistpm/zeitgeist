@@ -22,7 +22,7 @@
 extern crate alloc;
 
 use crate::weights::*;
-use alloc::{vec, vec::Vec};
+use alloc::vec;
 use core::marker::PhantomData;
 use frame_support::{
     ensure,
@@ -44,7 +44,7 @@ use zeitgeist_primitives::{
     math::checked_ops_res::{CheckedAddRes, CheckedSubRes},
     orderbook::{Order, OrderId},
     traits::{DistributeFees, HybridRouterOrderbookApi, MarketCommonsPalletApi},
-    types::{Asset, BaseAsset, Market, MarketStatus, MarketType, ScalarPosition, ScoringRule},
+    types::{Asset, BaseAsset, MarketStatus, ScoringRule},
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -97,6 +97,7 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
@@ -104,14 +105,6 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type OrderOf<T> = Order<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
-    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
-    pub(crate) type MarketOf<T> = Market<
-        AccountIdOf<T>,
-        BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
-        MomentOf<T>,
-        AssetOf<T>,
-    >;
     pub(crate) type OrderbookTradeOf<T> = OrderbookTrade<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type ExternalFeeOf<T> = ExternalFee<AccountIdOf<T>, BalanceOf<T>>;
 
@@ -426,7 +419,7 @@ mod pallet {
 
             // if base asset: fund the full amount, but charge base asset fees from taker later
             // always charge fees from the base asset and not the outcome asset
-            let maybe_adjusted_maker_fill = Self::charge_external_fees(
+            let (maybe_adjusted_maker_fill, external_fee) = Self::charge_external_fees(
                 &order_data,
                 base_asset,
                 maker_fill,
@@ -485,7 +478,6 @@ mod pallet {
                 market.scoring_rule == ScoringRule::AmmCdaHybrid,
                 Error::<T>::InvalidScoringRule
             );
-            let market_assets = Self::outcome_assets(market_id, &market);
             let base_asset = market.base_asset;
             let outcome_asset = if maker_asset == base_asset.into() {
                 taker_asset

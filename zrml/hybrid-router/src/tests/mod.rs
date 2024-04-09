@@ -27,7 +27,7 @@ use zeitgeist_primitives::{
     constants::{base_multiples::*, BASE, CENT},
     orderbook::Order,
     types::{
-        AccountIdTest, Asset, Deadlines, MarketCreation, MarketPeriod, MarketStatus, MarketType,
+        AccountIdTest, Assets, Deadlines, MarketCreation, MarketPeriod, MarketStatus, MarketType,
         MultiHash, ScoringRule,
     },
 };
@@ -39,13 +39,13 @@ mod buy;
 mod sell;
 
 #[cfg(not(feature = "parachain"))]
-const BASE_ASSET: Asset<MarketIdOf<Runtime>> = Asset::Ztg;
+const BASE_ASSET: Assets = Assets::Ztg;
 #[cfg(feature = "parachain")]
-const BASE_ASSET: Asset<MarketIdOf<Runtime>> = FOREIGN_ASSET;
+const BASE_ASSET: Assets = FOREIGN_ASSET;
 
 fn create_market(
     creator: AccountIdTest,
-    base_asset: Asset<MarketIdOf<Runtime>>,
+    base_asset: Assets,
     market_type: MarketType,
     scoring_rule: ScoringRule,
 ) -> MarketIdOf<Runtime> {
@@ -54,7 +54,7 @@ fn create_market(
     metadata[1] = 0x30;
     assert_ok!(PredictionMarkets::create_market(
         RuntimeOrigin::signed(creator),
-        base_asset,
+        base_asset.try_into().unwrap(),
         Perbill::zero(),
         EVE,
         MarketPeriod::Block(0..2),
@@ -74,7 +74,7 @@ fn create_market(
 
 fn create_market_and_deploy_pool(
     creator: AccountIdOf<Runtime>,
-    base_asset: Asset<MarketIdOf<Runtime>>,
+    base_asset: Assets,
     market_type: MarketType,
     amount: BalanceOf<Runtime>,
     spot_prices: Vec<BalanceOf<Runtime>>,

@@ -53,7 +53,7 @@ fn fails_if_user_cannot_afford_bonds_advised(
                 market_creation,
                 MarketType::Scalar(0..=1),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             pallet_balances::Error::<Runtime>::InsufficientBalance
         );
@@ -76,7 +76,7 @@ fn fails_on_fee_too_high() {
                 MarketCreation::Permissionless,
                 MarketType::Scalar(0..=1),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::FeeTooHigh
         );
@@ -102,7 +102,7 @@ fn fails_on_invalid_multihash() {
                 MarketCreation::Permissionless,
                 MarketType::Scalar(0..=1),
                 Some(MarketDisputeMechanism::SimpleDisputes),
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::InvalidMultihash
         );
@@ -706,7 +706,7 @@ fn does_trigger_market_transition_api() {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             1..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         assert!(StateTransitionMock::on_proposal_triggered());
     });
@@ -720,7 +720,7 @@ fn does_trigger_market_transition_api_permissionless() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             1..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         assert!(StateTransitionMock::on_activation_triggered());
     });

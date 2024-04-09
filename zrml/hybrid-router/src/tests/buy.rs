@@ -483,7 +483,7 @@ fn buy_max_price_lower_than_amm_spot_price_results_in_place_order() {
             Order {
                 market_id,
                 maker: ALICE,
-                maker_asset: base_asset,
+                maker_asset: base_asset.into(),
                 maker_amount: _2,
                 taker_asset: asset,
                 taker_amount: _4,
@@ -550,7 +550,7 @@ fn buy_from_amm_but_low_amount() {
             Order {
                 market_id,
                 maker: ALICE,
-                maker_asset: base_asset,
+                maker_asset: base_asset.into(),
                 maker_amount: 19999999970,
                 taker_asset: asset,
                 taker_amount: 39999999933,
@@ -648,7 +648,7 @@ fn buy_places_limit_order_no_pool() {
             Order {
                 market_id,
                 maker: ALICE,
-                maker_asset: base_asset,
+                maker_asset: base_asset.into(),
                 maker_amount: 10 * BASE,
                 taker_asset: asset,
                 taker_amount: 20 * BASE,

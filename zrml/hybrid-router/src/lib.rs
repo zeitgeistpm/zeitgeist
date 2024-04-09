@@ -67,7 +67,7 @@ mod pallet {
         },
         orderbook::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderbookApi},
-        types::{Asset, Market, MarketType, ScalarPosition},
+        types::{Asset, BaseAsset, Market, MarketType, ScalarPosition},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -140,7 +140,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> =
-        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
+        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, BaseAsset>;
     pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
     pub(crate) type OrderTradeOf<T> = OrderbookTrade<AccountIdOf<T>, BalanceOf<T>>;
 
@@ -455,7 +455,7 @@ mod pallet {
             mut remaining: BalanceOf<T>,
             who: &AccountIdOf<T>,
             market_id: MarketIdOf<T>,
-            base_asset: AssetOf<T>,
+            base_asset: BaseAsset,
             asset: AssetOf<T>,
             price_limit: BalanceOf<T>,
         ) -> Result<OrderAmmTradesInfo<T>, DispatchError> {
@@ -471,7 +471,7 @@ mod pallet {
                     Err(_) => continue,
                 };
 
-                let order_price = order.price(base_asset)?;
+                let order_price = order.price(base_asset.into())?;
 
                 match tx_type {
                     TxType::Buy => {
@@ -619,12 +619,12 @@ mod pallet {
             );
             ensure!(orders.len() as u32 <= T::MaxOrders::get(), Error::<T>::MaxOrdersExceeded);
             let market = T::MarketCommons::market(&market_id)?;
-            let assets = Self::outcome_assets(market_id, &market);
+            let assets = market.outcome_assets(market_id);
             ensure!(asset_count as usize == assets.len(), Error::<T>::AssetCountMismatch);
 
             let (asset_in, asset_out) = match tx_type {
-                TxType::Buy => (market.base_asset, asset),
-                TxType::Sell => (asset, market.base_asset),
+                TxType::Buy => (market.base_asset.into(), asset),
+                TxType::Sell => (asset, market.base_asset.into()),
             };
             T::AssetManager::ensure_can_withdraw(asset_in, &who, amount_in)?;
 
@@ -665,7 +665,7 @@ mod pallet {
             if !remaining.is_zero() {
                 let (maker_asset, maker_amount, taker_asset, taker_amount) = match tx_type {
                     TxType::Buy => {
-                        let maker_asset = market.base_asset;
+                        let maker_asset = market.base_asset.into();
                         let maker_amount = remaining;
                         let taker_asset = asset;
                         let taker_amount = remaining.bdiv_ceil(price_limit)?;
@@ -674,7 +674,7 @@ mod pallet {
                     TxType::Sell => {
                         let maker_asset = asset;
                         let maker_amount = remaining;
-                        let taker_asset = market.base_asset;
+                        let taker_asset = market.base_asset.into();
                         let taker_amount = price_limit.bmul_floor(remaining)?;
                         (maker_asset, maker_amount, taker_asset, taker_amount)
                     }

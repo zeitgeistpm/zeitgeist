@@ -103,7 +103,7 @@ fn admin_move_market_to_resolved_resolves_disputed_market() {
             base_asset,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         let market_id = 0;
 

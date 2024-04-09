@@ -768,7 +768,7 @@ fn does_trigger_market_transition_api() {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             None,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
         run_to_block(end);
         let outcome = OutcomeReport::Categorical(1);

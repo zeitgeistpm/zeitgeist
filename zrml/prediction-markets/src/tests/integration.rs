@@ -517,7 +517,7 @@ fn it_resolves_a_disputed_court_market() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
 
         let market_id = 0;

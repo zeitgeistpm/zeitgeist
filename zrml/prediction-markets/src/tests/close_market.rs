@@ -93,7 +93,7 @@ fn fails_if_caller_is_not_market_creator() {
             MarketCreation::Permissionless,
             MarketType::Categorical(3),
             None,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
         run_to_block(end - 1);
         assert_noop!(
@@ -206,7 +206,7 @@ fn does_trigger_market_transition_api_permissionless() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             1..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         assert_ok!(PredictionMarkets::close_market(&0));
         assert!(StateTransitionMock::on_closure_triggered());
