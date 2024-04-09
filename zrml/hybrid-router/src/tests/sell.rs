@@ -35,7 +35,7 @@ fn sell_to_amm_and_then_fill_specified_order() {
             swap_fee,
         );
 
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
         let order_maker_amount = _6;
@@ -92,7 +92,7 @@ fn sell_to_amm_and_then_fill_specified_order() {
                 maker: CHARLIE,
                 maker_asset: BASE_ASSET,
                 maker_amount: 52804047165,
-                taker_asset: Asset::CategoricalOutcome(market_id, 0),
+                taker_asset: Assets::CategoricalOutcome(market_id, 0),
                 taker_amount: unfilled_base_asset_amount,
             }
         );
@@ -118,7 +118,7 @@ fn sell_to_amm_if_specified_order_has_lower_prices_than_the_amm() {
             swap_fee,
         );
 
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = _1;
 
         let order_maker_amount = _1;
@@ -162,7 +162,7 @@ fn sell_to_amm_if_specified_order_has_lower_prices_than_the_amm() {
                 maker: CHARLIE,
                 maker_asset: BASE_ASSET,
                 maker_amount: _1,
-                taker_asset: Asset::CategoricalOutcome(market_id, 0),
+                taker_asset: Assets::CategoricalOutcome(market_id, 0),
                 taker_amount: _2,
             }
         );
@@ -185,7 +185,7 @@ fn sell_fill_multiple_orders_if_amm_spot_price_lower_than_order_prices() {
             swap_fee,
         );
 
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
         let order_maker_amount = _1_2;
@@ -246,7 +246,7 @@ fn sell_fill_specified_order_partially_if_amm_spot_price_lower() {
             swap_fee,
         );
 
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
         let order_maker_amount = _4;
@@ -289,7 +289,7 @@ fn sell_fill_specified_order_partially_if_amm_spot_price_lower() {
                 maker: CHARLIE,
                 maker_asset: BASE_ASSET,
                 maker_amount: _3,
-                taker_asset: Asset::CategoricalOutcome(market_id, 0),
+                taker_asset: Assets::CategoricalOutcome(market_id, 0),
                 taker_amount: _6,
             }
         );
@@ -312,7 +312,7 @@ fn sell_fails_if_asset_not_equal_to_order_book_taker_asset() {
             swap_fee,
         );
 
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
         let maker_amount = _1;
@@ -368,7 +368,7 @@ fn sell_fails_if_order_price_below_min_price() {
             swap_fee,
         );
 
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
         let order_maker_amount = _1;
@@ -378,7 +378,7 @@ fn sell_fails_if_order_price_below_min_price() {
             market_id,
             BASE_ASSET,
             order_maker_amount,
-            Asset::CategoricalOutcome(market_id, 0),
+            Assets::CategoricalOutcome(market_id, 0),
             amount,
         ));
 
@@ -423,7 +423,7 @@ fn sell_to_amm() {
             swap_fee,
         );
 
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
         assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount,));
@@ -475,7 +475,7 @@ fn sell_min_price_higher_than_amm_spot_price_results_in_place_order() {
         let market = Markets::<Runtime>::get(market_id).unwrap();
         let base_asset = market.base_asset;
 
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
         assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount,));
@@ -532,7 +532,7 @@ fn sell_to_amm_but_low_amount() {
         let market = Markets::<Runtime>::get(market_id).unwrap();
         let base_asset = market.base_asset;
 
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
         assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
@@ -600,7 +600,7 @@ fn sell_to_amm_only() {
             swap_fee,
         );
 
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
         assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount,));
@@ -651,7 +651,7 @@ fn sell_places_limit_order_no_pool() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
 
         assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount,));
@@ -701,7 +701,7 @@ fn sell_fails_if_balance_too_low() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
 
         assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount - 1,));
@@ -742,7 +742,7 @@ fn sell_emits_event() {
             swap_fee,
         );
 
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount_in = _1000 * 100;
 
         let min_price = _1_100.saturated_into::<BalanceOf<Runtime>>();
@@ -816,7 +816,7 @@ fn sell_fails_if_asset_count_mismatch() {
 
         let asset_count = 2;
         assert_ne!(required_asset_count, asset_count);
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
 
         let amount_in = 2 * BASE;
         assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
@@ -853,7 +853,7 @@ fn sell_fails_if_cancel_strategy_applied() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount_in = 10 * BASE;
         assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
@@ -880,7 +880,7 @@ fn sell_fails_if_market_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let asset_count = 2;
-        let asset = Asset::CategoricalOutcome(market_id, 0);
+        let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount_in = 10 * BASE;
         assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
