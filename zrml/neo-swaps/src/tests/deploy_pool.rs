@@ -261,7 +261,7 @@ fn deploy_pool_fails_on_asset_count_above_max() {
         let market_id = create_market(
             ALICE,
             BASE_ASSET,
-            MarketType::Categorical(category_count as u16),
+            MarketType::Categorical(category_count),
             ScoringRule::AmmCdaHybrid,
         );
         let liquidity = _10;

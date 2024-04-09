@@ -67,7 +67,7 @@ mod pallet {
         },
         orderbook::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderbookApi},
-        types::{Asset, BaseAssetClass, Market, MarketType, ScalarPosition},
+        types::{Asset, BaseAsset, BaseAssetClass, Market, MarketType, ScalarPosition},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -140,7 +140,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type MarketOf<T> =
-        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, Asset<MarketIdOf<T>>>;
+        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, BaseAsset>;
     pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
     pub(crate) type OrderTradeOf<T> = OrderbookTrade<AccountIdOf<T>, BalanceOf<T>>;
 
