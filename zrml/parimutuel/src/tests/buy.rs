@@ -92,8 +92,7 @@ fn buy_balances_change_correctly() {
     });
 }
 
-#[test_case(ScoringRule::Orderbook; "orderbook")]
-#[test_case(ScoringRule::Lmsr; "lmsr")]
+#[test_case(ScoringRule::AmmCdaHybrid; "amm_cda_hybrid")]
 fn buy_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;

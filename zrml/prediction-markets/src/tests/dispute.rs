@@ -314,7 +314,7 @@ fn does_trigger_market_transition_api() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         // Run to the end of the trading phase.

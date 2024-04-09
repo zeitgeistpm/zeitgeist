@@ -38,7 +38,10 @@ use zeitgeist_primitives::{
     constants::{base_multiples::*, CENT},
     math::fixed::{BaseProvider, FixedDiv, ZeitgeistBase},
     traits::{CompleteSetOperationsApi, DeployPoolApi, HybridRouterOrderbookApi},
-    types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
+    types::{
+        Asset, BaseAssetClass, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType,
+        ScoringRule,
+    },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -65,7 +68,11 @@ fn create_spot_prices<T: Config>(asset_count: u16) -> Vec<BalanceOf<T>> {
     amounts
 }
 
-fn create_market<T>(caller: T::AccountId, base_asset: AssetOf<T>, asset_count: u16) -> MarketIdOf<T>
+fn create_market<T>(
+    caller: T::AccountId,
+    base_asset: BaseAssetClass,
+    asset_count: u16,
+) -> MarketIdOf<T>
 where
     T: Config,
 {
@@ -93,7 +100,7 @@ where
 
 fn create_market_and_deploy_pool<T: Config>(
     caller: T::AccountId,
-    base_asset: AssetOf<T>,
+    base_asset: BaseAssetClass,
     asset_count: u16,
     amount: BalanceOf<T>,
 ) -> MarketIdOf<T>
@@ -125,7 +132,7 @@ mod benchmarks {
     #[benchmark]
     fn buy(n: Linear<2, 16>, o: Linear<0, 10>) {
         let buyer: T::AccountId = whitelisted_caller();
-        let base_asset = Asset::Ztg;
+        let base_asset = BaseAssetClass::Ztg;
         let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             buyer.clone(),
@@ -186,7 +193,7 @@ mod benchmarks {
     #[benchmark]
     fn sell(n: Linear<2, 10>, o: Linear<0, 10>) {
         let seller: T::AccountId = whitelisted_caller();
-        let base_asset = Asset::Ztg;
+        let base_asset = BaseAssetClass::Ztg;
         let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             seller.clone(),

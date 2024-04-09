@@ -67,7 +67,7 @@ mod pallet {
         },
         orderbook::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderbookApi},
-        types::{Asset, Market, MarketType, ScalarPosition},
+        types::{Asset, BaseAssetClass, Market, MarketType, ScalarPosition},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -455,7 +455,7 @@ mod pallet {
             mut remaining: BalanceOf<T>,
             who: &AccountIdOf<T>,
             market_id: MarketIdOf<T>,
-            base_asset: AssetOf<T>,
+            base_asset: BaseAssetClass,
             asset: AssetOf<T>,
             price_limit: BalanceOf<T>,
         ) -> Result<OrderAmmTradesInfo<T>, DispatchError> {
@@ -619,12 +619,12 @@ mod pallet {
             );
             ensure!(orders.len() as u32 <= T::MaxOrders::get(), Error::<T>::MaxOrdersExceeded);
             let market = T::MarketCommons::market(&market_id)?;
-            let assets = Self::outcome_assets(market_id, &market);
+            let assets = market.outcome_assets(market_id);
             ensure!(asset_count as usize == assets.len(), Error::<T>::AssetCountMismatch);
 
             let (asset_in, asset_out) = match tx_type {
-                TxType::Buy => (market.base_asset, asset),
-                TxType::Sell => (asset, market.base_asset),
+                TxType::Buy => (market.base_asset.into(), asset),
+                TxType::Sell => (asset, market.base_asset.into()),
             };
             T::AssetManager::ensure_can_withdraw(asset_in, &who, amount_in)?;
 

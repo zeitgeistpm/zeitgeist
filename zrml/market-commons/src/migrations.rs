@@ -17,8 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    AccountIdOf, AssetOf, BalanceOf, BlockNumberOf, Config, MarketIdOf, MomentOf,
-    Pallet as MarketCommons,
+    AccountIdOf, BalanceOf, BlockNumberOf, Config, MarketIdOf, MomentOf, Pallet as MarketCommons,
 };
 use alloc::vec::Vec;
 use core::marker::PhantomData;
@@ -31,7 +30,7 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{Perbill, RuntimeDebug, Saturating};
 use zeitgeist_primitives::types::{
-    Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+    BaseAsset, Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
 
@@ -67,7 +66,7 @@ pub struct OldMarket<AI, BA, BN, M, A> {
 }
 
 type OldMarketOf<T> =
-    OldMarket<AccountIdOf<T>, BalanceOf<T>, BlockNumberOf<T>, MomentOf<T>, AssetOf<T>>;
+    OldMarket<AccountIdOf<T>, BalanceOf<T>, BlockNumberOf<T>, MomentOf<T>, BaseAsset>;
 
 #[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
 pub enum OldScoringRule {
@@ -187,7 +186,7 @@ mod tests {
     use frame_support::{migration::put_storage_value, storage_root, StorageHasher};
     use sp_runtime::{Perbill, StateVersion};
     use test_case::test_case;
-    use zeitgeist_primitives::types::{Asset, Bond, MarketId};
+    use zeitgeist_primitives::types::{BaseAssetClass, Bond, MarketId};
 
     #[test]
     fn on_runtime_upgrade_increments_the_storage_version() {
@@ -210,7 +209,7 @@ mod tests {
     ) {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            let base_asset = Asset::Ztg;
+            let base_asset = BaseAssetClass::Ztg;
             let creator = 0;
             let creation = MarketCreation::Permissionless;
             let creator_fee = Perbill::from_rational(1u32, 1_000u32);
@@ -232,7 +231,7 @@ mod tests {
             };
             let status = MarketStatus::Active;
             let early_close = None;
-            let old_market = OldMarket {
+            let old_market = OldMarketOf::<Runtime> {
                 base_asset,
                 creator,
                 creation: creation.clone(),
@@ -286,7 +285,7 @@ mod tests {
             StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION)
                 .put::<MarketCommons<Runtime>>();
             let market = Market {
-                base_asset: Asset::<MarketIdOf<Runtime>>::ForeignAsset(0),
+                base_asset: BaseAssetClass::Ztg,
                 creator: 1,
                 creation: MarketCreation::Permissionless,
                 creator_fee: Perbill::from_rational(2u32, 3u32),

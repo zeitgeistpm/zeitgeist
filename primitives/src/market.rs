@@ -121,10 +121,7 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
 
                 for i in 0..categories {
                     match self.scoring_rule {
-                        ScoringRule::Orderbook => {
-                            assets.push(MarketAssetClass::<MI>::CategoricalOutcome(market_id, i))
-                        }
-                        ScoringRule::Lmsr => {
+                        ScoringRule::AmmCdaHybrid => {
                             assets.push(MarketAssetClass::<MI>::CategoricalOutcome(market_id, i))
                         }
                         ScoringRule::Parimutuel => {
@@ -182,10 +179,7 @@ impl<AI, BA, BN, M, A> Market<AI, BA, BN, M, A> {
     ) -> Option<MarketAssetClass<MI>> {
         match outcome_report {
             OutcomeReport::Categorical(idx) => match self.scoring_rule {
-                ScoringRule::Orderbook => {
-                    Some(MarketAssetClass::<MI>::CategoricalOutcome(market_id, *idx))
-                }
-                ScoringRule::Lmsr => {
+                ScoringRule::AmmCdaHybrid => {
                     Some(MarketAssetClass::<MI>::CategoricalOutcome(market_id, *idx))
                 }
                 ScoringRule::Parimutuel => {
@@ -521,15 +515,9 @@ mod tests {
 
     #[test_case(
         MarketType::Categorical(2),
-        ScoringRule::Lmsr,
+        ScoringRule::AmmCdaHybrid,
         vec![MarketAsset::CategoricalOutcome(0, 0), MarketAsset::CategoricalOutcome(0, 1)];
-        "categorical_market_lmsr"
-    )]
-    #[test_case(
-        MarketType::Categorical(2),
-        ScoringRule::Orderbook,
-        vec![MarketAsset::CategoricalOutcome(0, 0), MarketAsset::CategoricalOutcome(0, 1)];
-        "categorical_market_orderbook"
+        "categorical_market_amm_cda_hybrid"
     )]
     #[test_case(
         MarketType::Categorical(2),
@@ -539,7 +527,7 @@ mod tests {
     )]
     #[test_case(
         MarketType::Scalar(12..=34),
-        ScoringRule::Lmsr,
+        ScoringRule::AmmCdaHybrid,
         vec![MarketAsset::ScalarOutcome(0, ScalarPosition::Long), MarketAsset::ScalarOutcome(0, ScalarPosition::Short)];
         "scalar_market"
     )]
@@ -575,17 +563,10 @@ mod tests {
 
     #[test_case(
         MarketType::Categorical(2),
-        ScoringRule::Lmsr,
+        ScoringRule::AmmCdaHybrid,
         OutcomeReport::Categorical(2),
         Some(MarketAsset::CategoricalOutcome(0, 2));
-        "categorical_market_lmsr"
-    )]
-    #[test_case(
-        MarketType::Categorical(2),
-        ScoringRule::Orderbook,
-        OutcomeReport::Categorical(2),
-        Some(MarketAsset::CategoricalOutcome(0, 2));
-        "categorical_market_orderbook"
+        "categorical_market_amm_cda_hybrid"
     )]
     #[test_case(
         MarketType::Categorical(2),
@@ -596,7 +577,7 @@ mod tests {
     )]
     #[test_case(
         MarketType::Scalar(12..=34),
-        ScoringRule::Lmsr,
+        ScoringRule::AmmCdaHybrid,
         OutcomeReport::Scalar(2),
         None;
         "scalar_market"
