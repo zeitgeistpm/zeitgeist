@@ -122,7 +122,7 @@ fn simple_create_categorical_market(
         gen_metadata(2),
         creation,
         MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-        Some(MarketDisputeMechanism::SimpleDisputes),
+        Some(MarketDisputeMechanism::Authorized),
         scoring_rule
     ));
 }

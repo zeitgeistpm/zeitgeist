@@ -17,13 +17,15 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-
-use alloc::collections::BTreeMap;
-use zeitgeist_primitives::types::OutcomeReport;
-
 use crate::MarketIdsPerDisputeBlock;
+use alloc::collections::BTreeMap;
 use orml_traits::MultiReservableCurrency;
-use zeitgeist_primitives::{constants::MILLISECS_PER_BLOCK, types::ScalarPosition};
+use sp_runtime::Perquintill;
+use zeitgeist_primitives::{
+    constants::MILLISECS_PER_BLOCK,
+    types::{OutcomeReport, ScalarPosition},
+};
+use zrml_court::types::{CourtStatus, Draw, Vote};
 use zrml_global_disputes::{
     types::{OutcomeInfo, Possession},
     GlobalDisputesPalletApi, Outcomes, PossessionOf,
@@ -470,6 +472,242 @@ fn authorized_correctly_resolves_disputed_market() {
     ExtBuilder::default().build().execute_with(|| {
         test(BaseAsset::CampaignAsset(100));
     });
+    ExtBuilder::default().build().execute_with(|| {
+        test(BaseAsset::Ztg);
+    });
+    #[cfg(feature = "parachain")]
+    ExtBuilder::default().build().execute_with(|| {
+        test(BaseAsset::ForeignAsset(100));
+    });
+}
+
+#[test]
+fn it_resolves_a_disputed_court_market() {
+    let test = |base_asset: BaseAsset| {
+        let juror_0 = 1000;
+        let juror_1 = 1001;
+        let juror_2 = 1002;
+        let juror_3 = 1003;
+        let juror_4 = 1004;
+        let juror_5 = 1005;
+
+        for j in &[juror_0, juror_1, juror_2, juror_3, juror_4, juror_5] {
+            let amount = <Runtime as zrml_court::Config>::MinJurorStake::get() + *j;
+            assert_ok!(AssetManager::deposit(Asset::Ztg, j, amount + SENTINEL_AMOUNT));
+            assert_ok!(Court::join_court(RuntimeOrigin::signed(*j), amount));
+        }
+
+        // just to have enough jurors for the dispute
+        for j in 1006..(1006 + Court::necessary_draws_weight(0usize) as u32) {
+            let juror = j as u128;
+            let amount = <Runtime as zrml_court::Config>::MinJurorStake::get() + juror;
+            assert_ok!(AssetManager::deposit(Asset::Ztg, &juror, amount + SENTINEL_AMOUNT));
+            assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
+        }
+
+        let end = 2;
+        assert_ok!(PredictionMarkets::create_market(
+            RuntimeOrigin::signed(ALICE),
+            base_asset,
+            Perbill::zero(),
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
+            Some(MarketDisputeMechanism::Court),
+            ScoringRule::Lmsr,
+        ));
+
+        let market_id = 0;
+        let market = MarketCommons::market(&0).unwrap();
+
+        let report_at = end + market.deadlines.grace_period + 1;
+        run_to_block(report_at);
+
+        assert_ok!(PredictionMarkets::report(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            OutcomeReport::Categorical(0)
+        ));
+
+        assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), market_id,));
+
+        let court = zrml_court::Courts::<Runtime>::get(market_id).unwrap();
+        let vote_start = court.round_ends.pre_vote + 1;
+
+        run_to_block(vote_start);
+
+        // overwrite draws to disregard randomness
+        zrml_court::SelectedDraws::<Runtime>::remove(market_id);
+        let mut draws = zrml_court::SelectedDraws::<Runtime>::get(market_id);
+        for juror in &[juror_0, juror_1, juror_2, juror_3, juror_4, juror_5] {
+            let draw = Draw {
+                court_participant: *juror,
+                weight: 1,
+                vote: Vote::Drawn,
+                slashable: <Runtime as zrml_court::Config>::MinJurorStake::get(),
+            };
+            let index = draws
+                .binary_search_by_key(juror, |draw| draw.court_participant)
+                .unwrap_or_else(|j| j);
+            draws.try_insert(index, draw).unwrap();
+        }
+        let old_draws = draws.clone();
+        zrml_court::SelectedDraws::<Runtime>::insert(market_id, draws);
+
+        let salt = <Runtime as frame_system::Config>::Hash::default();
+
+        // outcome_0 is the plurality decision => right outcome
+        let outcome_0 = OutcomeReport::Categorical(0);
+        let vote_item_0 = VoteItem::Outcome(outcome_0.clone());
+        // outcome_1 is the wrong outcome
+        let outcome_1 = OutcomeReport::Categorical(1);
+        let vote_item_1 = VoteItem::Outcome(outcome_1);
+
+        let commitment_0 = BlakeTwo256::hash_of(&(juror_0, vote_item_0.clone(), salt));
+        assert_ok!(Court::vote(RuntimeOrigin::signed(juror_0), market_id, commitment_0));
+
+        // juror_1 votes for non-plurality outcome => slashed later
+        let commitment_1 = BlakeTwo256::hash_of(&(juror_1, vote_item_1.clone(), salt));
+        assert_ok!(Court::vote(RuntimeOrigin::signed(juror_1), market_id, commitment_1));
+
+        let commitment_2 = BlakeTwo256::hash_of(&(juror_2, vote_item_0.clone(), salt));
+        assert_ok!(Court::vote(RuntimeOrigin::signed(juror_2), market_id, commitment_2));
+
+        let commitment_3 = BlakeTwo256::hash_of(&(juror_3, vote_item_0.clone(), salt));
+        assert_ok!(Court::vote(RuntimeOrigin::signed(juror_3), market_id, commitment_3));
+
+        // juror_4 fails to vote in time
+
+        let commitment_5 = BlakeTwo256::hash_of(&(juror_5, vote_item_0.clone(), salt));
+        assert_ok!(Court::vote(RuntimeOrigin::signed(juror_5), market_id, commitment_5));
+
+        // juror_3 is denounced by juror_0 => slashed later
+        assert_ok!(Court::denounce_vote(
+            RuntimeOrigin::signed(juror_0),
+            market_id,
+            juror_3,
+            vote_item_0.clone(),
+            salt
+        ));
+
+        let aggregation_start = court.round_ends.vote + 1;
+        run_to_block(aggregation_start);
+
+        assert_ok!(Court::reveal_vote(
+            RuntimeOrigin::signed(juror_0),
+            market_id,
+            vote_item_0.clone(),
+            salt
+        ));
+        assert_ok!(Court::reveal_vote(
+            RuntimeOrigin::signed(juror_1),
+            market_id,
+            vote_item_1,
+            salt
+        ));
+
+        let wrong_salt = BlakeTwo256::hash_of(&69);
+        assert_noop!(
+            Court::reveal_vote(
+                RuntimeOrigin::signed(juror_2),
+                market_id,
+                vote_item_0.clone(),
+                wrong_salt
+            ),
+            zrml_court::Error::<Runtime>::CommitmentHashMismatch
+        );
+        assert_ok!(Court::reveal_vote(
+            RuntimeOrigin::signed(juror_2),
+            market_id,
+            vote_item_0.clone(),
+            salt
+        ));
+
+        assert_noop!(
+            Court::reveal_vote(
+                RuntimeOrigin::signed(juror_3),
+                market_id,
+                vote_item_0.clone(),
+                salt
+            ),
+            zrml_court::Error::<Runtime>::VoteAlreadyDenounced
+        );
+
+        assert_noop!(
+            Court::reveal_vote(
+                RuntimeOrigin::signed(juror_4),
+                market_id,
+                vote_item_0.clone(),
+                salt
+            ),
+            zrml_court::Error::<Runtime>::JurorDidNotVote
+        );
+
+        // juror_5 fails to reveal in time
+
+        let resolve_at = court.round_ends.appeal;
+        let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(resolve_at);
+        assert_eq!(market_ids.len(), 1);
+
+        run_blocks(resolve_at);
+
+        let market_after = MarketCommons::market(&0).unwrap();
+        assert_eq!(market_after.status, MarketStatus::Resolved);
+        assert_eq!(market_after.resolved_outcome, Some(outcome_0));
+        let court_after = zrml_court::Courts::<Runtime>::get(market_id).unwrap();
+        assert_eq!(court_after.status, CourtStatus::Closed { winner: vote_item_0 });
+
+        let free_juror_0_before = Balances::free_balance(juror_0);
+        let free_juror_1_before = Balances::free_balance(juror_1);
+        let free_juror_2_before = Balances::free_balance(juror_2);
+        let free_juror_3_before = Balances::free_balance(juror_3);
+        let free_juror_4_before = Balances::free_balance(juror_4);
+        let free_juror_5_before = Balances::free_balance(juror_5);
+
+        assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(juror_0), market_id));
+
+        let free_juror_0_after = Balances::free_balance(juror_0);
+        let slashable_juror_0 =
+            old_draws.iter().find(|draw| draw.court_participant == juror_0).unwrap().slashable;
+        let free_juror_1_after = Balances::free_balance(juror_1);
+        let slashable_juror_1 =
+            old_draws.iter().find(|draw| draw.court_participant == juror_1).unwrap().slashable;
+        let free_juror_2_after = Balances::free_balance(juror_2);
+        let slashable_juror_2 =
+            old_draws.iter().find(|draw| draw.court_participant == juror_2).unwrap().slashable;
+        let free_juror_3_after = Balances::free_balance(juror_3);
+        let slashable_juror_3 =
+            old_draws.iter().find(|draw| draw.court_participant == juror_3).unwrap().slashable;
+        let free_juror_4_after = Balances::free_balance(juror_4);
+        let slashable_juror_4 =
+            old_draws.iter().find(|draw| draw.court_participant == juror_4).unwrap().slashable;
+        let free_juror_5_after = Balances::free_balance(juror_5);
+        let slashable_juror_5 =
+            old_draws.iter().find(|draw| draw.court_participant == juror_5).unwrap().slashable;
+
+        let mut total_slashed = 0;
+        // juror_1 voted for the wrong outcome => slashed
+        assert_eq!(free_juror_1_before - free_juror_1_after, slashable_juror_1);
+        total_slashed += slashable_juror_1;
+        // juror_3 was denounced by juror_0 => slashed
+        assert_eq!(free_juror_3_before - free_juror_3_after, slashable_juror_3);
+        total_slashed += slashable_juror_3;
+        // juror_4 failed to vote => slashed
+        assert_eq!(free_juror_4_before - free_juror_4_after, slashable_juror_4);
+        total_slashed += slashable_juror_4;
+        // juror_5 failed to reveal => slashed
+        assert_eq!(free_juror_5_before - free_juror_5_after, slashable_juror_5);
+        total_slashed += slashable_juror_5;
+        // juror_0 and juror_2 voted for the right outcome => rewarded
+        let total_winner_stake = slashable_juror_0 + slashable_juror_2;
+        let juror_0_share = Perquintill::from_rational(slashable_juror_0, total_winner_stake);
+        assert_eq!(free_juror_0_after, free_juror_0_before + juror_0_share * total_slashed);
+        let juror_2_share = Perquintill::from_rational(slashable_juror_2, total_winner_stake);
+        assert_eq!(free_juror_2_after, free_juror_2_before + juror_2_share * total_slashed);
+    };
     ExtBuilder::default().build().execute_with(|| {
         test(BaseAsset::Ztg);
     });

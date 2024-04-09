@@ -1630,9 +1630,6 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
             >;
 
-        /// The origin that is allowed to destroy markets.
-        type DestroyOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-
         /// The base amount of currency that must be bonded in order to create a dispute.
         #[pallet::constant]
         type DisputeBond: Get<BalanceOf<Self>>;
@@ -3054,14 +3051,10 @@ mod pallet {
                 }
 
                 let sender_is_oracle = sender == market.oracle;
-                let origin_has_permission = T::ResolveOrigin::ensure_origin(origin).is_ok();
-                let sender_is_outsider = !sender_is_oracle && !origin_has_permission;
+                let sender_is_outsider = !sender_is_oracle;
 
                 if should_check_origin {
-                    ensure!(
-                        sender_is_oracle || origin_has_permission,
-                        Error::<T>::ReporterNotOracle
-                    );
+                    ensure!(sender_is_oracle, Error::<T>::ReporterNotOracle);
                 } else if sender_is_outsider {
                     let outsider_bond = T::OutsiderBond::get();
 
@@ -3103,9 +3096,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             <zrml_market_commons::Pallet<T>>::mutate_market(&market_id, |market| {
                 let sender = ensure_signed(origin.clone())?;
-                let sender_is_oracle = sender == market.oracle;
-                let origin_has_permission = T::ResolveOrigin::ensure_origin(origin).is_ok();
-                ensure!(sender_is_oracle || origin_has_permission, Error::<T>::ReporterNotOracle);
+                ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
                 market.report = Some(market_report.clone());
                 market.status = MarketStatus::Reported;
                 Ok(())

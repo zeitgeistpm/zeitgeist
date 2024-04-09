@@ -39,7 +39,7 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
         assert_ok!(PredictionMarkets::reject_market(
-            RuntimeOrigin::signed(SUDO),
+            RuntimeOrigin::signed(RejectOrigin::get()),
             0,
             reject_reason.clone()
         ));
@@ -71,7 +71,11 @@ fn reject_errors_if_reject_reason_is_too_long() {
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize + 1];
         assert_noop!(
-            PredictionMarkets::reject_market(RuntimeOrigin::signed(SUDO), 0, reject_reason),
+            PredictionMarkets::reject_market(
+                RuntimeOrigin::signed(RejectOrigin::get()),
+                0,
+                reject_reason
+            ),
             Error::<Runtime>::RejectReasonLengthExceedsMaxRejectReasonLen
         );
     });
@@ -95,9 +99,17 @@ fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
         let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
         let reject_reason = vec![0_u8; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
-        assert_ok!(PredictionMarkets::request_edit(RuntimeOrigin::signed(SUDO), 0, edit_reason));
+        assert_ok!(PredictionMarkets::request_edit(
+            RuntimeOrigin::signed(RequestEditOrigin::get()),
+            0,
+            edit_reason
+        ));
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
-        assert_ok!(PredictionMarkets::reject_market(RuntimeOrigin::signed(SUDO), 0, reject_reason));
+        assert_ok!(PredictionMarkets::reject_market(
+            RuntimeOrigin::signed(RejectOrigin::get()),
+            0,
+            reject_reason
+        ));
         assert!(!MarketIdsForEdit::<Runtime>::contains_key(0));
 
         assert_noop!(
@@ -134,7 +146,11 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
 
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
-        assert_ok!(PredictionMarkets::reject_market(RuntimeOrigin::signed(SUDO), 0, reject_reason));
+        assert_ok!(PredictionMarkets::reject_market(
+            RuntimeOrigin::signed(RejectOrigin::get()),
+            0,
+            reject_reason
+        ));
 
         // AdvisoryBond gets slashed after reject_market
         // OracleBond gets unreserved after reject_market
@@ -199,7 +215,11 @@ fn reject_market_clears_auto_close_blocks() {
         );
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
-        assert_ok!(PredictionMarkets::reject_market(RuntimeOrigin::signed(SUDO), 0, reject_reason));
+        assert_ok!(PredictionMarkets::reject_market(
+            RuntimeOrigin::signed(RejectOrigin::get()),
+            0,
+            reject_reason
+        ));
 
         let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66);
         assert_eq!(auto_close.len(), 1);
@@ -220,7 +240,11 @@ fn reject_market_fails_on_permissionless_market() {
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
         assert_noop!(
-            PredictionMarkets::reject_market(RuntimeOrigin::signed(SUDO), 0, reject_reason),
+            PredictionMarkets::reject_market(
+                RuntimeOrigin::signed(RejectOrigin::get()),
+                0,
+                reject_reason
+            ),
             Error::<Runtime>::InvalidMarketStatus
         );
     });
@@ -236,11 +260,18 @@ fn reject_market_fails_on_approved_market() {
             0..2,
             ScoringRule::Lmsr,
         );
-        assert_ok!(PredictionMarkets::approve_market(RuntimeOrigin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::approve_market(
+            RuntimeOrigin::signed(ApproveOrigin::get()),
+            0
+        ));
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
         assert_noop!(
-            PredictionMarkets::reject_market(RuntimeOrigin::signed(SUDO), 0, reject_reason),
+            PredictionMarkets::reject_market(
+                RuntimeOrigin::signed(RejectOrigin::get()),
+                0,
+                reject_reason
+            ),
             Error::<Runtime>::InvalidMarketStatus
         );
     });

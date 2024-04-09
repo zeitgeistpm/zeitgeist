@@ -1,11 +1,34 @@
 pull_request_rules:
-  - name: Auto merge
+  - name: Auto merge (main)
     conditions:
+      - base=main
       - "#approved-reviews-by>=1"
       - "#changes-requested-reviews-by=0"
       - check-success=Coverage
       - check-success=Format
       - check-success=Copyright Notices
+      - check-success=Checks (clippy)
+      - check-success=Checks (parachain)
+      - check-success=Checks (standalone)
+      - check-success=Quick check benchmarks
+      - check-success=Test standalone build
+      - check-success=Test parachain build
+      - check-success=Fuzz
+      - label=s:accepted
+    actions:
+      label:
+        remove:
+          - s:in-progress
+          - s:review-needed
+      queue:
+        merge_method: squash
+  - name: Auto merge (feature branch)
+    conditions:
+      - base!=main
+      - "#approved-reviews-by>=1"
+      - "#changes-requested-reviews-by=0"
+      - check-success=Coverage
+      - check-success=Format
       - check-success=Checks (clippy)
       - check-success=Checks (parachain)
       - check-success=Checks (standalone)

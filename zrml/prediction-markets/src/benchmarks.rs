@@ -280,10 +280,10 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        let resolve_origin = T::ResolveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
-        call.dispatch_bypass_filter(close_origin)?
+        call.dispatch_bypass_filter(resolve_origin)?
     } verify {
         assert_last_event::<T>(Event::MarketResolved::<T>(
             market_id,
@@ -316,10 +316,10 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        let resolve_origin = T::ResolveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
-        call.dispatch_bypass_filter(close_origin)?
+        call.dispatch_bypass_filter(resolve_origin)?
     } verify {
         assert_last_event::<T>(Event::MarketResolved::<T>(
             market_id,
@@ -368,10 +368,10 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        let resolve_origin = T::ResolveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
-        call.dispatch_bypass_filter(close_origin)?
+        call.dispatch_bypass_filter(resolve_origin)?
     } verify {
         assert_last_event::<T>(Event::MarketResolved::<T>(
             market_id,
@@ -421,10 +421,10 @@ benchmarks! {
             ).unwrap();
         }
 
-        let close_origin = T::CloseOrigin::try_successful_origin().unwrap();
+        let resolve_origin = T::ResolveOrigin::try_successful_origin().unwrap();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
-        call.dispatch_bypass_filter(close_origin)?
+        call.dispatch_bypass_filter(resolve_origin)?
     } verify {
         assert_last_event::<T>(Event::MarketResolved::<T>(
             market_id,
@@ -456,10 +456,10 @@ benchmarks! {
             Some(MarketDisputeMechanism::Court),
         )?;
 
-        let approve_origin = T::ApproveOrigin::try_successful_origin().unwrap();
+        let request_edit_origin = T::RequestEditOrigin::try_successful_origin().unwrap();
         let edit_reason = vec![0_u8; r as usize];
         let call = Call::<T>::request_edit{ market_id, edit_reason };
-    }: { call.dispatch_bypass_filter(approve_origin)? } verify {}
+    }: { call.dispatch_bypass_filter(request_edit_origin)? } verify {}
 
     buy_complete_set {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
@@ -529,10 +529,10 @@ benchmarks! {
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         let market_id = zrml_market_commons::Pallet::<T>::latest_market_id()?;
 
-        let approve_origin = T::ApproveOrigin::try_successful_origin().unwrap();
+        let request_edit_origin = T::RequestEditOrigin::try_successful_origin().unwrap();
         let edit_reason = vec![0_u8; 1024];
         Call::<T>::request_edit{ market_id, edit_reason }
-        .dispatch_bypass_filter(approve_origin)?;
+        .dispatch_bypass_filter(request_edit_origin)?;
 
         for i in 0..m {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(

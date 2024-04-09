@@ -1,9 +1,10 @@
 name: Integration Tests
 
 on:
+  workflow_dispatch:
   push:
     tags:
-      - '^v[0-9]+.[0-9]+.[0-9]+(-rc[0-9]+)?$'
+      - "^v[0-9]+.[0-9]+.[0-9]+(-rc[0-9]+)?$"
 
 env:
   CARGO_TERM_COLOR: always
@@ -21,29 +22,29 @@ jobs:
 
       - name: Build Parachain
         run: cargo build --release --features parachain
-      
+
       - name: Save runtime wasm
         run: |
-            mkdir -p runtimes
-            cp target/release/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm runtimes/;
-            cp target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm runtimes/;
+          mkdir -p runtimes
+          cp target/release/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm runtimes/;
+          cp target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm runtimes/;
 
       - name: Upload runtimes
         uses: actions/upload-artifact@v3.1.2
         with:
-            name: runtimes
-            path: runtimes
+          name: runtimes
+          path: runtimes
 
       - name: Save zeitgeist binary
         run: |
-            mkdir -p binaries
-            cp target/release/zeitgeist binaries/;
+          mkdir -p binaries
+          cp target/release/zeitgeist binaries/;
 
       - name: Upload binary
         uses: actions/upload-artifact@v3.1.2
         with:
-            name: binaries
-            path: binaries
+          name: binaries
+          path: binaries
 
   zombienet_zndsl:
     name: ZNDSL Tests
@@ -64,7 +65,7 @@ jobs:
           node-version: 20.x
           cache: "pnpm"
           cache-dependency-path: "./integration-tests/pnpm-lock.yaml"
-      
+
       - name: Install pnpm packages
         run: |
           cd integration-tests
@@ -87,9 +88,9 @@ jobs:
       - name: Download binary
         uses: actions/download-artifact@v3.0.2
         with:
-            name: binaries
-            path: target/release
-          
+          name: binaries
+          path: target/release
+
       - name: Display structure of downloaded files
         run: ls -R
         working-directory: target/
@@ -121,7 +122,7 @@ jobs:
           node-version: 20.x
           cache: "pnpm"
           cache-dependency-path: "./integration-tests/pnpm-lock.yaml"
-        
+
       - name: Install pnpm packages
         run: |
           cd integration-tests
@@ -144,8 +145,8 @@ jobs:
       - name: Download binary
         uses: actions/download-artifact@v3.0.2
         with:
-            name: binaries
-            path: target/release
+          name: binaries
+          path: target/release
 
       - name: Display structure of downloaded files
         run: ls -R
@@ -154,7 +155,7 @@ jobs:
       - name: Test zeitgeist runtime upgrade using Zombienet
         run: |
           chmod uog+x target/release/zeitgeist
-          
+
           cd integration-tests
           pnpm exec moonwall test zombienet_zeitgeist_upgrade
 
@@ -177,7 +178,7 @@ jobs:
           node-version: 20.x
           cache: "pnpm"
           cache-dependency-path: "./integration-tests/pnpm-lock.yaml"
-        
+
       - name: Install pnpm packages
         run: |
           cd integration-tests

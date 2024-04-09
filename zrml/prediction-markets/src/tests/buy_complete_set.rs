@@ -19,8 +19,6 @@
 use super::*;
 use test_case::test_case;
 
-// TODO(#1239) buy_complete_set fails if market doesn't exist
-
 #[test]
 fn buy_complete_set_works() {
     let test = |base_asset: BaseAsset| {
@@ -148,6 +146,16 @@ fn buy_complete_set_fails_if_market_has_wrong_scoring_rule(scoring_rule: Scoring
         assert_noop!(
             PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(FRED), market_id, 1),
             Error::<Runtime>::InvalidScoringRule,
+        );
+    });
+}
+
+#[test]
+fn fails_if_market_is_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(FRED), 0, 1),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
         );
     });
 }

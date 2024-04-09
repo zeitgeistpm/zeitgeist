@@ -16,37 +16,48 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    consts::{EXP_NUMERICAL_LIMIT, MAX_ASSETS},
+    consts::EXP_NUMERICAL_LIMIT,
     math::{Math, MathOps},
     pallet::{AssetOf, BalanceOf, Config},
     traits::{LiquiditySharesManager, PoolOperations},
     Error,
 };
-use alloc::{collections::BTreeMap, vec::Vec};
+use alloc::{fmt::Debug, vec::Vec};
+use frame_support::{
+    storage::bounded_btree_map::BoundedBTreeMap, CloneNoBound, PartialEqNoBound,
+    RuntimeDebugNoBound,
+};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
-    traits::{CheckedAdd, CheckedSub},
-    DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion, Saturating,
+    traits::{CheckedAdd, CheckedSub, Get},
+    DispatchError, DispatchResult, SaturatedConversion, Saturating,
 };
 
-#[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-#[scale_info(skip_type_params(T))]
-pub struct Pool<T: Config, LSM>
+#[derive(
+    CloneNoBound, Decode, Encode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
+)]
+#[scale_info(skip_type_params(S, T))]
+pub struct Pool<T, LSM, S>
 where
-    LSM: LiquiditySharesManager<T>,
+    T: Config,
+    LSM: Clone + Debug + LiquiditySharesManager<T> + PartialEq,
+    S: Get<u32>,
 {
     pub account_id: T::AccountId,
-    pub reserves: BTreeMap<AssetOf<T>, BalanceOf<T>>,
+    pub reserves: BoundedBTreeMap<AssetOf<T>, BalanceOf<T>, S>,
     pub collateral: AssetOf<T>,
     pub liquidity_parameter: BalanceOf<T>,
     pub liquidity_shares_manager: LSM,
     pub swap_fee: BalanceOf<T>,
 }
 
-impl<T: Config, LSM: LiquiditySharesManager<T> + TypeInfo> PoolOperations<T> for Pool<T, LSM>
+impl<T, LSM, S> PoolOperations<T> for Pool<T, LSM, S>
 where
+    T: Config,
     BalanceOf<T>: SaturatedConversion,
+    LSM: Clone + Debug + LiquiditySharesManager<T> + TypeInfo + PartialEq,
+    S: Get<u32>,
 {
     fn assets(&self) -> Vec<AssetOf<T>> {
         self.reserves.keys().cloned().collect()
@@ -115,32 +126,5 @@ where
     ) -> Result<BalanceOf<T>, DispatchError> {
         let reserve = self.reserve_of(&asset)?;
         Math::<T>::calculate_buy_ln_argument(reserve, amount_in, self.liquidity_parameter)
-    }
-}
-
-// TODO(#1214): Replace BTreeMap with BoundedBTreeMap and remove the unnecessary `MaxEncodedLen`
-// implementation.
-impl<T: Config, LSM: LiquiditySharesManager<T>> MaxEncodedLen for Pool<T, LSM>
-where
-    T::AccountId: MaxEncodedLen,
-    AssetOf<T>: MaxEncodedLen,
-    BalanceOf<T>: MaxEncodedLen,
-    LSM: MaxEncodedLen,
-{
-    fn max_encoded_len() -> usize {
-        let len_account_id = T::AccountId::max_encoded_len();
-        let len_reserves = 1usize.saturating_add((MAX_ASSETS as usize).saturating_mul(
-            <AssetOf<T>>::max_encoded_len().saturating_add(BalanceOf::<T>::max_encoded_len()),
-        ));
-        let len_collateral = AssetOf::<T>::max_encoded_len();
-        let len_liquidity_parameter = BalanceOf::<T>::max_encoded_len();
-        let len_liquidity_shares_manager = LSM::max_encoded_len();
-        let len_swap_fee = BalanceOf::<T>::max_encoded_len();
-        len_account_id
-            .saturating_add(len_reserves)
-            .saturating_add(len_collateral)
-            .saturating_add(len_liquidity_parameter)
-            .saturating_add(len_liquidity_shares_manager)
-            .saturating_add(len_swap_fee)
     }
 }

@@ -34,8 +34,6 @@ use frame_support::{
     },
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
-#[cfg(feature = "parachain")]
-use orml_asset_registry::AssetMetadata;
 use parity_scale_codec::Compact;
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
@@ -68,9 +66,11 @@ use zeitgeist_primitives::{
         AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CampaignAsset, CampaignAssetClass, CampaignAssetId, Currencies, CustomAsset, CustomAssetId,
         Hash, Index, MarketAsset, MarketId, Moment, ResultWithWeightInfo, UncheckedExtrinsicTest,
-        XcmAsset,
     },
 };
+
+#[cfg(feature = "parachain")]
+use {orml_asset_registry::AssetMetadata, zeitgeist_primitives::types::XcmAsset};
 
 pub(super) const ON_PROPOSAL_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x00];
 pub(super) const ON_ACTIVATION_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x01];
@@ -86,6 +86,12 @@ pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
 pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
+pub const APPROVE_ORIGIN: AccountIdTest = 70;
+pub const REJECT_ORIGIN: AccountIdTest = 71;
+pub const CLOSE_MARKET_EARLY_ORIGIN: AccountIdTest = 72;
+pub const CLOSE_ORIGIN: AccountIdTest = 73;
+pub const REQUEST_EDIT_ORIGIN: AccountIdTest = 74;
+pub const RESOLVE_ORIGIN: AccountIdTest = 75;
 
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
@@ -191,6 +197,12 @@ impl DeployPoolMock {
 
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
+    pub const ApproveOrigin: AccountIdTest = APPROVE_ORIGIN;
+    pub const RejectOrigin: AccountIdTest = REJECT_ORIGIN;
+    pub const CloseMarketEarlyOrigin: AccountIdTest = CLOSE_MARKET_EARLY_ORIGIN;
+    pub const CloseOrigin: AccountIdTest = CLOSE_ORIGIN;
+    pub const RequestEditOrigin: AccountIdTest = REQUEST_EDIT_ORIGIN;
+    pub const ResolveOrigin: AccountIdTest = RESOLVE_ORIGIN;
 }
 parameter_types! {
     pub const AdvisoryBond: Balance = 11 * CENT;
@@ -235,7 +247,7 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
-    type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type ApproveOrigin = EnsureSignedBy<ApproveOrigin, AccountIdTest>;
     type AssetCreator = AssetRouter;
     type AssetDestroyer = AssetRouter;
     type AssetManager = AssetManager;
@@ -243,15 +255,14 @@ impl crate::Config for Runtime {
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
     type CloseEarlyDisputeBond = CloseEarlyDisputeBond;
-    type CloseMarketEarlyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type CloseMarketEarlyOrigin = EnsureSignedBy<CloseMarketEarlyOrigin, AccountIdTest>;
     type CloseEarlyProtectionTimeFramePeriod = CloseEarlyProtectionTimeFramePeriod;
     type CloseEarlyProtectionBlockPeriod = CloseEarlyProtectionBlockPeriod;
     type CloseEarlyRequestBond = CloseEarlyRequestBond;
-    type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type CloseOrigin = EnsureSignedBy<CloseOrigin, AccountIdTest>;
     type Currency = Balances;
     type MaxCreatorFee = MaxCreatorFee;
     type Court = Court;
-    type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DeployPool = DeployPoolMock;
     type DisputeBond = DisputeBond;
     type RuntimeEvent = RuntimeEvent;
@@ -274,9 +285,9 @@ impl crate::Config for Runtime {
     type PalletId = PmPalletId;
     type CloseEarlyBlockPeriod = CloseEarlyBlockPeriod;
     type CloseEarlyTimeFramePeriod = CloseEarlyTimeFramePeriod;
-    type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type RequestEditOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type RejectOrigin = EnsureSignedBy<RejectOrigin, AccountIdTest>;
+    type RequestEditOrigin = EnsureSignedBy<RequestEditOrigin, AccountIdTest>;
+    type ResolveOrigin = EnsureSignedBy<ResolveOrigin, AccountIdTest>;
     type SimpleDisputes = SimpleDisputes;
     type Slash = Treasury;
     type ValidityBond = ValidityBond;

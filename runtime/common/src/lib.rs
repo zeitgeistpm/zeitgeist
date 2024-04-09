@@ -56,12 +56,13 @@ macro_rules! decl_common_types {
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
         use zrml_market_commons::migrations::AddIdToMarket;
+        use zrml_neo_swaps::migration::MigratePoolReservesToBoundedBTreeMap;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (AddIdToMarket<Runtime>);
+        type Migrations = (AddIdToMarket<Runtime>, MigratePoolReservesToBoundedBTreeMap<Runtime>);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -171,12 +172,6 @@ macro_rules! decl_common_types {
         type EnsureRootOrTwoThirdsAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 2, 3>,
-        >;
-
-        // At least 100%
-        type EnsureRootOrAllAdvisoryCommittee = EitherOfDiverse<
-            EnsureRoot<AccountId>,
-            EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 1>,
         >;
 
         #[cfg(feature = "std")]
@@ -1275,7 +1270,6 @@ macro_rules! impl_config_traits {
             type CloseEarlyProtectionTimeFramePeriod = CloseEarlyProtectionTimeFramePeriod;
             type CloseEarlyProtectionBlockPeriod = CloseEarlyProtectionBlockPeriod;
             type CloseEarlyRequestBond = CloseEarlyRequestBond;
-            type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DeployPool = NeoSwaps;
             type DisputeBond = DisputeBond;
             type RuntimeEvent = RuntimeEvent;

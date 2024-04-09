@@ -101,7 +101,7 @@ parameter_types! {
     pub const OracleBond: Balance = 0;
     pub const ValidityBond: Balance = 0;
     pub const DisputeBond: Balance = 0;
-    pub const MaxCategories: u16 = MAX_ASSETS + 1;
+    pub const MaxCategories: u16 = MAX_ASSETS as u16 + 1;
 }
 
 pub struct DeployPoolNoop;
@@ -340,7 +340,6 @@ impl zrml_prediction_markets::Config for Runtime {
     type Court = Court;
     type Currency = Balances;
     type DeployPool = DeployPoolNoop;
-    type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
     type RuntimeEvent = RuntimeEvent;
     type GlobalDisputes = GlobalDisputes;
