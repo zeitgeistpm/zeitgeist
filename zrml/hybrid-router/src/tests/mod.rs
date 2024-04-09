@@ -27,8 +27,8 @@ use zeitgeist_primitives::{
     constants::{base_multiples::*, BASE, CENT},
     orderbook::Order,
     types::{
-        AccountIdTest, Assets, Deadlines, MarketCreation, MarketPeriod, MarketStatus,
-        MarketType, MultiHash, ScoringRule,
+        AccountIdTest, Assets, Deadlines, MarketCreation, MarketPeriod, MarketStatus, MarketType,
+        MultiHash, ScoringRule,
     },
 };
 use zrml_market_commons::{Error as MError, MarketCommonsPalletApi, Markets};
