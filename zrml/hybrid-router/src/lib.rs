@@ -67,7 +67,7 @@ mod pallet {
         },
         orderbook::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderbookApi},
-        types::{Asset, BaseAsset, BaseAssetClass, Market, MarketType, ScalarPosition},
+        types::{Asset, BaseAsset, Market, MarketType, ScalarPosition},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -455,7 +455,7 @@ mod pallet {
             mut remaining: BalanceOf<T>,
             who: &AccountIdOf<T>,
             market_id: MarketIdOf<T>,
-            base_asset: BaseAssetClass,
+            base_asset: BaseAsset,
             asset: AssetOf<T>,
             price_limit: BalanceOf<T>,
         ) -> Result<OrderAmmTradesInfo<T>, DispatchError> {

@@ -55,7 +55,6 @@ mock = [
     "xcm/default",
     "zeitgeist-primitives/mock",
     "zrml-asset-router/default",
-    "zrml-asset-router/std",
     "zrml-market-commons/default",
     "zrml-neo-swaps/default",
     "zrml-orderbook/default",

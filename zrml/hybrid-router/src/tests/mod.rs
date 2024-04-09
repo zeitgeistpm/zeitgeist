@@ -27,7 +27,7 @@ use zeitgeist_primitives::{
     constants::{base_multiples::*, BASE, CENT},
     orderbook::Order,
     types::{
-        AccountIdTest, Asset, Assets, Deadlines, MarketCreation, MarketPeriod, MarketStatus,
+        AccountIdTest, Assets, Deadlines, MarketCreation, MarketPeriod, MarketStatus,
         MarketType, MultiHash, ScoringRule,
     },
 };
