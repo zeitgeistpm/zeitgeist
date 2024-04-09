@@ -56,12 +56,16 @@ macro_rules! decl_common_types {
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
         use zrml_market_commons::migrations::MigrateScoringRuleAmmCdaHybrid;
+        use zrml_neo_swaps::migration::MigratePoolReservesToBoundedBTreeMap;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (MigrateScoringRuleAmmCdaHybrid<Runtime>,);
+        type Migrations = (
+            MigratePoolReservesToBoundedBTreeMap<Runtime>,
+            MigrateScoringRuleAmmCdaHybrid<Runtime>,
+        );
 
         pub type Executive = frame_executive::Executive<
             Runtime,

@@ -267,7 +267,7 @@ fn sell_fails_if_price_is_too_low() {
         // speaking this leaves the pool in an inconsistent state (reserve recorded in the `Pool`
         // struct is smaller than actual reserve), but this doesn't matter in this test.
         NeoSwaps::try_mutate_pool(&market_id, |pool| {
-            pool.reserves.insert(asset_in, 11 * pool.liquidity_parameter);
+            pool.reserves.try_insert(asset_in, 11 * pool.liquidity_parameter).unwrap();
             Ok(())
         })
         .unwrap();
@@ -306,7 +306,7 @@ fn sell_fails_if_price_is_pushed_below_threshold() {
         NeoSwaps::try_mutate_pool(&market_id, |pool| {
             // The price is right at the brink here. Any further shift and sells won't be accepted
             // anymore.
-            pool.reserves.insert(asset_in, 10 * pool.liquidity_parameter);
+            pool.reserves.try_insert(asset_in, 10 * pool.liquidity_parameter).unwrap();
             Ok(())
         })
         .unwrap();
