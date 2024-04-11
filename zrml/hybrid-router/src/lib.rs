@@ -46,10 +46,7 @@ mod pallet {
         traits::{IsType, StorageVersion},
         PalletId,
     };
-    use frame_system::{
-        ensure_signed,
-        pallet_prelude::{BlockNumberFor, OriginFor},
-    };
+    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{Get, Zero},
@@ -67,7 +64,7 @@ mod pallet {
         },
         orderbook::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderbookApi},
-        types::{Asset, BaseAsset, Market, MarketType, ScalarPosition},
+        types::{Asset, BaseAsset},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -138,9 +135,6 @@ mod pallet {
     pub(crate) type OrderOf<T> = Order<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
-    pub(crate) type MarketOf<T> =
-        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, BaseAsset>;
     pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
     pub(crate) type OrderTradeOf<T> = OrderbookTrade<AccountIdOf<T>, BalanceOf<T>>;
 
@@ -324,33 +318,6 @@ mod pallet {
     where
         T: Config,
     {
-        /// Returns a vector of assets corresponding to the given market ID and market type.
-        /// For scalar outcomes, the returned vector is [LONG, SHORT].
-        /// For categorical outcomes,
-        /// the vector starts with the lowest and ends with the highest categorical outcome.
-        ///
-        /// # Arguments
-        ///
-        /// * `market_id` - The ID of the market.
-        /// * `market` - A reference to the market.
-        pub fn outcome_assets(market_id: MarketIdOf<T>, market: &MarketOf<T>) -> Vec<AssetOf<T>> {
-            match market.market_type {
-                MarketType::Categorical(categories) => {
-                    let mut assets = Vec::new();
-                    for i in 0..categories {
-                        assets.push(Asset::CategoricalOutcome(market_id, i));
-                    }
-                    assets
-                }
-                MarketType::Scalar(_) => {
-                    vec![
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
-                    ]
-                }
-            }
-        }
-
         /// Fills the order from the Automated Market Maker (AMM) if it exists.
         /// The order is filled until the `price_limit` is reached.
         ///
