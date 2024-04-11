@@ -584,7 +584,10 @@ mod pallet {
                 price_limit <= ZeitgeistBase::<BalanceOf<T>>::get()?,
                 Error::<T>::PriceLimitTooHigh
             );
-            ensure!(orders.len() as u32 <= T::MaxOrders::get(), Error::<T>::MaxOrdersExceeded);
+            ensure!(
+                orders.len().saturated_into::<u32>() <= T::MaxOrders::get(),
+                Error::<T>::MaxOrdersExceeded
+            );
             let market = T::MarketCommons::market(&market_id)?;
             let assets = market.outcome_assets(market_id);
             ensure!(asset_count as usize == assets.len(), Error::<T>::AssetCountMismatch);
