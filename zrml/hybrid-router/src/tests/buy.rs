@@ -997,6 +997,50 @@ fn buy_succeeds_for_place_order_partial_fill_near_full_fill_not_allowed() {
 }
 
 #[test]
+fn buy_skips_fill_order_if_order_not_present_and_places_new_order() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0;
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
+        let required_asset_count = match &market.market_type {
+            MarketType::Scalar(_) => panic!("Categorical market type is expected!"),
+            MarketType::Categorical(categories) => *categories,
+        };
+        market.status = MarketStatus::Active;
+        Markets::<Runtime>::insert(market_id, market);
+
+        let asset_count = required_asset_count;
+        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let amount = 10 * BASE;
+        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
+        let orders = vec![42];
+        let strategy = Strategy::LimitOrder;
+        assert_ok!(HybridRouter::buy(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            asset_count,
+            asset,
+            amount,
+            max_price,
+            orders,
+            strategy,
+        ));
+
+        let order = Orders::<Runtime>::get(0).unwrap();
+        assert_eq!(
+            order,
+            Order {
+                market_id,
+                maker: ALICE,
+                maker_asset: BASE_ASSET,
+                maker_amount: 10 * BASE,
+                taker_asset: Assets::CategoricalOutcome(market_id, 0),
+                taker_amount: 20 * BASE,
+            }
+        );
+    });
+}
+
+#[test]
 fn buy_fails_if_max_orders_exceeded() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
