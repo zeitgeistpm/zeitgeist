@@ -12,6 +12,21 @@ As of 0.3.9, the changelog's format is based on
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
+## v0.5.2
+
+[#1310]: https://github.com/zeitgeistpm/zeitgeist/pull/1310
+
+### Added
+
+- ⚠️ [#1310] Add `market_id` field to `Market` struct.
+- [#1310] Add `MarketBuilderTrait`, which is used to define
+  `MarketCommonsPalletApi::build_market`, which should be used for creating
+  markets in the future.
+
+### Deprectaed
+
+- [#1310] `MarketCommonsPalletApi::push_market` is now deprecated.
+
 ## v0.5.1
 
 [#1295]: https://github.com/zeitgeistpm/zeitgeist/pull/1295
