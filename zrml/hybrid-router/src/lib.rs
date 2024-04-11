@@ -110,7 +110,7 @@ mod pallet {
         type MaxOrders: Get<u32>;
 
         /// The API to handle the order book.
-        type OrderBook: HybridRouterOrderbookApi<
+        type Orderbook: HybridRouterOrderbookApi<
                 AccountId = AccountIdOf<Self>,
                 MarketId = MarketIdOf<Self>,
                 Balance = BalanceOf<Self>,
@@ -194,9 +194,9 @@ mod pallet {
         /// The price of an order is below the specified minimum price.
         OrderPriceBelowMinPrice,
         /// The asset of an order is not equal to the maker asset of the order book.
-        AssetNotEqualToOrderBookMakerAsset,
+        AssetNotEqualToOrderbookMakerAsset,
         /// The asset of an order is not equal to the taker asset of the order book.
-        AssetNotEqualToOrderBookTakerAsset,
+        AssetNotEqualToOrderbookTakerAsset,
         /// The strategy "immediate or cancel" was applied.
         CancelStrategyApplied,
         /// The asset count does not match the markets asset count.
@@ -466,7 +466,7 @@ mod pallet {
                     break;
                 }
 
-                let order = match T::OrderBook::order(order_id) {
+                let order = match T::Orderbook::order(order_id) {
                     Ok(order) => order,
                     Err(_) => continue,
                 };
@@ -478,7 +478,7 @@ mod pallet {
                         // existing order is willing to give the required `asset` as the `maker_asset`
                         ensure!(
                             asset == order.maker_asset,
-                            Error::<T>::AssetNotEqualToOrderBookMakerAsset
+                            Error::<T>::AssetNotEqualToOrderbookMakerAsset
                         );
                         ensure!(order_price <= price_limit, Error::<T>::OrderPriceAboveMaxPrice);
                     }
@@ -486,7 +486,7 @@ mod pallet {
                         // existing order is willing to receive the required `asset` as the `taker_asset`
                         ensure!(
                             asset == order.taker_asset,
-                            Error::<T>::AssetNotEqualToOrderBookTakerAsset
+                            Error::<T>::AssetNotEqualToOrderbookTakerAsset
                         );
                         ensure!(order_price >= price_limit, Error::<T>::OrderPriceBelowMinPrice);
                     }
@@ -531,7 +531,7 @@ mod pallet {
             order_id: OrderId,
             maker_fill: BalanceOf<T>,
         ) -> Result<Option<OrderTradeOf<T>>, DispatchError> {
-            match T::OrderBook::fill_order(who, order_id, Some(maker_fill)) {
+            match T::Orderbook::fill_order(who, order_id, Some(maker_fill)) {
                 Ok(order_trade) => Ok(Some(order_trade)),
                 Err(ApiError::SoftFailure(OrderbookSoftFail::BelowMinimumBalance))
                 | Err(ApiError::SoftFailure(
@@ -566,7 +566,7 @@ mod pallet {
             match strategy {
                 Strategy::ImmediateOrCancel => Err(Error::<T>::CancelStrategyApplied.into()),
                 Strategy::LimitOrder => {
-                    match T::OrderBook::place_order(
+                    match T::Orderbook::place_order(
                         who.clone(),
                         market_id,
                         maker_asset,

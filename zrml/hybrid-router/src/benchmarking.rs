@@ -160,7 +160,7 @@ mod benchmarks {
             let surplus = ((i + 1) as u128) * _1_2;
             let taker_amount = taker_amount + surplus.saturated_into::<BalanceOf<T>>();
             assert_ok!(T::AssetManager::deposit(maker_asset, &order_creator, maker_amount));
-            assert_ok!(T::OrderBook::place_order(
+            assert_ok!(T::Orderbook::place_order(
                 order_creator,
                 market_id,
                 maker_asset,
@@ -183,7 +183,7 @@ mod benchmarks {
             strategy,
         );
 
-        let buyer_limit_order = T::OrderBook::order(o as u128).unwrap();
+        let buyer_limit_order = T::Orderbook::order(o as u128).unwrap();
         assert_eq!(buyer_limit_order.market_id, market_id);
         assert_eq!(buyer_limit_order.maker, buyer);
         assert_eq!(buyer_limit_order.maker_asset, base_asset.into());
@@ -226,7 +226,7 @@ mod benchmarks {
             let surplus = ((i + 1) as u128) * _1_2;
             let taker_amount = taker_amount + surplus.saturated_into::<BalanceOf<T>>();
             assert_ok!(T::AssetManager::deposit(maker_asset, &order_creator, maker_amount));
-            T::OrderBook::place_order(
+            T::Orderbook::place_order(
                 order_creator,
                 market_id,
                 maker_asset,
@@ -250,7 +250,7 @@ mod benchmarks {
             strategy,
         );
 
-        let seller_limit_order = T::OrderBook::order(o as u128).unwrap();
+        let seller_limit_order = T::Orderbook::order(o as u128).unwrap();
         assert_eq!(seller_limit_order.market_id, market_id);
         assert_eq!(seller_limit_order.maker, seller);
         assert_eq!(seller_limit_order.maker_asset, asset);

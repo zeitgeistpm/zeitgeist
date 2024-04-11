@@ -165,7 +165,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         HybridRouter: zrml_hybrid_router::{Pallet, Call, Storage, Event<T>},
-        OrderBook: zrml_orderbook::{Call, Event<T>, Pallet, Storage},
+        Orderbook: zrml_orderbook::{Call, Event<T>, Pallet, Storage},
         AssetRouter: zrml_asset_router::{Pallet},
         NeoSwaps: zrml_neo_swaps::{Call, Event<T>, Pallet},
         Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
@@ -196,7 +196,7 @@ impl crate::Config for Runtime {
     #[cfg(feature = "runtime-benchmarks")]
     type CompleteSetOperations = PredictionMarkets;
     type MarketCommons = MarketCommons;
-    type OrderBook = OrderBook;
+    type Orderbook = Orderbook;
     type RuntimeEvent = RuntimeEvent;
     type MaxOrders = MaxOrders;
     type PalletId = HybridRouterPalletId;

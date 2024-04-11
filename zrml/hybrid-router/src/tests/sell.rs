@@ -41,7 +41,7 @@ fn sell_to_amm_and_then_fill_specified_order() {
         let order_maker_amount = _6;
         let order_taker_amount = _12;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &CHARLIE, order_maker_amount));
-        assert_ok!(OrderBook::place_order(
+        assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
             BASE_ASSET,
@@ -124,7 +124,7 @@ fn sell_to_amm_if_specified_order_has_lower_prices_than_the_amm() {
         let order_maker_amount = _1;
         let order_taker_amount = _2;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &CHARLIE, order_maker_amount));
-        assert_ok!(OrderBook::place_order(
+        assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
             BASE_ASSET,
@@ -191,7 +191,7 @@ fn sell_fill_multiple_orders_if_amm_spot_price_lower_than_order_prices() {
         let order_maker_amount = _1_2;
         let order_taker_amount = _1;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &CHARLIE, 2 * order_maker_amount));
-        assert_ok!(OrderBook::place_order(
+        assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
             BASE_ASSET,
@@ -199,7 +199,7 @@ fn sell_fill_multiple_orders_if_amm_spot_price_lower_than_order_prices() {
             asset,
             order_taker_amount,
         ));
-        assert_ok!(OrderBook::place_order(
+        assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
             BASE_ASSET,
@@ -252,7 +252,7 @@ fn sell_fill_specified_order_partially_if_amm_spot_price_lower() {
         let order_maker_amount = _4;
         let order_taker_amount = _8;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &CHARLIE, order_maker_amount));
-        assert_ok!(OrderBook::place_order(
+        assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
             BASE_ASSET,
@@ -318,7 +318,7 @@ fn sell_fails_if_asset_not_equal_to_order_book_taker_asset() {
         let maker_amount = _1;
         assert_ok!(AssetRouter::increase_balance(asset, &CHARLIE, maker_amount,));
 
-        assert_ok!(OrderBook::place_order(
+        assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
             asset,
@@ -347,7 +347,7 @@ fn sell_fails_if_asset_not_equal_to_order_book_taker_asset() {
                 orders,
                 strategy,
             ),
-            Error::<Runtime>::AssetNotEqualToOrderBookTakerAsset
+            Error::<Runtime>::AssetNotEqualToOrderbookTakerAsset
         );
     });
 }
@@ -373,7 +373,7 @@ fn sell_fails_if_order_price_below_min_price() {
 
         let order_maker_amount = _1;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &CHARLIE, order_maker_amount));
-        assert_ok!(OrderBook::place_order(
+        assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
             BASE_ASSET,
@@ -756,7 +756,7 @@ fn sell_emits_event() {
             let surplus = ((i + 1) as u128) * _1_2;
             let taker_amount = taker_amount + surplus.saturated_into::<BalanceOf<Runtime>>();
             assert_ok!(AssetManager::deposit(maker_asset, &order_creator, maker_amount));
-            assert_ok!(OrderBook::place_order(
+            assert_ok!(Orderbook::place_order(
                 RuntimeOrigin::signed(order_creator),
                 market_id,
                 maker_asset,

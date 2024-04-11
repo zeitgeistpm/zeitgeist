@@ -1420,7 +1420,7 @@ macro_rules! impl_config_traits {
             type CompleteSetOperations = PredictionMarkets;
             type MarketCommons = MarketCommons;
             type Amm = NeoSwaps;
-            type OrderBook = Orderbook;
+            type Orderbook = Orderbook;
             type MaxOrders = MaxOrders;
             type RuntimeEvent = RuntimeEvent;
             type PalletId = HybridRouterPalletId;
