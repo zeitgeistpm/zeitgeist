@@ -53,7 +53,7 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{Get, Zero},
-        DispatchResult, Saturating,
+        DispatchResult, SaturatedConversion, Saturating,
     };
     #[cfg(feature = "runtime-benchmarks")]
     use zeitgeist_primitives::traits::{CompleteSetOperationsApi, DeployPoolApi};
@@ -233,7 +233,7 @@ mod pallet {
         ///
         /// Complexity: `O(n)`
         #[pallet::call_index(0)]
-        #[pallet::weight(T::WeightInfo::buy(*asset_count as u32, orders.len() as u32))]
+        #[pallet::weight(T::WeightInfo::buy(*asset_count as u32, orders.len().saturated_into::<u32>()))]
         #[frame_support::transactional]
         #[allow(clippy::too_many_arguments)]
         pub fn buy(
