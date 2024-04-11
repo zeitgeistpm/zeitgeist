@@ -289,7 +289,7 @@ mod pallet {
         ///
         /// Complexity: `O(n)`
         #[pallet::call_index(1)]
-        #[pallet::weight(T::WeightInfo::sell(*asset_count as u32, orders.len() as u32))]
+        #[pallet::weight(T::WeightInfo::sell(*asset_count as u32, orders.len().saturated_into::<u32>()))]
         #[frame_support::transactional]
         #[allow(clippy::too_many_arguments)]
         pub fn sell(
