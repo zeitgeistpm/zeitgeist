@@ -871,6 +871,118 @@ fn buy_succeeds_for_place_order_below_minimum_balance_soft_failure() {
 }
 
 #[test]
+fn buy_succeeds_for_numerical_soft_failure() {
+    ExtBuilder::default().build().execute_with(|| {
+        let liquidity = _10;
+        let min_spot_price = CENT / 2;
+        let spot_prices = vec![min_spot_price, _1 - min_spot_price];
+        let swap_fee = CENT;
+        let asset_count = 2u16;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            liquidity,
+            spot_prices.clone(),
+            swap_fee,
+        );
+
+        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let amount = _1_100;
+
+        let max_price = (_3_4).saturated_into::<BalanceOf<Runtime>>();
+        let orders = vec![];
+        let strategy = Strategy::LimitOrder;
+        assert_ok!(HybridRouter::buy(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            asset_count,
+            asset,
+            amount,
+            max_price,
+            orders,
+            strategy,
+        ));
+
+        let order = Orders::<Runtime>::get(0).unwrap();
+        assert_eq!(
+            order,
+            Order {
+                market_id,
+                maker: ALICE,
+                maker_asset: BASE_ASSET,
+                maker_amount: _1_100,
+                taker_asset: Assets::CategoricalOutcome(market_id, 0),
+                taker_amount: 133333334,
+            }
+        );
+    });
+}
+
+#[test]
+fn buy_just_one_unit_from_amm() {
+    ExtBuilder::default().build().execute_with(|| {
+        let liquidity = _10;
+        let spot_prices = vec![_1_2, _1_2];
+        let swap_fee = CENT;
+        let asset_count = 2u16;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            liquidity,
+            spot_prices.clone(),
+            swap_fee,
+        );
+
+        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let amount = 1;
+
+        let order_maker_amount = _2;
+        assert_ok!(AssetManager::deposit(asset, &CHARLIE, order_maker_amount));
+        assert_ok!(Orderbook::place_order(
+            RuntimeOrigin::signed(CHARLIE),
+            market_id,
+            Assets::CategoricalOutcome(market_id, 0),
+            order_maker_amount,
+            BASE_ASSET,
+            _1,
+        ));
+
+        let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
+        assert_eq!(order_ids.len(), 1);
+        let order_id = order_ids[0];
+
+        let max_price = (_1_2 + 1).saturated_into::<BalanceOf<Runtime>>();
+        let orders = vec![order_id];
+        let strategy = Strategy::LimitOrder;
+        assert_ok!(HybridRouter::buy(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            asset_count,
+            asset,
+            amount,
+            max_price,
+            orders,
+            strategy,
+        ));
+
+        let order = Orders::<Runtime>::get(order_id).unwrap();
+        assert_eq!(
+            order,
+            Order {
+                market_id,
+                maker: CHARLIE,
+                maker_asset: Assets::CategoricalOutcome(market_id, 0),
+                maker_amount: _2,
+                taker_asset: BASE_ASSET,
+                taker_amount: _1,
+            }
+        );
+    });
+}
+
+#[test]
 fn buy_succeeds_for_fill_order_below_minimum_balance_soft_failure() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;

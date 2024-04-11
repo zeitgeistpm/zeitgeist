@@ -373,7 +373,9 @@ mod pallet {
                 BalanceOf::<T>::zero(),
             )?;
 
-            Ok((amount_in.checked_sub_res(&amm_amount_in)?, amm_trade_info))
+            amm_trade_info
+                .map(|amm_trade| Ok((amount_in.checked_sub_res(&amm_amount_in)?, Some(amm_trade))))
+                .unwrap_or(Ok((amount_in, None)))
         }
 
         fn handle_amm_trade(
