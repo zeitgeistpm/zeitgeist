@@ -802,6 +802,40 @@ fn buy_fails_if_asset_count_mismatch() {
 }
 
 #[test]
+fn buy_fails_if_amount_is_zero() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0;
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
+        let required_asset_count = match &market.market_type {
+            MarketType::Scalar(_) => panic!("Categorical market type is expected!"),
+            MarketType::Categorical(categories) => *categories,
+        };
+        market.status = MarketStatus::Active;
+        Markets::<Runtime>::insert(market_id, market);
+
+        let asset_count = required_asset_count;
+        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let amount = 0;
+        let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
+        let orders = vec![];
+        let strategy = Strategy::LimitOrder;
+        assert_noop!(
+            HybridRouter::buy(
+                RuntimeOrigin::signed(ALICE),
+                market_id,
+                asset_count,
+                asset,
+                amount,
+                max_price,
+                orders,
+                strategy,
+            ),
+            Error::<Runtime>::AmountIsZero
+        );
+    });
+}
+
+#[test]
 fn buy_fails_if_cancel_strategy_applied() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
