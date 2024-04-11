@@ -585,6 +585,58 @@ fn sell_to_amm_but_low_amount() {
 }
 
 #[test]
+fn sell_succeeds_for_numerical_soft_failure() {
+    ExtBuilder::default().build().execute_with(|| {
+        let liquidity = _10;
+        let spot_prices = vec![_9_10, _1_10];
+        let swap_fee = CENT;
+        let asset_count = 2u16;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            liquidity,
+            spot_prices.clone(),
+            swap_fee,
+        );
+
+        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let amount_in = _1000 * 100;
+
+        // increase_balance does not set total issuance
+        AssetRouter::set_total_issuance(asset, amount_in);
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
+
+        let min_price = (_1_100 / 1000).saturated_into::<BalanceOf<Runtime>>();
+        let orders = vec![];
+        let strategy = Strategy::LimitOrder;
+        assert_ok!(HybridRouter::sell(
+            RuntimeOrigin::signed(ALICE),
+            market_id,
+            asset_count,
+            asset,
+            amount_in,
+            min_price,
+            orders,
+            strategy,
+        ));
+
+        let order = Orders::<Runtime>::get(0).unwrap();
+        assert_eq!(
+            order,
+            Order {
+                market_id,
+                maker: ALICE,
+                maker_asset: Assets::CategoricalOutcome(market_id, 0),
+                maker_amount: _1000 * 100,
+                taker_asset: BASE_ASSET,
+                taker_amount: _1,
+            }
+        );
+    });
+}
+
+#[test]
 fn sell_to_amm_only() {
     ExtBuilder::default().build().execute_with(|| {
         let liquidity = _10;
