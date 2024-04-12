@@ -488,7 +488,7 @@ mod pallet {
 
             let outcome_asset_converted =
                 outcome_asset.try_into().map_err(|_| Error::<T>::InvalidOutcomeAsset)?;
-            let market_assets = market.outcome_assets(market_id);
+            let market_assets = market.outcome_assets();
             market_assets
                 .binary_search(&outcome_asset_converted)
                 .map_err(|_| Error::<T>::InvalidOutcomeAsset)?;

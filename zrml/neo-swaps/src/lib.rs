@@ -71,7 +71,7 @@ mod pallet {
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
         traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees, HybridRouterAmmApi},
-        types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
+        types::{Asset, MarketStatus, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -886,11 +886,10 @@ mod pallet {
                 Error::<T>::LiquidityTooLow
             );
             let pool_account_id = Self::pool_account_id(&market_id);
-            let assets = Self::outcomes(market_id)?;
             let mut reserves = BTreeMap::new();
-            for (&amount_in, &asset) in amounts_in.iter().zip(assets.iter()) {
-                T::MultiCurrency::transfer(asset, &who, &pool_account_id, amount_in)?;
-                let _ = reserves.insert(asset, amount_in);
+            for (&amount_in, &asset) in amounts_in.iter().zip(market.outcome_assets().iter()) {
+                T::MultiCurrency::transfer(asset.into(), &who, &pool_account_id, amount_in)?;
+                let _ = reserves.insert(asset.into(), amount_in);
             }
             let collateral = market.base_asset;
             let pool = Pool {
@@ -951,26 +950,6 @@ mod pallet {
             let total_fees = external_fees.saturating_add(swap_fees);
             let remaining = amount.checked_sub(&total_fees).ok_or(Error::<T>::Unexpected)?;
             Ok(FeeDistribution { remaining, swap_fees, external_fees })
-        }
-
-        // TODO(#1218): Carbon copy of a function in prediction-markets. To be removed later.
-        fn outcomes(market_id: MarketIdOf<T>) -> Result<Vec<AssetOf<T>>, DispatchError> {
-            let market = T::MarketCommons::market(&market_id)?;
-            Ok(match market.market_type {
-                MarketType::Categorical(categories) => {
-                    let mut assets = Vec::new();
-                    for i in 0..categories {
-                        assets.push(Asset::CategoricalOutcome(market_id, i));
-                    }
-                    assets
-                }
-                MarketType::Scalar(_) => {
-                    vec![
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
-                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
-                    ]
-                }
-            })
         }
 
         pub(crate) fn try_mutate_pool<R, F>(

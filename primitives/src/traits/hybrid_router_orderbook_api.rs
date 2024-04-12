@@ -20,13 +20,13 @@ use frame_support::dispatch::DispatchError;
 use crate::hybrid_router_api_types::{ApiError, OrderbookSoftFail, OrderbookTrade};
 
 /// A type alias for the return struct of orderbook trades.
-pub type OrderbookTradeOf<T> = OrderbookTrade<
+type OrderbookTradeOf<T> = OrderbookTrade<
     <T as HybridRouterOrderbookApi>::AccountId,
     <T as HybridRouterOrderbookApi>::Balance,
 >;
 
 /// A type alias for the error type of the orderbook part of the hybrid router.
-pub type ApiErrorOf = ApiError<OrderbookSoftFail>;
+type ApiErrorOf = ApiError<OrderbookSoftFail>;
 
 /// Trait for handling the order book part of the hybrid router.
 pub trait HybridRouterOrderbookApi {

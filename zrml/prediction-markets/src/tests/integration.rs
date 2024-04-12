@@ -205,7 +205,7 @@ fn full_scalar_market_lifecycle() {
 
         // check balances
         let market = &MarketCommons::market(&0).unwrap();
-        let assets = market.outcome_assets(0);
+        let assets = market.outcome_assets();
         assert_eq!(assets.len(), 2);
         for asset in assets.iter() {
             let bal = AssetManager::free_balance((*asset).into(), &CHARLIE);

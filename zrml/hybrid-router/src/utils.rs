@@ -17,7 +17,7 @@
 
 #![cfg(all(feature = "mock", test))]
 
-use crate::{AccountIdOf, BalanceOf};
+use crate::{AccountIdOf, BalanceOf, MarketIdOf};
 use frame_system::pallet_prelude::BlockNumberFor;
 use zeitgeist_primitives::{
     traits::MarketCommonsPalletApi,
@@ -27,7 +27,7 @@ use zeitgeist_primitives::{
 pub(crate) type MomentOf<T> =
     <<T as crate::Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 pub(crate) type MarketOf<T> =
-    Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, BaseAsset>;
+    Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, BaseAsset, MarketIdOf<T>>;
 
 pub(crate) fn market_mock<T>(creator: T::AccountId) -> MarketOf<T>
 where
@@ -43,6 +43,7 @@ where
     };
 
     zeitgeist_primitives::types::Market {
+        market_id: 0u8.into(),
         base_asset: BaseAssetClass::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),

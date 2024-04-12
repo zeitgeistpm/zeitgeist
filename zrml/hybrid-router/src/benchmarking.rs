@@ -77,6 +77,7 @@ where
     T: Config,
 {
     let market = Market {
+        market_id: 0u8.into(),
         base_asset,
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),

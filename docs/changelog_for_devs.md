@@ -14,10 +14,15 @@ APIs/RPC interface.
 
 ## v0.5.2
 
+[#1310]: https://github.com/zeitgeistpm/zeitgeist/pull/1310
 [#1307]: https://github.com/zeitgeistpm/zeitgeist/pull/1307
 
 ### Added
 
+- ⚠️ [#1310] Add `market_id` field to `Market` struct.
+- [#1310] Add `MarketBuilderTrait`, which is used to define
+  `MarketCommonsPalletApi::build_market`, which should be used for creating
+  markets in the future.
 - [#1307] New hybrid router for managing the trade execution using the
   `neo-swaps` automated market maker and order book
 
@@ -32,6 +37,10 @@ APIs/RPC interface.
     A trade was executed using the Hybrid Router.
 
   For details, please refer to the `README.md` and the in-file documentation.
+
+### Deprectaed
+
+- [#1310] `MarketCommonsPalletApi::push_market` is now deprecated.
 
 ## v0.5.1
 

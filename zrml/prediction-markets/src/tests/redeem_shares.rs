@@ -185,7 +185,7 @@ fn scalar_market_correctly_resolves_common(base_asset: BaseAsset, reported_value
     assert_ok!(PredictionMarkets::redeem_shares(RuntimeOrigin::signed(CHARLIE), 0));
     assert_ok!(PredictionMarkets::redeem_shares(RuntimeOrigin::signed(EVE), 0));
     let market = &MarketCommons::market(&0).unwrap();
-    let assets = market.outcome_assets(0);
+    let assets = market.outcome_assets();
     for asset in assets.iter() {
         assert_eq!(AssetManager::free_balance((*asset).into(), &CHARLIE), 0);
         assert_eq!(AssetManager::free_balance((*asset).into(), &EVE), 0);

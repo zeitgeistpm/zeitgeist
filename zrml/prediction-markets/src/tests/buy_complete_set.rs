@@ -40,7 +40,7 @@ fn buy_complete_set_works() {
 
         let market = MarketCommons::market(&market_id).unwrap();
 
-        let assets = market.outcome_assets(market_id);
+        let assets = market.outcome_assets();
         for asset in assets.iter() {
             let bal = AssetManager::free_balance((*asset).into(), &who);
             assert_eq!(bal, amount);

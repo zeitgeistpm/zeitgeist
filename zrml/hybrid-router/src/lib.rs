@@ -591,7 +591,7 @@ mod pallet {
                 Error::<T>::MaxOrdersExceeded
             );
             let market = T::MarketCommons::market(&market_id)?;
-            let assets = market.outcome_assets(market_id);
+            let assets = market.outcome_assets();
             ensure!(asset_count as usize == assets.len(), Error::<T>::AssetCountMismatch);
 
             let (asset_in, asset_out) = match tx_type {

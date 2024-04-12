@@ -203,6 +203,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
     Markets::<Runtime>::insert(
         market_id,
         Market {
+            market_id: Default::default(),
             base_asset: BaseAsset::Ztg,
             creation: MarketCreation::Permissionless,
             creator_fee: sp_runtime::Perbill::zero(),

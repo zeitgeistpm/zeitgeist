@@ -55,7 +55,7 @@ macro_rules! decl_common_types {
         use orml_traits::MultiCurrency;
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
-        use zrml_market_commons::migrations::MigrateScoringRuleAmmCdaHybrid;
+        use zrml_market_commons::migrations::MigrateScoringRuleAmmCdaHybridAndMarketId;
         use zrml_neo_swaps::migration::MigratePoolReservesToBoundedBTreeMap;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
@@ -63,8 +63,8 @@ macro_rules! decl_common_types {
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
         type Migrations = (
+            MigrateScoringRuleAmmCdaHybridAndMarketId<Runtime>,
             MigratePoolReservesToBoundedBTreeMap<Runtime>,
-            MigrateScoringRuleAmmCdaHybrid<Runtime>,
         );
 
         pub type Executive = frame_executive::Executive<

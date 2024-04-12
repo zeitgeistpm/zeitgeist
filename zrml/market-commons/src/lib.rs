@@ -24,6 +24,7 @@ extern crate alloc;
 pub mod migrations;
 mod mock;
 mod tests;
+pub mod types;
 
 pub use pallet::*;
 pub use zeitgeist_primitives::traits::MarketCommonsPalletApi;
@@ -50,19 +51,33 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         math::checked_ops_res::CheckedAddRes,
-        types::{BaseAsset, Market, PoolId},
+        traits::MarketBuilderTrait,
+        types::{
+            BaseAsset, Deadlines, EarlyClose, Market, MarketBonds, MarketPeriod, PoolId, Report,
+        },
     };
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(11);
 
-    pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub type BalanceOf<T> = <T as Config>::Balance;
-    pub type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
-    pub type MarketOf<T> =
-        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberOf<T>, MomentOf<T>, BaseAsset>;
-    pub type MarketIdOf<T> = <T as Config>::MarketId;
-    pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
+    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type BalanceOf<T> = <T as Config>::Balance;
+    pub(crate) type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
+    pub(crate) type MarketIdOf<T> = <T as Config>::MarketId;
+    pub(crate) type MarketOf<T> = Market<
+        AccountIdOf<T>,
+        BalanceOf<T>,
+        BlockNumberOf<T>,
+        MomentOf<T>,
+        BaseAsset,
+        MarketIdOf<T>,
+    >;
+    pub(crate) type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
+    pub(crate) type DeadlinesOf<T> = Deadlines<BlockNumberOf<T>>;
+    pub(crate) type EarlyCloseOf<T> = EarlyClose<BlockNumberOf<T>, MomentOf<T>>;
+    pub(crate) type MarketBondsOf<T> = MarketBonds<AccountIdOf<T>, BalanceOf<T>>;
+    pub(crate) type MarketPeriodOf<T> = MarketPeriod<BlockNumberOf<T>, MomentOf<T>>;
+    pub(crate) type ReportOf<T> = Report<AccountIdOf<T>, BlockNumberOf<T>>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
@@ -105,6 +120,8 @@ mod pallet {
         NoReport,
         /// There's a pool registered for this market already.
         PoolAlreadyExists,
+        /// Unexpectedly failed to build a market due to missing data.
+        IncompleteMarketBuilder,
     }
 
     #[pallet::hooks]
@@ -124,7 +141,7 @@ mod pallet {
         // on the storage so next following calls will return yet another incremented number.
         //
         // Returns `Err` if `MarketId` addition overflows.
-        pub fn next_market_id() -> Result<T::MarketId, DispatchError> {
+        fn next_market_id() -> Result<T::MarketId, DispatchError> {
             let id = MarketCounter::<T>::get();
             let new_counter = id.checked_add_res(&1u8.into())?;
             <MarketCounter<T>>::put(new_counter);
@@ -175,10 +192,31 @@ mod pallet {
             })
         }
 
-        fn push_market(market: MarketOf<T>) -> Result<Self::MarketId, DispatchError> {
+        fn push_market(mut market: MarketOf<T>) -> Result<Self::MarketId, DispatchError> {
             let market_id = Self::next_market_id()?;
-            <Markets<T>>::insert(market_id, market);
+            market.market_id = market_id;
+            Markets::<T>::insert(market_id, market.clone());
             Ok(market_id)
+        }
+
+        fn build_market<U>(
+            mut market_builder: U,
+        ) -> Result<(Self::MarketId, MarketOf<T>), DispatchError>
+        where
+            U: MarketBuilderTrait<
+                    Self::AccountId,
+                    Self::Balance,
+                    Self::BlockNumber,
+                    Self::Moment,
+                    BaseAsset,
+                    Self::MarketId,
+                >,
+        {
+            let market_id = Self::next_market_id()?;
+            market_builder.market_id(market_id);
+            let market = market_builder.build()?;
+            <Markets<T>>::insert(market_id, market.clone());
+            Ok((market_id, market))
         }
 
         fn remove_market(market_id: &Self::MarketId) -> DispatchResult {

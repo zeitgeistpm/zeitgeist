@@ -49,7 +49,7 @@ fn sell_complete_set_works(scoring_rule: ScoringRule) {
         ));
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let assets = market.outcome_assets(market_id);
+        let assets = market.outcome_assets();
         for asset in assets.iter() {
             let bal = AssetManager::free_balance((*asset).into(), &who);
             assert_eq!(bal, expected_amount);

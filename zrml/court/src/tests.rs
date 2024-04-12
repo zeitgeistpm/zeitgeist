@@ -66,6 +66,7 @@ type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
 const ORACLE_REPORT: OutcomeReport = OutcomeReport::Scalar(u128::MAX);
 
 const DEFAULT_MARKET: MarketOf<Runtime> = Market {
+    market_id: 0,
     base_asset: BaseAsset::Ztg,
     creation: MarketCreation::Permissionless,
     creator_fee: sp_runtime::Perbill::zero(),

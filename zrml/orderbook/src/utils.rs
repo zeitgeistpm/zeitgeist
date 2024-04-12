@@ -32,6 +32,7 @@ type MarketOf<T> = Market<
     <T as frame_system::Config>::BlockNumber,
     MomentOf<T>,
     BaseAsset,
+    MarketIdOf<T>,
 >;
 
 pub(crate) fn market_mock<T>() -> MarketOf<T>
@@ -39,6 +40,7 @@ where
     T: crate::Config,
 {
     Market {
+        market_id: Default::default(),
         base_asset: BaseAsset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),

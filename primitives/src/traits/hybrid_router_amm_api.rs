@@ -19,10 +19,10 @@ use crate::hybrid_router_api_types::{AmmSoftFail, AmmTrade, ApiError};
 use frame_support::dispatch::DispatchError;
 
 /// A type alias for the return struct of AMM buy and sell.
-pub type AmmTradeOf<T> = AmmTrade<<T as HybridRouterAmmApi>::Balance>;
+type AmmTradeOf<T> = AmmTrade<<T as HybridRouterAmmApi>::Balance>;
 
 /// A type alias for the error type of the AMM part of the hybrid router.
-pub type ApiErrorOf = ApiError<AmmSoftFail>;
+type ApiErrorOf = ApiError<AmmSoftFail>;
 
 /// Trait for handling the AMM part of the hybrid router.
 pub trait HybridRouterAmmApi {

@@ -116,6 +116,7 @@ mod pallet {
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
         BaseAsset,
+        MarketIdOf<T>,
     >;
     pub(crate) type DisputesOf<T> = BoundedVec<
         MarketDispute<
@@ -556,6 +557,7 @@ where
     use zeitgeist_primitives::types::{MarketBonds, ScoringRule};
 
     zeitgeist_primitives::types::Market {
+        market_id: Default::default(),
         base_asset: BaseAsset::Ztg,
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),
