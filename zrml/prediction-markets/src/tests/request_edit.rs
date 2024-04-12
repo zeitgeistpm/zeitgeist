@@ -30,7 +30,7 @@ fn it_allows_request_edit_origin_to_request_edits_for_markets() {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             2..4,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         // make sure it's in status proposed
@@ -71,7 +71,7 @@ fn request_edit_fails_on_bad_origin() {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             2..4,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         // make sure it's in status proposed
@@ -95,7 +95,7 @@ fn edit_request_fails_if_edit_reason_is_too_long() {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         let market = MarketCommons::market(&0);

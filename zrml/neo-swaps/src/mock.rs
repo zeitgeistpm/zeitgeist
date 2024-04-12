@@ -38,27 +38,30 @@ use parity_scale_codec::Compact;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, ConstU32, Get, IdentityLookup, Zero},
-    DispatchResult, Percent, SaturatedConversion,
+    DispatchResult, Perbill, Percent, SaturatedConversion,
 };
 use zeitgeist_primitives::{
-    constants::mock::{
-        AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AssetsAccountDeposit,
-        AssetsApprovalDeposit, AssetsDeposit, AssetsMetadataDepositBase,
-        AssetsMetadataDepositPerByte, AssetsStringLimit, AuthorizedPalletId, BlockHashCount,
-        BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
-        CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
-        CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
-        DestroyAccountWeight, DestroyApprovalWeight, DestroyFinishWeight, ExistentialDeposit,
-        ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId,
-        GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId, LockId, MaxAppeals,
-        MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration,
-        MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
-        MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners,
-        MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinCategories,
-        MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod,
-        NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId,
-        RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, TreasuryPalletId, VotePeriod,
-        VotingOutcomeFee, CENT,
+    constants::{
+        base_multiples::*,
+        mock::{
+            AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AssetsAccountDeposit,
+            AssetsApprovalDeposit, AssetsDeposit, AssetsMetadataDepositBase,
+            AssetsMetadataDepositPerByte, AssetsStringLimit, AuthorizedPalletId, BlockHashCount,
+            BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
+            CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
+            CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
+            DestroyAccountWeight, DestroyApprovalWeight, DestroyFinishWeight, ExistentialDeposit,
+            ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId,
+            GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId, LockId, MaxAppeals,
+            MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration,
+            MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
+            MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners,
+            MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinCategories,
+            MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount,
+            MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor,
+            OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId,
+            TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
+        },
     },
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
@@ -101,7 +104,7 @@ parameter_types! {
     pub const OracleBond: Balance = 0;
     pub const ValidityBond: Balance = 0;
     pub const DisputeBond: Balance = 0;
-    pub const MaxCategories: u16 = MAX_ASSETS as u16 + 1;
+    pub const MaxCategories: u16 = MAX_ASSETS + 1;
 }
 
 pub struct DeployPoolNoop;
@@ -144,6 +147,10 @@ where
             Ok(_) => fees,
             Err(_) => Zero::zero(),
         }
+    }
+
+    fn fee_percentage(_market_id: Self::MarketId) -> Perbill {
+        Perbill::from_rational(EXTERNAL_FEES, BASE)
     }
 }
 

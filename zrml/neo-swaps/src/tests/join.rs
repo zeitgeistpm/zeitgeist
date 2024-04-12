@@ -184,7 +184,7 @@ fn join_fails_on_inactive_market(market_status: MarketStatus) {
 #[test]
 fn join_fails_on_pool_not_found() {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::Lmsr);
+        let market_id = create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::AmmCdaHybrid);
         assert_noop!(
             NeoSwaps::join(
                 RuntimeOrigin::signed(ALICE),

@@ -40,7 +40,7 @@ fn on_initialize_skips_the_genesis_block() {
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
 
         // Blocknumber = 0

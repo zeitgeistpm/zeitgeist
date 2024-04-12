@@ -112,6 +112,7 @@ zrml-asset-router = { workspace = true }
 zrml-authorized = { workspace = true }
 zrml-court = { workspace = true }
 zrml-global-disputes = { workspace = true, optional = true }
+zrml-hybrid-router = { workspace = true }
 zrml-liquidity-mining = { workspace = true }
 zrml-market-commons = { workspace = true }
 zrml-neo-swaps = { workspace = true }
@@ -212,6 +213,7 @@ runtime-benchmarks = [
     "xcm-builder?/runtime-benchmarks",
     "zrml-authorized/runtime-benchmarks",
     "zrml-court/runtime-benchmarks",
+    "zrml-hybrid-router/runtime-benchmarks",
     "zrml-liquidity-mining/runtime-benchmarks",
     "zrml-neo-swaps/runtime-benchmarks",
     "zrml-parimutuel/runtime-benchmarks",
@@ -319,6 +321,7 @@ std = [
     "zeitgeist-primitives/std",
     "zrml-authorized/std",
     "zrml-court/std",
+    "zrml-hybrid-router/std",
     "zrml-liquidity-mining/std",
     "zrml-market-commons/std",
     "zrml-neo-swaps/std",
@@ -377,6 +380,7 @@ try-runtime = [
     "zrml-asset-router/try-runtime",
     "zrml-authorized/try-runtime",
     "zrml-court/try-runtime",
+    "zrml-hybrid-router/try-runtime",
     "zrml-liquidity-mining/try-runtime",
     "zrml-market-commons/try-runtime",
     "zrml-neo-swaps/try-runtime",

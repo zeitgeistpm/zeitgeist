@@ -9,6 +9,7 @@ default-members = [
     "zrml/authorized",
     "zrml/asset-router",
     "zrml/court",
+    "zrml/hybrid-router",
     "zrml/global-disputes",
     "zrml/liquidity-mining",
     "zrml/market-commons",
@@ -34,6 +35,7 @@ members = [
     "zrml/authorized",
     "zrml/asset-router",
     "zrml/court",
+    "zrml/hybrid-router",
     "zrml/global-disputes",
     "zrml/liquidity-mining",
     "zrml/market-commons",
@@ -239,6 +241,7 @@ zrml-asset-router = { path = "zrml/asset-router", default-features = false }
 zrml-authorized = { path = "zrml/authorized", default-features = false }
 zrml-court = { path = "zrml/court", default-features = false }
 zrml-global-disputes = { path = "zrml/global-disputes", default-features = false }
+zrml-hybrid-router = { path = "zrml/hybrid-router", default-features = false }
 zrml-liquidity-mining = { path = "zrml/liquidity-mining", default-features = false }
 zrml-market-commons = { path = "zrml/market-commons", default-features = false }
 zrml-neo-swaps = { path = "zrml/neo-swaps", default-features = false }

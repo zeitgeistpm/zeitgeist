@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -22,6 +22,8 @@
     clippy::arithmetic_side_effects
 )]
 
+#[cfg(feature = "mock")]
+pub mod base_multiples;
 #[cfg(feature = "mock")]
 pub mod mock;
 pub mod ztg;
@@ -78,6 +80,10 @@ pub const COURT_LOCK_ID: [u8; 8] = *b"zge/colk";
 pub const GLOBAL_DISPUTES_PALLET_ID: PalletId = PalletId(*b"zge/gldp");
 /// Lock identifier, mainly used for the locks on the accounts.
 pub const GLOBAL_DISPUTES_LOCK_ID: [u8; 8] = *b"zge/gdlk";
+
+// Hybrid Router
+/// Pallet identifier, mainly used for named balance reserves.
+pub const HYBRID_ROUTER_PALLET_ID: PalletId = PalletId(*b"zge/hybr");
 
 // Liqudity Mining
 /// Pallet identifier, mainly used for named balance reserves.

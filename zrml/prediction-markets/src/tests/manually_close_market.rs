@@ -45,7 +45,7 @@ fn manually_close_market_after_long_stall() {
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
@@ -58,7 +58,7 @@ fn manually_close_market_after_long_stall() {
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
 
         // This block takes much longer than 12sec, but markets and pools still close correctly.
@@ -114,7 +114,7 @@ fn manually_close_market_fails_if_market_not_in_close_time_frame_list() {
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
 
         // remove market from open time frame list
@@ -155,7 +155,7 @@ fn manually_close_market_fails_if_not_allowed_for_block_based_markets() {
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
 
         // This block takes much longer than 12sec, but markets and pools still close correctly.

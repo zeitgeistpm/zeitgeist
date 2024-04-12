@@ -81,10 +81,13 @@ macro_rules! impl_foreign_fees {
             asset_registry::Inspect as AssetRegistryInspect,
         };
         use pallet_asset_tx_payment::HandleCredit;
-        use sp_runtime::traits::{Convert, DispatchInfoOf, PostDispatchInfoOf};
+        use sp_runtime::{
+            traits::{Convert, DispatchInfoOf, PostDispatchInfoOf},
+            Perbill,
+        };
         use zeitgeist_primitives::{
             math::fixed::{FixedDiv, FixedMul},
-            types::Assets,
+            types::{Assets, TxPaymentAssetId},
         };
 
         #[repr(u8)]
@@ -308,6 +311,10 @@ macro_rules! impl_market_creator_fees {
                 Self::do_distribute(market_id, asset, account, amount)
                     .unwrap_or_else(|_| 0u8.saturated_into())
             }
+
+            fn fee_percentage(market_id: Self::MarketId) -> Perbill {
+                Self::fee_percentage(market_id).unwrap_or(Perbill::zero())
+            }
         }
 
         impl MarketCreatorFee {
@@ -317,8 +324,8 @@ macro_rules! impl_market_creator_fees {
                 account: &AccountId,
                 amount: Balance,
             ) -> Result<Balance, DispatchError> {
-                let market = MarketCommons::market(&market_id)?; // Should never fail
-                let fee_amount = market.creator_fee.mul_floor(amount);
+                let market = MarketCommons::market(&market_id)?;
+                let fee_amount = Self::fee_percentage(market_id)?.mul_floor(amount);
                 // Might fail if the transaction is too small
                 <AssetManager as MultiCurrency<_>>::transfer(
                     asset,
@@ -327,6 +334,11 @@ macro_rules! impl_market_creator_fees {
                     fee_amount,
                 )?;
                 Ok(fee_amount)
+            }
+
+            fn fee_percentage(market_id: MarketId) -> Result<Perbill, DispatchError> {
+                let market = MarketCommons::market(&market_id)?;
+                Ok(market.creator_fee)
             }
         }
     };

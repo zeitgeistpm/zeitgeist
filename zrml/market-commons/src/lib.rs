@@ -54,7 +54,7 @@ mod pallet {
     };
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(10);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(11);
 
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub type BalanceOf<T> = <T as Config>::Balance;
