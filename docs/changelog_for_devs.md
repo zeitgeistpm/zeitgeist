@@ -15,6 +15,7 @@ APIs/RPC interface.
 ## v0.5.2
 
 [#1310]: https://github.com/zeitgeistpm/zeitgeist/pull/1310
+[#1307]: https://github.com/zeitgeistpm/zeitgeist/pull/1307
 
 ### Added
 
@@ -22,6 +23,20 @@ APIs/RPC interface.
 - [#1310] Add `MarketBuilderTrait`, which is used to define
   `MarketCommonsPalletApi::build_market`, which should be used for creating
   markets in the future.
+- [#1307] New hybrid router for managing the trade execution using the
+  `neo-swaps` automated market maker and order book
+
+  - `buy`: Routes a buy order to AMM and CDA to achieve the best average
+    execution price.
+  - `sell`: Routes a sell order to AMM and CDA to achieve the best average
+    execution price.
+
+  The new pallet has the following events:
+
+  - `HybridRouterExecuted { tx_type, who, market_id, price_limit, asset_in, amount_in, asset_out, amount_out, external_fee_amount, swap_fee_amount }`:
+    A trade was executed using the Hybrid Router.
+
+  For details, please refer to the `README.md` and the in-file documentation.
 
 ### Deprectaed
 

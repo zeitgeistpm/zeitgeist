@@ -36,7 +36,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         let market = MarketCommons::market(&0).unwrap();
@@ -69,7 +69,7 @@ fn report_fails_before_grace_period_is_over() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         run_to_block(end);
@@ -95,7 +95,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         let market = MarketCommons::market(&0).unwrap();
@@ -143,7 +143,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
 
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, CENT));
@@ -178,7 +178,7 @@ fn report_fails_on_mismatched_outcome_for_categorical_market() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -201,7 +201,7 @@ fn report_fails_on_out_of_range_outcome_for_categorical_market() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -224,7 +224,7 @@ fn report_fails_on_mismatched_outcome_for_scalar_market() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
@@ -247,7 +247,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         let market = MarketCommons::market(&0).unwrap();
@@ -291,7 +291,7 @@ fn report_fails_on_market_state_proposed() {
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
         assert_noop!(
             PredictionMarkets::report(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Categorical(1)),
@@ -314,7 +314,7 @@ fn report_fails_on_market_state_closed_for_advised_market() {
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
         assert_noop!(
             PredictionMarkets::report(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Categorical(1)),
@@ -337,7 +337,7 @@ fn report_fails_on_market_state_active() {
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
         assert_noop!(
             PredictionMarkets::report(RuntimeOrigin::signed(BOB), 0, OutcomeReport::Categorical(1)),
@@ -360,7 +360,7 @@ fn report_fails_on_market_state_resolved() {
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
         let _ = MarketCommons::mutate_market(&0, |market| {
             market.status = MarketStatus::Resolved;
@@ -395,7 +395,7 @@ fn does_trigger_market_transition_api(dispute_mechanism: Option<MarketDisputeMec
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
             dispute_mechanism,
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid,
         ));
 
         let market = MarketCommons::market(&0).unwrap();

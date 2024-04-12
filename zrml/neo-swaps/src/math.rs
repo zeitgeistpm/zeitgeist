@@ -44,7 +44,10 @@ use crate::{
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use fixed::FixedU128;
-use sp_runtime::{DispatchError, SaturatedConversion};
+use sp_runtime::{
+    traits::{One, Zero},
+    DispatchError, SaturatedConversion,
+};
 use typenum::U80;
 
 type Fractional = U80;
@@ -80,6 +83,18 @@ pub(crate) trait MathOps<T: Config> {
         reserve: BalanceOf<T>,
         amount: BalanceOf<T>,
         liquidity: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError>;
+
+    fn calculate_buy_amount_until(
+        until: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
+        spot_price: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError>;
+
+    fn calculate_sell_amount_until(
+        until: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
+        spot_price: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 }
 
@@ -149,6 +164,32 @@ impl<T: Config> MathOps<T> for Math<T> {
             .map(|result| result.saturated_into())
             .ok_or_else(|| Error::<T>::MathError.into())
     }
+
+    fn calculate_buy_amount_until(
+        until: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
+        spot_price: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        let until = until.saturated_into();
+        let liquidity = liquidity.saturated_into();
+        let spot_price = spot_price.saturated_into();
+        detail::calculate_buy_amount_until(until, liquidity, spot_price)
+            .map(|result| result.saturated_into())
+            .ok_or_else(|| Error::<T>::MathError.into())
+    }
+
+    fn calculate_sell_amount_until(
+        until: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
+        spot_price: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        let until = until.saturated_into();
+        let liquidity = liquidity.saturated_into();
+        let spot_price = spot_price.saturated_into();
+        detail::calculate_sell_amount_until(until, liquidity, spot_price)
+            .map(|result| result.saturated_into())
+            .ok_or_else(|| Error::<T>::MathError.into())
+    }
 }
 
 mod detail {
@@ -215,6 +256,32 @@ mod detail {
             to_fixed(reserve)?,
             to_fixed(amount_in)?,
             to_fixed(liquidity)?,
+        )?;
+        from_fixed(result_fixed)
+    }
+
+    pub(super) fn calculate_buy_amount_until(
+        until: u128,
+        liquidity: u128,
+        spot_price: u128,
+    ) -> Option<u128> {
+        let result_fixed = calculate_buy_amount_until_fixed(
+            to_fixed(until)?,
+            to_fixed(liquidity)?,
+            to_fixed(spot_price)?,
+        )?;
+        from_fixed(result_fixed)
+    }
+
+    pub(super) fn calculate_sell_amount_until(
+        until: u128,
+        liquidity: u128,
+        spot_price: u128,
+    ) -> Option<u128> {
+        let result_fixed = calculate_sell_amount_until_fixed(
+            to_fixed(until)?,
+            to_fixed(liquidity)?,
+            to_fixed(spot_price)?,
         )?;
         from_fixed(result_fixed)
     }
@@ -308,6 +375,47 @@ mod detail {
         };
         exp_x_over_b.checked_add(exp_neg_r_over_b)?.checked_sub(FixedType::checked_from_num(1)?)
     }
+
+    /// Calculate `-b * ln( (1-q) / (1-p_i(r)) )` where `q = until` if `q > p_i(r)`; otherwise,
+    /// return zero.
+    pub(super) fn calculate_buy_amount_until_fixed(
+        until: FixedType,
+        liquidity: FixedType,
+        spot_price: FixedType,
+    ) -> Option<FixedType> {
+        let numerator = FixedType::one().checked_sub(until)?;
+        let denominator = FixedType::one().checked_sub(spot_price)?;
+        let ln_arg = numerator.checked_div(denominator)?;
+        let (ln_result, ln_neg) = ln(ln_arg).ok()?;
+        if !ln_neg {
+            return Some(FixedType::zero());
+        }
+        liquidity.checked_mul(ln_result)
+    }
+
+    /// Calculate `b * ln( (1 / (1 / p_i(r) - 1)) - (1 / q * (1 / p_i(r) - 1)) )` where `q = until`
+    /// if `q < p_i(r)`; otherwise, return zero.
+    pub(super) fn calculate_sell_amount_until_fixed(
+        until: FixedType,
+        liquidity: FixedType,
+        spot_price: FixedType,
+    ) -> Option<FixedType> {
+        let first_numerator = FixedType::one();
+        let first_denominator =
+            (FixedType::one().checked_div(spot_price)?).checked_sub(FixedType::one())?;
+        let second_numerator = FixedType::one();
+        let second_denominator = until.checked_mul(
+            FixedType::one().checked_div(spot_price)?.checked_sub(FixedType::one())?,
+        )?;
+        let first_term = first_numerator.checked_div(first_denominator)?;
+        let second_term = second_numerator.checked_div(second_denominator)?;
+        let ln_arg = second_term.checked_sub(first_term)?;
+        let (ln_result, ln_neg) = ln(ln_arg).ok()?;
+        if ln_neg {
+            return Some(FixedType::zero());
+        }
+        liquidity.checked_mul(ln_result)
+    }
 }
 
 mod transcendental {
@@ -397,10 +505,11 @@ mod transcendental {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{consts::*, mock::Runtime as MockRuntime};
+    use crate::{mock::Runtime as MockRuntime, MAX_SPOT_PRICE, MIN_SPOT_PRICE};
     use alloc::str::FromStr;
     use frame_support::assert_err;
     use test_case::test_case;
+    use zeitgeist_primitives::constants::base_multiples::*;
 
     type MockBalance = BalanceOf<MockRuntime>;
     type MockMath = Math<MockRuntime>;
@@ -605,5 +714,107 @@ mod tests {
         let result: FixedType =
             exp(FixedType::checked_from_num(EXP_OVERFLOW_THRESHOLD).unwrap(), neg).unwrap();
         assert_eq!(result, expected);
+    }
+
+    #[test_case(_9_10, _10, _1_10, 219722457734)] // Large price shift
+    #[test_case(_4_10, _10, _3_10, 15415067983)] // Small price shift
+    #[test_case(_3_10, _10, _4_10, 0)] // Zero buy amount
+    #[test_case(_4_10, _10, _4_10, 0)] // Zero buy amount
+    #[test_case(MAX_SPOT_PRICE, 188_739_165_817, MIN_SPOT_PRICE, 999_053_937_034; "leap_up")]
+    #[test_case(MIN_SPOT_PRICE, _10, MAX_SPOT_PRICE, 0; "leap_down")]
+    #[test_case(
+        MIN_SPOT_PRICE + 100_000,
+        132_117_416_072,
+        MIN_SPOT_PRICE,
+        1_327_820;
+        "step_up_low"
+    )]
+    #[test_case(
+        MAX_SPOT_PRICE,
+        11_324_349_949,
+        MAX_SPOT_PRICE - 100_000,
+        22_626_081;
+        "step_up_high"
+    )]
+    #[test_case(MIN_SPOT_PRICE, _1, MIN_SPOT_PRICE + 100_000, 0; "step_down_low")]
+    #[test_case(MAX_SPOT_PRICE - 100_000, _1, MAX_SPOT_PRICE, 0; "step_down_high")]
+    fn calculate_buy_amount_until_works(
+        until: MockBalance,
+        liquidity: MockBalance,
+        spot_price: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(
+            MockMath::calculate_buy_amount_until(until, liquidity, spot_price).unwrap(),
+            expected
+        );
+    }
+
+    #[test_case(_1, _10, _1_2; "until too large")]
+    #[test_case(_1_2, _10, _1; "spot price too large")]
+    #[test_case(u128::MAX, _10, _1_2; "until limit")]
+    #[test_case(_3_4, u128::MAX, _1_2; "liquidity limit")]
+    #[test_case(_3_4, _10, u128::MAX; "spot price limit")]
+    fn calculate_buy_amount_until_throws_math_error(
+        until: MockBalance,
+        liquidity: MockBalance,
+        spot_price: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_buy_amount_until(until, liquidity, spot_price),
+            Error::<MockRuntime>::MathError
+        );
+    }
+
+    #[test_case(_1_10, _10, _9_10, 439444915467)] // Large price shift
+    #[test_case(_1_10, _10, _2_10, 81093021622)] // Small price shift
+    #[test_case(_2_10, _10, _1_10, 0)] // Zero sell amount
+    #[test_case(_1_10, _10, _1_10, 0)] // Zero sell amount
+    #[test_case(_1_100, _10, _1_2, 459511985013)] // Very small until
+    #[test_case(1_2, _10, 1_100, 451815891780)] // Very small spot_price
+    #[test_case(MAX_SPOT_PRICE, 188_739_165_817, MIN_SPOT_PRICE, 0; "leap_up")]
+    #[test_case(MIN_SPOT_PRICE, 11_324_349_949, MAX_SPOT_PRICE, 119_886_472_444; "leap_down")]
+    #[test_case(MIN_SPOT_PRICE + 100_000, 132_117_416_072, MIN_SPOT_PRICE, 0; "step_up_low")]
+    #[test_case(MAX_SPOT_PRICE, 11_324_349_949, MAX_SPOT_PRICE - 100_000, 0; "step_up_high")]
+    #[test_case(
+        MIN_SPOT_PRICE,
+        186_922_262_798,
+        MIN_SPOT_PRICE + 100_000,
+        375_349_804;
+        "step_down_low"
+    )]
+    #[test_case(
+        MAX_SPOT_PRICE - 100_000,
+        43_410_008_138,
+        MAX_SPOT_PRICE,
+        87_169_596;
+        "step_down_high"
+    )]
+    fn calculate_sell_amount_until_fixed_works(
+        until: MockBalance,
+        liquidity: MockBalance,
+        spot_price: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(
+            MockMath::calculate_sell_amount_until(until, liquidity, spot_price).unwrap(),
+            expected
+        );
+    }
+
+    #[test_case(0, _10, _1_2; "until too small")]
+    #[test_case(_1_2, _10, _1; "spot price too large")]
+    #[test_case(u128::MAX, _10, _3_4; "until limit")]
+    #[test_case(_1_2, u128::MAX, _3_4; "liquidity limit")]
+    #[test_case(_1_2, _10, u128::MAX; "spot price limit")]
+    fn calculate_sell_amount_until_throws_math_error(
+        until: MockBalance,
+        liquidity: MockBalance,
+        spot_price: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_sell_amount_until(until, liquidity, spot_price),
+            Error::<MockRuntime>::MathError
+        );
     }
 }

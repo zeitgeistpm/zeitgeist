@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-use crate::{types::*, weights::*};
+use crate::weights::*;
 use alloc::vec;
 use core::marker::PhantomData;
 use frame_support::{
@@ -40,11 +40,10 @@ pub use pallet::*;
 use sp_runtime::traits::{AccountIdConversion, Get, Zero};
 use zeitgeist_macros::unreachable_non_terminating;
 use zeitgeist_primitives::{
-    math::{
-        checked_ops_res::{CheckedAddRes, CheckedSubRes},
-        fixed::FixedMulDiv,
-    },
-    traits::{DistributeFees, MarketCommonsPalletApi},
+    hybrid_router_api_types::{ApiError, ExternalFee, OrderbookSoftFail, OrderbookTrade},
+    math::checked_ops_res::{CheckedAddRes, CheckedSubRes},
+    orderbook::{Order, OrderId},
+    traits::{DistributeFees, HybridRouterOrderbookApi, MarketCommonsPalletApi},
     types::{Asset, BaseAsset, MarketStatus, ScoringRule},
 };
 
@@ -54,7 +53,6 @@ pub mod migrations;
 pub mod mock;
 #[cfg(test)]
 mod tests;
-pub mod types;
 mod utils;
 pub mod weights;
 
@@ -99,6 +97,7 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
@@ -106,7 +105,8 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type OrderOf<T> = Order<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
-    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
+    pub(crate) type OrderbookTradeOf<T> = OrderbookTrade<AccountIdOf<T>, BalanceOf<T>>;
+    pub(crate) type ExternalFeeOf<T> = ExternalFee<AccountIdOf<T>, BalanceOf<T>>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -132,6 +132,7 @@ mod pallet {
             filled_taker_amount: BalanceOf<T>,
             unfilled_maker_amount: BalanceOf<T>,
             unfilled_taker_amount: BalanceOf<T>,
+            external_fee: ExternalFeeOf<T>,
         },
         OrderPlaced {
             order_id: OrderId,
@@ -204,7 +205,7 @@ mod pallet {
         ) -> DispatchResult {
             let taker = ensure_signed(origin)?;
 
-            Self::do_fill_order(order_id, taker, maker_partial_fill)?;
+            let _ = Self::do_fill_order(order_id, taker, maker_partial_fill)?;
 
             Ok(())
         }
@@ -253,33 +254,6 @@ mod pallet {
             Ok(())
         }
 
-        fn ensure_ratio_quotient_valid(order_data: &OrderOf<T>) -> DispatchResult {
-            let maker_full_fill = order_data.taker_amount;
-            // this ensures that partial fills, which fill nearly the whole order, are not executed
-            // this protects the last fill happening
-            // without a division by zero for `Perquintill::from_rational`
-            let is_ratio_quotient_valid = maker_full_fill.is_zero()
-                || maker_full_fill >= T::AssetManager::minimum_balance(order_data.taker_asset);
-            ensure!(is_ratio_quotient_valid, Error::<T>::PartialFillNearFullFillNotAllowed);
-            Ok(())
-        }
-
-        /// Calculates the amount that the taker is going to get from the maker's amount.
-        fn get_taker_fill(
-            order_data: &OrderOf<T>,
-            maker_fill: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
-            // the maker_full_fill is the maximum amount of what the maker wants to have
-            let maker_full_fill = order_data.taker_amount;
-            // the taker_full_fill is the maximum amount of what the taker wants to have
-            let taker_full_fill = order_data.maker_amount;
-            // rounding down: the taker will always get a little bit less than what they asked for.
-            // This ensures that the reserve of the maker
-            // is always enough to repatriate successfully!
-            // `maker_full_fill` is ensured to be never zero in `ensure_ratio_quotient_valid`
-            maker_fill.bmul_bdiv_floor(taker_full_fill, maker_full_fill)
-        }
-
         /// The order account for a specific order id.
         #[inline]
         pub(crate) fn order_account(order_id: OrderId) -> AccountIdOf<T> {
@@ -290,6 +264,17 @@ mod pallet {
         #[inline]
         pub(crate) fn reserve_id() -> [u8; 8] {
             T::PalletId::get().0
+        }
+
+        fn ensure_ratio_quotient_valid(order_data: &OrderOf<T>) -> DispatchResult {
+            let maker_full_fill = order_data.taker_amount;
+            // this ensures that partial fills, which fill nearly the whole order, are not executed
+            // this protects the last fill happening
+            // without a division by zero for `Perquintill::from_rational`
+            let is_ratio_quotient_valid = maker_full_fill.is_zero()
+                || maker_full_fill >= T::AssetManager::minimum_balance(order_data.taker_asset);
+            ensure!(is_ratio_quotient_valid, Error::<T>::PartialFillNearFullFillNotAllowed);
+            Ok(())
         }
 
         fn do_remove_order(order_id: OrderId, who: AccountIdOf<T>) -> DispatchResult {
@@ -328,16 +313,22 @@ mod pallet {
             Ok(())
         }
 
-        /// Charge the external fees from `taker` and return the adjusted maker fill.
+        /// Charge the external fees in base asset and return the adjusted maker fill.
+        ///
+        /// `maker_fill` is the amount that the maker wants to have.
+        /// `taker_fill` is the amount that the taker wants to have.
+        /// It does not charge fees from the outcome asset.
+        ///
+        /// Returns the adjusted maker fill and the external fee.
         fn charge_external_fees(
             order_data: &OrderOf<T>,
             base_asset: BaseAsset,
             maker_fill: BalanceOf<T>,
             taker: &AccountIdOf<T>,
             taker_fill: BalanceOf<T>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
-            let maker_asset_is_base = order_data.maker_asset == base_asset.into();
-            let base_asset_fill = if maker_asset_is_base {
+        ) -> Result<(BalanceOf<T>, ExternalFeeOf<T>), DispatchError> {
+            let maker_asset_is_base_asset = order_data.maker_asset == base_asset.into();
+            let base_asset_fill = if maker_asset_is_base_asset {
                 taker_fill
             } else {
                 unreachable_non_terminating!(
@@ -354,14 +345,14 @@ mod pallet {
                 taker,
                 base_asset_fill,
             );
-            if maker_asset_is_base {
-                // maker_fill is the amount that the maker wants to have (outcome asset from taker)
-                // do not charge fees from outcome assets, but rather from the base asset
-                Ok(maker_fill)
+            if maker_asset_is_base_asset {
+                Ok((maker_fill, ExternalFeeOf::<T> { account: taker.clone(), amount: fee_amount }))
             } else {
-                // accounting fees from the taker,
-                // who is responsible to pay the base asset minus fees to the maker
-                Ok(maker_fill.checked_sub_res(&fee_amount)?)
+                Ok((
+                    // maker gets less base asset, so the maker paid the fees
+                    maker_fill.checked_sub_res(&fee_amount)?,
+                    ExternalFeeOf::<T> { account: order_data.maker.clone(), amount: fee_amount },
+                ))
             }
         }
 
@@ -369,13 +360,14 @@ mod pallet {
             order_id: OrderId,
             taker: AccountIdOf<T>,
             maker_partial_fill: Option<BalanceOf<T>>,
-        ) -> DispatchResult {
+        ) -> Result<OrderbookTradeOf<T>, DispatchError> {
             let mut order_data = <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist)?;
             let market = T::MarketCommons::market(&order_data.market_id)?;
             unreachable_non_terminating!(
-                market.scoring_rule == ScoringRule::Orderbook,
+                market.scoring_rule == ScoringRule::AmmCdaHybrid,
                 LOG_TARGET,
-                "The call to place_order already ensured the scoring rule order book.",
+                "The call to place_order already ensured the scoring rule amm and order book \
+                 hybrid.",
             );
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             let base_asset = market.base_asset;
@@ -394,7 +386,8 @@ mod pallet {
             // the reserve of the maker should always be enough
             // to repatriate successfully, e.g. taker gets a little bit less
             // it should always ensure that the maker's request (maker_fill) is fully filled
-            let taker_fill = Self::get_taker_fill(&order_data, maker_fill)?;
+            let (taker_fill, _maker_fill) =
+                order_data.taker_and_maker_fill_from_taker_amount(maker_fill)?;
             let order_account = Self::order_account(order_id);
 
             if !T::AssetManager::reserved_balance_named(&Self::reserve_id(), maker_asset, &maker)
@@ -426,7 +419,7 @@ mod pallet {
 
             // if base asset: fund the full amount, but charge base asset fees from taker later
             // always charge fees from the base asset and not the outcome asset
-            let maybe_adjusted_maker_fill = Self::charge_external_fees(
+            let (maybe_adjusted_maker_fill, external_fee) = Self::charge_external_fees(
                 &order_data,
                 base_asset,
                 maker_fill,
@@ -461,9 +454,14 @@ mod pallet {
                 filled_taker_amount: maker_fill,
                 unfilled_maker_amount: order_data.maker_amount,
                 unfilled_taker_amount: order_data.taker_amount,
+                external_fee: external_fee.clone(),
             });
 
-            Ok(())
+            Ok(OrderbookTrade {
+                filled_maker_amount: taker_fill,
+                filled_taker_amount: maker_fill,
+                external_fee,
+            })
         }
 
         fn do_place_order(
@@ -476,7 +474,10 @@ mod pallet {
         ) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
-            ensure!(market.scoring_rule == ScoringRule::Orderbook, Error::<T>::InvalidScoringRule);
+            ensure!(
+                market.scoring_rule == ScoringRule::AmmCdaHybrid,
+                Error::<T>::InvalidScoringRule
+            );
             let base_asset = market.base_asset;
             let outcome_asset = if maker_asset == base_asset.into() {
                 taker_asset
@@ -532,6 +533,61 @@ mod pallet {
             Self::deposit_event(Event::OrderPlaced { order_id, order });
 
             Ok(())
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
+        fn match_failure(error: DispatchError) -> ApiError<OrderbookSoftFail> {
+            let below_minimum_balance: DispatchError = Error::<T>::BelowMinimumBalance.into();
+            let partial_fill_near_full_fill_not_allowed: DispatchError =
+                Error::<T>::PartialFillNearFullFillNotAllowed.into();
+            if error == below_minimum_balance {
+                ApiError::SoftFailure(OrderbookSoftFail::BelowMinimumBalance)
+            } else if error == partial_fill_near_full_fill_not_allowed {
+                ApiError::SoftFailure(OrderbookSoftFail::PartialFillNearFullFillNotAllowed)
+            } else {
+                ApiError::HardFailure(error)
+            }
+        }
+    }
+
+    impl<T: Config> HybridRouterOrderbookApi for Pallet<T> {
+        type AccountId = AccountIdOf<T>;
+        type MarketId = MarketIdOf<T>;
+        type Balance = BalanceOf<T>;
+        type Asset = AssetOf<T>;
+        type Order = OrderOf<T>;
+        type OrderId = OrderId;
+
+        fn order(order_id: Self::OrderId) -> Result<Self::Order, DispatchError> {
+            <Orders<T>>::get(order_id).ok_or(Error::<T>::OrderDoesNotExist.into())
+        }
+
+        fn fill_order(
+            who: Self::AccountId,
+            order_id: Self::OrderId,
+            maker_partial_fill: Option<Self::Balance>,
+        ) -> Result<OrderbookTradeOf<T>, ApiError<OrderbookSoftFail>> {
+            Self::do_fill_order(order_id, who, maker_partial_fill).map_err(Self::match_failure)
+        }
+
+        fn place_order(
+            who: Self::AccountId,
+            market_id: Self::MarketId,
+            maker_asset: Self::Asset,
+            maker_amount: Self::Balance,
+            taker_asset: Self::Asset,
+            taker_amount: Self::Balance,
+        ) -> Result<(), ApiError<OrderbookSoftFail>> {
+            Self::do_place_order(
+                who,
+                market_id,
+                maker_asset,
+                maker_amount,
+                taker_asset,
+                taker_amount,
+            )
+            .map_err(Self::match_failure)
         }
     }
 }

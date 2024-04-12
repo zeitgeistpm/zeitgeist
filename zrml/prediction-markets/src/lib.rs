@@ -1118,7 +1118,7 @@ mod pallet {
                 MarketCreation::Permissionless,
                 market_type,
                 dispute_mechanism,
-                ScoringRule::Lmsr,
+                ScoringRule::AmmCdaHybrid,
             )?;
             Self::do_buy_complete_set(who.clone(), market_id, amount)?;
             let spot_prices_len = spot_prices.len() as u32;

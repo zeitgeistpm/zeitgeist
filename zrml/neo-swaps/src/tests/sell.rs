@@ -81,7 +81,7 @@ fn sell_works() {
                 market_id,
                 asset_in,
                 amount_in,
-                amount_out: expected_amount_out,
+                amount_out: expected_amount_out_minus_fees,
                 swap_fee_amount: expected_swap_fee_amount,
                 external_fee_amount: expected_external_fee_amount,
             }
@@ -179,7 +179,7 @@ fn sell_fails_on_inactive_market(market_status: MarketStatus) {
 fn sell_fails_on_pool_not_found() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::Lmsr);
+            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::AmmCdaHybrid);
         assert_noop!(
             NeoSwaps::sell(
                 RuntimeOrigin::signed(BOB),

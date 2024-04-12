@@ -53,7 +53,7 @@ fn create_market_builder(oracle: AccountIdOf<Runtime>) -> MarketBuilder<Runtime>
         })
         .report(None)
         .resolved_outcome(None)
-        .scoring_rule(ScoringRule::Lmsr)
+        .scoring_rule(ScoringRule::AmmCdaHybrid)
         .status(MarketStatus::Disputed)
         .bonds(MarketBonds {
             creation: None,

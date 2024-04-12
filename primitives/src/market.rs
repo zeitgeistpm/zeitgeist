@@ -80,7 +80,7 @@ where
     /// - `Noop`, which implies that another module provides the means for redeeming rewards
     pub fn resolution_mechanism(&self) -> ResolutionMechanism {
         match self.scoring_rule {
-            ScoringRule::Lmsr | ScoringRule::Orderbook => ResolutionMechanism::RedeemTokens,
+            ScoringRule::AmmCdaHybrid => ResolutionMechanism::RedeemTokens,
             ScoringRule::Parimutuel => ResolutionMechanism::Noop,
         }
     }
@@ -123,9 +123,7 @@ where
 
                 for i in 0..categories {
                     match self.scoring_rule {
-                        ScoringRule::Orderbook => assets
-                            .push(MarketAssetClass::<MI>::CategoricalOutcome(self.market_id, i)),
-                        ScoringRule::Lmsr => assets
+                        ScoringRule::AmmCdaHybrid => assets
                             .push(MarketAssetClass::<MI>::CategoricalOutcome(self.market_id, i)),
                         ScoringRule::Parimutuel => {
                             assets.push(MarketAssetClass::<MI>::ParimutuelShare(self.market_id, i))
@@ -175,10 +173,7 @@ where
     ) -> Option<MarketAssetClass<MI>> {
         match outcome_report {
             OutcomeReport::Categorical(idx) => match self.scoring_rule {
-                ScoringRule::Orderbook => {
-                    Some(MarketAssetClass::<MI>::CategoricalOutcome(self.market_id, *idx))
-                }
-                ScoringRule::Lmsr => {
+                ScoringRule::AmmCdaHybrid => {
                     Some(MarketAssetClass::<MI>::CategoricalOutcome(self.market_id, *idx))
                 }
                 ScoringRule::Parimutuel => {
@@ -370,8 +365,7 @@ pub struct Deadlines<BN> {
 
 #[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
 pub enum ScoringRule {
-    Lmsr,
-    Orderbook,
+    AmmCdaHybrid,
     Parimutuel,
 }
 
@@ -506,7 +500,7 @@ mod tests {
                 oracle_duration: 1_u32,
                 dispute_duration: 1_u32,
             },
-            scoring_rule: ScoringRule::Lmsr,
+            scoring_rule: ScoringRule::AmmCdaHybrid,
             status: MarketStatus::Active,
             report: None,
             resolved_outcome: None,
@@ -519,15 +513,9 @@ mod tests {
 
     #[test_case(
         MarketType::Categorical(2),
-        ScoringRule::Lmsr,
+        ScoringRule::AmmCdaHybrid,
         vec![MarketAsset::CategoricalOutcome(0, 0), MarketAsset::CategoricalOutcome(0, 1)];
-        "categorical_market_lmsr"
-    )]
-    #[test_case(
-        MarketType::Categorical(2),
-        ScoringRule::Orderbook,
-        vec![MarketAsset::CategoricalOutcome(0, 0), MarketAsset::CategoricalOutcome(0, 1)];
-        "categorical_market_orderbook"
+        "categorical_market_amm_cda_hybrid"
     )]
     #[test_case(
         MarketType::Categorical(2),
@@ -537,7 +525,7 @@ mod tests {
     )]
     #[test_case(
         MarketType::Scalar(12..=34),
-        ScoringRule::Lmsr,
+        ScoringRule::AmmCdaHybrid,
         vec![
             MarketAsset::ScalarOutcome(0, ScalarPosition::Long),
             MarketAsset::ScalarOutcome(0, ScalarPosition::Short),
@@ -577,17 +565,10 @@ mod tests {
 
     #[test_case(
         MarketType::Categorical(2),
-        ScoringRule::Lmsr,
+        ScoringRule::AmmCdaHybrid,
         OutcomeReport::Categorical(2),
         Some(MarketAsset::CategoricalOutcome(0, 2));
-        "categorical_market_lmsr"
-    )]
-    #[test_case(
-        MarketType::Categorical(2),
-        ScoringRule::Orderbook,
-        OutcomeReport::Categorical(2),
-        Some(MarketAsset::CategoricalOutcome(0, 2));
-        "categorical_market_orderbook"
+        "categorical_market_amm_cda_hybrid"
     )]
     #[test_case(
         MarketType::Categorical(2),
@@ -598,7 +579,7 @@ mod tests {
     )]
     #[test_case(
         MarketType::Scalar(12..=34),
-        ScoringRule::Lmsr,
+        ScoringRule::AmmCdaHybrid,
         OutcomeReport::Scalar(2),
         None;
         "scalar_market"
