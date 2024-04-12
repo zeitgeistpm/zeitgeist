@@ -33,7 +33,7 @@ fn it_allows_to_redeem_shares() {
             base_asset,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, CENT));
@@ -147,7 +147,7 @@ fn scalar_market_correctly_resolves_common(base_asset: BaseAsset, reported_value
         base_asset,
         MarketCreation::Permissionless,
         0..end,
-        ScoringRule::Lmsr,
+        ScoringRule::AmmCdaHybrid,
     );
     assert_ok!(PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(CHARLIE), 0, 100 * BASE));
     assert_ok!(AssetManager::transfer(

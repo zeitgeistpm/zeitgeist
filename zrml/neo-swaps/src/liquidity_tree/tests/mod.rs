@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -18,9 +18,7 @@
 #![cfg(all(feature = "mock", test))]
 
 use crate::{
-    assert_liquidity_tree_state,
-    consts::*,
-    create_b_tree_map,
+    assert_liquidity_tree_state, create_b_tree_map,
     liquidity_tree::{
         traits::liquidity_tree_helper::LiquidityTreeHelper,
         types::{LiquidityTreeError, Node},
@@ -32,6 +30,7 @@ use crate::{
 use alloc::collections::BTreeMap;
 use frame_support::assert_err;
 use sp_runtime::traits::Zero;
+use zeitgeist_primitives::constants::base_multiples::*;
 
 mod deposit_fees;
 mod exit;

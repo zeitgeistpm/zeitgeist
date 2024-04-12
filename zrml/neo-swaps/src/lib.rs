@@ -61,15 +61,16 @@ mod pallet {
     use scale_info::TypeInfo;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
-        DispatchError, DispatchResult, SaturatedConversion,
+        DispatchError, DispatchResult, Perbill, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
+        hybrid_router_api_types::{AmmSoftFail, AmmTrade, ApiError},
         math::{
             checked_ops_res::{CheckedAddRes, CheckedSubRes},
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
-        traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees},
+        traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees, HybridRouterAmmApi},
         types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -100,6 +101,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
     pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>, MaxAssets>;
+    pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -164,8 +166,7 @@ mod pallet {
             external_fee_amount: BalanceOf<T>,
         },
         /// Informant sold a position. `amount_out` is the amount of collateral received by `who`,
-        /// with swap and external fees not yet deducted. The actual amount received is
-        /// `amount_out - swap_fee_amount - external_fee_amount`.
+        /// with swap and external fees already deducted.
         SellExecuted {
             who: T::AccountId,
             market_id: MarketIdOf<T>,
@@ -326,7 +327,7 @@ mod pallet {
             let who = ensure_signed(origin)?;
             let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
-            Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)?;
+            let _ = Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)?;
             Ok(Some(T::WeightInfo::buy(asset_count.into())).into())
         }
 
@@ -370,7 +371,7 @@ mod pallet {
             let who = ensure_signed(origin)?;
             let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
-            Self::do_sell(who, market_id, asset_in, amount_in, min_amount_out)?;
+            let _ = Self::do_sell(who, market_id, asset_in, amount_in, min_amount_out)?;
             Ok(Some(T::WeightInfo::sell(asset_count.into())).into())
         }
 
@@ -547,7 +548,7 @@ mod pallet {
             asset_out: AssetOf<T>,
             amount_in: BalanceOf<T>,
             min_amount_out: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> Result<AmmTradeOf<T>, DispatchError> {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
@@ -596,7 +597,7 @@ mod pallet {
                     swap_fee_amount,
                     external_fee_amount,
                 });
-                Ok(())
+                Ok(AmmTrade { amount_in, amount_out, swap_fee_amount, external_fee_amount })
             })
         }
 
@@ -607,7 +608,7 @@ mod pallet {
             asset_in: AssetOf<T>,
             amount_in: BalanceOf<T>,
             min_amount_out: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> Result<AmmTradeOf<T>, DispatchError> {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
@@ -666,11 +667,16 @@ mod pallet {
                     market_id,
                     asset_in,
                     amount_in,
-                    amount_out,
+                    amount_out: amount_out_minus_fees,
                     swap_fee_amount,
                     external_fee_amount,
                 });
-                Ok(())
+                Ok(AmmTrade {
+                    amount_in,
+                    amount_out: amount_out_minus_fees,
+                    swap_fee_amount,
+                    external_fee_amount,
+                })
             })
         }
 
@@ -845,7 +851,10 @@ mod pallet {
             ensure!(!Pools::<T>::contains_key(market_id), Error::<T>::DuplicatePool);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-            ensure!(market.scoring_rule == ScoringRule::Lmsr, Error::<T>::InvalidTradingMechanism);
+            ensure!(
+                market.scoring_rule == ScoringRule::AmmCdaHybrid,
+                Error::<T>::InvalidTradingMechanism
+            );
             let asset_count_u16: u16 =
                 spot_prices.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
             let asset_count_u32: u32 = asset_count_u16.into();
@@ -990,6 +999,113 @@ mod pallet {
             swap_fee: Self::Balance,
         ) -> DispatchResult {
             Self::do_deploy_pool(who, market_id, amount, spot_prices, swap_fee)
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
+        fn amount_including_fee_surplus(
+            amount: BalanceOf<T>,
+            fee_fractional: BalanceOf<T>,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let fee_divisor = ZeitgeistBase::<BalanceOf<T>>::get()?
+                .checked_sub(&fee_fractional)
+                .ok_or(Error::<T>::Unexpected)?;
+            amount.bdiv(fee_divisor)
+        }
+
+        fn total_fee_fractional(
+            swap_fee: BalanceOf<T>,
+            external_fee_percentage: Perbill,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let external_fee_fractional =
+                external_fee_percentage.mul_floor(ZeitgeistBase::<BalanceOf<T>>::get()?);
+            swap_fee.checked_add_res(&external_fee_fractional)
+        }
+
+        fn match_failure(error: DispatchError) -> ApiError<AmmSoftFail> {
+            let spot_price_too_low: DispatchError =
+                Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceTooLow).into();
+            let spot_price_slipped_too_low: DispatchError =
+                Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow).into();
+            let max_amount_exceeded: DispatchError =
+                Error::<T>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded).into();
+            let min_amount_not_met: DispatchError =
+                Error::<T>::NumericalLimits(NumericalLimitsError::MinAmountNotMet).into();
+            if spot_price_too_low == error
+                || spot_price_slipped_too_low == error
+                || max_amount_exceeded == error
+                || min_amount_not_met == error
+            {
+                ApiError::SoftFailure(AmmSoftFail::Numerical)
+            } else {
+                ApiError::HardFailure(error)
+            }
+        }
+    }
+
+    impl<T: Config> HybridRouterAmmApi for Pallet<T> {
+        type AccountId = T::AccountId;
+        type MarketId = MarketIdOf<T>;
+        type Balance = BalanceOf<T>;
+        type Asset = AssetOf<T>;
+
+        fn pool_exists(market_id: Self::MarketId) -> bool {
+            Pools::<T>::contains_key(market_id)
+        }
+
+        fn get_spot_price(
+            market_id: Self::MarketId,
+            asset: Self::Asset,
+        ) -> Result<Self::Balance, DispatchError> {
+            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            pool.calculate_spot_price(asset)
+        }
+
+        fn calculate_buy_amount_until(
+            market_id: Self::MarketId,
+            asset: Self::Asset,
+            until: Self::Balance,
+        ) -> Result<Self::Balance, DispatchError> {
+            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            let buy_amount = pool.calculate_buy_amount_until(asset, until)?;
+            let total_fee_fractional = Self::total_fee_fractional(
+                pool.swap_fee,
+                T::ExternalFees::fee_percentage(market_id),
+            )?;
+            let buy_amount_plus_fees =
+                Self::amount_including_fee_surplus(buy_amount, total_fee_fractional)?;
+            Ok(buy_amount_plus_fees)
+        }
+
+        fn buy(
+            who: Self::AccountId,
+            market_id: Self::MarketId,
+            asset_out: Self::Asset,
+            amount_in: Self::Balance,
+            min_amount_out: Self::Balance,
+        ) -> Result<AmmTradeOf<T>, ApiError<AmmSoftFail>> {
+            Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)
+                .map_err(Self::match_failure)
+        }
+
+        fn calculate_sell_amount_until(
+            market_id: Self::MarketId,
+            asset: Self::Asset,
+            until: Self::Balance,
+        ) -> Result<Self::Balance, DispatchError> {
+            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            pool.calculate_sell_amount_until(asset, until)
+        }
+
+        fn sell(
+            who: Self::AccountId,
+            market_id: Self::MarketId,
+            asset_out: Self::Asset,
+            amount_in: Self::Balance,
+            min_amount_out: Self::Balance,
+        ) -> Result<AmmTradeOf<T>, ApiError<AmmSoftFail>> {
+            Self::do_sell(who, market_id, asset_out, amount_in, min_amount_out)
+                .map_err(Self::match_failure)
         }
     }
 }
