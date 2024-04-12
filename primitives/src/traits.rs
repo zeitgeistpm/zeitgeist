@@ -28,7 +28,6 @@ mod market_transition_api;
 mod swaps;
 mod weights;
 mod zeitgeist_asset;
-mod zeitgeist_multi_reservable_currency;
 
 pub use complete_set_operations_api::CompleteSetOperationsApi;
 pub use deploy_pool_api::DeployPoolApi;
@@ -42,4 +41,3 @@ pub use market_transition_api::MarketTransitionApi;
 pub use swaps::Swaps;
 pub use weights::CheckedDivPerComponent;
 pub use zeitgeist_asset::*;
-pub use zeitgeist_multi_reservable_currency::ZeitgeistAssetManager;
