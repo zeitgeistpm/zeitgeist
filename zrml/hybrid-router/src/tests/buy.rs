@@ -1113,6 +1113,7 @@ fn buy_skips_fill_order_if_order_not_present_and_places_new_order() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>(MARKET_CREATOR);
+        market.base_asset = BASE_ASSET.try_into().unwrap();
         let required_asset_count = match &market.market_type {
             MarketType::Scalar(_) => panic!("Categorical market type is expected!"),
             MarketType::Categorical(categories) => *categories,
