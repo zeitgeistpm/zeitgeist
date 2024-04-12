@@ -55,7 +55,7 @@ where
         },
         report: None,
         resolved_outcome: None,
-        scoring_rule: ScoringRule::Orderbook,
+        scoring_rule: ScoringRule::AmmCdaHybrid,
         status: MarketStatus::Active,
         bonds: Default::default(),
         early_close: None,

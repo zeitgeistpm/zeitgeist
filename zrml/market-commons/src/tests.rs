@@ -46,7 +46,7 @@ const MARKET_DUMMY: Market<AccountIdTest, Balance, BlockNumber, Moment, BaseAsse
     deadlines: Deadlines { grace_period: 1_u64, oracle_duration: 1_u64, dispute_duration: 1_u64 },
     report: None,
     resolved_outcome: None,
-    scoring_rule: ScoringRule::Lmsr,
+    scoring_rule: ScoringRule::AmmCdaHybrid,
     status: MarketStatus::Disputed,
     bonds: MarketBonds {
         creation: None,

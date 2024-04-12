@@ -220,7 +220,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
             report: None,
             resolved_outcome: None,
             status: MarketStatus::Closed,
-            scoring_rule: ScoringRule::Lmsr,
+            scoring_rule: ScoringRule::AmmCdaHybrid,
             bonds: MarketBonds::default(),
             early_close: None,
         },

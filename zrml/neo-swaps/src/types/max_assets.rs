@@ -22,6 +22,6 @@ pub(crate) struct MaxAssets;
 
 impl Get<u32> for MaxAssets {
     fn get() -> u32 {
-        MAX_ASSETS
+        MAX_ASSETS.into()
     }
 }

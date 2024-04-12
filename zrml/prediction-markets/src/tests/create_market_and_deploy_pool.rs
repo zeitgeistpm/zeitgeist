@@ -74,7 +74,7 @@ fn create_market_and_deploy_pool_works() {
         assert_eq!(market.market_type, market_type);
         assert_eq!(market.period, period);
         assert_eq!(market.deadlines, deadlines);
-        assert_eq!(market.scoring_rule, ScoringRule::Lmsr);
+        assert_eq!(market.scoring_rule, ScoringRule::AmmCdaHybrid);
         assert_eq!(market.status, MarketStatus::Active);
         assert_eq!(market.report, None);
         assert_eq!(market.resolved_outcome, None);

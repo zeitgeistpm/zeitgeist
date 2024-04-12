@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -14,6 +14,8 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
+use sp_runtime::Perbill;
 
 /// Trait for distributing fees collected from trading to external recipients like the treasury.
 pub trait DistributeFees {
@@ -40,4 +42,11 @@ pub trait DistributeFees {
         account: &Self::AccountId,
         amount: Self::Balance,
     ) -> Self::Balance;
+
+    /// Returns the percentage of the fee that is distributed.
+    ///
+    /// # Arguments
+    ///
+    /// - `market_id`: The market on which the fees belong to.
+    fn fee_percentage(market_id: Self::MarketId) -> Perbill;
 }

@@ -39,7 +39,7 @@ fn schedule_early_close_emits_event() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         let market_id = 0;
@@ -80,7 +80,7 @@ fn sudo_schedule_early_close_at_block_works() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
 
         let market_id = 0;
@@ -152,7 +152,7 @@ fn sudo_schedule_early_close_at_timeframe_works() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
 
         let market_id = 0;
@@ -222,7 +222,7 @@ fn schedule_early_close_block_fails_if_early_close_request_too_late() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
 
         run_to_block(end - 1);
@@ -254,7 +254,7 @@ fn schedule_early_close_timestamp_fails_if_early_close_request_too_late() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
 
         run_to_block(end.saturating_div(MILLISECS_PER_BLOCK.into()) - 1);
@@ -283,7 +283,7 @@ fn schedule_early_close_as_market_creator_works() {
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::Court),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
 
         let market_id = 0;

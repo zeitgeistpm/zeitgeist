@@ -30,7 +30,7 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             4..6,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         let market = MarketCommons::market(&0);
@@ -61,7 +61,7 @@ fn reject_errors_if_reject_reason_is_too_long() {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         // make sure it's in status proposed
@@ -89,7 +89,7 @@ fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         // make sure it's in status proposed
@@ -127,7 +127,7 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
             base_asset,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
@@ -199,19 +199,19 @@ fn reject_market_clears_auto_close_blocks() {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             33..66,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         simple_create_categorical_market(
             BaseAsset::Ztg,
             MarketCreation::Advised,
             22..66,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         simple_create_categorical_market(
             BaseAsset::Ztg,
             MarketCreation::Advised,
             22..33,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
@@ -235,7 +235,7 @@ fn reject_market_fails_on_permissionless_market() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         let reject_reason: Vec<u8> =
             vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
@@ -258,7 +258,7 @@ fn reject_market_fails_on_approved_market() {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         assert_ok!(PredictionMarkets::approve_market(
             RuntimeOrigin::signed(ApproveOrigin::get()),

@@ -205,6 +205,11 @@ parameter_types! {
     /// The maximum number of public proposals that can exist at any time.
     pub const MaxProposals: u32 = 100;
 
+    // Hybrid Router parameters
+    pub const HybridRouterPalletId: PalletId = HYBRID_ROUTER_PALLET_ID;
+    /// Maximum number of orders that can be placed in a single trade transaction.
+    pub const MaxOrders: u32 = 100;
+
     // Identity
     /// The amount held on deposit for a registered identity
     pub const BasicDeposit: Balance = deposit(1, 258);

@@ -57,7 +57,7 @@ fuzz_target!(|data: Data| {
             market_creation(data.create_scalar_market_creation),
             MarketType::Scalar(data.create_scalar_market_outcome_range),
             market_dispute_mechanism(data.create_scalar_market_dispute_mechanism),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         let _ = PredictionMarkets::on_initialize(2);
