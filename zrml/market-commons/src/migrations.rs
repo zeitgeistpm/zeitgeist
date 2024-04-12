@@ -175,8 +175,6 @@ where
         let old_market_count = old_markets.len();
         let new_market_count = crate::Markets::<T>::iter().count();
         assert_eq!(old_market_count, new_market_count);
-        let new_market_count = Markets::<T>::iter().count();
-        assert_eq!(old_markets.len(), new_market_count);
         for (market_id, new_market) in crate::Markets::<T>::iter() {
             let old_market = old_markets
                 .get(&market_id)
