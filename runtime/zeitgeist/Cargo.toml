@@ -419,7 +419,7 @@ force-debug = ["sp-debug-derive/force-debug"]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-runtime"
-version = "0.5.1"
+version = "0.5.2"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
