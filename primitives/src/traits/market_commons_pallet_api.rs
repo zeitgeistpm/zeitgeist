@@ -18,7 +18,10 @@
 
 #![allow(clippy::type_complexity)]
 
-use crate::types::{BaseAsset, Market, PoolId};
+use crate::{
+    traits::MarketBuilderTrait,
+    types::{BaseAsset, Market, PoolId},
+};
 use frame_support::{
     dispatch::{fmt::Debug, DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
@@ -36,6 +39,7 @@ pub type MarketOf<T> = Market<
     <T as MarketCommonsPalletApi>::BlockNumber,
     <T as MarketCommonsPalletApi>::Moment,
     BaseAsset,
+    <T as MarketCommonsPalletApi>::MarketId,
 >;
 
 /// Abstraction over storage operations for markets
@@ -79,8 +83,31 @@ pub trait MarketCommonsPalletApi {
     where
         F: FnOnce(&mut MarketOf<Self>) -> DispatchResult;
 
-    /// Pushes a new market into the storage, returning its related auto-incremented ID.
+    /// Add a `market` to the API's list of markets, overwrite its `market_id` field with a new ID
+    /// and return the market's new ID.
+    ///
+    /// Deprecated since v0.5.1. For testing purposes only; use `build_market` in production.
     fn push_market(market: MarketOf<Self>) -> Result<Self::MarketId, DispatchError>;
+
+    /// Equips a market with a market ID, writes the market to storage and then returns the ID and
+    /// the built market.
+    ///
+    /// This function is the only public means by which new IDs are issued. The market's `market_id`
+    /// field is expected to be `None`. If that's not the case, this function will raise an error to
+    /// avoid double-writes, which are always the result of an incorrect issuance process for market
+    /// IDs.
+    fn build_market<U>(
+        market_builder: U,
+    ) -> Result<(Self::MarketId, MarketOf<Self>), DispatchError>
+    where
+        U: MarketBuilderTrait<
+                Self::AccountId,
+                Self::Balance,
+                Self::BlockNumber,
+                Self::Moment,
+                BaseAsset,
+                Self::MarketId,
+            >;
 
     /// Removes a market from the storage.
     fn remove_market(market_id: &Self::MarketId) -> DispatchResult;

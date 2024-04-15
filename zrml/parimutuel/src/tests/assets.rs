@@ -43,7 +43,7 @@ fn created_after_market_activation() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market.clone());
         assert_ok!(Parimutuel::on_activation(&market_id).result);
-        for asset in market.outcome_assets(market_id) {
+        for asset in market.outcome_assets() {
             assert!(<Runtime as Config>::AssetCreator::asset_exists(asset.into()));
         }
     });
@@ -95,10 +95,8 @@ fn destroyed_losing_after_resolution_with_winner() {
         <Runtime as Config>::AssetDestroyer::on_idle(System::block_number(), Weight::MAX);
         assert!(<Runtime as Config>::AssetCreator::asset_exists(winner_asset.into()));
 
-        for asset in market
-            .outcome_assets(market_id)
-            .iter()
-            .filter(|a| Asset::from(**a) != Asset::from(winner_asset))
+        for asset in
+            market.outcome_assets().iter().filter(|a| Asset::from(**a) != Asset::from(winner_asset))
         {
             assert!(
                 !<Runtime as Config>::AssetCreator::asset_exists((*asset).into()),
@@ -157,10 +155,8 @@ fn destroyed_after_resolution_without_winner() {
         <Runtime as Config>::AssetDestroyer::on_idle(System::block_number(), Weight::MAX);
         assert!(<Runtime as Config>::AssetCreator::asset_exists(losing_asset.into()));
 
-        for asset in market
-            .outcome_assets(market_id)
-            .iter()
-            .filter(|a| Asset::from(**a) != Asset::from(losing_asset))
+        for asset in
+            market.outcome_assets().iter().filter(|a| Asset::from(**a) != Asset::from(losing_asset))
         {
             assert!(
                 !<Runtime as Config>::AssetCreator::asset_exists((*asset).into()),

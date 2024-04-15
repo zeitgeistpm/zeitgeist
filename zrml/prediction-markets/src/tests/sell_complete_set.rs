@@ -21,8 +21,7 @@ use test_case::test_case;
 
 // TODO(#1239) MarketDoesNotExist
 
-#[test_case(ScoringRule::Lmsr)]
-#[test_case(ScoringRule::Orderbook)]
+#[test_case(ScoringRule::AmmCdaHybrid)]
 fn sell_complete_set_works(scoring_rule: ScoringRule) {
     let test = |base_asset: BaseAsset| {
         simple_create_categorical_market(
@@ -50,7 +49,7 @@ fn sell_complete_set_works(scoring_rule: ScoringRule) {
         ));
 
         let market = MarketCommons::market(&market_id).unwrap();
-        let assets = market.outcome_assets(market_id);
+        let assets = market.outcome_assets();
         for asset in assets.iter() {
             let bal = AssetManager::free_balance((*asset).into(), &who);
             assert_eq!(bal, expected_amount);
@@ -80,7 +79,7 @@ fn sell_complete_set_fails_on_zero_amount() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         assert_noop!(
             PredictionMarkets::sell_complete_set(RuntimeOrigin::signed(BOB), 0, 0),
@@ -96,7 +95,7 @@ fn sell_complete_set_fails_on_insufficient_share_balance() {
             base_asset,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         let market_id = 0;
         let amount = 2 * CENT;

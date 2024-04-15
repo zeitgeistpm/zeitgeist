@@ -28,6 +28,7 @@ where
     };
 
     zeitgeist_primitives::types::Market {
+        market_id: Default::default(),
         base_asset: BaseAsset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),

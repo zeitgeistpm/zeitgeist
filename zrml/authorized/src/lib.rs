@@ -73,6 +73,7 @@ mod pallet {
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
         BaseAsset,
+        MarketIdOf<T>,
     >;
 
     #[pallet::call]
@@ -371,11 +372,12 @@ where
     use frame_support::traits::Get;
     use sp_runtime::{traits::AccountIdConversion, Perbill};
     use zeitgeist_primitives::types::{
-        BaseAsset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-        MarketStatus, MarketType, ScoringRule,
+        BaseAsset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+        MarketPeriod, MarketStatus, MarketType, ScoringRule,
     };
 
-    zeitgeist_primitives::types::Market {
+    Market {
+        market_id: Default::default(),
         base_asset: BaseAsset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),
@@ -392,7 +394,7 @@ where
         },
         report: None,
         resolved_outcome: None,
-        scoring_rule: ScoringRule::Lmsr,
+        scoring_rule: ScoringRule::AmmCdaHybrid,
         status: MarketStatus::Disputed,
         bonds: MarketBonds::default(),
         early_close: None,

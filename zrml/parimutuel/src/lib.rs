@@ -115,8 +115,14 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
-    pub(crate) type MarketOf<T> =
-        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, BaseAsset>;
+    pub(crate) type MarketOf<T> = Market<
+        AccountIdOf<T>,
+        BalanceOf<T>,
+        BlockNumberFor<T>,
+        MomentOf<T>,
+        BaseAsset,
+        MarketIdOf<T>,
+    >;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -549,7 +555,6 @@ mod pallet {
         }
 
         fn get_assets_to_destroy<F>(
-            market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
             filter: F,
         ) -> BTreeMap<AssetOf<T>, Option<T::AccountId>>
@@ -558,7 +563,7 @@ mod pallet {
         {
             BTreeMap::<AssetOf<T>, Option<T::AccountId>>::from_iter(
                 market
-                    .outcome_assets(*market_id)
+                    .outcome_assets()
                     .into_iter()
                     .filter(|asset| filter(*asset))
                     .map(|asset| (AssetOf::<T>::from(asset), None)),
@@ -580,7 +585,7 @@ mod pallet {
                 }
             };
 
-            for outcome in market.outcome_assets(*market_id) {
+            for outcome in market.outcome_assets() {
                 let admin = Self::pot_account(*market_id);
                 let is_sufficient = true;
                 let min_balance = 1u8;
@@ -610,7 +615,7 @@ mod pallet {
                 }
             };
 
-            let winning_asset_option = market.resolved_outcome_into_asset(*market_id);
+            let winning_asset_option = market.resolved_outcome_into_asset();
             let winning_asset = if let Some(winning_asset) = winning_asset_option {
                 winning_asset
             } else {
@@ -625,11 +630,11 @@ mod pallet {
 
             let outcome_total = T::AssetManager::total_issuance(winning_asset.into());
             let assets_to_destroy = if outcome_total.is_zero() {
-                Self::get_assets_to_destroy(market_id, &market, |asset| {
+                Self::get_assets_to_destroy(&market, |asset| {
                     T::AssetCreator::total_issuance(asset.into()).is_zero()
                 })
             } else {
-                Self::get_assets_to_destroy(market_id, &market, |asset| asset != winning_asset)
+                Self::get_assets_to_destroy(&market, |asset| asset != winning_asset)
             };
 
             let destroy_result =

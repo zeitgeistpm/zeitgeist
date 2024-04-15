@@ -31,7 +31,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_blocknumb
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             now..end,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         run_blocks(3);
         let market_id = 0;
@@ -68,7 +68,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr
+            ScoringRule::AmmCdaHybrid
         ));
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
@@ -117,7 +117,7 @@ fn admin_move_market_to_closed_fails_if_market_is_not_active(market_status: Mark
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         let market_id = 0;
         assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
@@ -149,7 +149,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
@@ -162,7 +162,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
         assert_ok!(PredictionMarkets::admin_move_market_to_closed(
             RuntimeOrigin::signed(CloseOrigin::get()),

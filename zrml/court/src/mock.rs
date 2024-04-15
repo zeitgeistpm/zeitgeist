@@ -38,10 +38,10 @@ use zeitgeist_primitives::{
         MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinJurorStake, MinimumPeriod,
         RequestInterval, VotePeriod, BASE,
     },
-    traits::DisputeResolutionApi,
+    traits::{DisputeResolutionApi, MarketOfDisputeResolutionApi},
     types::{
-        AccountIdTest, Balance, BaseAsset, BlockNumber, BlockTest, Hash, Index, Market, MarketId,
-        Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
+        UncheckedExtrinsicTest,
     },
 };
 
@@ -96,13 +96,7 @@ impl DisputeResolutionApi for MockResolution {
 
     fn resolve(
         _market_id: &Self::MarketId,
-        _market: &Market<
-            Self::AccountId,
-            Self::Balance,
-            Self::BlockNumber,
-            Self::Moment,
-            BaseAsset,
-        >,
+        _market: &MarketOfDisputeResolutionApi<Self>,
     ) -> Result<Weight, DispatchError> {
         Ok(Weight::zero())
     }

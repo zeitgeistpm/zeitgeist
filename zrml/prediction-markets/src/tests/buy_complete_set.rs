@@ -26,7 +26,7 @@ fn buy_complete_set_works() {
             base_asset,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         let market_id = 0;
@@ -40,7 +40,7 @@ fn buy_complete_set_works() {
 
         let market = MarketCommons::market(&market_id).unwrap();
 
-        let assets = market.outcome_assets(market_id);
+        let assets = market.outcome_assets();
         for asset in assets.iter() {
             let bal = AssetManager::free_balance((*asset).into(), &who);
             assert_eq!(bal, amount);
@@ -73,7 +73,7 @@ fn buy_complete_fails_on_zero_amount() {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         assert_noop!(
             PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, 0),
@@ -89,7 +89,7 @@ fn buy_complete_set_fails_on_insufficient_balance() {
             base_asset,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         assert_noop!(
             PredictionMarkets::buy_complete_set(RuntimeOrigin::signed(BOB), 0, 10000 * BASE),
@@ -119,7 +119,7 @@ fn buy_complete_set_fails_if_market_is_not_active(status: MarketStatus) {
             BaseAsset::Ztg,
             MarketCreation::Permissionless,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         let market_id = 0;
         assert_ok!(MarketCommons::mutate_market(&market_id, |market| {

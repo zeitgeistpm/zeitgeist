@@ -25,6 +25,7 @@ type MarketOf<T> = zeitgeist_primitives::types::Market<
     <T as frame_system::Config>::BlockNumber,
     MomentOf<T>,
     zeitgeist_primitives::types::BaseAsset,
+    MarketIdOf<T>,
 >;
 
 pub(crate) fn market_mock<T>() -> MarketOf<T>
@@ -36,6 +37,7 @@ where
     use zeitgeist_primitives::types::ScoringRule;
 
     zeitgeist_primitives::types::Market {
+        market_id: Default::default(),
         base_asset: zeitgeist_primitives::types::BaseAsset::Ztg,
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),
@@ -54,7 +56,7 @@ where
         },
         report: None,
         resolved_outcome: None,
-        scoring_rule: ScoringRule::Lmsr,
+        scoring_rule: ScoringRule::AmmCdaHybrid,
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
         bonds: Default::default(),
         early_close: None,

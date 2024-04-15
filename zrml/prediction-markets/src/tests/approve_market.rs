@@ -33,7 +33,7 @@ fn fails_if_market_status_is_not_proposed(market_status: MarketStatus) {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         let market_id = 0;
         assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
@@ -57,7 +57,7 @@ fn it_allows_advisory_origin_to_approve_markets() {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         let market = MarketCommons::market(&0);
@@ -87,7 +87,7 @@ fn market_with_edit_request_cannot_be_approved() {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             0..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
 
         // make sure it's in status proposed
@@ -126,7 +126,7 @@ fn approve_market_correctly_unreserves_advisory_bond() {
             MarketCreation::Advised,
             MarketType::Categorical(2),
             Some(MarketDisputeMechanism::SimpleDisputes),
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         ));
         let market_id = 0;
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -160,7 +160,7 @@ fn does_trigger_market_transition_api() {
             BaseAsset::Ztg,
             MarketCreation::Advised,
             1..2,
-            ScoringRule::Lmsr,
+            ScoringRule::AmmCdaHybrid,
         );
         assert_ok!(PredictionMarkets::approve_market(
             RuntimeOrigin::signed(ApproveOrigin::get()),

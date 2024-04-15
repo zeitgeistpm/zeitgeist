@@ -168,7 +168,7 @@ fn deploy_pool_works_with_scalar_marktes() {
 fn deploy_pool_fails_on_incorrect_vec_len() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::Lmsr);
+            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::AmmCdaHybrid);
         assert_noop!(
             NeoSwaps::deploy_pool(RuntimeOrigin::signed(ALICE), market_id, _10, vec![_1_3], CENT),
             Error::<Runtime>::IncorrectVecLen
@@ -194,7 +194,7 @@ fn deploy_pool_fails_on_market_not_found() {
 fn deploy_pool_fails_on_inactive_market(market_status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::Lmsr);
+            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::AmmCdaHybrid);
         MarketCommons::mutate_market(&market_id, |market| {
             market.status = market_status;
             Ok(())
@@ -237,7 +237,6 @@ fn deploy_pool_fails_on_duplicate_pool() {
     });
 }
 
-#[test_case(ScoringRule::Orderbook)]
 #[test_case(ScoringRule::Parimutuel)]
 fn deploy_pool_fails_on_invalid_trading_mechanism(scoring_rule: ScoringRule) {
     ExtBuilder::default().build().execute_with(|| {
@@ -262,8 +261,8 @@ fn deploy_pool_fails_on_asset_count_above_max() {
         let market_id = create_market(
             ALICE,
             BASE_ASSET,
-            MarketType::Categorical(category_count as u16),
-            ScoringRule::Lmsr,
+            MarketType::Categorical(category_count),
+            ScoringRule::AmmCdaHybrid,
         );
         let liquidity = _10;
         assert_ok!(PredictionMarkets::buy_complete_set(
@@ -292,7 +291,7 @@ fn deploy_pool_fails_on_asset_count_above_max() {
 fn deploy_pool_fails_on_swap_fee_below_min() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::Lmsr);
+            create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::AmmCdaHybrid);
         let liquidity = _10;
         assert_ok!(PredictionMarkets::buy_complete_set(
             RuntimeOrigin::signed(ALICE),
@@ -316,7 +315,7 @@ fn deploy_pool_fails_on_swap_fee_below_min() {
 fn deploy_pool_fails_on_swap_fee_above_max() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::Lmsr);
+            create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::AmmCdaHybrid);
         let liquidity = _10;
         assert_ok!(PredictionMarkets::buy_complete_set(
             RuntimeOrigin::signed(ALICE),
@@ -341,7 +340,7 @@ fn deploy_pool_fails_on_swap_fee_above_max() {
 fn deploy_pool_fails_on_invalid_spot_prices(spot_prices: Vec<BalanceOf<Runtime>>) {
     ExtBuilder::default().build().execute_with(|| {
         let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::Lmsr);
+            create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::AmmCdaHybrid);
         let liquidity = _10;
         assert_ok!(PredictionMarkets::buy_complete_set(
             RuntimeOrigin::signed(ALICE),
@@ -365,7 +364,7 @@ fn deploy_pool_fails_on_invalid_spot_prices(spot_prices: Vec<BalanceOf<Runtime>>
 fn deploy_pool_fails_on_spot_price_below_min() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::Lmsr);
+            create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::AmmCdaHybrid);
         let liquidity = _10;
         assert_ok!(PredictionMarkets::buy_complete_set(
             RuntimeOrigin::signed(ALICE),
@@ -390,7 +389,7 @@ fn deploy_pool_fails_on_spot_price_below_min() {
 fn deploy_pool_fails_on_spot_price_above_max() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::Lmsr);
+            create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::AmmCdaHybrid);
         let liquidity = _10;
         assert_ok!(PredictionMarkets::buy_complete_set(
             RuntimeOrigin::signed(ALICE),
@@ -415,7 +414,7 @@ fn deploy_pool_fails_on_spot_price_above_max() {
 fn deploy_pool_fails_on_insufficient_funds() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::Lmsr);
+            create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::AmmCdaHybrid);
         let liquidity = _10;
         assert_ok!(PredictionMarkets::buy_complete_set(
             RuntimeOrigin::signed(ALICE),
@@ -439,7 +438,7 @@ fn deploy_pool_fails_on_insufficient_funds() {
 fn deploy_pool_fails_on_liquidity_too_low() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::Lmsr);
+            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::AmmCdaHybrid);
         let amount = _1_2;
         assert_ok!(PredictionMarkets::buy_complete_set(
             RuntimeOrigin::signed(ALICE),

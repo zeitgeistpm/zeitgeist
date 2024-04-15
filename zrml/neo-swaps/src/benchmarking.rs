@@ -19,7 +19,6 @@
 
 use super::*;
 use crate::{
-    consts::*,
     liquidity_tree::{traits::LiquidityTreeHelper, types::LiquidityTree},
     traits::{liquidity_shares_manager::LiquiditySharesManager, pool_operations::PoolOperations},
     AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools, MIN_SPOT_PRICE,
@@ -34,7 +33,7 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::Get, Perbill, SaturatedConversion};
 use zeitgeist_primitives::{
-    constants::CENT,
+    constants::{base_multiples::*, CENT},
     math::fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
     traits::CompleteSetOperationsApi,
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
@@ -181,6 +180,7 @@ where
     T: Config,
 {
     let market = Market {
+        market_id: 0u8.into(),
         base_asset: base_asset.try_into().unwrap(),
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),
@@ -190,7 +190,7 @@ where
         market_type: MarketType::Categorical(asset_count),
         period: MarketPeriod::Block(0u32.into()..1u32.into()),
         deadlines: Default::default(),
-        scoring_rule: ScoringRule::Lmsr,
+        scoring_rule: ScoringRule::AmmCdaHybrid,
         status: MarketStatus::Active,
         report: None,
         resolved_outcome: None,
@@ -198,8 +198,7 @@ where
         bonds: Default::default(),
         early_close: None,
     };
-    let maybe_market_id = T::MarketCommons::push_market(market);
-    maybe_market_id.unwrap()
+    T::MarketCommons::push_market(market).unwrap()
 }
 
 fn create_spot_prices<T: Config>(asset_count: u16) -> Vec<BalanceOf<T>> {

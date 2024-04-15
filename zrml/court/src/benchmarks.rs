@@ -54,6 +54,7 @@ where
     T: Config,
 {
     Market {
+        market_id: 0u8.into(),
         base_asset: BaseAsset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),
@@ -77,7 +78,7 @@ where
         }),
         resolved_outcome: None,
         status: MarketStatus::Disputed,
-        scoring_rule: ScoringRule::Lmsr,
+        scoring_rule: ScoringRule::AmmCdaHybrid,
         bonds: MarketBonds {
             creation: None,
             oracle: None,
