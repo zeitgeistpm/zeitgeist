@@ -19,11 +19,11 @@ pallet-contracts = { workspace = true }
 pallet-contracts-primitives = { workspace = true }
 pallet-democracy = { workspace = true }
 pallet-identity = { workspace = true }
+pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-membership = { workspace = true }
 pallet-multisig = { workspace = true }
 pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
-pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-scheduler = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-transaction-payment = { workspace = true }
