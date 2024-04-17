@@ -86,7 +86,7 @@ substrate-prometheus-endpoint = { workspace = true, optional = true }
 # Polkadot
 
 polkadot-cli = { workspace = true, optional = true }
-polkadot-parachain = { workspace = true, features = ["default"], optional = true }
+polkadot-parachain-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-service = { workspace = true, optional = true }
 polkadot-test-service = { workspace = true, optional = true }
@@ -94,9 +94,9 @@ polkadot-test-service = { workspace = true, optional = true }
 # Standalone
 
 sc-consensus-aura = { workspace = true }
-sc-finality-grandpa = { workspace = true }
+sc-consensus-grandpa = { workspace = true }
 sp-consensus-aura = { workspace = true }
-sp-finality-grandpa = { workspace = true, features = ["default"] }
+sp-consensus-grandpa = { workspace = true, features = ["default"] }
 
 # Utility
 cfg-if = { workspace = true }
@@ -158,7 +158,7 @@ parachain = [
     # Polkadot
 
     "polkadot-cli",
-    "polkadot-parachain",
+    "polkadot-parachain-primitives",
     "polkadot-primitives",
     "polkadot-service",
     "polkadot-test-service",

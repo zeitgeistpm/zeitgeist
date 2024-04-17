@@ -22,7 +22,7 @@ pallet-multisig = { workspace = true }
 pallet-parachain-staking = { workspace = true, optional = true }
 pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
-pallet-randomness-collective-flip = { workspace = true }
+pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-scheduler = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-transaction-payment = { workspace = true }
@@ -66,7 +66,7 @@ std = [
     "pallet-multisig/std",
     "pallet-preimage/std",
     "pallet-proxy/std",
-    "pallet-randomness-collective-flip/std",
+    "pallet-insecure-randomness-collective-flip/std",
     "pallet-scheduler/std",
     "pallet-timestamp/std",
     "pallet-transaction-payment-rpc-runtime-api/std",

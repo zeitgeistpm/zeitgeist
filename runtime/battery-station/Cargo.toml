@@ -23,7 +23,7 @@ pallet-membership = { workspace = true }
 pallet-multisig = { workspace = true }
 pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
-pallet-randomness-collective-flip = { workspace = true }
+pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-scheduler = { workspace = true }
 pallet-sudo = { workspace = true }
 pallet-timestamp = { workspace = true }
@@ -79,14 +79,14 @@ session-keys-primitives = { workspace = true, optional = true }
 
 # Polkadot
 
-polkadot-parachain = { workspace = true, optional = true }
+polkadot-parachain-primitives = { workspace = true, optional = true }
 
 # Standalone
 
 pallet-aura = { workspace = true }
 pallet-grandpa = { workspace = true }
 sp-consensus-aura = { workspace = true }
-sp-finality-grandpa = { workspace = true }
+sp-consensus-grandpa = { workspace = true }
 
 # Utility
 cfg-if = { workspace = true }
@@ -129,7 +129,7 @@ zrml-swaps-runtime-api = { workspace = true }
 [dev-dependencies]
 sp-io = { workspace = true, features = ["default"] }
 test-case = { workspace = true }
-xcm-emulator = { workspace = true }
+xcm-simulator = { workspace = true }
 
 [features]
 default = ["std"]
@@ -153,7 +153,7 @@ parachain = [
     "pallet-author-mapping",
     "pallet-author-slot-filter",
     "pallet-parachain-staking",
-    "polkadot-parachain",
+    "polkadot-parachain-primitives",
     "session-keys-primitives",
 
     # XCM
@@ -250,7 +250,7 @@ std = [
     "pallet-multisig/std",
     "pallet-preimage/std",
     "pallet-proxy/std",
-    "pallet-randomness-collective-flip/std",
+    "pallet-insecure-randomness-collective-flip/std",
     "pallet-scheduler/std",
     "pallet-sudo/std",
     "pallet-timestamp/std",
@@ -304,14 +304,14 @@ std = [
     # Polkadot
 
     "pallet-xcm?/std",
-    "polkadot-parachain?/std",
+    "polkadot-parachain-primitives?/std",
 
     # Standalone
 
     "pallet-aura/std",
     "pallet-grandpa/std",
     "sp-consensus-aura/std",
-    "sp-finality-grandpa/std",
+    "sp-consensus-grandpa/std",
 
     # XCM
 
@@ -355,7 +355,7 @@ try-runtime = [
     "frame-system/try-runtime",
     "frame-support/try-runtime",
     "pallet-timestamp/try-runtime",
-    "pallet-randomness-collective-flip/try-runtime",
+    "pallet-insecure-randomness-collective-flip/try-runtime",
     "pallet-scheduler/try-runtime",
     "pallet-preimage/try-runtime",
 
