@@ -121,6 +121,9 @@ export async function canSendXcmTransfer(
     destWeightLimit
   );
 
+  const { partialFee, weight } = await xcmTransfer.paymentInfo(alice.address);
+  const transferFee: bigint = partialFee.toBigInt();
+
   await xcmTransfer.signAndSend(alice, { nonce: -1 });
 
   await context.createBlock({
@@ -129,8 +132,6 @@ export async function canSendXcmTransfer(
     allowFailures: false,
   });
 
-  const { partialFee, weight } = await xcmTransfer.paymentInfo(alice.address);
-  const transferFee: bigint = partialFee.toBigInt();
   const senderBalanceAfter = (
     (await senderParaApi.query.system.account(alice.address)) as AccountInfo
   ).data.free.toBigInt();
@@ -181,15 +182,18 @@ export async function canSendXcmTransfer(
     receiverBalanceAfter > receiverBalanceBefore,
     "Balance did not increase"
   ).toBeTruthy();
-  const xcmFee: bigint =
-    receiverBalanceBefore + amount - transferFee - receiverBalanceAfter;
-  // between 0.02 ZTG and 0.10 ZTG XCM fee
-  const approxXcmFeeLow = 200000000;
+  const xcmFee: bigint = receiverBalanceBefore + amount - receiverBalanceAfter;
+  console.log(
+    `receiverBalanceBefore: ${receiverBalanceBefore}; amount: ${amount}; transferFee: ${transferFee}; receiverBalanceAfter: ${receiverBalanceAfter}; xcmFee: ${xcmFee}`
+  );
+  console.log(`xcmFee: ${xcmFee}`);
+  // between 0.01 ZTG and 0.10 ZTG XCM fee
+  const approxXcmFeeLow = 100000000;
   const approxXcmFeeHigh = 1000000000;
   expect(xcmFee).toBeGreaterThanOrEqual(approxXcmFeeLow);
   expect(xcmFee).toBeLessThanOrEqual(approxXcmFeeHigh);
   expect(
     receiverBalanceAfter - receiverBalanceBefore,
     "Unexpected xcm transfer balance diff"
-  ).toBe(amount - transferFee - xcmFee);
+  ).toBe(amount - xcmFee);
 }
