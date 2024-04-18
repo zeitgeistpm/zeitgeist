@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::pallet::*;
+use frame_support::traits::tokens::{Fortitude, Preservation, Provenance};
 
 // Supertrait of Create and Destroy
 impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
@@ -26,23 +27,44 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
         route_call!(asset, total_issuance, total_issuance,).unwrap_or(Zero::zero())
     }
 
+    fn active_issuance(asset: Self::AssetId) -> Self::Balance {
+        route_call!(asset, total_issuance, active_issuance,).unwrap_or(Zero::zero())
+    }
+
     fn minimum_balance(asset: Self::AssetId) -> Self::Balance {
         route_call!(asset, minimum_balance, minimum_balance,).unwrap_or(Zero::zero())
     }
 
     fn balance(asset: Self::AssetId, who: &T::AccountId) -> Self::Balance {
-        route_call!(asset, total_balance, balance, who).unwrap_or(Zero::zero())
+        route_call!(asset, free_balance, balance, who).unwrap_or(Zero::zero())
+    }
+
+    fn total_balance(asset: Self::AssetId, who: &T::AccountId) -> Self::Balance {
+        route_call!(asset, total_balance, total_balance, who).unwrap_or(Zero::zero())
     }
 
     fn reducible_balance(
         asset: Self::AssetId,
         who: &T::AccountId,
-        keep_alive: bool,
+        preservation: Preservation,
+        force: Fortitude,
     ) -> Self::Balance {
         if T::CurrencyType::try_from(asset).is_ok() {
-            <Self as MultiCurrency<T::AccountId>>::free_balance(asset, who)
+            let reducible = <Self as MultiCurrency<T::AccountId>>::free_balance(asset, who);
+
+            match force {
+                Fortitude::Polite => match preservation {
+                    Preservation::Expendable => reducible,
+                    Preservation::Protect | Preservation::Preserve => {
+                        let min_balance =
+                            <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
+                        reducible.saturating_sub(min_balance)
+                    }
+                },
+                Fortitude::Force => reducible,
+            }
         } else {
-            only_asset!(asset, Zero::zero(), Inspect, reducible_balance, who, keep_alive)
+            only_asset!(asset, Zero::zero(), Inspect, reducible_balance, who, preservation, force)
         }
     }
 
@@ -50,7 +72,7 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
         asset: Self::AssetId,
         who: &T::AccountId,
         amount: Self::Balance,
-        mint: bool,
+        provenance: Provenance,
     ) -> DepositConsequence {
         if T::CurrencyType::try_from(asset).is_err() {
             return only_asset!(
@@ -60,7 +82,7 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
                 can_deposit,
                 who,
                 amount,
-                mint
+                provenance
             );
         }
 
@@ -94,7 +116,7 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
             <Self as MultiCurrency<T::AccountId>>::ensure_can_withdraw(asset, who, amount);
 
         if let Err(_e) = can_withdraw {
-            return WithdrawConsequence::NoFunds;
+            return WithdrawConsequence::BalanceLow;
         }
 
         let total_balance = <Self as MultiCurrency<T::AccountId>>::total_balance(asset, who);

@@ -16,15 +16,26 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::pallet::*;
-use frame_support::traits::tokens::fungibles::Unbalanced;
+use frame_support::traits::tokens::{
+    fungibles::{Dust, Unbalanced},
+    Fortitude, Precision, Preservation,
+};
 
 impl<T: Config> Unbalanced<T::AccountId> for Pallet<T> {
-    fn set_balance(
+    fn handle_raw_dust(asset: Self::AssetId, amount: Self::Balance) {
+        route_call_with_trait!(asset, Unbalanced, handle_raw_dust, amount)?
+    }
+
+    fn handle_dust(dust: Dust<T::AccountId, Self>) {
+        unimplemented!();
+    }
+
+    fn write_balance(
         asset: Self::AssetId,
         who: &T::AccountId,
         amount: Self::Balance,
-    ) -> DispatchResult {
-        route_call_with_trait!(asset, Unbalanced, set_balance, who, amount)?
+    ) -> Result<Option<Self::Balance>, DispatchError> {
+        route_call_with_trait!(asset, Unbalanced, write_balance, who, amount)?
     }
 
     fn set_total_issuance(asset: Self::AssetId, amount: Self::Balance) {
@@ -35,33 +46,36 @@ impl<T: Config> Unbalanced<T::AccountId> for Pallet<T> {
         asset: Self::AssetId,
         who: &T::AccountId,
         amount: Self::Balance,
+        precision: Precision,
+        preservation: Preservation,
+        force: Fortitude,
     ) -> Result<Self::Balance, DispatchError> {
-        route_call_with_trait!(asset, Unbalanced, decrease_balance, who, amount)?
-    }
-
-    fn decrease_balance_at_most(
-        asset: Self::AssetId,
-        who: &T::AccountId,
-        amount: Self::Balance,
-    ) -> Self::Balance {
-        route_call_with_trait!(asset, Unbalanced, decrease_balance_at_most, who, amount)
-            .unwrap_or(Zero::zero())
+        route_call_with_trait!(
+            asset,
+            Unbalanced,
+            decrease_balance,
+            who,
+            amount,
+            precision,
+            preservation,
+            force
+        )?
     }
 
     fn increase_balance(
         asset: Self::AssetId,
         who: &T::AccountId,
         amount: Self::Balance,
+        precision: Precision,
     ) -> Result<Self::Balance, DispatchError> {
-        route_call_with_trait!(asset, Unbalanced, increase_balance, who, amount)?
+        route_call_with_trait!(asset, Unbalanced, increase_balance, who, amount, precision)?
     }
 
-    fn increase_balance_at_most(
-        asset: Self::AssetId,
-        who: &T::AccountId,
-        amount: Self::Balance,
-    ) -> Self::Balance {
-        route_call_with_trait!(asset, Unbalanced, increase_balance_at_most, who, amount)
-            .unwrap_or(Zero::zero())
+    fn deactivate(asset: Self::AssetId, amount: Self::Balance) {
+        route_call_with_trait!(asset, Unbalanced, deactivate, amount)?
+    }
+
+    fn reactivate(asset: Self::AssetId, amount: Self::Balance) {
+        route_call_with_trait!(asset, Unbalanced, reactivate, amount)?
     }
 }

@@ -123,3 +123,8 @@ fn routes_currencies_correctly() {
         assert_eq!(AssetRouter::total_issuance(MARKET_ASSET), 0);
     });
 }
+
+#[test]
+fn new_unbalanced_tests() {
+    unimplemented!();
+}
