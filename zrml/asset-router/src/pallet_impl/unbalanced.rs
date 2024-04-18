@@ -16,18 +16,34 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::pallet::*;
-use frame_support::traits::tokens::{
-    fungibles::{Dust, Unbalanced},
-    Fortitude, Precision, Preservation,
-};
+use frame_support::traits::tokens::fungibles::{Dust, Unbalanced};
 
 impl<T: Config> Unbalanced<T::AccountId> for Pallet<T> {
     fn handle_raw_dust(asset: Self::AssetId, amount: Self::Balance) {
-        route_call_with_trait!(asset, Unbalanced, handle_raw_dust, amount)?
+        let _ = route_call_with_trait!(asset, Unbalanced, handle_raw_dust, amount);
     }
 
     fn handle_dust(dust: Dust<T::AccountId, Self>) {
-        unimplemented!();
+        let Dust(currency_id, amount) = dust;
+
+        if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
+            // Route "pre new asset system" market assets to `CurrencyType`
+            if T::MarketAssets::asset_exists(asset) {
+                T::MarketAssets::handle_dust(Dust(asset, amount));
+            } else {
+                if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
+                    T::Currencies::handle_dust(Dust(currency, amount));
+                } else {
+                    T::MarketAssets::handle_dust(Dust(asset, amount));
+                }
+            }
+        } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
+            T::CampaignAssets::handle_dust(Dust(asset, amount));
+        } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
+            T::CustomAssets::handle_dust(Dust(asset, amount));
+        } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
+            T::Currencies::handle_dust(Dust(currency, amount));
+        }
     }
 
     fn write_balance(
@@ -72,10 +88,10 @@ impl<T: Config> Unbalanced<T::AccountId> for Pallet<T> {
     }
 
     fn deactivate(asset: Self::AssetId, amount: Self::Balance) {
-        route_call_with_trait!(asset, Unbalanced, deactivate, amount)?
+        let _ = route_call_with_trait!(asset, Unbalanced, deactivate, amount);
     }
 
     fn reactivate(asset: Self::AssetId, amount: Self::Balance) {
-        route_call_with_trait!(asset, Unbalanced, reactivate, amount)?
+        let _ = route_call_with_trait!(asset, Unbalanced, reactivate, amount);
     }
 }

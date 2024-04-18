@@ -16,7 +16,6 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::pallet::*;
-use frame_support::traits::tokens::{Fortitude, Preservation, Provenance};
 
 // Supertrait of Create and Destroy
 impl<T: Config> Inspect<T::AccountId> for Pallet<T> {

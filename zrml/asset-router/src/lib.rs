@@ -44,7 +44,8 @@ pub mod pallet {
         traits::{
             tokens::{
                 fungibles::{Create, Destroy, Inspect, Mutate, Unbalanced},
-                DepositConsequence, WithdrawConsequence,
+                DepositConsequence, Fortitude, Precision, Preservation, Provenance,
+                WithdrawConsequence,
             },
             BalanceStatus as Status, ConstU32,
         },
@@ -70,7 +71,6 @@ pub mod pallet {
         DispatchError, FixedPointOperand, SaturatedConversion,
     };
     use zeitgeist_macros::unreachable_non_terminating;
-    pub(crate) use zeitgeist_primitives::traits::CheckedDivPerComponent;
 
     pub(crate) const LOG_TARGET: &str = "runtime::asset-router";
     pub(crate) const MAX_ASSET_DESTRUCTIONS_PER_BLOCK: u8 = 128;
@@ -216,6 +216,8 @@ pub mod pallet {
         UnknownAsset,
         /// Operation is not supported for given asset
         Unsupported,
+        /// Only a partial amount was deposited. Indicates how much was deposited.
+        DepositOnlyPartial(u128),
     }
 
     #[pallet::pallet]
