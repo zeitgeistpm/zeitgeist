@@ -24,7 +24,7 @@ orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
-pallet-randomness-collective-flip = { workspace = true, optional = true }
+pallet-insecure-randomness-collective-flip = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
 pallet-treasury = { workspace = true, optional = true }
 sp-api = { workspace = true, optional = true }
@@ -47,7 +47,7 @@ mock = [
     "orml-tokens/default",
     "pallet-assets/default",
     "pallet-balances/default",
-    "pallet-randomness-collective-flip/default",
+    "pallet-insecure-randomness-collective-flip/default",
     "pallet-timestamp/default",
     "pallet-treasury/default",
     "serde/default",
