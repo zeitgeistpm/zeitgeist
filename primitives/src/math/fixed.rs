@@ -31,11 +31,12 @@ use alloc::{
 };
 use core::{cmp::Ordering, convert::TryFrom, marker::PhantomData};
 use fixed::{traits::Fixed, ParseFixedError};
-use frame_support::{dispatch::DispatchError, ensure};
+use frame_support::ensure;
 use sp_arithmetic::{
     traits::{AtLeast32BitUnsigned, Zero},
     ArithmeticError,
 };
+use sp_runtime::DispatchError;
 
 /// Trait for safely obtaining constants converted to generic types in a Substrate context.
 pub trait BaseProvider<T> {
