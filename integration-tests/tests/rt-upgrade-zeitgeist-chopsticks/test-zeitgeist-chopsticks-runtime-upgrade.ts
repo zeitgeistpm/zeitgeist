@@ -74,7 +74,7 @@ describeSuite({
       const moonwallContext = await MoonwallContext.getContext();
       log(moonwallContext.rtUpgradePath);
 
-      await context.upgradeRuntime();
+      await context.upgradeRuntime("ZeitgeistPara");
 
       const rtafter = (
         zeitgeistParaApi.consts.system.version as unknown as RuntimeVersion

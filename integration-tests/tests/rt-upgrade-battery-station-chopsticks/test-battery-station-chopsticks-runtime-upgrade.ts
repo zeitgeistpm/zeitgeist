@@ -74,7 +74,7 @@ describeSuite({
       const moonwallContext = await MoonwallContext.getContext();
       log(moonwallContext.rtUpgradePath);
 
-      await context.upgradeRuntime();
+      await context.upgradeRuntime("BatteryStationPara");
 
       const rtafter = (
         batteryStationParaApi.consts.system.version as unknown as RuntimeVersion
