@@ -18,6 +18,7 @@
 #![cfg(test)]
 
 use super::*;
+use crate::*;
 use frame_support::traits::tokens::fungibles::Inspect;
 
 fn test_helper(asset: Assets, initial_amount: <Runtime as crate::Config>::Balance) {
@@ -27,14 +28,20 @@ fn test_helper(asset: Assets, initial_amount: <Runtime as crate::Config>::Balanc
         initial_amount
     ));
     assert!(AssetRouter::asset_exists(asset));
-    assert_eq!(AssetRouter::total_issuance(asset), initial_amount);
+    assert_eq!(<AssetRouter as Inspect<AccountId>>::total_issuance(asset), initial_amount);
     assert_eq!(AssetRouter::balance(asset, &ALICE), initial_amount);
-    assert_eq!(AssetRouter::reducible_balance(asset, &ALICE, false), initial_amount);
+    assert_eq!(
+        AssetRouter::reducible_balance(asset, &ALICE, Preservation::Preserve, Fortitude::Polite),
+        initial_amount
+    );
     assert_eq!(
         AssetRouter::can_withdraw(asset, &ALICE, initial_amount),
         WithdrawConsequence::ReducedToZero(0)
     );
-    assert_eq!(AssetRouter::can_deposit(asset, &ALICE, 1, true), DepositConsequence::Success);
+    assert_eq!(
+        AssetRouter::can_deposit(asset, &ALICE, 1, Provenance::Minted),
+        DepositConsequence::Success
+    );
 }
 
 #[test]
@@ -97,8 +104,14 @@ fn routes_market_assets_correctly() {
 #[test]
 fn routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_eq!(AssetRouter::minimum_balance(CURRENCY), CURRENCY_MIN_BALANCE);
-        assert_eq!(AssetRouter::minimum_balance(CURRENCY_OLD_OUTCOME), CURRENCY_MIN_BALANCE);
+        assert_eq!(
+            <AssetRouter as MultiCurrency<AccountId>>::minimum_balance(CURRENCY),
+            CURRENCY_MIN_BALANCE
+        );
+        assert_eq!(
+            <AssetRouter as MultiCurrency<AccountId>>::minimum_balance(CURRENCY_OLD_OUTCOME),
+            CURRENCY_MIN_BALANCE
+        );
 
         test_helper(CURRENCY, CURRENCY_INITIAL_AMOUNT);
         test_helper(CURRENCY_OLD_OUTCOME, CURRENCY_INITIAL_AMOUNT);

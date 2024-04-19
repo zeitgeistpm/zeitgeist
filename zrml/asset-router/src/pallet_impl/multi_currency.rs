@@ -144,11 +144,7 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
         amount: Self::Balance,
     ) -> DispatchResult {
         let eval_fungible_result = |b: Self::Balance| {
-            if b != amount {
-                Err(Error::<T>::DepositOnlyPartial(b.saturated_into()).into())
-            } else {
-                Ok(())
-            }
+            if b != amount { Err(Error::<T>::DepositOnlyPartial.into()) } else { Ok(()) }
         };
 
         if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {

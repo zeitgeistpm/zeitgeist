@@ -216,8 +216,8 @@ pub mod pallet {
         UnknownAsset,
         /// Operation is not supported for given asset
         Unsupported,
-        /// Only a partial amount was deposited. Indicates how much was deposited.
-        DepositOnlyPartial(u128),
+        /// Only a partial amount was deposited
+        DepositOnlyPartial,
     }
 
     #[pallet::pallet]
