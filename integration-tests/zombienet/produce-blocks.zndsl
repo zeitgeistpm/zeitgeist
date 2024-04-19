@@ -1,3 +1,7 @@
+Description: Produce blocks test
+Network: ./produce-blocks.toml
+Creds: config
+
 # Copyright (C) Parity Technologies (UK) Ltd.
 # Copyright 2022-2024 Forecasting Technologies LTD.
 #
@@ -16,9 +20,6 @@
 # You should have received a copy of the GNU General Public License
 # along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-Description: Produce blocks test
-Network: ./produce-blocks.toml
-Creds: config
 
 # Tracing
 # bob: trace with traceID 94c1501a78a0d83c498cc92deec264d9 contains ["answer-chunk-request", "answer-chunk-request"]

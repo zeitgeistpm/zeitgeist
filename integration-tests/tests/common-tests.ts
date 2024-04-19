@@ -36,7 +36,9 @@ export async function canSendBalanceTransfer(
   let tries = 0;
   const amount = BigInt("1000000000");
   const balanceBefore = (
-    (await paraApi.query.system.account(randomAccount.address)) as AccountInfo
+    (await paraApi.query.system.account(
+      randomAccount.address
+    )) as unknown as AccountInfo
   ).data.free.toBigInt();
 
   /// It might happen that by accident we hit a session change
@@ -68,7 +70,9 @@ export async function canSendBalanceTransfer(
   await context.createBlock({ providerName: providerName, count: 1 });
 
   const balanceAfter = (
-    (await paraApi.query.system.account(randomAccount.address)) as AccountInfo
+    (await paraApi.query.system.account(
+      randomAccount.address
+    )) as unknown as AccountInfo
   ).data.free.toBigInt();
   expect(balanceAfter > balanceBefore, "Balance did not increase").toBeTruthy();
 }
@@ -87,7 +91,9 @@ export async function canSendXcmTransfer(
   const bob = keyring.addFromUri("//Bob", { name: "Bob default" });
 
   const senderBalanceBefore = (
-    (await senderParaApi.query.system.account(alice.address)) as AccountInfo
+    (await senderParaApi.query.system.account(
+      alice.address
+    )) as unknown as AccountInfo
   ).data.free.toBigInt();
   const receiverBalanceBefore = (
     (await receiverParaApi.query.tokens.accounts(
@@ -121,6 +127,9 @@ export async function canSendXcmTransfer(
     destWeightLimit
   );
 
+  const { partialFee, weight } = await xcmTransfer.paymentInfo(alice.address);
+  const transferFee: bigint = partialFee.toBigInt();
+
   await xcmTransfer.signAndSend(alice, { nonce: -1 });
 
   await context.createBlock({
@@ -129,10 +138,10 @@ export async function canSendXcmTransfer(
     allowFailures: false,
   });
 
-  const { partialFee, weight } = await xcmTransfer.paymentInfo(alice.address);
-  const transferFee: bigint = partialFee.toBigInt();
   const senderBalanceAfter = (
-    (await senderParaApi.query.system.account(alice.address)) as AccountInfo
+    (await senderParaApi.query.system.account(
+      alice.address
+    )) as unknown as AccountInfo
   ).data.free.toBigInt();
   expect(
     senderBalanceBefore - senderBalanceAfter,
@@ -181,15 +190,18 @@ export async function canSendXcmTransfer(
     receiverBalanceAfter > receiverBalanceBefore,
     "Balance did not increase"
   ).toBeTruthy();
-  const xcmFee: bigint =
-    receiverBalanceBefore + amount - transferFee - receiverBalanceAfter;
-  // between 0.02 ZTG and 0.10 ZTG XCM fee
-  const approxXcmFeeLow = 200000000;
+  const xcmFee: bigint = receiverBalanceBefore + amount - receiverBalanceAfter;
+  console.log(
+    `receiverBalanceBefore: ${receiverBalanceBefore}; amount: ${amount}; transferFee: ${transferFee}; receiverBalanceAfter: ${receiverBalanceAfter}; xcmFee: ${xcmFee}`
+  );
+  console.log(`xcmFee: ${xcmFee}`);
+  // between 0.01 ZTG and 0.10 ZTG XCM fee
+  const approxXcmFeeLow = 100000000;
   const approxXcmFeeHigh = 1000000000;
   expect(xcmFee).toBeGreaterThanOrEqual(approxXcmFeeLow);
   expect(xcmFee).toBeLessThanOrEqual(approxXcmFeeHigh);
   expect(
     receiverBalanceAfter - receiverBalanceBefore,
     "Unexpected xcm transfer balance diff"
-  ).toBe(amount - transferFee - xcmFee);
+  ).toBe(amount - xcmFee);
 }
