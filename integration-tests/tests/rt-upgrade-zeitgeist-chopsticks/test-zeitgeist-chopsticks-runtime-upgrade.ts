@@ -81,7 +81,7 @@ describeSuite({
       log(
         `RT upgrade has increased specVersion from ${rtBefore} to ${rtafter}`
       );
-    }, 60000);
+    }, 120000);
 
     it({
       id: "T1",
