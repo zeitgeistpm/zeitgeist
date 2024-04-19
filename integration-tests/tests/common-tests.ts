@@ -36,7 +36,9 @@ export async function canSendBalanceTransfer(
   let tries = 0;
   const amount = BigInt("1000000000");
   const balanceBefore = (
-    (await paraApi.query.system.account(randomAccount.address)) as AccountInfo
+    (await paraApi.query.system.account(
+      randomAccount.address
+    )) as unknown as AccountInfo
   ).data.free.toBigInt();
 
   /// It might happen that by accident we hit a session change
@@ -68,7 +70,9 @@ export async function canSendBalanceTransfer(
   await context.createBlock({ providerName: providerName, count: 1 });
 
   const balanceAfter = (
-    (await paraApi.query.system.account(randomAccount.address)) as AccountInfo
+    (await paraApi.query.system.account(
+      randomAccount.address
+    )) as unknown as AccountInfo
   ).data.free.toBigInt();
   expect(balanceAfter > balanceBefore, "Balance did not increase").toBeTruthy();
 }
@@ -87,7 +91,9 @@ export async function canSendXcmTransfer(
   const bob = keyring.addFromUri("//Bob", { name: "Bob default" });
 
   const senderBalanceBefore = (
-    (await senderParaApi.query.system.account(alice.address)) as AccountInfo
+    (await senderParaApi.query.system.account(
+      alice.address
+    )) as unknown as AccountInfo
   ).data.free.toBigInt();
   const receiverBalanceBefore = (
     (await receiverParaApi.query.tokens.accounts(
@@ -133,7 +139,9 @@ export async function canSendXcmTransfer(
   });
 
   const senderBalanceAfter = (
-    (await senderParaApi.query.system.account(alice.address)) as AccountInfo
+    (await senderParaApi.query.system.account(
+      alice.address
+    )) as unknown as AccountInfo
   ).data.free.toBigInt();
   expect(
     senderBalanceBefore - senderBalanceAfter,

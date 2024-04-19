@@ -51,32 +51,33 @@ describeSuite({
       hydradxParaApi = context.polkadotJs("HydraDXPara");
 
       const paraZeitgeistNetwork = (
-        zeitgeistParaApi.consts.system.version as RuntimeVersion
+        zeitgeistParaApi.consts.system.version as unknown as RuntimeVersion
       ).specName.toString();
       expect(paraZeitgeistNetwork, "Para API incorrect").to.contain(
         "zeitgeist"
       );
 
       const relayNetwork = (
-        relayApi.consts.system.version as RuntimeVersion
+        relayApi.consts.system.version as unknown as RuntimeVersion
       ).specName.toString();
       expect(relayNetwork, "Relay API incorrect").to.contain("polkadot");
 
       const paraHydraDXNetwork = (
-        hydradxParaApi.consts.system.version as RuntimeVersion
+        hydradxParaApi.consts.system.version as unknown as RuntimeVersion
       ).specName.toString();
       expect(paraHydraDXNetwork, "Para API incorrect").to.contain("hydradx");
 
       const rtBefore = (
-        zeitgeistParaApi.consts.system.version as RuntimeVersion
+        zeitgeistParaApi.consts.system.version as unknown as RuntimeVersion
       ).specVersion.toNumber();
       log(`About to upgrade to runtime at:`);
-      log(MoonwallContext.getContext().rtUpgradePath);
+      const moonwallContext = await MoonwallContext.getContext();
+      log(moonwallContext.rtUpgradePath);
 
       await context.upgradeRuntime();
 
       const rtafter = (
-        zeitgeistParaApi.consts.system.version as RuntimeVersion
+        zeitgeistParaApi.consts.system.version as unknown as RuntimeVersion
       ).specVersion.toNumber();
       log(
         `RT upgrade has increased specVersion from ${rtBefore} to ${rtafter}`
