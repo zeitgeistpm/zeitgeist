@@ -27,7 +27,7 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use log;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::{DispatchError, Perbill, RuntimeDebug, Saturating};
+use sp_runtime::{Perbill, RuntimeDebug, Saturating};
 use zeitgeist_primitives::types::{
     BaseAsset, Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
@@ -38,6 +38,7 @@ use {
     crate::MarketIdOf,
     alloc::{collections::BTreeMap, format},
     frame_support::migration::storage_key_iter,
+    sp_runtime::DispatchError,
 };
 
 #[cfg(any(feature = "try-runtime", feature = "test"))]

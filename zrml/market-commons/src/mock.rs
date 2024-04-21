@@ -20,7 +20,7 @@
 
 use crate::{self as zrml_market_commons};
 use frame_support::{construct_runtime, traits::Everything};
-use frame_system::mocking::MockBlockU32;
+use frame_system::mocking::MockBlock;
 use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     BuildStorage,
@@ -49,7 +49,7 @@ impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountIdTest;
     type BaseCallFilter = Everything;
-    type Block = MockBlockU32<Runtime>;
+    type Block = MockBlock<Runtime>;
     type BlockHashCount = BlockHashCount;
     type BlockLength = ();
     type BlockWeights = ();

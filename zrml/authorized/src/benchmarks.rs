@@ -27,10 +27,7 @@ use crate::{
     Pallet,
 };
 use frame_benchmarking::benchmarks;
-use frame_support::{
-    dispatch::UnfilteredDispatchable,
-    traits::{EnsureOrigin, Get, Imbalance},
-};
+use frame_support::traits::{EnsureOrigin, Get, Imbalance, UnfilteredDispatchable};
 use sp_runtime::traits::Saturating;
 use zeitgeist_primitives::{
     traits::{DisputeApi, DisputeResolutionApi},

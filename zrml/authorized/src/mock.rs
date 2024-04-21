@@ -22,25 +22,19 @@ extern crate alloc;
 
 use crate::{self as zrml_authorized, mock_storage::pallet as mock_storage};
 use alloc::{vec, vec::Vec};
-use frame_support::{
-    construct_runtime, ord_parameter_types,
-    pallet_prelude::{DispatchError, Weight},
-    traits::Everything,
-};
-use frame_system::EnsureSignedBy;
+use frame_support::{construct_runtime, ord_parameter_types, traits::Everything, weights::Weight};
+use frame_system::{mocking::MockBlock, EnsureSignedBy};
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    BuildStorage, DispatchError,
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        AuthorizedPalletId, BlockHashCount, CorrectionPeriod, MaxReserves, MinimumPeriod, BASE,
+        AuthorizedPalletId, BlockHashCount, CorrectionPeriod, ExistentialDeposit, MaxLocks,
+        MaxReserves, MinimumPeriod, BASE,
     },
     traits::{DisputeResolutionApi, MarketOfDisputeResolutionApi},
-    types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
-        UncheckedExtrinsicTest,
-    },
+    types::{AccountIdTest, Balance, BlockNumber, Hash, MarketId, Moment},
 };
 
 pub const ALICE: AccountIdTest = 0;
@@ -48,19 +42,14 @@ pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
 
 construct_runtime!(
-    pub enum Runtime
-    where
-        Block = BlockTest<Runtime>,
-        NodeBlock = BlockTest<Runtime>,
-        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
-    {
-        Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
-        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        MarketCommons: zrml_market_commons::{Pallet, Storage},
-        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet},
+    pub enum Runtime {
+        Authorized: zrml_authorized,
+        Balances: pallet_balances,
+        MarketCommons: zrml_market_commons,
+        System: frame_system,
+        Timestamp: pallet_timestamp,
         // Just a mock storage for testing.
-        MockStorage: mock_storage::{Storage},
+        MockStorage: mock_storage,
     }
 );
 
@@ -113,7 +102,7 @@ impl DisputeResolutionApi for MockResolution {
 
 impl crate::Config for Runtime {
     type Currency = Balances;
-    type RuntimeEvent = ();
+    type RuntimeEvent = RuntimeEvent;
     type CorrectionPeriod = CorrectionPeriod;
     type DisputeResolution = MockResolution;
     type MarketCommons = MarketCommons;
@@ -131,18 +120,17 @@ impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountIdTest;
     type BaseCallFilter = Everything;
+    type Block = MockBlock<Runtime>;
     type BlockHashCount = BlockHashCount;
     type BlockLength = ();
-    type BlockNumber = BlockNumber;
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
     type DbWeight = ();
-    type RuntimeEvent = ();
+    type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
-    type Header = Header;
-    type Index = Index;
     type Lookup = IdentityLookup<Self::AccountId>;
+    type Nonce = u64;
     type MaxConsumers = frame_support::traits::ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
@@ -158,9 +146,13 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type RuntimeEvent = ();
-    type ExistentialDeposit = ();
-    type MaxLocks = ();
+    type FreezeIdentifier = ();
+    type RuntimeHoldReason = ();
+    type RuntimeEvent = RuntimeEvent;
+    type ExistentialDeposit = ExistentialDeposit;
+    type MaxHolds = ();
+    type MaxFreezes = ();
+    type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
@@ -191,7 +183,7 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
         // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
         let _ = env_logger::builder().is_test(true).try_init();

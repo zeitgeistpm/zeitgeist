@@ -24,7 +24,8 @@ use crate::{
     mock_storage::pallet as mock_storage,
     AuthorizedOutcomeReports, Error,
 };
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
+use frame_support::{assert_noop, assert_ok};
+use sp_runtime::DispatchError;
 use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{AuthorityReport, MarketDisputeMechanism, MarketStatus, OutcomeReport},
