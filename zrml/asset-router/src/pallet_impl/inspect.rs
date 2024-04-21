@@ -48,19 +48,29 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
         preservation: Preservation,
         force: Fortitude,
     ) -> Self::Balance {
-        if T::CurrencyType::try_from(asset).is_ok() {
+        if let Ok(asset_inner) = T::MarketAssetType::try_from(asset) {
+            if T::MarketAssets::asset_exists(asset_inner) {
+                return only_asset!(
+                    asset,
+                    Zero::zero(),
+                    Inspect,
+                    reducible_balance,
+                    who,
+                    preservation,
+                    force
+                );
+            }
+        }
+
+        if let Ok(_) = T::CurrencyType::try_from(asset) {
             let reducible = <Self as MultiCurrency<T::AccountId>>::free_balance(asset, who);
 
-            match force {
-                Fortitude::Polite => match preservation {
-                    Preservation::Expendable => reducible,
-                    Preservation::Protect | Preservation::Preserve => {
-                        let min_balance =
-                            <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
-                        reducible.saturating_sub(min_balance)
-                    }
-                },
-                Fortitude::Force => reducible,
+            match preservation {
+                Preservation::Expendable => reducible,
+                Preservation::Protect | Preservation::Preserve => {
+                    let min_balance = <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
+                    reducible.saturating_sub(min_balance)
+                }
             }
         } else {
             only_asset!(asset, Zero::zero(), Inspect, reducible_balance, who, preservation, force)
@@ -73,8 +83,31 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
         amount: Self::Balance,
         provenance: Provenance,
     ) -> DepositConsequence {
-        if T::CurrencyType::try_from(asset).is_err() {
-            return only_asset!(
+        if let Ok(asset_inner) = T::MarketAssetType::try_from(asset) {
+            if T::MarketAssets::asset_exists(asset_inner) {
+                return only_asset!(
+                    asset,
+                    DepositConsequence::UnknownAsset,
+                    Inspect,
+                    can_deposit,
+                    who,
+                    amount,
+                    provenance
+                );
+            }
+        }
+
+        if let Ok(_) = T::CurrencyType::try_from(asset) {
+            let total_balance = <Self as MultiCurrency<T::AccountId>>::total_balance(asset, who);
+            let min_balance = <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
+
+            if total_balance.saturating_add(amount) < min_balance {
+                DepositConsequence::BelowMinimum
+            } else {
+                DepositConsequence::Success
+            }
+        } else {
+            only_asset!(
                 asset,
                 DepositConsequence::UnknownAsset,
                 Inspect,
@@ -82,16 +115,7 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
                 who,
                 amount,
                 provenance
-            );
-        }
-
-        let total_balance = <Self as MultiCurrency<T::AccountId>>::total_balance(asset, who);
-        let min_balance = <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
-
-        if total_balance.saturating_add(amount) < min_balance {
-            DepositConsequence::BelowMinimum
-        } else {
-            DepositConsequence::Success
+            )
         }
     }
 
@@ -100,32 +124,45 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
         who: &T::AccountId,
         amount: Self::Balance,
     ) -> WithdrawConsequence<Self::Balance> {
-        if T::CurrencyType::try_from(asset).is_err() {
-            return only_asset!(
+        if let Ok(asset_inner) = T::MarketAssetType::try_from(asset) {
+            if T::MarketAssets::asset_exists(asset_inner) {
+                return only_asset!(
+                    asset,
+                    WithdrawConsequence::UnknownAsset,
+                    Inspect,
+                    can_withdraw,
+                    who,
+                    amount
+                );
+            }
+        }
+
+        if let Ok(_) = T::CurrencyType::try_from(asset) {
+            let can_withdraw =
+                <Self as MultiCurrency<T::AccountId>>::ensure_can_withdraw(asset, who, amount);
+
+            if let Err(_e) = can_withdraw {
+                return WithdrawConsequence::BalanceLow;
+            }
+
+            let total_balance = <Self as MultiCurrency<T::AccountId>>::total_balance(asset, who);
+            let min_balance = <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
+            let remainder = total_balance.saturating_sub(amount);
+
+            if remainder < min_balance {
+                WithdrawConsequence::ReducedToZero(remainder)
+            } else {
+                WithdrawConsequence::Success
+            }
+        } else {
+            only_asset!(
                 asset,
                 WithdrawConsequence::UnknownAsset,
                 Inspect,
                 can_withdraw,
                 who,
                 amount
-            );
-        }
-
-        let can_withdraw =
-            <Self as MultiCurrency<T::AccountId>>::ensure_can_withdraw(asset, who, amount);
-
-        if let Err(_e) = can_withdraw {
-            return WithdrawConsequence::BalanceLow;
-        }
-
-        let total_balance = <Self as MultiCurrency<T::AccountId>>::total_balance(asset, who);
-        let min_balance = <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
-        let remainder = total_balance.saturating_sub(amount);
-
-        if remainder < min_balance {
-            WithdrawConsequence::ReducedToZero(remainder)
-        } else {
-            WithdrawConsequence::Success
+            )
         }
     }
 

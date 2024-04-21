@@ -52,7 +52,7 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
                 T::MarketAssets::reducible_balance(
                     asset,
                     who,
-                    Preservation::Protect,
+                    Preservation::Expendable,
                     Fortitude::Polite,
                 )
             } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
@@ -61,7 +61,7 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
                 T::MarketAssets::reducible_balance(
                     asset,
                     who,
-                    Preservation::Protect,
+                    Preservation::Expendable,
                     Fortitude::Polite,
                 )
             }
@@ -69,11 +69,16 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
             T::CampaignAssets::reducible_balance(
                 asset,
                 who,
-                Preservation::Protect,
+                Preservation::Expendable,
                 Fortitude::Polite,
             )
         } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
-            T::CustomAssets::reducible_balance(asset, who, Preservation::Protect, Fortitude::Polite)
+            T::CustomAssets::reducible_balance(
+                asset,
+                who,
+                Preservation::Expendable,
+                Fortitude::Polite,
+            )
         } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             T::Currencies::free_balance(currency, who)
         } else {
