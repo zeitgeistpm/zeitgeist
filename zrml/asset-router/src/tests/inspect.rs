@@ -33,7 +33,9 @@ fn test_helper(
     ));
     assert!(AssetRouter::asset_exists(asset));
     assert_eq!(<AssetRouter as Inspect<AccountId>>::total_issuance(asset), initial_amount);
+    assert_eq!(AssetRouter::active_issuance(asset), initial_amount);
     assert_eq!(AssetRouter::balance(asset, &ALICE), initial_amount);
+    assert_eq!(AssetRouter::free_balance(asset, &ALICE), initial_amount);
     assert_eq!(
         AssetRouter::reducible_balance(asset, &ALICE, Preservation::Protect, Fortitude::Force),
         initial_amount - min_balance

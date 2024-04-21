@@ -19,7 +19,10 @@
 
 use super::*;
 use crate::*;
-use frame_support::traits::tokens::fungibles::Unbalanced;
+use frame_support::{
+    assert_storage_noop,
+    traits::{fungibles::Dust, tokens::fungibles::Unbalanced},
+};
 use orml_traits::MultiCurrency;
 
 fn test_helper(asset: Assets, initial_amount: <Runtime as crate::Config>::Balance) {
@@ -46,6 +49,9 @@ fn test_helper(asset: Assets, initial_amount: <Runtime as crate::Config>::Balanc
     );
     AssetRouter::set_total_issuance(asset, 1337);
     assert_eq!(<AssetRouter as MultiCurrency<AccountId>>::total_issuance(asset), 1337);
+    assert_storage_noop!(AssetRouter::deactivate(asset, 1));
+    assert_storage_noop!(AssetRouter::reactivate(asset, 1));
+    assert_storage_noop!(AssetRouter::handle_raw_dust(asset, 1));
 }
 
 #[test]
@@ -122,14 +128,10 @@ fn routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::write_balance(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT));
         test_helper(CURRENCY, CURRENCY_INITIAL_AMOUNT);
+        assert_storage_noop!(AssetRouter::handle_dust(Dust(CURRENCY, 1)));
 
         assert_eq!(<AssetRouter as MultiCurrency<AccountId>>::total_issuance(CAMPAIGN_ASSET), 0);
         assert_eq!(<AssetRouter as MultiCurrency<AccountId>>::total_issuance(CUSTOM_ASSET), 0);
         assert_eq!(<AssetRouter as MultiCurrency<AccountId>>::total_issuance(MARKET_ASSET), 0);
     });
-}
-
-#[test]
-fn new_unbalanced_tests() {
-    unimplemented!();
 }

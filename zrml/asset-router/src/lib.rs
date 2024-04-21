@@ -65,9 +65,7 @@ pub mod pallet {
     use parity_scale_codec::{FullCodec, MaxEncodedLen};
     use scale_info::TypeInfo;
     pub(crate) use sp_runtime::{
-        traits::{
-            AtLeast32BitUnsigned, Bounded, Get, MaybeSerializeDeserialize, Member, Saturating, Zero,
-        },
+        traits::{AtLeast32BitUnsigned, Bounded, Get, MaybeSerializeDeserialize, Member, Zero},
         DispatchError, FixedPointOperand, SaturatedConversion,
     };
     use zeitgeist_macros::unreachable_non_terminating;
