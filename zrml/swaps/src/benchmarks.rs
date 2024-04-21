@@ -30,7 +30,8 @@ use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
 use crate::{types::PoolStatus, AssetOf, Config, Event, MAX_IN_RATIO, MAX_OUT_RATIO};
-use frame_benchmarking::{benchmarks, vec, whitelisted_caller, Vec};
+use alloc::{vec, vec::Vec};
+use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::traits::Get;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;

@@ -58,12 +58,13 @@ mod pallet {
     use alloc::{collections::btree_map::BTreeMap, vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
-        dispatch::Weight,
         ensure,
         pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
         require_transactional,
         traits::{Get, IsType, StorageVersion},
-        transactional, Blake2_128Concat, PalletError, PalletId, Parameter,
+        transactional,
+        weights::Weight,
+        Blake2_128Concat, PalletError, PalletId, Parameter,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
@@ -564,7 +565,6 @@ mod pallet {
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
-    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
