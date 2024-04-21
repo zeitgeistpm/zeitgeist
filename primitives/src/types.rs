@@ -21,7 +21,7 @@ pub use crate::{
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result, Unstructured};
-use frame_support::dispatch::Weight;
+use frame_support::weights::Weight;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{

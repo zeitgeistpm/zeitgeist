@@ -38,18 +38,21 @@ pub mod pallet {
     pub(crate) use alloc::collections::BTreeMap;
     pub(crate) use core::{fmt::Debug, marker::PhantomData};
     pub(crate) use frame_support::{
-        ensure, log,
-        pallet_prelude::{DispatchError, DispatchResult, Hooks, StorageValue, ValueQuery, Weight},
+        ensure,
+        pallet_prelude::{DispatchResult, Hooks, StorageValue, ValueQuery, Weight},
         require_transactional,
         traits::{
             tokens::{
-                fungibles::{Create, Destroy, Inspect, Mutate, Transfer, Unbalanced},
-                DepositConsequence, WithdrawConsequence,
+                fungibles::{Create, Destroy, Inspect, Mutate, Unbalanced},
+                DepositConsequence, Fortitude, Precision, Preservation, Provenance,
+                WithdrawConsequence,
             },
             BalanceStatus as Status, ConstU32,
         },
         BoundedVec, Parameter,
     };
+    pub(crate) use frame_system::pallet_prelude::BlockNumberFor;
+    use log;
     pub(crate) use orml_traits::{
         arithmetic::Signed,
         currency::{
@@ -62,13 +65,10 @@ pub mod pallet {
     use parity_scale_codec::{FullCodec, MaxEncodedLen};
     use scale_info::TypeInfo;
     pub(crate) use sp_runtime::{
-        traits::{
-            AtLeast32BitUnsigned, Bounded, Get, MaybeSerializeDeserialize, Member, Saturating, Zero,
-        },
-        FixedPointOperand, SaturatedConversion,
+        traits::{AtLeast32BitUnsigned, Bounded, Get, MaybeSerializeDeserialize, Member, Zero},
+        DispatchError, FixedPointOperand, SaturatedConversion,
     };
     use zeitgeist_macros::unreachable_non_terminating;
-    pub(crate) use zeitgeist_primitives::traits::CheckedDivPerComponent;
 
     pub(crate) const LOG_TARGET: &str = "runtime::asset-router";
     pub(crate) const MAX_ASSET_DESTRUCTIONS_PER_BLOCK: u8 = 128;
@@ -81,7 +81,6 @@ pub mod pallet {
         Create<T::AccountId, AssetId = A, Balance = T::Balance>
         + Destroy<T::AccountId, AssetId = A, Balance = T::Balance>
         + Inspect<T::AccountId, AssetId = A, Balance = T::Balance>
-        + Transfer<T::AccountId, AssetId = A, Balance = T::Balance>
         + Mutate<T::AccountId, AssetId = A, Balance = T::Balance>
         + Unbalanced<T::AccountId, AssetId = A, Balance = T::Balance>
     {
@@ -92,7 +91,6 @@ pub mod pallet {
         G: Create<T::AccountId, AssetId = A, Balance = T::Balance>
             + Destroy<T::AccountId, AssetId = A, Balance = T::Balance>
             + Inspect<T::AccountId, AssetId = A, Balance = T::Balance>
-            + Transfer<T::AccountId, AssetId = A, Balance = T::Balance>
             + Mutate<T::AccountId, AssetId = A, Balance = T::Balance>
             + Unbalanced<T::AccountId, AssetId = A, Balance = T::Balance>,
         T: Config,
@@ -216,14 +214,16 @@ pub mod pallet {
         UnknownAsset,
         /// Operation is not supported for given asset
         Unsupported,
+        /// Only a partial amount was deposited
+        DepositOnlyPartial,
     }
 
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        fn on_idle(_: T::BlockNumber, mut remaining_weight: Weight) -> Weight {
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_idle(_: BlockNumberFor<T>, mut remaining_weight: Weight) -> Weight {
             let max_extra_weight = Self::on_idle_max_extra_weight();
 
             if !remaining_weight

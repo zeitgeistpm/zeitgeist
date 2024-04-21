@@ -22,14 +22,18 @@ use crate::{
     traits::MarketBuilderTrait,
     types::{BaseAsset, Market, PoolId},
 };
+use alloc::fmt::Debug;
 use frame_support::{
-    dispatch::{fmt::Debug, DispatchError, DispatchResult},
+    dispatch::DispatchResult,
     pallet_prelude::{MaybeSerializeDeserialize, Member},
     storage::PrefixIterator,
     Parameter,
 };
 use parity_scale_codec::{FullCodec, HasCompact, MaxEncodedLen};
-use sp_runtime::traits::{AtLeast32Bit, AtLeast32BitUnsigned};
+use sp_runtime::{
+    traits::{AtLeast32Bit, AtLeast32BitUnsigned},
+    DispatchError,
+};
 
 // Abstraction of the market type, which is not a part of `MarketCommonsPalletApi` because Rust
 // doesn't support type aliases in traits.
