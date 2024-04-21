@@ -78,6 +78,15 @@ fn campaign_assets_panic_on_write_balance() {
 }
 
 #[test]
+#[should_panic]
+fn campaign_assets_panic_on_handle_dust() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
+        let _ = AssetRouter::handle_dust(Dust(CAMPAIGN_ASSET, 1));
+    });
+}
+
+#[test]
 fn routes_custom_assets_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE));
@@ -97,6 +106,15 @@ fn custom_assets_panic_on_write_balance() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE));
         let _ = AssetRouter::write_balance(CUSTOM_ASSET, &ALICE, 42);
+    });
+}
+
+#[test]
+#[should_panic]
+fn custom_assets_panic_on_handle_dust() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE));
+        let _ = AssetRouter::handle_dust(Dust(CUSTOM_ASSET, 1));
     });
 }
 
@@ -124,11 +142,22 @@ fn market_assets_panic_on_write_balance() {
 }
 
 #[test]
+#[should_panic]
+fn market_assets_panic_on_handle_dust() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE));
+        let _ = AssetRouter::handle_dust(Dust(MARKET_ASSET, 1));
+    });
+}
+
+#[test]
 fn routes_currencies_correctly() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::write_balance(CURRENCY, &ALICE, CURRENCY_INITIAL_AMOUNT));
         test_helper(CURRENCY, CURRENCY_INITIAL_AMOUNT);
         assert_storage_noop!(AssetRouter::handle_dust(Dust(CURRENCY, 1)));
+        assert_ok!(AssetRouter::write_balance(CURRENCY, &ALICE, CURRENCY_MIN_BALANCE));
+        assert_eq!(AssetRouter::free_balance(CURRENCY, &ALICE), CURRENCY_MIN_BALANCE);
 
         assert_eq!(<AssetRouter as MultiCurrency<AccountId>>::total_issuance(CAMPAIGN_ASSET), 0);
         assert_eq!(<AssetRouter as MultiCurrency<AccountId>>::total_issuance(CUSTOM_ASSET), 0);
