@@ -52,7 +52,7 @@ fn sell_to_amm_and_then_fill_specified_order() {
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let strategy = Strategy::LimitOrder;
@@ -135,7 +135,7 @@ fn sell_to_amm_if_specified_order_has_lower_prices_than_the_amm() {
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount, Precision::Exact));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let strategy = Strategy::LimitOrder;
@@ -210,7 +210,7 @@ fn sell_fill_multiple_orders_if_amm_spot_price_lower_than_order_prices() {
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let strategy = Strategy::LimitOrder;
@@ -265,7 +265,7 @@ fn sell_fill_specified_order_partially_if_amm_spot_price_lower() {
         assert_eq!(order_ids.len(), 1);
         let order_id = order_ids[0];
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount, Precision::Exact));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![order_id];
@@ -316,7 +316,7 @@ fn sell_fails_if_asset_not_equal_to_order_book_taker_asset() {
         let amount_in = _2;
 
         let maker_amount = _1;
-        assert_ok!(AssetRouter::increase_balance(asset, &CHARLIE, maker_amount,));
+        assert_ok!(AssetRouter::increase_balance(asset, &CHARLIE, maker_amount, Precision::Exact));
 
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
@@ -331,7 +331,7 @@ fn sell_fails_if_asset_not_equal_to_order_book_taker_asset() {
         assert_eq!(order_ids.len(), 1);
         let order_id = order_ids[0];
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![order_id];
@@ -386,7 +386,7 @@ fn sell_fails_if_order_price_below_min_price() {
         assert_eq!(order_ids.len(), 1);
         let order_id = order_ids[0];
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, 5 * amount,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, 5 * amount, Precision::Exact));
 
         let min_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![order_id];
@@ -426,7 +426,7 @@ fn sell_to_amm() {
         let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount, Precision::Exact));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -478,7 +478,7 @@ fn sell_min_price_higher_than_amm_spot_price_results_in_place_order() {
         let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount, Precision::Exact));
 
         //*  spot price of the AMM is 1 smaller than the min_price
         //*  this results in no sell on the AMM, but places an order on the order book
@@ -535,7 +535,7 @@ fn sell_to_amm_but_low_amount() {
         let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
 
         //*  min_price is just 1 smaller than the spot price of the AMM
         //*  this results in a low sell amount_in on the AMM
@@ -605,7 +605,7 @@ fn sell_succeeds_for_numerical_soft_failure() {
 
         // increase_balance does not set total issuance
         AssetRouter::set_total_issuance(asset, amount_in);
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
 
         let min_price = (_1_100 / 1000).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -655,7 +655,7 @@ fn sell_to_amm_only() {
         let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount, Precision::Exact));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -706,7 +706,7 @@ fn sell_places_limit_order_no_pool() {
         let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount, Precision::Exact));
 
         let min_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -756,7 +756,7 @@ fn sell_fails_if_balance_too_low() {
         let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount - 1,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount - 1, Precision::Exact));
 
         let min_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -822,7 +822,7 @@ fn sell_emits_event() {
 
         // increase_balance does not set total issuance
         AssetRouter::set_total_issuance(asset, amount_in);
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
 
         let strategy = Strategy::LimitOrder;
         assert_ok!(HybridRouter::sell(
@@ -871,7 +871,7 @@ fn sell_fails_if_asset_count_mismatch() {
         let asset = Assets::CategoricalOutcome(market_id, 0);
 
         let amount_in = 2 * BASE;
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
 
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -941,7 +941,7 @@ fn sell_fails_if_cancel_strategy_applied() {
         let asset_count = required_asset_count;
         let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount_in = 10 * BASE;
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::ImmediateOrCancel;
@@ -968,7 +968,7 @@ fn sell_fails_if_market_does_not_exist() {
         let asset_count = 2;
         let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount_in = 10 * BASE;
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in,));
+        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::ImmediateOrCancel;
