@@ -31,7 +31,10 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::{traits::Get, Perbill, SaturatedConversion};
+use sp_runtime::{
+    traits::{Get, Zero},
+    Perbill, SaturatedConversion,
+};
 use zeitgeist_primitives::{
     constants::{base_multiples::*, CENT},
     math::fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
@@ -472,7 +475,6 @@ mod benchmarks {
 
         // Mock up some fees. Needs to be large enough to ensure that Bob's share is not smaller
         // than the existential deposit.
-        let pool = Pools::<T>::get(market_id).unwrap();
         let max_node_count = LiquidityTreeOf::<T>::max_node_count() as u128;
         let fee_amount = (max_node_count * _10).saturated_into();
         deposit_fees::<T>(market_id, fee_amount);

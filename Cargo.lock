@@ -15177,6 +15177,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hydra-dx-math",
+ "log",
  "more-asserts",
  "orml-asset-registry",
  "orml-currencies",

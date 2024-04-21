@@ -219,6 +219,7 @@ type MarketAssetsInstance = pallet_assets::Instance3;
 
 construct_runtime!(
     pub enum Runtime {
+        #[cfg(feature = "parachain")]
         AssetRegistry: orml_asset_registry,
         AssetRouter: zrml_asset_router,
         Authorized: zrml_authorized,
@@ -658,52 +659,53 @@ impl ExtBuilder {
             .assimilate_storage(&mut t)
             .unwrap();
 
-        cfg_if::cfg_if!(
-            if #[cfg(feature = "parachain")] {
-                orml_tokens::GenesisConfig::<Runtime> {
-                    balances: (0..69)
-                        .map(|idx| (idx, Currencies::ForeignAsset(100), INITIAL_BALANCE))
-                        .collect(),
-                }
-                .assimilate_storage(&mut t)
-                .unwrap();
-
-                let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
-                    allow_as_base_asset: true,
-                    ..Default::default()
-                };
-
-                orml_asset_registry::GenesisConfig::<Runtime> {
-                    assets: vec![
-                        (
-                            XcmAsset::ForeignAsset(100),
-                            AssetMetadata {
-                                decimals: 18,
-                                name: "ACALA USD".as_bytes().to_vec().try_into().unwrap(),
-                                symbol: "AUSD".as_bytes().to_vec().try_into().unwrap(),
-                                existential_deposit: 0,
-                                location: None,
-                                additional: custom_metadata,
-                            }.encode(),
-                        ),
-                        (
-                            XcmAsset::ForeignAsset(420),
-                            AssetMetadata {
-                                decimals: 18,
-                                name: "FANCY_TOKEN".as_bytes().to_vec().try_into().unwrap(),
-                                symbol: "FTK".as_bytes().to_vec().try_into().unwrap(),
-                                existential_deposit: 0,
-                                location: None,
-                                additional: zeitgeist_primitives::types::CustomMetadata::default(),
-                            }.encode(),
-                        ),
-                    ],
-                    last_asset_id: XcmAsset::ForeignAsset(420)
-                }
-                .assimilate_storage(&mut t)
-                .unwrap();
+        #[cfg(feature = "parachain")]
+        {
+            orml_tokens::GenesisConfig::<Runtime> {
+                balances: (0..69)
+                    .map(|idx| (idx, Currencies::ForeignAsset(100), INITIAL_BALANCE))
+                    .collect(),
             }
-        );
+            .assimilate_storage(&mut t)
+            .unwrap();
+
+            let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
+                allow_as_base_asset: true,
+                ..Default::default()
+            };
+
+            orml_asset_registry::GenesisConfig::<Runtime> {
+                assets: vec![
+                    (
+                        XcmAsset::ForeignAsset(100),
+                        AssetMetadata {
+                            decimals: 18,
+                            name: "ACALA USD".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "AUSD".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: 0,
+                            location: None,
+                            additional: custom_metadata,
+                        }
+                        .encode(),
+                    ),
+                    (
+                        XcmAsset::ForeignAsset(420),
+                        AssetMetadata {
+                            decimals: 18,
+                            name: "FANCY_TOKEN".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "FTK".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: 0,
+                            location: None,
+                            additional: zeitgeist_primitives::types::CustomMetadata::default(),
+                        }
+                        .encode(),
+                    ),
+                ],
+                last_asset_id: XcmAsset::ForeignAsset(420),
+            }
+            .assimilate_storage(&mut t)
+            .unwrap();
+        }
 
         let mut test_ext: sp_io::TestExternalities = t.into();
         test_ext.execute_with(|| System::set_block_number(1));

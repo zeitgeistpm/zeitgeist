@@ -84,11 +84,6 @@ where
         op: UpdateDescendantStakeOperation,
     ) -> DispatchResult;
 
-    /// Mutate each child of the node at `index` using `mutator`.
-    fn mutate_each_child<F>(&mut self, index: u32, mutator: F) -> DispatchResult
-    where
-        F: FnMut(&mut Self::Node) -> DispatchResult;
-
     /// Return the number of nodes in the tree. Note that abandoned nodes are counted.
     fn node_count(&self) -> u32;
 

@@ -53,15 +53,18 @@ mod pallet {
         pallet_prelude::StorageMap,
         require_transactional,
         traits::{Get, IsType, StorageVersion},
-        transactional, PalletError, PalletId, RuntimeDebug, Twox64Concat,
+        transactional, PalletError, PalletId, Twox64Concat,
     };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{
+        ensure_signed,
+        pallet_prelude::{BlockNumberFor, OriginFor},
+    };
     use orml_traits::MultiCurrency;
     use parity_scale_codec::{Decode, Encode};
     use scale_info::TypeInfo;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
-        DispatchError, DispatchResult, Perbill, SaturatedConversion,
+        DispatchError, DispatchResult, Perbill, RuntimeDebug, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
@@ -120,7 +123,7 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
             >;
 
-        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = BlockNumberFor<Self>>;
 
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 
@@ -142,7 +145,6 @@ mod pallet {
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
-    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]

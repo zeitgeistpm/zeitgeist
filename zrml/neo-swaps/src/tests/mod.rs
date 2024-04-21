@@ -29,7 +29,7 @@ mod withdraw_fees;
 use crate::{consts::*, mock::*, traits::*, *};
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
-use sp_runtime::Perbill;
+use sp_runtime::{ArithmeticError, DispatchError, Perbill, TokenError};
 use zeitgeist_primitives::{
     constants::{base_multiples::*, CENT},
     math::fixed::{FixedDiv, FixedMul},

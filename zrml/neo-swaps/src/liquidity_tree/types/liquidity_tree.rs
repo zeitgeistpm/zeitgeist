@@ -377,18 +377,6 @@ where
         Ok(())
     }
 
-    fn mutate_each_child<F>(&mut self, index: u32, mut mutator: F) -> DispatchResult
-    where
-        F: FnMut(&mut Self::Node) -> DispatchResult,
-    {
-        let child_indices = self.children(index)?;
-        child_indices.apply(|index| {
-            self.mutate_node(index, |node| mutator(node))?;
-            Ok(())
-        })?;
-        Ok(())
-    }
-
     fn node_count(&self) -> u32 {
         self.nodes.len() as u32
     }
