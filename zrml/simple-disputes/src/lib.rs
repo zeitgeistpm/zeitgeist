@@ -53,12 +53,11 @@ mod pallet {
         traits::{Currency, Get, Hooks, Imbalance, IsType, NamedReservableCurrency},
         transactional, BoundedVec, PalletId,
     };
-    use frame_system::pallet_prelude::*;
+    use frame_system::pallet_prelude::{BlockNumberFor, *};
     use sp_runtime::{
         traits::{CheckedDiv, Saturating, Zero},
         DispatchError, SaturatedConversion,
     };
-
     use zrml_market_commons::MarketCommonsPalletApi;
 
     #[pallet::config]
@@ -74,7 +73,7 @@ mod pallet {
 
         type DisputeResolution: DisputeResolutionApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 MarketId = MarketIdOf<Self>,
                 Moment = MomentOf<Self>,
             >;
@@ -87,7 +86,7 @@ mod pallet {
         /// The identifier of individual markets.
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 Balance = BalanceOf<Self>,
             >;
 
@@ -113,17 +112,13 @@ mod pallet {
     pub(crate) type MarketOf<T> = Market<
         <T as frame_system::Config>::AccountId,
         BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
+        BlockNumberFor<T>,
         MomentOf<T>,
         BaseAsset,
         MarketIdOf<T>,
     >;
     pub(crate) type DisputesOf<T> = BoundedVec<
-        MarketDispute<
-            <T as frame_system::Config>::AccountId,
-            <T as frame_system::Config>::BlockNumber,
-            BalanceOf<T>,
-        >,
+        MarketDispute<<T as frame_system::Config>::AccountId, BlockNumberFor<T>, BalanceOf<T>>,
         <T as Config>::MaxDisputes,
     >;
     pub type CacheSize = ConstU32<64>;
@@ -145,7 +140,7 @@ mod pallet {
     {
         OutcomeReserved {
             market_id: MarketIdOf<T>,
-            dispute: MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>,
+            dispute: MarketDispute<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>,
         },
     }
 
@@ -165,7 +160,7 @@ mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -224,8 +219,8 @@ mod pallet {
         }
 
         fn ensure_can_not_dispute_the_same_outcome(
-            disputes: &[MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>],
-            report: &Report<T::AccountId, T::BlockNumber>,
+            disputes: &[MarketDispute<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>],
+            report: &Report<T::AccountId, BlockNumberFor<T>>,
             outcome: &OutcomeReport,
         ) -> DispatchResult {
             if let Some(last_dispute) = disputes.last() {
@@ -253,16 +248,16 @@ mod pallet {
         }
 
         fn get_auto_resolve(
-            disputes: &[MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>],
+            disputes: &[MarketDispute<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>],
             market: &MarketOf<T>,
-        ) -> Option<T::BlockNumber> {
+        ) -> Option<BlockNumberFor<T>> {
             disputes.last().map(|last_dispute| {
                 last_dispute.at.saturating_add(market.deadlines.dispute_duration)
             })
         }
 
         fn remove_auto_resolve(
-            disputes: &[MarketDispute<T::AccountId, T::BlockNumber, BalanceOf<T>>],
+            disputes: &[MarketDispute<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>],
             market_id: &MarketIdOf<T>,
             market: &MarketOf<T>,
         ) -> u32 {
@@ -316,7 +311,7 @@ mod pallet {
         type AccountId = T::AccountId;
         type Balance = BalanceOf<T>;
         type NegativeImbalance = NegativeImbalanceOf<T>;
-        type BlockNumber = T::BlockNumber;
+        type BlockNumber = BlockNumberFor<T>;
         type MarketId = MarketIdOf<T>;
         type Moment = MomentOf<T>;
         type Origin = T::RuntimeOrigin;

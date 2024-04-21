@@ -31,6 +31,7 @@ use frame_support::{
     dispatch::RawOrigin,
     traits::{Currency, Get, Imbalance},
 };
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::traits::{One, Saturating};
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -47,7 +48,7 @@ fn fill_disputes<T: Config>(market_id: MarketIdOf<T>, d: u32) {
             outcome,
         )
         .unwrap();
-        <frame_system::Pallet<T>>::set_block_number(now.saturating_add(T::BlockNumber::one()));
+        <frame_system::Pallet<T>>::set_block_number(now.saturating_add(BlockNumberFor::<T>::one()));
     }
 }
 
