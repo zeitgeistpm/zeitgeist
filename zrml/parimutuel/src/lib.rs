@@ -34,24 +34,25 @@ mod pallet {
     use alloc::collections::BTreeMap;
     use core::marker::PhantomData;
     use frame_support::{
-        ensure, log,
-        pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
+        ensure,
+        pallet_prelude::{Decode, Encode, TypeInfo},
         require_transactional,
         traits::{
             fungibles::{Create, Inspect},
             Get, IsType, StorageVersion,
         },
-        PalletId, RuntimeDebug,
+        PalletId,
     };
     use frame_system::{
         ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
+    use log;
     use orml_traits::MultiCurrency;
     use pallet_assets::ManagedDestroy;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Zero},
-        DispatchResult,
+        DispatchError, DispatchResult, RuntimeDebug,
     };
     use zeitgeist_macros::unreachable_non_terminating;
     use zeitgeist_primitives::{
@@ -85,7 +86,7 @@ mod pallet {
 
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 Balance = BalanceOf<Self>,
             >;
 
