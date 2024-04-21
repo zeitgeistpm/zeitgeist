@@ -15257,6 +15257,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -15278,10 +15279,12 @@ dependencies = [
 name = "zrml-prediction-markets"
 version = "0.5.2"
 dependencies = [
+ "cfg-if",
  "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "more-asserts",
  "orml-asset-registry",
  "orml-currencies",
