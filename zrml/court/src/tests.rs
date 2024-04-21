@@ -33,12 +33,18 @@ use crate::{
 };
 use alloc::collections::BTreeMap;
 use frame_support::{
-    assert_noop, assert_ok, storage_root,
-    traits::{fungible::Balanced, tokens::imbalance::Imbalance, Currency, NamedReservableCurrency},
-    StateVersion,
+    assert_noop, assert_ok,
+    storage::child::StateVersion,
+    traits::{
+        fungible::Balanced,
+        tokens::{imbalance::Imbalance, Precision},
+        Currency, NamedReservableCurrency,
+    },
 };
+use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_balances::{BalanceLock, NegativeImbalance};
 use rand::seq::SliceRandom;
+use sp_io::storage::root as storage_root;
 use sp_runtime::{
     traits::{BlakeTwo256, Hash, Zero},
     Perbill, Perquintill,
@@ -60,8 +66,6 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_market_commons::{Error as MError, MarketCommonsPalletApi};
-
-type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
 
 const ORACLE_REPORT: OutcomeReport = OutcomeReport::Scalar(u128::MAX);
 
@@ -119,7 +123,7 @@ fn fill_juror_pool(jurors_len: u32) {
     for i in 0..jurors_len {
         let amount = MinJurorStake::get() + i as u128;
         let juror = (i + 1000) as u128;
-        let _ = Balances::deposit(&juror, amount).unwrap();
+        let _ = Balances::deposit(&juror, amount, Precision::Exact).unwrap();
         assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
     }
 }
@@ -467,7 +471,7 @@ fn join_court_fails_amount_below_lowest_juror() {
         let max_amount = min_amount + max_accounts as u128;
         for i in 1..=max_accounts {
             let amount = max_amount - i as u128;
-            let _ = Balances::deposit(&(i as u128), amount).unwrap();
+            let _ = Balances::deposit(&(i as u128), amount, Precision::Exact).unwrap();
             assert_ok!(Court::join_court(RuntimeOrigin::signed(i as u128), amount));
         }
 
@@ -513,7 +517,7 @@ fn prepare_exit_court_removes_lowest_staked_juror() {
         for i in 0..CourtPoolOf::<Runtime>::bound() {
             let amount = min_amount + i as u128;
             let juror = i as u128;
-            let _ = Balances::deposit(&juror, amount).unwrap();
+            let _ = Balances::deposit(&juror, amount, Precision::Exact).unwrap();
             assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
         }
 
@@ -541,7 +545,7 @@ fn prepare_exit_court_removes_middle_staked_juror() {
         for i in 0..CourtPoolOf::<Runtime>::bound() {
             let amount = min_amount + i as u128;
             let juror = i as u128;
-            let _ = Balances::deposit(&juror, amount).unwrap();
+            let _ = Balances::deposit(&juror, amount, Precision::Exact).unwrap();
             assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
         }
 
@@ -571,7 +575,7 @@ fn prepare_exit_court_removes_highest_staked_juror() {
         for i in 0..CourtPoolOf::<Runtime>::bound() {
             let amount = min_amount + i as u128;
             let juror = i as u128;
-            let _ = Balances::deposit(&juror, amount).unwrap();
+            let _ = Balances::deposit(&juror, amount, Precision::Exact).unwrap();
             assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
         }
 
@@ -606,7 +610,7 @@ fn join_court_binary_search_sorted_insert_works() {
         for i in random_numbers {
             let amount = max_amount - i as u128;
             let juror = i as u128;
-            let _ = Balances::deposit(&juror, amount).unwrap();
+            let _ = Balances::deposit(&juror, amount, Precision::Exact).unwrap();
             assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
         }
 
@@ -2179,7 +2183,7 @@ fn reassign_court_stakes_slashes_loosers_and_awards_winners() {
 
         let reward_pot = Court::reward_pot(court_id);
         let tardy_or_denounced_value = 5 * MinJurorStake::get();
-        let _ = Balances::deposit(&reward_pot, tardy_or_denounced_value).unwrap();
+        let _ = Balances::deposit(&reward_pot, tardy_or_denounced_value, Precision::Exact).unwrap();
 
         assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
 
@@ -2298,7 +2302,7 @@ fn reassign_court_stakes_works_for_delegations() {
 
         let reward_pot = Court::reward_pot(court_id);
         let tardy_or_denounced_value = 5 * MinJurorStake::get();
-        let _ = Balances::deposit(&reward_pot, tardy_or_denounced_value).unwrap();
+        let _ = Balances::deposit(&reward_pot, tardy_or_denounced_value, Precision::Exact).unwrap();
 
         assert_ok!(Court::reassign_court_stakes(RuntimeOrigin::signed(EVE), court_id));
 
@@ -2534,7 +2538,7 @@ fn exchange_slashes_unjustified_and_unreserves_justified_appealers() {
             };
 
             let backer = number;
-            let _ = Balances::deposit(&backer, bond).unwrap();
+            let _ = Balances::deposit(&backer, bond, Precision::Exact).unwrap();
             assert_ok!(Balances::reserve_named(&Court::reserve_id(), &backer, bond));
             let free_balance = Balances::free_balance(backer);
             free_balances_before.insert(backer, free_balance);
@@ -2680,7 +2684,7 @@ fn choose_multiple_weighted_works() {
         for i in 0..necessary_draws_weight {
             let amount = MinJurorStake::get() + i as u128;
             let juror = i as u128;
-            let _ = Balances::deposit(&juror, amount).unwrap();
+            let _ = Balances::deposit(&juror, amount, Precision::Exact).unwrap();
             assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
         }
         let random_jurors = Court::choose_multiple_weighted(necessary_draws_weight).unwrap();
@@ -2723,7 +2727,7 @@ fn select_participants_fails_if_not_enough_jurors(appeal_number: usize) {
         for i in 0..(necessary_draws_weight - 1usize) {
             let amount = MinJurorStake::get() + i as u128;
             let juror = (i + 1000) as u128;
-            let _ = Balances::deposit(&juror, amount).unwrap();
+            let _ = Balances::deposit(&juror, amount, Precision::Exact).unwrap();
             assert_ok!(Court::join_court(RuntimeOrigin::signed(juror), amount));
         }
 
@@ -3106,7 +3110,7 @@ fn handle_inflation_works() {
         for number in jurors_list.iter() {
             let stake = *number;
             let juror = *number;
-            let _ = Balances::deposit(&juror, stake).unwrap();
+            let _ = Balances::deposit(&juror, stake, Precision::Exact).unwrap();
             free_balances_before.insert(juror, stake);
             jurors
                 .try_push(CourtPoolItem {
@@ -3211,7 +3215,7 @@ fn gain_equal(
 
 struct Params {
     stake: BalanceOf<Runtime>,
-    uneligible_index: BlockNumberOf<Runtime>,
+    uneligible_index: BlockNumberFor<Runtime>,
     uneligible_stake: BalanceOf<Runtime>,
 }
 
@@ -3424,7 +3428,7 @@ fn handle_inflation_without_waiting_one_inflation_period() {
         for number in jurors_list.iter() {
             let stake = *number;
             let juror = *number;
-            let _ = Balances::deposit(&juror, stake).unwrap();
+            let _ = Balances::deposit(&juror, stake, Precision::Exact).unwrap();
             free_balances_before.insert(juror, stake);
             jurors
                 .try_push(CourtPoolItem {
