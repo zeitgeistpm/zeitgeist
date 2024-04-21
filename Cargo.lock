@@ -15073,6 +15073,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "num-traits",
  "pallet-balances",
  "pallet-timestamp",
