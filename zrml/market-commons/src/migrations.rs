@@ -16,17 +16,18 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AccountIdOf, BalanceOf, BlockNumberOf, Config, MomentOf, Pallet as MarketCommons};
+use crate::{AccountIdOf, BalanceOf, Config, MomentOf, Pallet as MarketCommons};
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use frame_support::{
-    dispatch::Weight,
-    log,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
+    weights::Weight,
 };
+use frame_system::pallet_prelude::BlockNumberFor;
+use log;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::{Perbill, RuntimeDebug, Saturating};
+use sp_runtime::{DispatchError, Perbill, RuntimeDebug, Saturating};
 use zeitgeist_primitives::types::{
     BaseAsset, Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
@@ -68,7 +69,7 @@ pub struct OldMarket<AI, BA, BN, M, A> {
 }
 
 type OldMarketOf<T> =
-    OldMarket<AccountIdOf<T>, BalanceOf<T>, BlockNumberOf<T>, MomentOf<T>, BaseAsset>;
+    OldMarket<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, BaseAsset>;
 
 #[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
 pub enum OldScoringRule {
@@ -147,7 +148,7 @@ where
     }
 
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
         let old_markets = storage_key_iter::<MarketIdOf<T>, OldMarketOf<T>, Blake2_128Concat>(
             MARKET_COMMONS,
             MARKETS,
@@ -169,7 +170,7 @@ where
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(previous_state: Vec<u8>) -> Result<(), DispatchError> {
         let old_markets: BTreeMap<MarketIdOf<T>, OldMarketOf<T>> =
             Decode::decode(&mut &previous_state[..]).unwrap();
         let old_market_count = old_markets.len();
@@ -212,10 +213,9 @@ mod tests {
         MarketOf,
     };
     use alloc::fmt::Debug;
-    use frame_support::{
-        migration::put_storage_value, storage_root, Blake2_128Concat, StorageHasher,
-    };
+    use frame_support::{migration::put_storage_value, Blake2_128Concat, StorageHasher};
     use parity_scale_codec::Encode;
+    use sp_io::storage::root as storage_root;
     use sp_runtime::{Perbill, StateVersion};
     use test_case::test_case;
     use zeitgeist_primitives::types::{BaseAssetClass, Bond, EarlyCloseState, MarketId};
@@ -269,7 +269,7 @@ mod tests {
                 oracle: 4,
                 metadata: vec![0x05; 50],
                 market_type: MarketType::Categorical(999),
-                period: MarketPeriod::<BlockNumberOf<Runtime>, MomentOf<Runtime>>::Block(6..7),
+                period: MarketPeriod::<BlockNumberFor<Runtime>, MomentOf<Runtime>>::Block(6..7),
                 deadlines: Deadlines { grace_period: 7, oracle_duration: 8, dispute_duration: 9 },
                 scoring_rule: ScoringRule::AmmCdaHybrid,
                 status: MarketStatus::Active,

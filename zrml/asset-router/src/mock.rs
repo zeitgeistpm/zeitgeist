@@ -78,8 +78,7 @@ parameter_types! {
 }
 
 construct_runtime!(
-    pub enum Runtime
-    {
+    pub enum Runtime {
         AssetRouter: zrml_asset_router,
         Balances: pallet_balances,
         CustomAssets: pallet_assets::<Instance1>,

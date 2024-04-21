@@ -47,9 +47,9 @@ fn create_market_builder(oracle: AccountIdOf<Runtime>) -> MarketBuilder<Runtime>
         .oracle(oracle)
         .period(MarketPeriod::Block(0..100))
         .deadlines(Deadlines {
-            grace_period: 1_u64,
-            oracle_duration: 1_u64,
-            dispute_duration: 1_u64,
+            grace_period: 1_u32,
+            oracle_duration: 1_u32,
+            dispute_duration: 1_u32,
         })
         .report(None)
         .resolved_outcome(None)
