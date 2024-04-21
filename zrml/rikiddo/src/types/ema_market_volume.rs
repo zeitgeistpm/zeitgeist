@@ -25,8 +25,7 @@ use crate::{
 use arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured};
 #[cfg(feature = "arbitrary")]
 use core::mem;
-use frame_support::dispatch::{Decode, Encode};
-use parity_scale_codec::MaxEncodedLen;
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
 use substrate_fixed::{

@@ -72,6 +72,7 @@ pub mod pallet {
         traits::{Get, Hooks, StorageVersion, Time},
         Twox64Concat,
     };
+    use frame_system::pallet_prelude::BlockNumberFor;
     use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode, MaxEncodedLen};
     use scale_info::TypeInfo;
     use sp_runtime::DispatchError;
@@ -150,7 +151,7 @@ pub mod pallet {
         StorageMap<_, Twox64Concat, T::PoolId, T::Rikiddo>;
 
     #[pallet::hooks]
-    impl<T: Config<I>, I: 'static> Hooks<T::BlockNumber> for Pallet<T, I> {}
+    impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {}
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
