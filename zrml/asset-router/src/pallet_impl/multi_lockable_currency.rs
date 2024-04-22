@@ -18,7 +18,7 @@
 use crate::pallet::*;
 
 impl<T: Config> MultiLockableCurrency<T::AccountId> for Pallet<T> {
-    type Moment = T::BlockNumber;
+    type Moment = BlockNumberFor<T>;
 
     fn set_lock(
         lock_id: LockIdentifier,

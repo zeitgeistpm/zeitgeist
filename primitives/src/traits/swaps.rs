@@ -18,8 +18,9 @@
 
 use crate::types::PoolId;
 use alloc::vec::Vec;
-use frame_support::dispatch::{DispatchError, DispatchResult, Weight};
+use frame_support::{dispatch::DispatchResult, weights::Weight};
 use parity_scale_codec::{HasCompact, MaxEncodedLen};
+use sp_runtime::DispatchError;
 
 pub trait Swaps<AccountId> {
     type Asset: MaxEncodedLen;

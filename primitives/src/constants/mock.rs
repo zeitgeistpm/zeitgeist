@@ -191,7 +191,7 @@ parameter_type_with_key! {
 
 // System
 parameter_types! {
-    pub const BlockHashCount: u64 = 250;
+    pub const BlockHashCount: u32 = 250;
 }
 
 // Time
