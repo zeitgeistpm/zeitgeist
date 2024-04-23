@@ -1,3 +1,10 @@
+[workspace.package]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
+edition = "2021
+repository = "https://github.com/zeitgeistpm/zeitgeist"
+license = "GPL-3.0"
+homepage = "https://zeitgeist.pm/"
+
 [workspace]
 default-members = [
     "macros",

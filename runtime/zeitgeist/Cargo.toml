@@ -417,7 +417,7 @@ force-debug = ["sp-debug-derive/force-debug"]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2021"
+edition.workspace = true
 name = "zeitgeist-runtime"
 version = "0.5.2"
 
