@@ -15047,6 +15047,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "pallet-balances",
  "pallet-insecure-randomness-collective-flip",
  "pallet-timestamp",
@@ -15072,6 +15073,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "num-traits",
  "pallet-balances",
  "pallet-timestamp",
@@ -15089,6 +15091,7 @@ dependencies = [
 name = "zrml-hybrid-router"
 version = "0.5.2"
 dependencies = [
+ "cfg-if",
  "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
@@ -15133,6 +15136,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -15151,6 +15155,7 @@ dependencies = [
  "env_logger 0.10.2",
  "frame-support",
  "frame-system",
+ "log",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -15173,6 +15178,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hydra-dx-math",
+ "log",
  "more-asserts",
  "orml-asset-registry",
  "orml-currencies",
@@ -15253,6 +15259,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
@@ -15274,10 +15281,12 @@ dependencies = [
 name = "zrml-prediction-markets"
 version = "0.5.2"
 dependencies = [
+ "cfg-if",
  "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "more-asserts",
  "orml-asset-registry",
  "orml-currencies",

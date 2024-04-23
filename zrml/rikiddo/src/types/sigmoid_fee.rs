@@ -1,3 +1,4 @@
+// Copyright 2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -26,8 +27,7 @@ use crate::{
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
 #[cfg(feature = "arbitrary")]
 use core::mem;
-use frame_support::dispatch::{Decode, Encode};
-use parity_scale_codec::MaxEncodedLen;
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
 use substrate_fixed::{

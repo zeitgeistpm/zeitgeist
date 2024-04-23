@@ -32,7 +32,10 @@ use frame_support::{
     traits::{IsType, StorageVersion},
     transactional, PalletId, Twox64Concat,
 };
-use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+use frame_system::{
+    ensure_signed,
+    pallet_prelude::{BlockNumberFor, OriginFor},
+};
 use orml_traits::{
     BalanceStatus, MultiCurrency, MultiReservableCurrency, NamedMultiReservableCurrency,
 };
@@ -84,7 +87,7 @@ mod pallet {
 
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 Balance = BalanceOf<Self>,
             >;
 

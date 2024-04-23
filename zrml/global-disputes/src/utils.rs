@@ -18,11 +18,12 @@
 #![cfg(any(feature = "runtime-benchmarks", test))]
 
 use crate::*;
+use frame_system::pallet_prelude::BlockNumberFor;
 
 type MarketOf<T> = zeitgeist_primitives::types::Market<
     <T as frame_system::Config>::AccountId,
     BalanceOf<T>,
-    <T as frame_system::Config>::BlockNumber,
+    BlockNumberFor<T>,
     MomentOf<T>,
     zeitgeist_primitives::types::BaseAsset,
     MarketIdOf<T>,

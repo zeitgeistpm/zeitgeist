@@ -27,10 +27,10 @@ use crate::{
 use core::ops::Range;
 use frame_support::{
     assert_err, assert_ok,
-    dispatch::DispatchError,
     traits::{Currency, OnFinalize},
 };
 use frame_system::RawOrigin;
+use sp_runtime::DispatchError;
 use zeitgeist_primitives::types::{
     BaseAsset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, ScoringRule,

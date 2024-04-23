@@ -18,7 +18,10 @@
 #![cfg(all(feature = "mock", test))]
 
 use crate::{mock::*, types::*, utils::*, AccountIdOf, BalanceOf, MarketIdOf, *};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{
+    assert_noop, assert_ok,
+    traits::{fungible::Mutate, tokens::Precision},
+};
 use orml_currencies::Error as CurrenciesError;
 use orml_tokens::Error as TokensError;
 use orml_traits::MultiCurrency;

@@ -2,6 +2,7 @@
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+log = { workspace = true }
 orml-traits = { workspace = true }
 pallet-assets = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
@@ -19,6 +20,7 @@ zrml-simple-disputes = { workspace = true }
 
 # Mock
 
+cfg-if = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
 orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
@@ -41,6 +43,7 @@ zrml-prediction-markets = { workspace = true, features = ["mock", "default"] }
 [features]
 default = ["std"]
 mock = [
+    "cfg-if",
     "env_logger/default",
     "orml-asset-registry/default",
     "orml-currencies/default",

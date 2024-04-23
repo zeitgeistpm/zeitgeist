@@ -429,7 +429,7 @@ fn deploy_pool_fails_on_insufficient_funds() {
                 vec![_3_4, _1_4],
                 CENT
             ),
-            pallet_assets::Error::<Runtime, MarketAssetsInstance>::BalanceLow
+            DispatchError::Arithmetic(ArithmeticError::Underflow)
         );
     });
 }

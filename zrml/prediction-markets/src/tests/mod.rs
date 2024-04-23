@@ -47,6 +47,7 @@ use core::ops::Range;
 use frame_support::{
     assert_noop, assert_ok, storage::unhashed::get_or, traits::NamedReservableCurrency,
 };
+use frame_system::pallet_prelude::BlockNumberFor;
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Perbill;
 use sp_runtime::traits::{BlakeTwo256, Hash, Zero};
@@ -91,7 +92,7 @@ impl StateTransitionMock {
     }
 }
 
-fn get_deadlines() -> Deadlines<<Runtime as frame_system::Config>::BlockNumber> {
+fn get_deadlines() -> Deadlines<BlockNumberFor<Runtime>> {
     Deadlines {
         grace_period: 1_u32.into(),
         oracle_duration: <Runtime as Config>::MinOracleDuration::get(),

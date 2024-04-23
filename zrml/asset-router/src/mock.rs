@@ -26,7 +26,7 @@ use frame_support::{
     pallet_prelude::{DispatchResult, Weight},
     traits::{AsEnsureOriginWithArg, Everything},
 };
-use frame_system::{mocking::MockBlockU32, EnsureSigned};
+use frame_system::{mocking::MockBlock, EnsureSigned};
 use orml_traits::parameter_type_with_key;
 use pallet_assets::ManagedDestroy;
 use parity_scale_codec::Compact;
@@ -78,8 +78,7 @@ parameter_types! {
 }
 
 construct_runtime!(
-    pub enum Runtime
-    {
+    pub enum Runtime {
         AssetRouter: zrml_asset_router,
         Balances: pallet_balances,
         CustomAssets: pallet_assets::<Instance1>,
@@ -110,7 +109,7 @@ impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountIdTest;
     type BaseCallFilter = Everything;
-    type Block = MockBlockU32<Runtime>;
+    type Block = MockBlock<Runtime>;
     type BlockHashCount = BlockHashCount;
     type BlockLength = ();
     type BlockWeights = ();

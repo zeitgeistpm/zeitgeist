@@ -31,8 +31,8 @@ use crate::{
 };
 use alloc::{vec, vec::Vec};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
-use frame_support::traits::{Currency, Get, NamedReservableCurrency};
-use frame_system::RawOrigin;
+use frame_support::traits::{Currency, Get, Imbalance, NamedReservableCurrency};
+use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use sp_arithmetic::Perbill;
 use sp_runtime::{
     traits::{Bounded, Hash, Saturating, StaticLookup, Zero},
@@ -64,15 +64,16 @@ where
         metadata: vec![],
         oracle: account("oracle", 0, 0),
         period: MarketPeriod::Block(
-            0u64.saturated_into::<T::BlockNumber>()..100u64.saturated_into::<T::BlockNumber>(),
+            0u64.saturated_into::<BlockNumberFor<T>>()
+                ..100u64.saturated_into::<BlockNumberFor<T>>(),
         ),
         deadlines: Deadlines {
-            grace_period: 1_u64.saturated_into::<T::BlockNumber>(),
-            oracle_duration: 1_u64.saturated_into::<T::BlockNumber>(),
-            dispute_duration: 1_u64.saturated_into::<T::BlockNumber>(),
+            grace_period: 1_u64.saturated_into::<BlockNumberFor<T>>(),
+            oracle_duration: 1_u64.saturated_into::<BlockNumberFor<T>>(),
+            dispute_duration: 1_u64.saturated_into::<BlockNumberFor<T>>(),
         },
         report: Some(Report {
-            at: 1u64.saturated_into::<T::BlockNumber>(),
+            at: 1u64.saturated_into::<BlockNumberFor<T>>(),
             by: account("oracle", 0, 0),
             outcome: ORACLE_REPORT,
         }),
@@ -128,7 +129,7 @@ where
             court_participant: juror.clone(),
             consumed_stake,
             joined_at,
-            uneligible_index: 0u64.saturated_into::<T::BlockNumber>(),
+            uneligible_index: 0u64.saturated_into::<BlockNumberFor<T>>(),
             uneligible_stake: BalanceOf::<T>::zero(),
         };
         match pool.binary_search_by_key(&(stake, &juror), |pool_item| {
@@ -178,10 +179,10 @@ fn setup_court<T>() -> Result<(crate::MarketIdOf<T>, CourtId), &'static str>
 where
     T: Config,
 {
-    <frame_system::Pallet<T>>::set_block_number(1u64.saturated_into::<T::BlockNumber>());
+    <frame_system::Pallet<T>>::set_block_number(1u64.saturated_into::<BlockNumberFor<T>>());
 
     let now = <frame_system::Pallet<T>>::block_number();
-    <RequestBlock<T>>::put(now + 1u64.saturated_into::<T::BlockNumber>());
+    <RequestBlock<T>>::put(now + 1u64.saturated_into::<BlockNumberFor<T>>());
 
     let market_id = T::MarketCommons::push_market(get_market::<T>()).unwrap();
     Court::<T>::on_dispute(&market_id, &get_market::<T>()).unwrap();
@@ -262,7 +263,7 @@ benchmarks! {
             joined_at_before,
         );
         <frame_system::Pallet<T>>::set_block_number(
-            joined_at_before + 1u64.saturated_into::<T::BlockNumber>(),
+            joined_at_before + 1u64.saturated_into::<BlockNumberFor<T>>(),
         );
 
         let new_stake = T::MinJurorStake::get()
@@ -298,7 +299,7 @@ benchmarks! {
             joined_at_before,
         );
         <frame_system::Pallet<T>>::set_block_number(
-            joined_at_before + 1u64.saturated_into::<T::BlockNumber>(),
+            joined_at_before + 1u64.saturated_into::<BlockNumberFor<T>>(),
         );
 
         let juror_pool = <CourtPool<T>>::get();
@@ -411,7 +412,7 @@ benchmarks! {
         <SelectedDraws<T>>::insert(court_id, draws);
 
         <frame_system::Pallet<T>>::set_block_number(
-            pre_vote + 1u64.saturated_into::<T::BlockNumber>(),
+            pre_vote + 1u64.saturated_into::<BlockNumberFor<T>>(),
         );
 
         let commitment_vote = Default::default();
@@ -466,7 +467,7 @@ benchmarks! {
         <SelectedDraws<T>>::insert(court_id, draws);
 
         <frame_system::Pallet<T>>::set_block_number(
-            pre_vote + 1u64.saturated_into::<T::BlockNumber>(),
+            pre_vote + 1u64.saturated_into::<BlockNumberFor<T>>(),
         );
     }: _(RawOrigin::Signed(caller), court_id, denounced_juror_unlookup, vote_item.clone(), salt)
     verify {
@@ -515,7 +516,7 @@ benchmarks! {
         <SelectedDraws<T>>::insert(court_id, draws);
 
         <frame_system::Pallet<T>>::set_block_number(
-            vote_end + 1u64.saturated_into::<T::BlockNumber>()
+            vote_end + 1u64.saturated_into::<BlockNumberFor<T>>()
         );
     }: _(RawOrigin::Signed(caller.clone()), court_id, vote_item.clone(), salt)
     verify {
@@ -587,9 +588,9 @@ benchmarks! {
         }
         <SelectedDraws<T>>::insert(court_id, draws);
 
-        <frame_system::Pallet<T>>::set_block_number(aggregation + 1u64.saturated_into::<T::BlockNumber>());
+        <frame_system::Pallet<T>>::set_block_number(aggregation + 1u64.saturated_into::<BlockNumberFor<T>>());
         let now = <frame_system::Pallet<T>>::block_number();
-        <RequestBlock<T>>::put(now + 1u64.saturated_into::<T::BlockNumber>());
+        <RequestBlock<T>>::put(now + 1u64.saturated_into::<BlockNumberFor<T>>());
 
         let new_resolve_at = <RequestBlock<T>>::get()
             + T::VotePeriod::get()
@@ -699,7 +700,7 @@ benchmarks! {
         let r in 0..62;
 
         let now = <frame_system::Pallet<T>>::block_number();
-        let pre_vote_end = now + 1u64.saturated_into::<T::BlockNumber>();
+        let pre_vote_end = now + 1u64.saturated_into::<BlockNumberFor<T>>();
         <RequestBlock<T>>::put(pre_vote_end);
 
         let appeal_end = pre_vote_end
@@ -763,7 +764,8 @@ benchmarks! {
         for i in 0..a {
             let backer = account("backer", i, 0);
             let bond = T::MinJurorStake::get();
-            let _ = T::Currency::deposit_creating(&backer, bond);
+            let deposit = bond.saturating_add(T::Currency::minimum_balance());
+            assert_eq!(T::Currency::deposit_creating(&backer, deposit).peek(), deposit);
             T::Currency::reserve_named(&Court::<T>::reserve_id(), &backer, bond).unwrap();
             let appeal_info = AppealInfo {
                 backer,
@@ -813,7 +815,8 @@ benchmarks! {
         for i in 0..a {
             let backer = account("backer", i, 0);
             let bond = T::MinJurorStake::get();
-            let _ = T::Currency::deposit_creating(&backer, bond);
+            let deposit = bond.saturating_add(T::Currency::minimum_balance());
+            assert_eq!(T::Currency::deposit_creating(&backer, deposit).peek(), deposit);
             T::Currency::reserve_named(&Court::<T>::reserve_id(), &backer, bond).unwrap();
             let appeal_info = AppealInfo {
                 backer,

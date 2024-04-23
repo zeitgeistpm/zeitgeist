@@ -673,7 +673,7 @@ fn buy_fails_if_balance_too_low() {
         let asset = Assets::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
 
-        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), ALICE, amount - 1, 0));
+        assert_eq!(Balances::set_balance(&ALICE, amount - 1), amount - 1);
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::LimitOrder;

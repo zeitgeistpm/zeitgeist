@@ -42,6 +42,7 @@ mod pallet {
         traits::{Hooks, StorageVersion, Time},
         Blake2_128Concat, Parameter,
     };
+    use frame_system::pallet_prelude::BlockNumberFor;
     use parity_scale_codec::{FullCodec, HasCompact, MaxEncodedLen};
     use sp_runtime::{
         traits::{
@@ -62,22 +63,21 @@ mod pallet {
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type BalanceOf<T> = <T as Config>::Balance;
-    pub(crate) type BlockNumberOf<T> = <T as frame_system::Config>::BlockNumber;
     pub(crate) type MarketIdOf<T> = <T as Config>::MarketId;
     pub(crate) type MarketOf<T> = Market<
         AccountIdOf<T>,
         BalanceOf<T>,
-        BlockNumberOf<T>,
+        BlockNumberFor<T>,
         MomentOf<T>,
         BaseAsset,
         MarketIdOf<T>,
     >;
     pub(crate) type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
-    pub(crate) type DeadlinesOf<T> = Deadlines<BlockNumberOf<T>>;
-    pub(crate) type EarlyCloseOf<T> = EarlyClose<BlockNumberOf<T>, MomentOf<T>>;
+    pub(crate) type DeadlinesOf<T> = Deadlines<BlockNumberFor<T>>;
+    pub(crate) type EarlyCloseOf<T> = EarlyClose<BlockNumberFor<T>, MomentOf<T>>;
     pub(crate) type MarketBondsOf<T> = MarketBonds<AccountIdOf<T>, BalanceOf<T>>;
-    pub(crate) type MarketPeriodOf<T> = MarketPeriod<BlockNumberOf<T>, MomentOf<T>>;
-    pub(crate) type ReportOf<T> = Report<AccountIdOf<T>, BlockNumberOf<T>>;
+    pub(crate) type MarketPeriodOf<T> = MarketPeriod<BlockNumberFor<T>, MomentOf<T>>;
+    pub(crate) type ReportOf<T> = Report<AccountIdOf<T>, BlockNumberFor<T>>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
@@ -125,7 +125,7 @@ mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -155,7 +155,7 @@ mod pallet {
         <T as Config>::Timestamp: Time,
     {
         type AccountId = AccountIdOf<T>;
-        type BlockNumber = T::BlockNumber;
+        type BlockNumber = BlockNumberFor<T>;
         type Balance = T::Balance;
         type MarketId = T::MarketId;
         type Moment = MomentOf<T>;

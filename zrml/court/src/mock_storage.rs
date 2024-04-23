@@ -19,6 +19,7 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+use frame_system::pallet_prelude::BlockNumberFor;
 pub use pallet::*;
 use parity_scale_codec::Encode;
 use sp_runtime::traits::Hash;
@@ -27,6 +28,7 @@ use sp_runtime::traits::Hash;
 pub(crate) mod pallet {
     use core::marker::PhantomData;
     use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::BlockNumberFor;
     use zrml_market_commons::MarketCommonsPalletApi;
 
     pub(crate) type MarketIdOf<T> =
@@ -36,7 +38,7 @@ pub(crate) mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = BlockNumberFor<Self>>;
     }
 
     #[pallet::pallet]
@@ -47,14 +49,14 @@ pub(crate) mod pallet {
     pub(crate) type MarketIdsPerDisputeBlock<T: Config> = StorageMap<
         _,
         Twox64Concat,
-        T::BlockNumber,
+        BlockNumberFor<T>,
         BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 }
 
-impl<T: Config> frame_support::traits::Randomness<T::Hash, T::BlockNumber> for Pallet<T> {
-    fn random(subject: &[u8]) -> (T::Hash, T::BlockNumber) {
+impl<T: Config> frame_support::traits::Randomness<T::Hash, BlockNumberFor<T>> for Pallet<T> {
+    fn random(subject: &[u8]) -> (T::Hash, BlockNumberFor<T>) {
         let block_number = <frame_system::Pallet<T>>::block_number();
         let seed = subject.using_encoded(T::Hashing::hash);
 

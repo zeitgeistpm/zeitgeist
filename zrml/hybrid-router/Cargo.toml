@@ -9,7 +9,7 @@ sp-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 zrml-market-commons = { workspace = true }
 
-
+cfg-if = { workspace = true, optional = true }
 orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
@@ -41,6 +41,7 @@ zrml-hybrid-router = { workspace = true, features = ["mock"] }
 [features]
 default = ["std"]
 mock = [
+    "cfg-if",
     "orml-asset-registry/default",
     "orml-currencies/default",
     "orml-tokens/default",

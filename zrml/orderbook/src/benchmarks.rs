@@ -26,7 +26,7 @@
 use super::*;
 use crate::{utils::market_mock, Pallet as Orderbook};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
-use frame_support::dispatch::UnfilteredDispatchable;
+use frame_support::traits::UnfilteredDispatchable;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
