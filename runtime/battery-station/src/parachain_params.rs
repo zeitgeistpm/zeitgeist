@@ -66,10 +66,14 @@ parameter_types! {
     pub const LeaveDelegatorsDelay: u32 = 2;
     /// Maximum bottom delegations per candidate
     pub const MaxBottomDelegationsPerCandidate: u32 = 50;
+    /// Maximum number of collator candidates
+    pub const MaxCandidates: u32 = 200;
     /// Maximum delegations per delegator
     pub const MaxDelegationsPerDelegator: u32 = 100;
     /// Maximum top delegations per candidate
     pub const MaxTopDelegationsPerCandidate: u32 = 300;
+    /// Number of rounds until a collator not producing blocks is marked as inactive.
+    pub const MaxOfflineRounds: u32 = 1;
     /// Minimum round length is 2 minutes
     pub const MinBlocksPerRound: u32 = 2 * BLOCKS_PER_MINUTE as u32;
     /// Minimum stake required to become a collator

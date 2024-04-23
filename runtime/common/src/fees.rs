@@ -40,8 +40,8 @@ macro_rules! impl_fee_types {
         }
 
         pub struct DealWithForeignFees;
-        impl OnUnbalanced<CreditOf<AccountId, AssetRouter>> for DealWithForeignFees {
-            fn on_unbalanced(fees_and_tips: CreditOf<AccountId, AssetRouter>) {
+        impl OnUnbalanced<Credit<AccountId, AssetRouter>> for DealWithForeignFees {
+            fn on_unbalanced(fees_and_tips: Credit<AccountId, AssetRouter>) {
                 // We have to manage the mint / burn ratio on the Zeitgeist chain,
                 // but we do not have the responsibility and necessary knowledge to
                 // manage the mint / burn ratio for any other chain.
@@ -68,9 +68,11 @@ macro_rules! impl_foreign_fees {
         use frame_support::{
             pallet_prelude::InvalidTransaction,
             traits::{
-                fungibles::{CreditOf, Inspect},
+                fungibles::{Credit, Inspect},
                 tokens::{
-                    fungibles::Balanced, BalanceConversion, WithdrawConsequence, WithdrawReasons,
+                    fungibles::Balanced, ConversionToAssetBalance, Fortitude,
+                    Precision, Preservation, WithdrawConsequence, WithdrawReasons,
+                    
                 },
                 ExistenceRequirement,
             },
@@ -202,7 +204,7 @@ macro_rules! impl_foreign_fees {
         }
 
         pub struct TTCBalanceToAssetBalance;
-        impl BalanceConversion<Balance, Assets, Balance> for TTCBalanceToAssetBalance {
+        impl ConversionToAssetBalance<Balance, Assets, Balance> for TTCBalanceToAssetBalance {
             type Error = TransactionValidityError;
 
             fn to_asset_balance(
@@ -217,7 +219,7 @@ macro_rules! impl_foreign_fees {
 
         pub struct TTCHandleCredit;
         impl HandleCredit<AccountId, AssetRouter> for TTCHandleCredit {
-            fn handle_credit(final_fee: CreditOf<AccountId, AssetRouter>) {
+            fn handle_credit(final_fee: Credit<AccountId, AssetRouter>) {
                 let asset = final_fee.asset();
 
                 if CampaignAsset::try_from(asset).is_ok() {
@@ -232,7 +234,7 @@ macro_rules! impl_foreign_fees {
         impl pallet_asset_tx_payment::OnChargeAssetTransaction<Runtime> for TxCharger {
             type AssetId = Assets;
             type Balance = Balance;
-            type LiquidityInfo = CreditOf<AccountId, AssetRouter>;
+            type LiquidityInfo = Credit<AccountId, AssetRouter>;
 
             fn withdraw_fee(
                 who: &AccountId,
@@ -256,8 +258,14 @@ macro_rules! impl_foreign_fees {
                 if can_withdraw != WithdrawConsequence::Success {
                     return Err(InvalidTransaction::Payment.into());
                 }
-                <AssetRouter as Balanced<AccountId>>::withdraw(asset_id, who, converted_fee)
-                    .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
+                <AssetRouter as Balanced<AccountId>>::withdraw(
+                    asset_id, who,
+                    converted_fee,
+                    Precision::Exact,
+                    Preservation::Expendable,
+                    Fortitude::Force
+                )
+                .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
             }
 
             fn correct_and_deposit_fee(
@@ -265,9 +273,9 @@ macro_rules! impl_foreign_fees {
                 _dispatch_info: &DispatchInfoOf<RuntimeCall>,
                 _post_info: &PostDispatchInfoOf<RuntimeCall>,
                 corrected_native_fee: Self::Balance,
-                _tip: Self::Balance,
+                tip: Self::Balance,
                 paid: Self::LiquidityInfo,
-            ) -> Result<(), TransactionValidityError> {
+            ) -> Result<(Self::Balance, Self::Balance), TransactionValidityError> {
                 let min_converted_fee =
                     if corrected_native_fee.is_zero() { Zero::zero() } else { One::one() };
 
@@ -281,8 +289,9 @@ macro_rules! impl_foreign_fees {
                 // below the existential balance. In that case we don't refund anything.
                 let (final_fee, refund) = paid.split(converted_fee);
                 let _ = AssetRouter::resolve(who, refund);
+                let final_fee_raw = final_fee.peek();
                 TTCHandleCredit::handle_credit(final_fee);
-                Ok(())
+                Ok((final_fee_raw, tip))
             }
         }
     };
@@ -357,7 +366,7 @@ macro_rules! fee_tests {
         use orml_traits::MultiCurrency;
         use pallet_asset_tx_payment::OnChargeAssetTransaction;
         use sp_core::H256;
-        use sp_runtime::traits::Convert;
+        use sp_runtime::{BuildStorage, traits::Convert};
         use zeitgeist_primitives::constants::BASE;
 
         fn run_with_system_weight<F>(w: Weight, mut assertions: F)
@@ -365,7 +374,7 @@ macro_rules! fee_tests {
             F: FnMut(),
         {
             let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into();
             t.execute_with(|| {
                 System::set_block_consumed_resources(w, 0);
                 assertions()
@@ -375,7 +384,7 @@ macro_rules! fee_tests {
         #[test]
         fn treasury_receives_correct_amount_of_native_fees_and_tips() {
             let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into();
             t.execute_with(|| {
                 let fee_balance = 3 * ExistentialDeposit::get();
                 let fee_imbalance = Balances::issue(fee_balance);
@@ -393,7 +402,7 @@ macro_rules! fee_tests {
         #[test]
         fn treasury_receives_correct_amount_of_foreign_fees_and_tips() {
             let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into();
             t.execute_with(|| {
                 let fee_and_tip_balance = 10 * ExistentialDeposit::get();
                 let fees_and_tips = AssetRouter::issue(Asset::ForeignAsset(0), fee_and_tip_balance);
@@ -412,7 +421,7 @@ macro_rules! fee_tests {
         #[test]
         fn fee_payment_campaign_assets_withdraws_correct_amount() {
             let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into();
             t.execute_with(|| {
                 let asset = Asset::CampaignAsset(0);
                 let alice = AccountId::from([0u8; 32]);
@@ -450,7 +459,7 @@ macro_rules! fee_tests {
             });
         }
 
-        fn campaign_asset_throttled_fee_common() -> CreditOf<AccountId, AssetRouter> {
+        fn campaign_asset_throttled_fee_common() -> Credit<AccountId, AssetRouter> {
             let asset = Asset::CampaignAsset(0);
             let alice = AccountId::from([0u8; 32]);
             let initial_balance: Balance = 1_000_000_000_000;
@@ -482,7 +491,7 @@ macro_rules! fee_tests {
         #[test]
         fn fee_payment_campaign_assets_withdraws_correct_amount_throttled() {
             let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into();
             t.execute_with(|| {
                 let _ = campaign_asset_throttled_fee_common();
             });
@@ -491,7 +500,7 @@ macro_rules! fee_tests {
         #[test]
         fn fee_payment_campaign_assets_corrects_reimburses_and_burns_fees_properly() {
             let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into();
             t.execute_with(|| {
                 let asset = Asset::CampaignAsset(0);
                 let withdrawn = campaign_asset_throttled_fee_common();
