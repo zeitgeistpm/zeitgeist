@@ -37,22 +37,11 @@ use super::*;
 /// # Types
 ///
 /// * `MI`: Market Id
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
-    Clone,
-    Copy,
-    Debug,
-    Decode,
-    Default,
-    Eq,
-    Encode,
-    MaxEncodedLen,
-    Ord,
-    PartialEq,
-    PartialOrd,
-    TypeInfo,
+    Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, Ord, PartialEq, PartialOrd, TypeInfo,
+    serde::Deserialize, serde::Serialize
 )]
+#[serde(rename_all = "camelCase")]
 pub enum Asset<MI: MaxEncodedLen + HasCompact> {
     #[codec(index = 0)]
     CategoricalOutcome(MI, CategoryIndex),

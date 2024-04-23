@@ -9,8 +9,8 @@ orml-currencies = { workspace = true }
 orml-tokens = { workspace = true }
 orml-traits = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
-scale-info = { workspace = true, features = ["derive"] }
-serde = { workspace = true, features = ["derive"], optional = true }
+scale-info = { workspace = true, features = ["derive", "serde"] }
+serde = { workspace = true, features = ["alloc", "derive", "rc"] }
 sp-arithmetic = { workspace = true }
 sp-core = { workspace = true }
 sp-runtime = { workspace = true }
