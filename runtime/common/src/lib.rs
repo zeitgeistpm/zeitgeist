@@ -265,11 +265,7 @@ macro_rules! create_runtime {
         // `PredictionMarkets` depends on `SimpleDisputes`.
 
         construct_runtime!(
-            pub enum Runtime where
-                Block = crate::Block,
-                NodeBlock = crate::NodeBlock,
-                UncheckedExtrinsic = crate::UncheckedExtrinsic,
-            {
+            pub enum Runtime where {
                 // System
                 System: frame_system::{Call, Config, Event<T>, Pallet, Storage} = 0,
                 Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent} = 1,

@@ -51,7 +51,6 @@ mod pallet {
     };
     use alloc::vec::Vec;
     use core::marker::PhantomData;
-    #[cfg(feature = "std")]
     use frame_support::traits::BuildGenesisConfig;
     use frame_support::{
         dispatch::DispatchResult,
