@@ -79,7 +79,7 @@ use {
 
 use frame_support::construct_runtime;
 
-use sp_api::{BlockT, impl_runtime_apis};
+use sp_api::{impl_runtime_apis, BlockT};
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str,

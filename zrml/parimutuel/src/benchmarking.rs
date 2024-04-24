@@ -60,6 +60,7 @@ fn buy_asset<T: Config>(
 #[benchmarks]
 mod benchmarks {
     use super::*;
+    use alloc::vec;
 
     #[benchmark]
     fn buy() {

@@ -21,8 +21,20 @@ use super::*;
 /// Campaign assets can have special properties, such as the capability
 /// to pay fees.
 #[derive(
-    Clone, CompactAs, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, Ord, PartialEq, PartialOrd, TypeInfo,
-    serde::Deserialize, serde::Serialize
+    Clone,
+    CompactAs,
+    Copy,
+    Debug,
+    Decode,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+    serde::Deserialize,
+    serde::Serialize,
 )]
 #[serde(rename_all = "camelCase")]
 pub struct CampaignAssetClass(#[codec(compact)] pub CampaignAssetId);

@@ -19,8 +19,19 @@ use super::*;
 
 /// The `ParimutuelAssetClass` enum represents all assets that are specific to parimutuel markets.
 #[derive(
-    Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, Ord, PartialEq, PartialOrd, TypeInfo,
-    serde::Deserialize, serde::Serialize
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+    serde::Deserialize,
+    serde::Serialize,
 )]
 #[serde(rename_all = "camelCase")]
 pub enum ParimutuelAssetClass<MI> {

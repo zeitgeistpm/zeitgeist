@@ -70,9 +70,8 @@ macro_rules! impl_foreign_fees {
             traits::{
                 fungibles::{Credit, Inspect},
                 tokens::{
-                    fungibles::Balanced, ConversionToAssetBalance, Fortitude,
-                    Precision, Preservation, WithdrawConsequence, WithdrawReasons,
-                    
+                    fungibles::Balanced, ConversionToAssetBalance, Fortitude, Precision,
+                    Preservation, WithdrawConsequence, WithdrawReasons,
                 },
                 ExistenceRequirement,
             },
@@ -259,11 +258,12 @@ macro_rules! impl_foreign_fees {
                     return Err(InvalidTransaction::Payment.into());
                 }
                 <AssetRouter as Balanced<AccountId>>::withdraw(
-                    asset_id, who,
+                    asset_id,
+                    who,
                     converted_fee,
                     Precision::Exact,
                     Preservation::Expendable,
-                    Fortitude::Force
+                    Fortitude::Force,
                 )
                 .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
             }
@@ -366,7 +366,7 @@ macro_rules! fee_tests {
         use orml_traits::MultiCurrency;
         use pallet_asset_tx_payment::OnChargeAssetTransaction;
         use sp_core::H256;
-        use sp_runtime::{BuildStorage, traits::Convert};
+        use sp_runtime::{traits::Convert, BuildStorage};
         use zeitgeist_primitives::constants::BASE;
 
         fn run_with_system_weight<F>(w: Weight, mut assertions: F)

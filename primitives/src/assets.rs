@@ -46,8 +46,19 @@ mod tests;
 /// or a `Short` position meaning that they think the outcome will be closer
 /// to the lower bound.
 #[derive(
-    Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, Ord, PartialEq, PartialOrd, TypeInfo,
-    serde::Deserialize, serde::Serialize
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+    serde::Deserialize,
+    serde::Serialize,
 )]
 #[serde(rename_all = "camelCase")]
 pub enum ScalarPosition {

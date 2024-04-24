@@ -538,15 +538,14 @@ macro_rules! impl_config_traits {
                 collator_id: AccountId,
                 round: pallet_parachain_staking::RoundIndex,
             ) -> Result<
-                    Weight,
-                    sp_runtime::DispatchErrorWithPostInfo<
-                        frame_support::dispatch::PostDispatchInfo
-                    >
-                > {
+                Weight,
+                sp_runtime::DispatchErrorWithPostInfo<frame_support::dispatch::PostDispatchInfo>,
+            > {
                 ParachainStaking::go_offline_inner(collator_id)?;
-                let extra_weight = <Runtime as pallet_parachain_staking::Config>::WeightInfo::go_offline(
-                    pallet_parachain_staking::MAX_CANDIDATES,
-                );
+                let extra_weight =
+                    <Runtime as pallet_parachain_staking::Config>::WeightInfo::go_offline(
+                        pallet_parachain_staking::MAX_CANDIDATES,
+                    );
 
                 Ok(<Runtime as frame_system::Config>::DbWeight::get()
                     .reads(1)
@@ -760,9 +759,11 @@ macro_rules! impl_config_traits {
         pub struct DustIntoTreasury;
         type CreditOfBalances = pallet_balances::CreditOf<Runtime, ()>;
         impl OnUnbalanced<CreditOfBalances> for DustIntoTreasury {
-            fn on_nonzero_unbalanced(dust: CreditOfBalances) {
+            fn on_nonzero_unbalanced(mut dust: CreditOfBalances) {
                 let imbalance = NegativeImbalance::new(dust.peek());
                 Treasury::on_nonzero_unbalanced(imbalance);
+                // Ensure issuance is not reduced via OnDrop
+                core::mem::forget(dust);
             }
         }
 
@@ -1536,11 +1537,11 @@ macro_rules! create_runtime_api {
                         };
 
                         let candidates = pallet_parachain_staking::Pallet::<Self>::compute_top_candidates();
-						if candidates.is_empty() {
-							// If there are zero selected candidates, we use the same eligibility
-							// as the previous round
-							return AuthorInherent::can_author(&author, &slot);
-						}
+                        if candidates.is_empty() {
+                            // If there are zero selected candidates, we use the same eligibility
+                            // as the previous round
+                            return AuthorInherent::can_author(&author, &slot);
+                        }
 
                         // predict eligibility post-selection by computing selection results now
                         let (eligible, _) =
@@ -1562,6 +1563,7 @@ macro_rules! create_runtime_api {
                     Vec<frame_benchmarking::BenchmarkList>,
                     Vec<frame_support::traits::StorageInfo>,
                 ) {
+                    use alloc::vec::Vec;
                     use frame_benchmarking::{list_benchmark, baseline::Pallet as BaselineBench, Benchmarking, BenchmarkList};
                     use frame_support::traits::StorageInfoTrait;
                     use frame_system_benchmarking::Pallet as SystemBench;
@@ -1571,8 +1573,8 @@ macro_rules! create_runtime_api {
 
                     list_benchmark!(list, extra, frame_benchmarking, BaselineBench::<Runtime>);
                     list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
-                    orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
-                    orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
+                    //orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
+                    //orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
                     list_benchmark!(list, extra, pallet_assets, CustomAssets);
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_bounties, Bounties);
@@ -1622,21 +1624,23 @@ macro_rules! create_runtime_api {
                     config: frame_benchmarking::BenchmarkConfig,
                 ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
                     use frame_benchmarking::{
-                        add_benchmark, 
+                        add_benchmark,
                         baseline::{
                             Pallet as BaselineBench, Config as BaselineConfig
-                        }, 
-                        vec, BenchmarkBatch, Benchmarking, Vec
+                        },
+                        BenchmarkBatch, Benchmarking
                     };
-                    use frame_support::traits::WhitelistedStorageKeys;
+                    use alloc::{vec, vec::Vec};
+                    use frame_support::traits::{TrackedStorageKey, WhitelistedStorageKeys};
                     use frame_system_benchmarking::Pallet as SystemBench;
                     use orml_benchmarking::{add_benchmark as orml_add_benchmark};
-                    use sp_storage::TrackedStorageKey;
 
+                    #[allow(non_local_definitions)]
                     impl frame_system_benchmarking::Config for Runtime {}
+                    #[allow(non_local_definitions)]
                     impl BaselineConfig for Runtime {}
 
-                    let whitelist: Vec<TrackedStorageKey> = AllPalletsWithSystem::whitelisted_storage_keys();
+                    let mut whitelist: Vec<TrackedStorageKey> = AllPalletsWithSystem::whitelisted_storage_keys();
                     let additional_whitelist: Vec<TrackedStorageKey> = vec![
                         // ParachainStaking Round
                         hex_literal::hex!(  "a686a3043d0adcf2fa655e57bc595a78"
@@ -1661,8 +1665,8 @@ macro_rules! create_runtime_api {
 
                     add_benchmark!(params, batches, frame_benchmarking, BaselineBench::<Runtime>);
                     add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-                    orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
-                    orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
+                    //orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
+                    //orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
                     add_benchmark!(params, batches, pallet_assets, CustomAssets);
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_bounties, Bounties);
@@ -1708,7 +1712,7 @@ macro_rules! create_runtime_api {
                     }
 
                     if batches.is_empty() {
-                        return Err("Benchmark not found for this pallet.".into());
+                        return Err("Benchmark not found for this module.".into());
                     }
                     Ok(batches)
                 }
@@ -1721,11 +1725,11 @@ macro_rules! create_runtime_api {
             }
 
             impl pallet_contracts::ContractsApi<
-                Block, 
-                AccountId, 
-                Balance, 
-                BlockNumber, 
-                Hash, 
+                Block,
+                AccountId,
+                Balance,
+                BlockNumber,
+                Hash,
                 EventRecord
             > for Runtime {
                 fn call(
@@ -1749,7 +1753,7 @@ macro_rules! create_runtime_api {
                         pallet_contracts::Determinism::Enforced,
                     )
                 }
-        
+
                 fn instantiate(
                     origin: AccountId,
                     value: Balance,
@@ -1772,7 +1776,7 @@ macro_rules! create_runtime_api {
                         pallet_contracts::CollectEvents::UnsafeCollect,
                     )
                 }
-        
+
                 fn upload_code(
                     origin: AccountId,
                     code: Vec<u8>,
@@ -1782,7 +1786,7 @@ macro_rules! create_runtime_api {
                 {
                     Contracts::bare_upload_code(origin, code, storage_deposit_limit, determinism)
                 }
-        
+
                 fn get_storage(
                     address: AccountId,
                     key: Vec<u8>,
@@ -1874,12 +1878,12 @@ macro_rules! create_runtime_api {
                 }
 
                 fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
-					Runtime::metadata_at_version(version)
-				}
-                
-				fn metadata_versions() -> Vec<u32> {
-					Runtime::metadata_versions()
-				}
+                    Runtime::metadata_at_version(version)
+                }
+
+                fn metadata_versions() -> Vec<u32> {
+                    Runtime::metadata_versions()
+                }
             }
 
             impl sp_block_builder::BlockBuilder<Block> for Runtime {
@@ -1919,11 +1923,11 @@ macro_rules! create_runtime_api {
                 fn grandpa_authorities() -> sp_consensus_grandpa::AuthorityList {
                     Grandpa::grandpa_authorities()
                 }
-        
+
                 fn current_set_id() -> sp_consensus_grandpa::SetId {
                     Grandpa::current_set_id()
                 }
-        
+
                 fn submit_report_equivocation_unsigned_extrinsic(
                     _equivocation_proof: sp_consensus_grandpa::EquivocationProof<
                         <Block as BlockT>::Hash,
@@ -1933,7 +1937,7 @@ macro_rules! create_runtime_api {
                 ) -> Option<()> {
                     None
                 }
-        
+
                 fn generate_key_ownership_proof(
                     _set_id: sp_consensus_grandpa::SetId,
                     _authority_id: sp_consensus_grandpa::AuthorityId,
@@ -2067,7 +2071,8 @@ macro_rules! create_common_benchmark_logic {
                     AccountId, Amount, AssetManager, Balance, Assets, ExistentialDeposit,
                     GetNativeCurrencyId, Runtime
                 };
-                use frame_benchmarking::{account, vec, whitelisted_caller};
+                use alloc::vec;
+                use frame_benchmarking::{account, whitelisted_caller};
                 use frame_system::RawOrigin;
                 use sp_runtime::traits::UniqueSaturatedInto;
                 use orml_benchmarking::runtime_benchmarks;
@@ -2180,7 +2185,8 @@ macro_rules! create_common_benchmark_logic {
             pub(crate) mod tokens {
                 use super::utils::{lookup_of_account, set_balance as update_balance};
                 use crate::{AccountId, Balance, Tokens, Runtime};
-                use frame_benchmarking::{account, vec, whitelisted_caller};
+                use alloc::vec;
+                use frame_benchmarking::{account, whitelisted_caller};
                 use frame_system::RawOrigin;
                 use orml_benchmarking::runtime_benchmarks;
                 use orml_traits::MultiCurrency;

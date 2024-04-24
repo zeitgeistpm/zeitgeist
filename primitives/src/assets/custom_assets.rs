@@ -19,8 +19,20 @@ use super::*;
 
 /// The `CustomAsset` tuple struct represents all custom assets.
 #[derive(
-    Clone, CompactAs, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, Ord, PartialEq, PartialOrd, TypeInfo,
-    serde::Deserialize, serde::Serialize
+    Clone,
+    CompactAs,
+    Copy,
+    Debug,
+    Decode,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+    serde::Deserialize,
+    serde::Serialize,
 )]
 #[serde(rename_all = "camelCase")]
 pub struct CustomAssetClass(#[codec(compact)] pub CustomAssetId);

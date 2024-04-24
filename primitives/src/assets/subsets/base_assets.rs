@@ -20,8 +20,20 @@ use super::*;
 /// The `BaseAssetClass` enum represents all assets that can be used as collateral in
 /// prediction markets.
 #[derive(
-    Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, Ord, PartialEq, PartialOrd, TypeInfo,
-    serde::Deserialize, serde::Serialize
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Default,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+    serde::Deserialize,
+    serde::Serialize,
 )]
 #[serde(rename_all = "camelCase")]
 pub enum BaseAssetClass {

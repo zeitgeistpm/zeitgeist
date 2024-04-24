@@ -51,7 +51,6 @@ mod pallet {
     };
     use alloc::vec::Vec;
     use core::marker::PhantomData;
-    use frame_support::traits::BuildGenesisConfig;
     use frame_support::{
         dispatch::DispatchResult,
         storage::{
@@ -59,7 +58,8 @@ mod pallet {
             with_transaction,
         },
         traits::{
-            Currency, ExistenceRequirement, Get, Hooks, IsType, StorageVersion, WithdrawReasons,
+            BuildGenesisConfig, Currency, ExistenceRequirement, Get, Hooks, IsType, StorageVersion,
+            WithdrawReasons,
         },
         Blake2_128Concat, PalletId, Twox64Concat,
     };
