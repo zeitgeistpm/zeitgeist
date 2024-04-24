@@ -98,6 +98,7 @@ orml-asset-registry = { workspace = true, optional = true }
 orml-unknown-tokens = { workspace = true, optional = true }
 orml-xcm-support = { workspace = true, optional = true }
 orml-xtokens = { workspace = true, optional = true }
+pallet-message-queue = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
 polkadot-runtime-parachains = { workspace = true, optional = true }
 rococo-runtime = { workspace = true, optional = true }
@@ -162,6 +163,7 @@ parachain = [
     "orml-unknown-tokens",
     "orml-xcm-support",
     "orml-xtokens",
+    "pallet-message-queue",
     "pallet-xcm",
     "polkadot-runtime-parachains",
     "rococo-runtime",
@@ -319,6 +321,7 @@ std = [
     "orml-unknown-tokens?/std",
     "orml-xcm-support?/std",
     "orml-xtokens?/std",
+    "pallet-message-queue?/std",
     "pallet-xcm?/std",
     "polkadot-runtime-parachains?/std",
     "rococo-runtime?/std",

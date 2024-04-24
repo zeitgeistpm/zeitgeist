@@ -2294,6 +2294,9 @@ macro_rules! create_common_benchmark_logic {
 
                 #[cfg(test)]
                 pub mod tests {
+                    use crate::Runtime;
+                    use sp_runtime::BuildStorage;
+                    
                     pub fn new_test_ext() -> sp_io::TestExternalities {
                         frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into()
                     }

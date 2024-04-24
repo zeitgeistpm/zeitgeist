@@ -33,7 +33,7 @@ use crate::{
 use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, WeightLimit};
-use xcm_emulator::TestExt;
+use xcm_simulator::TestExt;
 use zeitgeist_primitives::{
     constants::{BalanceFractionalDecimals, BASE},
     types::{CustomMetadata, XcmAsset, XcmMetadata},

@@ -33,7 +33,7 @@ use frame_support::assert_err;
 use sp_runtime::traits::Convert as C2;
 use test_case::test_case;
 use xcm::latest::{Junction::*, Junctions::*, MultiLocation};
-use xcm_emulator::TestExt;
+use xcm_simulator::TestExt;
 use xcm_executor::traits::Convert as C1;
 
 fn convert_common_native<T>(expected: T)

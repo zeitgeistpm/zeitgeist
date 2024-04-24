@@ -18,11 +18,11 @@
 
 use crate::{
     xcm_config::config::{battery_station, general_key},
-    AccountId, AssetRegistry, Assets, Balance, ExistentialDeposit, Runtime, RuntimeOrigin, System,
+    AccountId, AssetRegistry, Assets, Balance, ExistentialDeposit, Runtime, RuntimeOrigin, System, AssetRegistryStringLimit
 };
-use frame_support::{assert_ok, traits::GenesisBuild};
+use frame_support::{assert_ok};
 use orml_traits::asset_registry::AssetMetadata;
-use sp_runtime::AccountId32;
+use sp_runtime::{AccountId32, BuildStorage};
 use xcm::{
     latest::{Junction::Parachain, Junctions::X2, MultiLocation},
     VersionedMultiLocation,
@@ -52,8 +52,9 @@ impl ExtBuilder {
     }
 
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
         let native_currency_id = Assets::Ztg;
+
         pallet_balances::GenesisConfig::<Runtime> {
             balances: self
                 .balances
@@ -79,17 +80,15 @@ impl ExtBuilder {
         .assimilate_storage(&mut t)
         .unwrap();
 
-        <parachain_info::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
-            &parachain_info::GenesisConfig { parachain_id: self.parachain_id.into() },
-            &mut t,
-        )
-        .unwrap();
 
-        <pallet_xcm::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
-            &pallet_xcm::GenesisConfig { safe_xcm_version: Some(2) },
-            &mut t,
-        )
-        .unwrap();
+
+        parachain_info::GenesisConfig::<Runtime> { _config: Default::default(), parachain_id: self.parachain_id.into() }
+            .assimilate_storage(&mut t)
+            .unwrap();
+
+        pallet_xcm::GenesisConfig::<Runtime> { _config: Default::default(), safe_xcm_version: Some(2) }
+            .assimilate_storage(&mut t)
+            .unwrap();
 
         let mut ext = sp_io::TestExternalities::new(t);
         ext.execute_with(|| System::set_block_number(1));
@@ -163,10 +162,10 @@ pub(super) fn foreign_parent_multilocation() -> MultiLocation {
 
 pub(super) fn register_foreign_ztg(additional_meta: Option<CustomMetadata>) {
     // Register ZTG as foreign asset.
-    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> = AssetMetadata {
         decimals: 10,
-        name: "Zeitgeist".into(),
-        symbol: "ZTG".into(),
+        name: "Zeitgeist".as_bytes().to_vec().try_into().unwrap(),
+        symbol: "ZTG".as_bytes().to_vec().try_into().unwrap(),
         existential_deposit: ExistentialDeposit::get(),
         location: Some(VersionedMultiLocation::V3(foreign_ztg_multilocation())),
         additional: additional_meta.unwrap_or_default(),
@@ -176,10 +175,10 @@ pub(super) fn register_foreign_ztg(additional_meta: Option<CustomMetadata>) {
 }
 
 pub(super) fn register_btc(additional_meta: Option<CustomMetadata>) {
-    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> = AssetMetadata {
         decimals: 8,
-        name: "Bitcoin".into(),
-        symbol: "BTC".into(),
+        name: "Bitcoin".as_bytes().to_vec().try_into().unwrap(),
+        symbol: "BTC".as_bytes().to_vec().try_into().unwrap(),
         existential_deposit: ExistentialDeposit::get(),
         location: Some(VersionedMultiLocation::V3(foreign_sibling_multilocation())),
         additional: additional_meta.unwrap_or_default(),
@@ -190,10 +189,10 @@ pub(super) fn register_btc(additional_meta: Option<CustomMetadata>) {
 
 pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) {
     // Register native Sibling token as foreign asset.
-    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> = AssetMetadata {
         decimals: 10,
-        name: "Sibling".into(),
-        symbol: "SBL".into(),
+        name: "Sibling".as_bytes().to_vec().try_into().unwrap(),
+        symbol: "SBL".as_bytes().to_vec().try_into().unwrap(),
         existential_deposit: ExistentialDeposit::get(),
         location: Some(VersionedMultiLocation::V3(foreign_sibling_multilocation())),
         additional: additional_meta.unwrap_or_default(),
@@ -208,10 +207,10 @@ pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) 
 
 pub(super) fn register_foreign_parent(additional_meta: Option<CustomMetadata>) {
     // Register roc as foreign asset in the sibling parachain
-    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> = AssetMetadata {
         decimals: 12,
-        name: "Rococo".into(),
-        symbol: "ROC".into(),
+        name: "Rococo".as_bytes().to_vec().try_into().unwrap(),
+        symbol: "ROC".as_bytes().to_vec().try_into().unwrap(),
         existential_deposit: 33_333_333, // 0.0033333333
         location: Some(VersionedMultiLocation::V3(foreign_parent_multilocation())),
         additional: additional_meta.unwrap_or_default(),
@@ -234,5 +233,5 @@ pub(super) fn zeitgeist_parachain_account() -> AccountId {
 fn parachain_account(id: u32) -> AccountId {
     use sp_runtime::traits::AccountIdConversion;
 
-    polkadot_parachain::primitives::Sibling::from(id).into_account_truncating()
+    polkadot_parachain_primitives::primitives::Sibling::from(id).into_account_truncating()
 }
