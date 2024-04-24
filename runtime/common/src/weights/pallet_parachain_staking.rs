@@ -52,7 +52,7 @@ use frame_support::{
 /// Weight functions for pallet_parachain_staking (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for WeightInfo<T> {
-/// Storage: ParachainStaking InflationConfig (r:1 w:1)
+    /// Storage: ParachainStaking InflationConfig (r:1 w:1)
     /// Proof Skipped: ParachainStaking InflationConfig (max_values: Some(1), max_size: None, mode: Measured)
     fn set_staking_expectations() -> Weight {
         // Proof Size summary in bytes:
@@ -150,7 +150,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking BottomDelegations (r:0 w:1)
     /// Proof Skipped: ParachainStaking BottomDelegations (max_values: None, max_size: None, mode: Measured)
     /// The range of component `x` is `[3, 200]`.
-    fn join_candidates(x: u32, ) -> Weight {
+    fn join_candidates(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1421 + x * (38 ±0)`
         //  Estimated: `4752 + x * (41 ±0)`
@@ -167,7 +167,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking CandidatePool (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
     /// The range of component `x` is `[3, 200]`.
-    fn schedule_leave_candidates(x: u32, ) -> Weight {
+    fn schedule_leave_candidates(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `702 + x * (37 ±0)`
         //  Estimated: `4060 + x * (38 ±0)`
@@ -200,7 +200,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking Total (r:1 w:1)
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
     /// The range of component `x` is `[2, 350]`.
-    fn execute_leave_candidates_worst_case(x: u32, ) -> Weight {
+    fn execute_leave_candidates_worst_case(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1157 + x * (431 ±0)`
         //  Estimated: `4696 + x * (3762 ±0)`
@@ -236,7 +236,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
     /// The range of component `x` is `[2, 350]`.
     /// The range of component `y` is `[2, 350]`.
-    fn execute_leave_candidates_ideal(x: u32, _y: u32, ) -> Weight {
+    fn execute_leave_candidates_ideal(x: u32, _y: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1149 + x * (431 ±0)`
         //  Estimated: `4696 + x * (3762 ±0)`
@@ -255,7 +255,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking CandidatePool (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
     /// The range of component `x` is `[3, 200]`.
-    fn cancel_leave_candidates(x: u32, ) -> Weight {
+    fn cancel_leave_candidates(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `670 + x * (37 ±0)`
         //  Estimated: `4028 + x * (38 ±0)`
@@ -272,7 +272,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking CandidatePool (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
     /// The range of component `x` is `[1, 200]`.
-    fn go_offline(x: u32, ) -> Weight {
+    fn go_offline(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `567 + x * (38 ±0)`
         //  Estimated: `3968 + x * (39 ±0)`
@@ -289,7 +289,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking CandidatePool (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
     /// The range of component `x` is `[1, 200]`.
-    fn go_online(x: u32, ) -> Weight {
+    fn go_online(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `531 + x * (38 ±0)`
         //  Estimated: `3932 + x * (39 ±0)`
@@ -314,7 +314,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: Balances Freezes (r:1 w:0)
     /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
     /// The range of component `x` is `[1, 200]`.
-    fn candidate_bond_more(x: u32, ) -> Weight {
+    fn candidate_bond_more(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1270 + x * (42 ±0)`
         //  Estimated: `4752 + x * (44 ±0)`
@@ -350,7 +350,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: System Account (r:1 w:1)
     /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     /// The range of component `x` is `[1, 200]`.
-    fn execute_candidate_bond_less(x: u32, ) -> Weight {
+    fn execute_candidate_bond_less(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1322 + x * (42 ±0)`
         //  Estimated: `4752 + x * (43 ±0)`
@@ -373,7 +373,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
             .saturating_add(T::DbWeight::get().reads(1_u64))
             .saturating_add(T::DbWeight::get().writes(1_u64))
     }
-    fn set_candidate_bond_to_zero(x: u32, ) -> Weight {
+    fn set_candidate_bond_to_zero(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1322 + x * (42 ±0)`
         //  Estimated: `4752 + x * (43 ±0)`
@@ -403,7 +403,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
     /// The range of component `x` is `[3, 100]`.
     /// The range of component `y` is `[2, 300]`.
-    fn delegate(x: u32, y: u32, ) -> Weight {
+    fn delegate(x: u32, y: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `2479 + x * (79 ±0) + y * (38 ±0)`
         //  Estimated: `5723 + x * (81 ±0) + y * (39 ±0)`
@@ -423,7 +423,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
     /// The range of component `x` is `[0, 349]`.
-    fn schedule_revoke_delegation(x: u32, ) -> Weight {
+    fn schedule_revoke_delegation(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `566 + x * (42 ±0)`
         //  Estimated: `4012 + x * (43 ±0)`
@@ -454,7 +454,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking Total (r:1 w:1)
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
     /// The range of component `x` is `[0, 349]`.
-    fn delegator_bond_more(x: u32, ) -> Weight {
+    fn delegator_bond_more(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1996 + x * (79 ±0)`
         //  Estimated: `5428 + x * (79 ±0)`
@@ -471,7 +471,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
     /// The range of component `x` is `[0, 349]`.
-    fn schedule_delegator_bond_less(x: u32, ) -> Weight {
+    fn schedule_delegator_bond_less(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `566 + x * (42 ±0)`
         //  Estimated: `4012 + x * (43 ±0)`
@@ -577,7 +577,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
     /// The range of component `x` is `[0, 349]`.
-    fn cancel_delegation_request(x: u32, ) -> Weight {
+    fn cancel_delegation_request(x: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `663 + x * (42 ±0)`
         //  Estimated: `4092 + x * (43 ±0)`
@@ -617,7 +617,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking TopDelegations (r:1 w:0)
     /// Proof Skipped: ParachainStaking TopDelegations (max_values: None, max_size: None, mode: Measured)
     /// The range of component `y` is `[0, 100]`.
-    fn get_rewardable_delegators(y: u32, ) -> Weight {
+    fn get_rewardable_delegators(y: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `73 + y * (36 ±0)`
         //  Estimated: `3537 + y * (36 ±0)`
@@ -646,7 +646,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Proof Skipped: ParachainStaking AtStake (max_values: None, max_size: None, mode: Measured)
     /// The range of component `x` is `[0, 50]`.
     /// The range of component `y` is `[0, 100]`.
-    fn select_top_candidates(x: u32, y: u32, ) -> Weight {
+    fn select_top_candidates(x: u32, y: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `0 + x * (3816 ±0) + y * (1800 ±0)`
         //  Estimated: `3730 + x * (3975 ±39) + y * (639 ±19)`
@@ -686,7 +686,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// The range of component `x` is `[0, 349]`.
     /// The range of component `y` is `[0, 349]`.
     /// The range of component `z` is `[0, 349]`.
-    fn pay_one_collator_reward_best(x: u32, y: u32, z: u32, ) -> Weight {
+    fn pay_one_collator_reward_best(x: u32, y: u32, z: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `0 + x * (395 ±0) + y * (156 ±0) + z * (41 ±0)`
         //  Estimated: `125757 + x * (2591 ±19) + y * (2234 ±19) + z * (28 ±0)`
@@ -719,7 +719,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: System Account (r:301 w:301)
     /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     /// The range of component `y` is `[0, 300]`.
-    fn pay_one_collator_reward(y: u32, ) -> Weight {
+    fn pay_one_collator_reward(y: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1208 + y * (160 ±0)`
         //  Estimated: `6978 + y * (2591 ±0)`
@@ -746,7 +746,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Proof Skipped: ParachainStaking AutoCompoundingDelegations (max_values: None, max_size: None, mode: Measured)
     /// The range of component `x` is `[0, 300]`.
     /// The range of component `y` is `[0, 100]`.
-    fn set_auto_compound(x: u32, y: u32, ) -> Weight {
+    fn set_auto_compound(x: u32, y: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `671 + x * (22 ±0) + y * (36 ±0)`
         //  Estimated: `4027 + x * (23 ±0) + y * (36 ±0)`
@@ -784,7 +784,7 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// The range of component `x` is `[0, 350]`.
     /// The range of component `y` is `[0, 349]`.
     /// The range of component `z` is `[0, 99]`.
-    fn delegate_with_auto_compound(x: u32, y: u32, z: u32, ) -> Weight {
+    fn delegate_with_auto_compound(x: u32, y: u32, z: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `0 + x * (60 ±0) + y * (21 ±0) + z * (78 ±0)`
         //  Estimated: `26253 + x * (44 ±0) + y * (19 ±0) + z * (76 ±1)`

@@ -337,7 +337,7 @@ macro_rules! create_runtime_with_additional_pallets {
         #[cfg(feature = "parachain")]
         create_runtime!(
             // System
-            ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
+            ParachainSystem: cumulus_pallet_parachain_system::{Call, Config<T>, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
             ParachainInfo: parachain_info::{Config<T>, Pallet, Storage} = 101,
 
             // Consensus
@@ -501,6 +501,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl pallet_xcm::Config for Runtime {
+            type AdminOrigin = EnsureRoot<AccountId>;
             type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
             type RuntimeCall = RuntimeCall;
             type RuntimeEvent = RuntimeEvent;
@@ -520,10 +521,12 @@ macro_rules! impl_config_traits {
             type CurrencyMatcher = ();
             type TrustedLockers = ();
             type SovereignAccountOf = LocationToAccountId;
-            type MaxLockers = ConstU32<8>;
+            type MaxLockers = MaxLockers;
+            type MaxRemoteLockConsumers = MaxRemoteLockConsumers;
             type WeightInfo = pallet_xcm::TestWeightInfo;
             #[cfg(feature = "runtime-benchmarks")]
             type ReachableDest = ReachableDest;
+            type RemoteLockConsumerIdentifier = ();
 
             const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
             // ^ Override for AdvertisedXcmVersion default
@@ -541,6 +544,8 @@ macro_rules! impl_config_traits {
                 Weight,
                 sp_runtime::DispatchErrorWithPostInfo<frame_support::dispatch::PostDispatchInfo>,
             > {
+                use pallet_parachain_staking::WeightInfo;
+
                 ParachainStaking::go_offline_inner(collator_id)?;
                 let extra_weight =
                     <Runtime as pallet_parachain_staking::Config>::WeightInfo::go_offline(
@@ -568,10 +573,8 @@ macro_rules! impl_config_traits {
             type MaxTopDelegationsPerCandidate = MaxTopDelegationsPerCandidate;
             type MaxOfflineRounds = MaxOfflineRounds;
             type MinBlocksPerRound = MinBlocksPerRound;
-            type MinCandidateStk = MinCollatorStk;
-            type MinCollatorStk = MinCollatorStk;
-            type MinDelegation = MinDelegatorStk;
-            type MinDelegatorStk = MinDelegatorStk;
+            type MinCandidateStk = MinCandidateStk;
+            type MinDelegation = MinDelegation;
             type MinSelectedCandidates = MinSelectedCandidates;
             type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
             type OnCollatorPayout = ();
@@ -591,6 +594,7 @@ macro_rules! impl_config_traits {
             type Balance = Balance;
             type CustomMetadata = CustomMetadata;
             type RuntimeEvent = RuntimeEvent;
+            type StringLimit = AssetRegistryStringLimit;
             type WeightInfo = ();
         }
 
@@ -1573,8 +1577,8 @@ macro_rules! create_runtime_api {
 
                     list_benchmark!(list, extra, frame_benchmarking, BaselineBench::<Runtime>);
                     list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
-                    //orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
-                    //orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
+                    orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
+                    orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
                     list_benchmark!(list, extra, pallet_assets, CustomAssets);
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_bounties, Bounties);
@@ -1665,8 +1669,8 @@ macro_rules! create_runtime_api {
 
                     add_benchmark!(params, batches, frame_benchmarking, BaselineBench::<Runtime>);
                     add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-                    //orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
-                    //orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
+                    orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
+                    orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
                     add_benchmark!(params, batches, pallet_assets, CustomAssets);
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_bounties, Bounties);
