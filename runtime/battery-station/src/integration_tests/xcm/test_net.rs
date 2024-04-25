@@ -97,6 +97,8 @@ pub(super) fn relay_ext() -> sp_io::TestExternalities {
 }
 
 pub(super) fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
+    let _ = env_logger::builder().is_test(true).try_init();
+    
     ExtBuilder::default()
         .set_balances(vec![
             (ALICE, Assets::Ztg, ztg(10)),
@@ -104,6 +106,7 @@ pub(super) fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
             (ZeitgeistTreasuryAccount::get(), FOREIGN_PARENT_ID.into(), roc(1)),
         ])
         .set_parachain_id(parachain_id)
+        .with_safe_xcm_version(3)
         .build()
 }
 

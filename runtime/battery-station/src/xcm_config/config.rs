@@ -35,7 +35,7 @@ use orml_xcm_support::{
 };
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain_primitives::primitives::Sibling;
-use sp_runtime::traits::{Convert, MaybeEquivalence};
+use sp_runtime::traits::{ConstU32, Convert, MaybeEquivalence};
 use xcm::{
     latest::{
         prelude::{AccountId32, AssetId, Concrete, GeneralKey, MultiAsset, XcmContext, X1, X2},
@@ -48,7 +48,7 @@ use xcm_builder::{
     AllowTopLevelPaidExecutionFrom, FixedRateOfFungible, FixedWeightBounds, ParentIsPreset,
     RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
-    TakeWeightCredit,
+    TakeWeightCredit, WithComputedOrigin
 };
 use xcm_executor::{traits::TransactAsset, Assets as ExecutorAssets};
 use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::XcmAsset};
@@ -125,12 +125,18 @@ impl xcm_executor::Config for XcmConfig {
 pub type Barrier = (
     // Execution barrier that just takes max_weight from weight_credit
     TakeWeightCredit,
-    // Ensures that execution time is bought with BuyExecution instruction
-    AllowTopLevelPaidExecutionFrom<Everything>,
     // Expected responses are OK.
     AllowKnownQueryResponses<PolkadotXcm>,
-    // Subscriptions for version tracking are OK.
-    AllowSubscriptionsFrom<Everything>,
+    WithComputedOrigin<
+        (
+            // If the message is one that immediately attemps to pay for execution, then allow it.
+            AllowTopLevelPaidExecutionFrom<Everything>,
+            // Subscriptions for version tracking are OK.
+            AllowSubscriptionsFrom<Everything>,
+        ),
+        UniversalLocation,
+        ConstU32<8>,
+    >,
 );
 
 /// The means of purchasing weight credit for XCM execution.
@@ -400,8 +406,20 @@ impl MaybeEquivalence<MultiLocation, Assets> for AssetConvert {
     }
 
     fn convert_back(id: &Assets) -> Option<MultiLocation> {
-        let asset_id = XcmAsset::try_from(*id).ok()?;
-        AssetRegistry::metadata(asset_id).and_then(|m| m.location).and_then(|l| l.try_into().ok())
+        match id {
+            Assets::Ztg => Some(MultiLocation::new(
+                1,
+                X2(
+                    Junction::Parachain(ParachainInfo::parachain_id().into()),
+                    general_key(battery_station::KEY),
+                ),
+            )),
+            Assets::ForeignAsset(_) => {
+                let asset = XcmAsset::try_from(*id).ok()?;
+                AssetRegistry::multilocation(&asset).ok()?
+            }
+            _ => None,
+        }
     }
 }
 

@@ -442,8 +442,8 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
 
 #[test]
 fn test_total_fee() {
-    assert_eq!(ztg_fee(), 80_128_000);
-    assert_eq!(roc_fee(), 8_012_800_000);
+    assert_eq!(ztg_fee(), 64_296_000);
+    assert_eq!(roc_fee(), 6_429_600_000);
 }
 
 #[inline]

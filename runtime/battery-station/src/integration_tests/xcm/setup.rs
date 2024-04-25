@@ -32,11 +32,12 @@ use zeitgeist_primitives::types::{CustomMetadata, XcmAsset};
 pub(super) struct ExtBuilder {
     balances: Vec<(AccountId, Assets, Balance)>,
     parachain_id: u32,
+    safe_xcm_version: Option<u32>,
 }
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![], parachain_id: battery_station::ID }
+        Self { balances: vec![], parachain_id: battery_station::ID, safe_xcm_version: None }
     }
 }
 
@@ -50,6 +51,11 @@ impl ExtBuilder {
         self.parachain_id = parachain_id;
         self
     }
+
+    pub fn with_safe_xcm_version(mut self, safe_xcm_version: u32) -> Self {
+		self.safe_xcm_version = Some(safe_xcm_version);
+		self
+	}
 
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
@@ -86,7 +92,7 @@ impl ExtBuilder {
             .assimilate_storage(&mut t)
             .unwrap();
 
-        pallet_xcm::GenesisConfig::<Runtime> { _config: Default::default(), safe_xcm_version: Some(2) }
+        pallet_xcm::GenesisConfig::<Runtime> { _config: Default::default(), safe_xcm_version: self.safe_xcm_version }
             .assimilate_storage(&mut t)
             .unwrap();
 
