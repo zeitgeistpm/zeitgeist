@@ -97,6 +97,7 @@ orml-asset-registry = { workspace = true, optional = true }
 orml-unknown-tokens = { workspace = true, optional = true }
 orml-xcm-support = { workspace = true, optional = true }
 orml-xtokens = { workspace = true, optional = true }
+pallet-message-queue = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
 polkadot-runtime = { workspace = true, optional = true }
 polkadot-runtime-parachains = { workspace = true, optional = true }
@@ -126,6 +127,7 @@ zrml-swaps = { workspace = true }
 zrml-swaps-runtime-api = { workspace = true }
 
 [dev-dependencies]
+env_logger = { workspace = true }
 sp-io = { workspace = true, features = ["default"] }
 test-case = { workspace = true }
 xcm-simulator = { workspace = true }
@@ -163,6 +165,7 @@ parachain = [
     "orml-unknown-tokens",
     "orml-xcm-support",
     "orml-xtokens",
+    "pallet-message-queue",
     "pallet-xcm",
     "xcm-builder",
     "xcm-executor",
@@ -246,6 +249,7 @@ std = [
     "pallet-democracy/std",
     "pallet-identity/std",
     "pallet-membership/std",
+    "pallet-message-queue?/std",
     "pallet-multisig/std",
     "pallet-preimage/std",
     "pallet-proxy/std",
@@ -340,7 +344,6 @@ try-runtime = [
     "frame-try-runtime/try-runtime",
 
     # For every pallet in the runtime include try-runtime
-
     # System runtime pallets
     "frame-support/try-runtime",
     "frame-system/try-runtime",
@@ -411,6 +414,9 @@ try-runtime = [
     "cumulus-pallet-xcm?/try-runtime",
     "cumulus-pallet-xcmp-queue?/try-runtime",
     "parachain-info?/try-runtime",
+
+    # Polkadot
+    "polkadot-runtime?/try-runtime",
 ]
 # Allow to print logs details (no wasm:stripped)
 force-debug = ["sp-debug-derive/force-debug"]

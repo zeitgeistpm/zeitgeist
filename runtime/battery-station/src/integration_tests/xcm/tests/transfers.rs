@@ -195,7 +195,7 @@ fn transfer_btc_sibling_to_zeitgeist() {
         assert_eq!(Balances::set_balance(
             &zeitgeist_parachain_account(),
             initial_sovereign_balance,
-        ), 0);
+        ), initial_sovereign_balance);
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ALICE),
             // Target chain will interpret XcmAsset::Ztg as BTC in this context.
