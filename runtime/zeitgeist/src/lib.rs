@@ -116,7 +116,7 @@ impl Contains<RuntimeCall> for IsCallable {
         };
         use orml_currencies::Call::update_balance;
         use pallet_assets::Call::{destroy_accounts, destroy_approvals, finish_destroy};
-        use pallet_balances::Call::{force_transfer, force_set_balance};
+        use pallet_balances::Call::{force_set_balance, force_transfer};
         use pallet_collective::Call::set_members;
         use pallet_contracts::Call::{
             call, call_old_weight, instantiate, instantiate_old_weight, remove_code,

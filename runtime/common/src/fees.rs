@@ -545,10 +545,11 @@ macro_rules! fee_tests {
 
             #[test]
             fn correct_and_deposit_fee_dot_foreign_asset() {
-                let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::<Runtime>::default()
-                    .build_storage()
-                    .unwrap()
-                    .into();
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::<Runtime>::default()
+                        .build_storage()
+                        .unwrap()
+                        .into();
                 t.execute_with(|| {
                     let alice = AccountId::from([0u8; 32]);
                     let fee_factor = 143_120_520;
@@ -556,16 +557,17 @@ macro_rules! fee_tests {
                         xcm: XcmMetadata { fee_factor: Some(fee_factor) },
                         ..Default::default()
                     };
-                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> = AssetMetadata {
-                        decimals: 10,
-                        name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
-                        symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V3(
-                            xcm::latest::MultiLocation::parent(),
-                        )),
-                        additional: custom_metadata,
-                    };
+                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> =
+                        AssetMetadata {
+                            decimals: 10,
+                            name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: Some(xcm::VersionedMultiLocation::V3(
+                                xcm::latest::MultiLocation::parent(),
+                            )),
+                            additional: custom_metadata,
+                        };
                     let dot = Asset::ForeignAsset(0);
 
                     assert_ok!(AssetRegistry::register_asset(
@@ -608,25 +610,27 @@ macro_rules! fee_tests {
 
             #[test]
             fn get_fee_factor_works() {
-                let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::<Runtime>::default()
-                    .build_storage()
-                    .unwrap()
-                    .into();
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::<Runtime>::default()
+                        .build_storage()
+                        .unwrap()
+                        .into();
                 t.execute_with(|| {
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: Some(143_120_520u128) },
                         ..Default::default()
                     };
-                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> = AssetMetadata {
-                        decimals: 10,
-                        name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
-                        symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V3(
-                            xcm::latest::MultiLocation::parent(),
-                        )),
-                        additional: custom_metadata,
-                    };
+                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> =
+                        AssetMetadata {
+                            decimals: 10,
+                            name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: Some(xcm::VersionedMultiLocation::V3(
+                                xcm::latest::MultiLocation::parent(),
+                            )),
+                            additional: custom_metadata,
+                        };
                     let dot_asset_id = 0u32;
                     let dot = XcmAsset::ForeignAsset(dot_asset_id);
 
@@ -642,10 +646,11 @@ macro_rules! fee_tests {
 
             #[test]
             fn get_fee_factor_metadata_not_found() {
-                let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::<Runtime>::default()
-                    .build_storage()
-                    .unwrap()
-                    .into();
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::<Runtime>::default()
+                        .build_storage()
+                        .unwrap()
+                        .into();
                 t.execute_with(|| {
                     {
                         // no registering of dot
@@ -659,25 +664,27 @@ macro_rules! fee_tests {
 
             #[test]
             fn get_fee_factor_fee_factor_not_found() {
-                let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::<Runtime>::default()
-                    .build_storage()
-                    .unwrap()
-                    .into();
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::<Runtime>::default()
+                        .build_storage()
+                        .unwrap()
+                        .into();
                 t.execute_with(|| {
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: None },
                         ..Default::default()
                     };
-                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> = AssetMetadata {
-                        decimals: 10,
-                        name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
-                        symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V3(
-                            xcm::latest::MultiLocation::parent(),
-                        )),
-                        additional: custom_metadata,
-                    };
+                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> =
+                        AssetMetadata {
+                            decimals: 10,
+                            name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: Some(xcm::VersionedMultiLocation::V3(
+                                xcm::latest::MultiLocation::parent(),
+                            )),
+                            additional: custom_metadata,
+                        };
                     let dot_asset_id = 0u32;
                     let dot = XcmAsset::ForeignAsset(dot_asset_id);
 
@@ -696,23 +703,25 @@ macro_rules! fee_tests {
 
             #[test]
             fn get_fee_factor_none_location() {
-                let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::<Runtime>::default()
-                    .build_storage()
-                    .unwrap()
-                    .into();
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::<Runtime>::default()
+                        .build_storage()
+                        .unwrap()
+                        .into();
                 t.execute_with(|| {
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: Some(10_393) },
                         ..Default::default()
                     };
-                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> = AssetMetadata {
-                        decimals: 10,
-                        name: "NoneLocationToken".as_bytes().to_vec().try_into().unwrap(),
-                        symbol: "NONE".as_bytes().to_vec().try_into().unwrap(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: None,
-                        additional: custom_metadata,
-                    };
+                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> =
+                        AssetMetadata {
+                            decimals: 10,
+                            name: "NoneLocationToken".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "NONE".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: None,
+                            additional: custom_metadata,
+                        };
                     let non_location_token = XcmAsset::ForeignAsset(1);
 
                     assert_ok!(AssetRegistry::register_asset(
@@ -727,26 +736,28 @@ macro_rules! fee_tests {
 
             #[test]
             fn withdraws_correct_dot_foreign_asset_fee() {
-                let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::<Runtime>::default()
-                    .build_storage()
-                    .unwrap()
-                    .into();
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::<Runtime>::default()
+                        .build_storage()
+                        .unwrap()
+                        .into();
                 t.execute_with(|| {
                     let fee_factor = 143_120_520;
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: Some(fee_factor) },
                         ..Default::default()
                     };
-                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> = AssetMetadata {
-                        decimals: 10,
-                        name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
-                        symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V3(
-                            xcm::latest::MultiLocation::parent(),
-                        )),
-                        additional: custom_metadata,
-                    };
+                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> =
+                        AssetMetadata {
+                            decimals: 10,
+                            name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: Some(xcm::VersionedMultiLocation::V3(
+                                xcm::latest::MultiLocation::parent(),
+                            )),
+                            additional: custom_metadata,
+                        };
                     let dot_asset_id = 0u32;
                     let dot = Asset::ForeignAsset(dot_asset_id);
 

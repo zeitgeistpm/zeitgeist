@@ -45,11 +45,17 @@ where
     let ztg_location_inner: MultiLocation =
         MultiLocation::new(0, X1(general_key(battery_station::KEY)));
 
-    assert_eq!(<AssetConvert as MaybeEquivalence<_, _>>::convert(&ztg_location_inner), Some(expected));
+    assert_eq!(
+        <AssetConvert as MaybeEquivalence<_, _>>::convert(&ztg_location_inner),
+        Some(expected)
+    );
 
     // The canonical way Ztg is represented out in the wild
     Zeitgeist::execute_with(|| {
-        assert_eq!(<AssetConvert as Convert<_, _>>::convert(expected), Some(foreign_ztg_multilocation()))
+        assert_eq!(
+            <AssetConvert as Convert<_, _>>::convert(expected),
+            Some(foreign_ztg_multilocation())
+        )
     });
 }
 
@@ -66,7 +72,10 @@ fn convert_common_non_native<T>(
         assert_eq!(<AssetConvert as Convert<_, _>>::convert(expected), None);
         // Register parent as foreign asset in the Zeitgeist parachain
         register(None);
-        assert_eq!(<AssetConvert as MaybeEquivalence<_, _>>::convert(&multilocation), Some(expected));
+        assert_eq!(
+            <AssetConvert as MaybeEquivalence<_, _>>::convert(&multilocation),
+            Some(expected)
+        );
         assert_eq!(<AssetConvert as Convert<_, _>>::convert(expected), Some(multilocation));
     });
 }
@@ -123,7 +132,9 @@ fn convert_unkown_multilocation() {
         MultiLocation::new(1, X2(Parachain(battery_station::ID), general_key(&[42])));
 
     Zeitgeist::execute_with(|| {
-        assert!(<AssetConvert as MaybeEquivalence<_, Assets>>::convert(&unknown_location).is_none());
+        assert!(
+            <AssetConvert as MaybeEquivalence<_, Assets>>::convert(&unknown_location).is_none()
+        );
     });
 }
 

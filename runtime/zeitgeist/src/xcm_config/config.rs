@@ -50,7 +50,7 @@ use xcm_builder::{
     AllowTopLevelPaidExecutionFrom, FixedRateOfFungible, FixedWeightBounds, ParentIsPreset,
     RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
-    TakeWeightCredit, WithComputedOrigin
+    TakeWeightCredit, WithComputedOrigin,
 };
 use xcm_executor::{traits::TransactAsset, Assets as ExecutorAssets};
 use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::XcmAsset};

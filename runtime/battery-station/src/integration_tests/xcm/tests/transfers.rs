@@ -30,7 +30,7 @@ use crate::{
     ZeitgeistTreasuryAccount,
 };
 
-use frame_support::{traits::tokens::fungible::Mutate, assert_ok};
+use frame_support::{assert_ok, traits::tokens::fungible::Mutate};
 use orml_traits::MultiCurrency;
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, WeightLimit};
 use xcm_simulator::TestExt;
@@ -192,10 +192,10 @@ fn transfer_btc_sibling_to_zeitgeist() {
     Sibling::execute_with(|| {
         assert_eq!(Balances::free_balance(&ALICE), sibling_alice_initial_balance);
         // Set the sovereign balance such that it is not subject to dust collection
-        assert_eq!(Balances::set_balance(
-            &zeitgeist_parachain_account(),
-            initial_sovereign_balance,
-        ), initial_sovereign_balance);
+        assert_eq!(
+            Balances::set_balance(&zeitgeist_parachain_account(), initial_sovereign_balance,),
+            initial_sovereign_balance
+        );
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ALICE),
             // Target chain will interpret XcmAsset::Ztg as BTC in this context.

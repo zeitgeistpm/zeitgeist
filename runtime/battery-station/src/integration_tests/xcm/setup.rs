@@ -18,9 +18,10 @@
 
 use crate::{
     xcm_config::config::{battery_station, general_key},
-    AccountId, AssetRegistry, Assets, Balance, ExistentialDeposit, Runtime, RuntimeOrigin, System, AssetRegistryStringLimit
+    AccountId, AssetRegistry, AssetRegistryStringLimit, Assets, Balance, ExistentialDeposit,
+    Runtime, RuntimeOrigin, System,
 };
-use frame_support::{assert_ok};
+use frame_support::assert_ok;
 use orml_traits::asset_registry::AssetMetadata;
 use sp_runtime::{AccountId32, BuildStorage};
 use xcm::{
@@ -53,9 +54,9 @@ impl ExtBuilder {
     }
 
     pub fn with_safe_xcm_version(mut self, safe_xcm_version: u32) -> Self {
-		self.safe_xcm_version = Some(safe_xcm_version);
-		self
-	}
+        self.safe_xcm_version = Some(safe_xcm_version);
+        self
+    }
 
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
@@ -86,15 +87,19 @@ impl ExtBuilder {
         .assimilate_storage(&mut t)
         .unwrap();
 
+        parachain_info::GenesisConfig::<Runtime> {
+            _config: Default::default(),
+            parachain_id: self.parachain_id.into(),
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
 
-
-        parachain_info::GenesisConfig::<Runtime> { _config: Default::default(), parachain_id: self.parachain_id.into() }
-            .assimilate_storage(&mut t)
-            .unwrap();
-
-        pallet_xcm::GenesisConfig::<Runtime> { _config: Default::default(), safe_xcm_version: self.safe_xcm_version }
-            .assimilate_storage(&mut t)
-            .unwrap();
+        pallet_xcm::GenesisConfig::<Runtime> {
+            _config: Default::default(),
+            safe_xcm_version: self.safe_xcm_version,
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
 
         let mut ext = sp_io::TestExternalities::new(t);
         ext.execute_with(|| System::set_block_number(1));
