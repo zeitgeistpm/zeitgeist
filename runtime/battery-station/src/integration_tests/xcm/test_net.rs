@@ -22,22 +22,34 @@ use crate::{
 };
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_runtime::BuildStorage;
-use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
+use xcm_emulator::{decl_test_networks, decl_test_parachains, decl_test_relay_chains, TestExt};
 
-use super::setup::{roc, ztg, ExtBuilder, ALICE, FOREIGN_PARENT_ID, PARA_ID_SIBLING};
+use super::setup::{roc, ztg, ALICE, FOREIGN_PARENT_ID, PARA_ID_SIBLING};
 
-decl_test_relay_chain! {
-    pub struct RococoNet {
-        Runtime = rococo_runtime::Runtime,
-        RuntimeCall = rococo_runtime::RuntimeCall,
-        RuntimeEvent = rococo_runtime::RuntimeEvent,
-        XcmConfig = rococo_runtime::XcmConfig,
-        MessageQueue = rococo_runtime::MessageQueue,
-        System = rococo_runtime::System,
-        new_ext = relay_ext(),
-    }
+decl_test_relay_chains! {
+	#[api_version(11)]
+	pub struct Rococo {
+		genesis = genesis::genesis(),
+		on_init = (),
+		runtime = rococo_runtime,
+		core = {
+            MessageProcessor: TODO
+			SovereignAccountOf: rococo_runtime::xcm_config::LocationConverter,
+		},
+		pallets = {
+			XcmPallet: rococo_runtime::XcmPallet,
+			Sudo: rococo_runtime::Sudo,
+			Balances: rococo_runtime::Balances,
+			Hrmp: rococo_runtime::Hrmp,
+			Identity: rococo_runtime::Identity,
+			IdentityMigrator: rococo_runtime::IdentityMigrator,
+			Treasury: rococo_runtime::Treasury,
+			AssetRate: rococo_runtime::AssetRate,
+		}
+	},
 }
 
+/*
 decl_test_parachain! {
     pub struct Zeitgeist {
         Runtime = Runtime,
@@ -90,6 +102,10 @@ pub(super) fn relay_ext() -> sp_io::TestExternalities {
         .assimilate_storage(&mut t)
         .unwrap();
 
+    polkadot-runtime-parachains::paras::GenesisConfig::<Runtime> {
+
+    }
+
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| System::set_block_number(1));
     ext
@@ -121,3 +137,4 @@ pub fn mock_relay_config() -> HostConfiguration<polkadot_primitives::BlockNumber
         ..Default::default()
     }
 }
+*/

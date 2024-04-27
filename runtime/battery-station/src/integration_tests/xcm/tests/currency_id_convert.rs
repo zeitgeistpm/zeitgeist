@@ -32,7 +32,6 @@ use core::fmt::Debug;
 use sp_runtime::traits::{Convert, MaybeEquivalence};
 use test_case::test_case;
 use xcm::latest::{Junction::*, Junctions::*, MultiLocation};
-use xcm_simulator::TestExt;
 
 fn convert_common_native<T>(expected: T)
 where

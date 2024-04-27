@@ -22,7 +22,7 @@ use crate::{
 };
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_runtime::BuildStorage;
-use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
+use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, TestExt};
 
 use super::setup::{dot, ztg, ExtBuilder, ALICE, FOREIGN_PARENT_ID, PARA_ID_SIBLING};
 
