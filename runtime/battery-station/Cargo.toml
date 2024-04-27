@@ -102,6 +102,7 @@ pallet-message-queue = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
 polkadot-runtime-parachains = { workspace = true, optional = true }
 rococo-runtime = { workspace = true, optional = true }
+rococo-runtime-constants = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
 xcm-executor = { workspace = true, optional = true }
@@ -129,7 +130,7 @@ zrml-swaps-runtime-api = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
-rococo-runtime-constants = { workspace = true, features = ["default"] }
+pallet-im-online = { workspace = true, features = ["default"] }
 sp-authority-discovery = { workspace = true, features = ["default"] }
 sp-consensus-babe = { workspace = true, features = ["default"] }
 sp-consensus-beefy = { workspace = true, features = ["default"] }
@@ -172,6 +173,7 @@ parachain = [
     "pallet-xcm",
     "polkadot-runtime-parachains",
     "rococo-runtime",
+    "rococo-runtime-constants",
     "xcm-builder",
     "xcm-executor",
     "xcm",
@@ -330,6 +332,7 @@ std = [
     "pallet-xcm?/std",
     "polkadot-runtime-parachains?/std",
     "rococo-runtime?/std",
+    "rococo-runtime-constants?/std",
     "xcm-builder?/std",
     "xcm-executor?/std",
     "xcm?/std",

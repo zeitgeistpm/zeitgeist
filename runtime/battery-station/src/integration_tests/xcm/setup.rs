@@ -21,6 +21,7 @@ use crate::{
     AccountId, AssetRegistry, AssetRegistryStringLimit, Assets, Balance, ExistentialDeposit,
     Runtime, RuntimeOrigin, System,
 };
+use sp_core::sr25519;
 use frame_support::assert_ok;
 use orml_traits::asset_registry::AssetMetadata;
 use sp_runtime::{AccountId32, BuildStorage};
@@ -29,10 +30,42 @@ use xcm::{
     VersionedMultiLocation,
 };
 use zeitgeist_primitives::types::{CustomMetadata, XcmAsset};
+use xcm_emulator::helpers::get_account_id_from_seed;
 
 /// Accounts
-pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
-pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
+pub(super) mod accounts {
+	use super::*;
+	pub const ALICE: &str = "Alice";
+	pub const BOB: &str = "Bob";
+	pub const CHARLIE: &str = "Charlie";
+	pub const DAVE: &str = "Dave";
+	pub const EVE: &str = "Eve";
+	pub const FERDIE: &str = "Ferdie";
+	pub const ALICE_STASH: &str = "Alice//stash";
+	pub const BOB_STASH: &str = "Bob//stash";
+	pub const CHARLIE_STASH: &str = "Charlie//stash";
+	pub const DAVE_STASH: &str = "Dave//stash";
+	pub const EVE_STASH: &str = "Eve//stash";
+	pub const FERDIE_STASH: &str = "Ferdie//stash";
+	pub const FERDIE_BEEFY: &str = "Ferdie//stash";
+
+	pub fn init_balances() -> Vec<AccountId> {
+		vec![
+			get_account_id_from_seed::<sr25519::Public>(ALICE),
+			get_account_id_from_seed::<sr25519::Public>(BOB),
+			get_account_id_from_seed::<sr25519::Public>(CHARLIE),
+			get_account_id_from_seed::<sr25519::Public>(DAVE),
+			get_account_id_from_seed::<sr25519::Public>(EVE),
+			get_account_id_from_seed::<sr25519::Public>(FERDIE),
+			get_account_id_from_seed::<sr25519::Public>(ALICE_STASH),
+			get_account_id_from_seed::<sr25519::Public>(BOB_STASH),
+			get_account_id_from_seed::<sr25519::Public>(CHARLIE_STASH),
+			get_account_id_from_seed::<sr25519::Public>(DAVE_STASH),
+			get_account_id_from_seed::<sr25519::Public>(EVE_STASH),
+			get_account_id_from_seed::<sr25519::Public>(FERDIE_STASH),
+		]
+	}
+}
 
 /// A PARA ID used for a sibling parachain.
 /// It must be one that doesn't collide with any other in use.

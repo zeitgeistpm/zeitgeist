@@ -20,10 +20,9 @@ use crate::{
     integration_tests::xcm::{
         setup::{
             adjusted_balance, btc, register_btc, register_foreign_parent, register_foreign_ztg,
-            roc, sibling_parachain_account, zeitgeist_parachain_account, ztg, ALICE, BOB, BTC_ID,
+            roc, sibling_parachain_account, zeitgeist_parachain_account, ztg, BTC_ID,
             FOREIGN_PARENT_ID, FOREIGN_ZTG_ID, PARA_ID_SIBLING,
         },
-        test_net::{RococoNet, Sibling, TestNet, Zeitgeist},
     },
     xcm_config::{config::battery_station, fees::default_per_second},
     AssetManager, AssetRegistry, Balance, Balances, RuntimeOrigin, XTokens,
