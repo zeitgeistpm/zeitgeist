@@ -23,7 +23,7 @@ use crate::{
             register_foreign_parent, register_foreign_sibling, FOREIGN_PARENT_ID,
             FOREIGN_SIBLING_ID, PARA_ID_BATTERY_STATION,
         },
-        test_net::BatteryStation
+        test_net::BatteryStation,
     },
     xcm_config::config::{battery_station, general_key, AssetConvert},
     Assets, CustomMetadata, ScalarPosition, XcmAsset,
@@ -175,5 +175,7 @@ where
     T: Copy + Debug + PartialEq,
     AssetConvert: Convert<T, Option<MultiLocation>>,
 {
-    BatteryStation::execute_with(|| assert_eq!(<AssetConvert as Convert<_, _>>::convert(asset), None));
+    BatteryStation::execute_with(|| {
+        assert_eq!(<AssetConvert as Convert<_, _>>::convert(asset), None)
+    });
 }

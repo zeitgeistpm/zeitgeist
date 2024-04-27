@@ -19,26 +19,25 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
+            accounts::{alice, bob},
             adjusted_balance, btc, register_btc, register_foreign_parent, register_foreign_ztg,
-            roc, sibling_parachain_account, zeitgeist_parachain_account, ztg, BTC_ID, PARA_ID_BATTERY_STATION,
-            FOREIGN_PARENT_ID, FOREIGN_ZTG_ID, PARA_ID_SIBLING, accounts::{alice, bob}
+            roc, sibling_parachain_account, zeitgeist_parachain_account, ztg, BTC_ID,
+            FOREIGN_PARENT_ID, FOREIGN_ZTG_ID, PARA_ID_BATTERY_STATION, PARA_ID_SIBLING,
         },
-        test_net::{BatteryStation, Rococo, Sibling}
+        test_net::{BatteryStation, Rococo, Sibling},
     },
     xcm_config::{config::battery_station, fees::default_per_second},
-    AssetManager, Balance, Balances, RuntimeOrigin, XTokens,
-    ZeitgeistTreasuryAccount,
+    AssetManager, Balance, Balances, RuntimeOrigin, XTokens, ZeitgeistTreasuryAccount,
 };
 
 use frame_support::{assert_ok, traits::tokens::fungible::Mutate};
 use orml_traits::MultiCurrency;
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, WeightLimit};
-use xcm_emulator::TestExt;
+use xcm_emulator::{RelayChain, TestExt};
 use zeitgeist_primitives::{
     constants::{BalanceFractionalDecimals, BASE},
     types::{CustomMetadata, XcmAsset, XcmMetadata},
 };
-use xcm_emulator::RelayChain;
 
 #[test]
 fn transfer_ztg_to_sibling() {
@@ -95,7 +94,6 @@ fn transfer_ztg_to_sibling() {
     });
 }
 
-
 #[test]
 fn transfer_ztg_sibling_to_zeitgeist() {
     let mut alice_initial_balance = 0;
@@ -106,7 +104,10 @@ fn transfer_ztg_sibling_to_zeitgeist() {
     BatteryStation::execute_with(|| {
         treasury_initial_balance = Balances::free_balance(ZeitgeistTreasuryAccount::get());
         alice_initial_balance = Balances::free_balance(&alice());
-        assert_eq!(Balances::set_balance(&sibling_parachain_account(), sibling_initial_balance), sibling_initial_balance);
+        assert_eq!(
+            Balances::set_balance(&sibling_parachain_account(), sibling_initial_balance),
+            sibling_initial_balance
+        );
     });
 
     Sibling::execute_with(|| {
@@ -271,10 +272,7 @@ fn transfer_btc_zeitgeist_to_sibling() {
         // Verify that Bob now has initial balance + amount transferred - fee
         assert_eq!(Balances::free_balance(&bob()), expected);
         // Verify that the amount transferred is now subtracted from the zeitgeist account at sibling
-        assert_eq!(
-            Balances::free_balance(zeitgeist_parachain_account()),
-            expected_sovereign
-        );
+        assert_eq!(Balances::free_balance(zeitgeist_parachain_account()), expected_sovereign);
     });
 }
 
@@ -288,8 +286,7 @@ fn transfer_roc_from_relay_chain() {
         register_foreign_parent(None);
         treasury_initial_balance =
             AssetManager::free_balance(FOREIGN_PARENT_ID.into(), &ZeitgeistTreasuryAccount::get());
-        bob_initial_balance = 
-            AssetManager::free_balance(FOREIGN_PARENT_ID.into(), &bob());
+        bob_initial_balance = AssetManager::free_balance(FOREIGN_PARENT_ID.into(), &bob());
     });
 
     Rococo::execute_with(|| {
@@ -309,7 +306,7 @@ fn transfer_roc_from_relay_chain() {
         let expected = transfer_amount - roc_fee();
         let bob_expected = bob_initial_balance + adjusted_balance(roc(1), expected);
         let treasury_expected = treasury_initial_balance + adjusted_balance(roc(1), roc_fee());
-        
+
         assert_eq!(AssetManager::free_balance(FOREIGN_PARENT_ID.into(), &bob()), bob_expected);
         // Verify that fees (of foreign currency) have been put into treasury
         assert_eq!(
@@ -328,7 +325,10 @@ fn transfer_roc_to_relay_chain() {
     Rococo::execute_with(|| {
         initial_balance_bob = rococo_runtime::Balances::free_balance(&bob());
         let bs_acc = Rococo::sovereign_account_id_of_child_para(PARA_ID_BATTERY_STATION.into());
-        assert_eq!(rococo_runtime::Balances::set_balance(&bs_acc, transfer_amount), transfer_amount);
+        assert_eq!(
+            rococo_runtime::Balances::set_balance(&bs_acc, transfer_amount),
+            transfer_amount
+        );
     });
 
     BatteryStation::execute_with(|| {
@@ -341,8 +341,11 @@ fn transfer_roc_to_relay_chain() {
             FOREIGN_PARENT_ID,
             transfer_amount,
             Box::new(
-                MultiLocation::new(1, X1(Junction::AccountId32 { id: bob().into(), network: None }))
-                    .into()
+                MultiLocation::new(
+                    1,
+                    X1(Junction::AccountId32 { id: bob().into(), network: None })
+                )
+                .into()
             ),
             WeightLimit::Limited(4_000_000_000.into())
         ));
