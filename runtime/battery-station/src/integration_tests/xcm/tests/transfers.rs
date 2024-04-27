@@ -30,10 +30,10 @@ use crate::{
     ZeitgeistTreasuryAccount,
 };
 
-use frame_support::assert_ok;
+use frame_support::{assert_ok, traits::tokens::fungible::Mutate};
 use orml_traits::MultiCurrency;
 use xcm::latest::{Junction, Junction::*, Junctions::*, MultiLocation, WeightLimit};
-use xcm_emulator::TestExt;
+use xcm_simulator::TestExt;
 use zeitgeist_primitives::{
     constants::{BalanceFractionalDecimals, BASE},
     types::{CustomMetadata, XcmAsset, XcmMetadata},
@@ -192,12 +192,10 @@ fn transfer_btc_sibling_to_zeitgeist() {
     Sibling::execute_with(|| {
         assert_eq!(Balances::free_balance(&ALICE), sibling_alice_initial_balance);
         // Set the sovereign balance such that it is not subject to dust collection
-        assert_ok!(Balances::set_balance(
-            RuntimeOrigin::root(),
-            zeitgeist_parachain_account().into(),
-            initial_sovereign_balance,
-            0
-        ));
+        assert_eq!(
+            Balances::set_balance(&zeitgeist_parachain_account(), initial_sovereign_balance,),
+            initial_sovereign_balance
+        );
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(ALICE),
             // Target chain will interpret XcmAsset::Ztg as BTC in this context.
@@ -444,8 +442,8 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
 
 #[test]
 fn test_total_fee() {
-    assert_eq!(ztg_fee(), 80_128_000);
-    assert_eq!(roc_fee(), 8_012_800_000);
+    assert_eq!(ztg_fee(), 64_296_000);
+    assert_eq!(roc_fee(), 6_429_600_000);
 }
 
 #[inline]

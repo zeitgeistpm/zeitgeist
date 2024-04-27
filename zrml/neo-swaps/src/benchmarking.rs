@@ -23,6 +23,7 @@ use crate::{
     traits::{liquidity_shares_manager::LiquiditySharesManager, pool_operations::PoolOperations},
     AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools, MIN_SPOT_PRICE,
 };
+use alloc::{vec, vec::Vec};
 use core::{cell::Cell, iter, marker::PhantomData};
 use frame_benchmarking::v2::*;
 use frame_support::{

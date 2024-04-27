@@ -98,6 +98,7 @@ orml-asset-registry = { workspace = true, optional = true }
 orml-unknown-tokens = { workspace = true, optional = true }
 orml-xcm-support = { workspace = true, optional = true }
 orml-xtokens = { workspace = true, optional = true }
+pallet-message-queue = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
 polkadot-runtime-parachains = { workspace = true, optional = true }
 rococo-runtime = { workspace = true, optional = true }
@@ -127,6 +128,7 @@ zrml-swaps = { workspace = true }
 zrml-swaps-runtime-api = { workspace = true }
 
 [dev-dependencies]
+env_logger = { workspace = true }
 sp-io = { workspace = true, features = ["default"] }
 test-case = { workspace = true }
 xcm-simulator = { workspace = true }
@@ -162,6 +164,7 @@ parachain = [
     "orml-unknown-tokens",
     "orml-xcm-support",
     "orml-xtokens",
+    "pallet-message-queue",
     "pallet-xcm",
     "polkadot-runtime-parachains",
     "rococo-runtime",
@@ -319,6 +322,7 @@ std = [
     "orml-unknown-tokens?/std",
     "orml-xcm-support?/std",
     "orml-xtokens?/std",
+    "pallet-message-queue?/std",
     "pallet-xcm?/std",
     "polkadot-runtime-parachains?/std",
     "rococo-runtime?/std",
@@ -428,7 +432,7 @@ force-debug = ["sp-debug-derive/force-debug"]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2021"
+edition.workspace = true
 name = "battery-station-runtime"
 version = "0.5.2"
 

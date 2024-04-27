@@ -18,11 +18,23 @@
 use super::*;
 
 /// The `CustomAsset` tuple struct represents all custom assets.
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
-    Clone, CompactAs, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo,
+    Clone,
+    CompactAs,
+    Copy,
+    Debug,
+    Decode,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+    serde::Deserialize,
+    serde::Serialize,
 )]
+#[serde(rename_all = "camelCase")]
 pub struct CustomAssetClass(#[codec(compact)] pub CustomAssetId);
 
 impl From<Compact<CustomAssetId>> for CustomAssetClass {

@@ -18,9 +18,23 @@
 use super::*;
 
 /// The `XcmAssetClass` enum represents all assets that can be transferred via XCM.
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Default,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+    serde::Deserialize,
+    serde::Serialize,
+)]
+#[serde(rename_all = "camelCase")]
 pub enum XcmAssetClass {
     #[codec(index = 4)]
     #[default]

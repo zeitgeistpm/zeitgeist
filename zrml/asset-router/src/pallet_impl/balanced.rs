@@ -15,15 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-pub mod balanced;
-pub mod create;
-pub mod destroy;
-pub mod inspect;
-pub mod managed_destroy;
-pub mod multi_currency;
-pub mod multi_currency_extended;
-pub mod multi_lockable_currency;
-pub mod multi_reserveable_currency;
-pub mod named_multi_reserveable_currency;
-pub mod transfer_all;
-pub mod unbalanced;
+use crate::pallet::*;
+use frame_support::traits::tokens::fungibles::{Balanced, DecreaseIssuance, IncreaseIssuance};
+
+impl<T: Config> Balanced<T::AccountId> for Pallet<T> {
+    type OnDropCredit = DecreaseIssuance<T::AccountId, Self>;
+    type OnDropDebt = IncreaseIssuance<T::AccountId, Self>;
+}
