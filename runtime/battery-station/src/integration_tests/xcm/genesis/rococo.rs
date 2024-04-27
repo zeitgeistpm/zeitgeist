@@ -18,13 +18,12 @@
 
 // TODO: Replace with crate "rococo-emulated-chain" from Cumulus starting from polkadot-v1.4.0
 
-use crate::Balance;
 use crate::integration_tests::xcm::setup::accounts;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_consensus_beefy::ecdsa_crypto::AuthorityId as BeefyId;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
-use sp_core::{storage::Storage, Pair, Public};
+use sp_core::{storage::Storage};
 use sp_runtime::BuildStorage;
 use polkadot_primitives::{AccountId, BlockNumber, AssignmentId, ValidatorId};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
@@ -34,7 +33,6 @@ use xcm_emulator::helpers::get_account_id_from_seed;
 use crate::integration_tests::xcm::setup::accounts::get_from_seed;
 use sp_core::sr25519;
 
-pub const ED: Balance = rococo_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
 const ENDOWMENT: u128 = roc(1_000_000);
 
 fn session_keys(

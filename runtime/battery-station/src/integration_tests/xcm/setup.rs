@@ -17,13 +17,12 @@
 
 use crate::{
     xcm_config::config::{battery_station, general_key},
-    AccountId, AssetRegistry, AssetRegistryStringLimit, Assets, Balance, ExistentialDeposit,
-    Runtime, RuntimeOrigin, System,
+    AccountId, AssetRegistry, AssetRegistryStringLimit, Balance, ExistentialDeposit,
+    RuntimeOrigin,
 };
 use sp_core::{Public, Pair, sr25519};
 use frame_support::assert_ok;
 use orml_traits::asset_registry::AssetMetadata;
-use sp_runtime::{AccountId32, BuildStorage};
 use xcm::{
     latest::{Junction::Parachain, Junctions::X2, MultiLocation},
     VersionedMultiLocation,
@@ -46,7 +45,6 @@ pub(super) mod accounts {
 	pub const DAVE_STASH: &str = "Dave//stash";
 	pub const EVE_STASH: &str = "Eve//stash";
 	pub const FERDIE_STASH: &str = "Ferdie//stash";
-	pub const FERDIE_BEEFY: &str = "Ferdie//stash";
 
 	pub fn init_balances() -> Vec<AccountId> {
 		vec![
@@ -129,7 +127,7 @@ pub(super) const fn adjusted_balance(foreign_base: Balance, amount: Balance) -> 
 // Multilocations that are used to represent tokens from other chains
 #[inline]
 pub(super) fn foreign_ztg_multilocation() -> MultiLocation {
-    MultiLocation::new(1, X2(Parachain(battery_station::ID), general_key(battery_station::KEY)))
+    MultiLocation::new(1, X2(Parachain(PARA_ID_BATTERY_STATION), general_key(battery_station::KEY)))
 }
 
 #[inline]
@@ -208,7 +206,7 @@ pub(super) fn sibling_parachain_account() -> AccountId {
 
 #[inline]
 pub(super) fn zeitgeist_parachain_account() -> AccountId {
-    parachain_account(battery_station::ID)
+    parachain_account(PARA_ID_BATTERY_STATION)
 }
 
 #[inline]

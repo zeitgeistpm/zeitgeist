@@ -23,10 +23,10 @@ use crate::{
             roc, sibling_parachain_account, zeitgeist_parachain_account, ztg, BTC_ID, PARA_ID_BATTERY_STATION,
             FOREIGN_PARENT_ID, FOREIGN_ZTG_ID, PARA_ID_SIBLING, accounts::{alice, bob}
         },
-        test_net::{BatteryStation, Rococo}
+        test_net::{BatteryStation, Rococo, Sibling}
     },
     xcm_config::{config::battery_station, fees::default_per_second},
-    AssetManager, AssetRegistry, Balance, Balances, RuntimeOrigin, XTokens,
+    AssetManager, Balance, Balances, RuntimeOrigin, XTokens,
     ZeitgeistTreasuryAccount,
 };
 
@@ -40,24 +40,22 @@ use zeitgeist_primitives::{
 };
 use xcm_emulator::RelayChain;
 
-/*
 #[test]
 fn transfer_ztg_to_sibling() {
-    TestNet::reset();
-
-    let alice_initial_balance = ztg(10);
+    let mut alice_initial_balance = 0;
+    let mut bob_initial_balance = 0;
     let transfer_amount = ztg(5);
     let mut treasury_initial_balance = 0;
 
     Sibling::execute_with(|| {
         treasury_initial_balance =
             AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &ZeitgeistTreasuryAccount::get());
-        assert_eq!(AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &bob()), 0);
+        bob_initial_balance = AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &bob());
         register_foreign_ztg(None);
     });
 
     BatteryStation::execute_with(|| {
-        assert_eq!(Balances::free_balance(&alice()), alice_initial_balance);
+        alice_initial_balance = Balances::free_balance(&alice());
         assert_eq!(Balances::free_balance(sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(alice()),
@@ -78,54 +76,43 @@ fn transfer_ztg_to_sibling() {
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
         assert_eq!(Balances::free_balance(&alice()), alice_initial_balance - transfer_amount);
-
         // Verify that the amount transferred is now part of the sibling account here
         assert_eq!(Balances::free_balance(sibling_parachain_account()), transfer_amount);
     });
 
     Sibling::execute_with(|| {
         let current_balance = AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &bob());
+        let bob_expected = bob_initial_balance + transfer_amount - ztg_fee();
+        let treasury_expected = treasury_initial_balance + ztg_fee();
 
         // Verify that bob() now has (amount transferred - fee)
-        assert_eq!(current_balance, transfer_amount - ztg_fee());
-
+        assert_eq!(current_balance, bob_expected);
         // Verify that fees (of foreign currency) have been put into treasury
         assert_eq!(
             AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &ZeitgeistTreasuryAccount::get()),
-            treasury_initial_balance + ztg_fee()
+            treasury_expected
         )
     });
 }
 
+
 #[test]
 fn transfer_ztg_sibling_to_zeitgeist() {
-    TestNet::reset();
-
-    // In order to be able to transfer ZTG from Sibling to BatteryStation, we need to first send
-    // ZTG from BatteryStation to Sibling, or else it fails since it'd be like Sibling had minted
-    // ZTG on their side.
-    transfer_ztg_to_sibling();
-
-    let alice_initial_balance = ztg(5);
-    let bob_initial_balance = ztg(5) - ztg_fee();
+    let mut alice_initial_balance = 0;
     let mut treasury_initial_balance = 0;
-    let sibling_sovereign_initial_balance = ztg(5);
     let transfer_amount = ztg(1);
-    // Note: This asset was registered in `transfer_ztg_to_sibling`
+    let sibling_initial_balance = transfer_amount;
 
     BatteryStation::execute_with(|| {
         treasury_initial_balance = Balances::free_balance(ZeitgeistTreasuryAccount::get());
-
-        assert_eq!(Balances::free_balance(&alice()), alice_initial_balance);
-        assert_eq!(
-            Balances::free_balance(sibling_parachain_account()),
-            sibling_sovereign_initial_balance
-        );
+        alice_initial_balance = Balances::free_balance(&alice());
+        assert_eq!(Balances::set_balance(&sibling_parachain_account(), sibling_initial_balance), sibling_initial_balance);
     });
 
     Sibling::execute_with(|| {
-        assert_eq!(Balances::free_balance(zeitgeist_parachain_account()), 0);
-        assert_eq!(AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &bob()), bob_initial_balance);
+        register_foreign_ztg(None);
+        let bob_initial_balance = AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &bob());
+
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(bob()),
             FOREIGN_ZTG_ID,
@@ -142,7 +129,6 @@ fn transfer_ztg_sibling_to_zeitgeist() {
             ),
             WeightLimit::Limited(4_000_000_000.into()),
         ));
-
         // Confirm that Bobs's balance is initial balance - amount transferred
         assert_eq!(
             AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &bob()),
@@ -156,13 +142,11 @@ fn transfer_ztg_sibling_to_zeitgeist() {
             Balances::free_balance(&alice()),
             alice_initial_balance + transfer_amount - ztg_fee(),
         );
-
         // Verify that the reserve has been adjusted properly
         assert_eq!(
             Balances::free_balance(sibling_parachain_account()),
-            sibling_sovereign_initial_balance - transfer_amount
+            sibling_initial_balance - transfer_amount
         );
-
         // Verify that fees (of native currency) have been put into treasury
         assert_eq!(
             Balances::free_balance(ZeitgeistTreasuryAccount::get()),
@@ -173,11 +157,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
 
 #[test]
 fn transfer_btc_sibling_to_zeitgeist() {
-    TestNet::reset();
-
-    let sibling_alice_initial_balance = ztg(10);
-    let zeitgeist_alice_initial_balance = btc(0);
-    let initial_sovereign_balance = btc(100);
+    let mut zeitgeist_alice_initial_balance = 0;
     let transfer_amount = btc(100);
     let mut treasury_initial_balance = 0;
 
@@ -185,14 +165,13 @@ fn transfer_btc_sibling_to_zeitgeist() {
         register_btc(None);
         treasury_initial_balance =
             AssetManager::free_balance(BTC_ID.into(), &ZeitgeistTreasuryAccount::get());
-        assert_eq!(
-            AssetManager::free_balance(BTC_ID.into(), &alice()),
-            zeitgeist_alice_initial_balance,
-        );
+        zeitgeist_alice_initial_balance = AssetManager::free_balance(BTC_ID.into(), &alice());
     });
 
     Sibling::execute_with(|| {
-        assert_eq!(Balances::free_balance(&alice()), sibling_alice_initial_balance);
+        let alice_initial_balance = Balances::free_balance(&alice());
+        let initial_sovereign_balance = transfer_amount;
+
         // Set the sovereign balance such that it is not subject to dust collection
         assert_eq!(
             Balances::set_balance(&zeitgeist_parachain_account(), initial_sovereign_balance,),
@@ -215,10 +194,8 @@ fn transfer_btc_sibling_to_zeitgeist() {
             ),
             WeightLimit::Limited(4_000_000_000.into()),
         ));
-
         // Confirm that Alice's balance is initial_balance - amount_transferred
-        assert_eq!(Balances::free_balance(&alice()), sibling_alice_initial_balance - transfer_amount);
-
+        assert_eq!(Balances::free_balance(&alice()), alice_initial_balance - transfer_amount);
         // Verify that the amount transferred is now part of the zeitgeist account here
         assert_eq!(
             Balances::free_balance(zeitgeist_parachain_account()),
@@ -229,37 +206,41 @@ fn transfer_btc_sibling_to_zeitgeist() {
     BatteryStation::execute_with(|| {
         let expected = transfer_amount - btc_fee();
         let expected_adjusted = adjusted_balance(btc(1), expected);
+        let expected_treasury = treasury_initial_balance + adjusted_balance(btc(1), btc_fee());
 
         // Verify that remote Alice now has initial balance + amount transferred - fee
         assert_eq!(
             AssetManager::free_balance(BTC_ID.into(), &alice()),
             zeitgeist_alice_initial_balance + expected_adjusted,
         );
-
         // Verify that fees (of foreign currency) have been put into treasury
         assert_eq!(
             AssetManager::free_balance(BTC_ID.into(), &ZeitgeistTreasuryAccount::get()),
             // Align decimal fractional places
-            treasury_initial_balance + adjusted_balance(btc(1), btc_fee())
+            expected_treasury
         )
     });
 }
 
 #[test]
 fn transfer_btc_zeitgeist_to_sibling() {
-    TestNet::reset();
-
-    let transfer_amount = btc(100) - btc_fee();
-    let initial_sovereign_balance = 2 * btc(100);
-    let sibling_bob_initial_balance = btc(0);
-
-    transfer_btc_sibling_to_zeitgeist();
+    let transfer_amount = btc(100);
+    let initial_sovereign_balance = transfer_amount;
+    let mut bob_initial_balance = 0;
 
     Sibling::execute_with(|| {
-        assert_eq!(AssetManager::free_balance(BTC_ID.into(), &bob()), sibling_bob_initial_balance,);
+        bob_initial_balance = Balances::free_balance(&bob());
+        // Set the sovereign balance such that it is not subject to dust collection
+        assert_eq!(
+            Balances::set_balance(&zeitgeist_parachain_account(), initial_sovereign_balance,),
+            initial_sovereign_balance
+        );
     });
 
     BatteryStation::execute_with(|| {
+        register_btc(None);
+        let alice_initial_balance = AssetManager::free_balance(BTC_ID.into(), &alice());
+
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(alice()),
             BTC_ID,
@@ -278,24 +259,24 @@ fn transfer_btc_zeitgeist_to_sibling() {
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
-        assert_eq!(AssetManager::free_balance(BTC_ID.into(), &alice()), 0);
+        let alice_balance = AssetManager::free_balance(BTC_ID.into(), &alice());
+        let alice_expected = alice_initial_balance - adjusted_balance(btc(1), transfer_amount);
+        assert_eq!(alice_balance, alice_expected);
     });
 
     Sibling::execute_with(|| {
-        let fee_adjusted = adjusted_balance(btc(1), btc_fee());
-        let expected = transfer_amount - fee_adjusted;
+        let expected = bob_initial_balance + transfer_amount - adjusted_balance(btc(1), btc_fee());
+        let expected_sovereign = initial_sovereign_balance - transfer_amount;
 
         // Verify that Bob now has initial balance + amount transferred - fee
-        assert_eq!(Balances::free_balance(&bob()), sibling_bob_initial_balance + expected,);
-
+        assert_eq!(Balances::free_balance(&bob()), expected);
         // Verify that the amount transferred is now subtracted from the zeitgeist account at sibling
         assert_eq!(
             Balances::free_balance(zeitgeist_parachain_account()),
-            initial_sovereign_balance - transfer_amount
+            expected_sovereign
         );
     });
 }
-*/
 
 #[test]
 fn transfer_roc_from_relay_chain() {
@@ -347,7 +328,7 @@ fn transfer_roc_to_relay_chain() {
     Rococo::execute_with(|| {
         initial_balance_bob = rococo_runtime::Balances::free_balance(&bob());
         let bs_acc = Rococo::sovereign_account_id_of_child_para(PARA_ID_BATTERY_STATION.into());
-        rococo_runtime::Balances::set_balance(&bs_acc, transfer_amount);
+        assert_eq!(rococo_runtime::Balances::set_balance(&bs_acc, transfer_amount), transfer_amount);
     });
 
     BatteryStation::execute_with(|| {
@@ -379,40 +360,27 @@ fn transfer_roc_to_relay_chain() {
     });
 }
 
-/*
 #[test]
 fn transfer_ztg_to_sibling_with_custom_fee() {
-    TestNet::reset();
-
-    let alice_initial_balance = ztg(10);
     // 10x fee factor, so ZTG has 10x the worth of sibling currency.
     let fee_factor = 100_000_000_000;
     let transfer_amount = ztg(5);
     let mut treasury_initial_balance = 0;
+    let mut bob_initial_balance = 0;
 
     Sibling::execute_with(|| {
         treasury_initial_balance =
             AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &ZeitgeistTreasuryAccount::get());
-        assert_eq!(AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &bob()), 0);
-
-        register_foreign_ztg(None);
+        bob_initial_balance = AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &bob());
         let custom_metadata = CustomMetadata {
             xcm: XcmMetadata { fee_factor: Some(fee_factor) },
             ..Default::default()
         };
-        assert_ok!(AssetRegistry::do_update_asset(
-            FOREIGN_ZTG_ID,
-            None,
-            None,
-            None,
-            None,
-            None,
-            Some(custom_metadata)
-        ));
+        register_foreign_ztg(Some(custom_metadata));
     });
 
     BatteryStation::execute_with(|| {
-        assert_eq!(Balances::free_balance(&alice()), alice_initial_balance);
+        let alice_initial_balance = Balances::free_balance(&alice());
         assert_eq!(Balances::free_balance(sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(alice()),
@@ -430,59 +398,58 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
             ),
             WeightLimit::Limited(4_000_000_000.into()),
         ));
-
         // Confirm that Alice's balance is initial_balance - amount_transferred
         assert_eq!(Balances::free_balance(&alice()), alice_initial_balance - transfer_amount);
-
         // Verify that the amount transferred is now part of the sibling account here
         assert_eq!(Balances::free_balance(sibling_parachain_account()), transfer_amount);
     });
 
     Sibling::execute_with(|| {
         let current_balance = AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &bob());
-        let custom_fee = calc_fee(default_per_second(10) * 10);
+        let custom_fee = ztg_fee() * fee_factor / BASE;
+        let bob_expected = bob_initial_balance + transfer_amount - custom_fee;
+        let treasury_expected = treasury_initial_balance + custom_fee;
 
         // Verify that bob() now has (amount transferred - fee)
-        assert_eq!(current_balance, transfer_amount - ztg_fee() * fee_factor / BASE);
-
+        assert_eq!(current_balance, bob_expected);
         // Verify that fees (of foreign currency) have been put into treasury
         assert_eq!(
             AssetManager::free_balance(FOREIGN_ZTG_ID.into(), &ZeitgeistTreasuryAccount::get()),
-            treasury_initial_balance + custom_fee
+            treasury_expected
         )
     });
 }
-*/
 
 #[test]
 fn test_total_fee() {
-    assert_eq!(ztg_fee(), 80_370_000);
+    assert_eq!(btc_fee(), 642_960);
     assert_eq!(roc_fee(), 8_037_000_000);
+    assert_eq!(ztg_fee(), 64_296_000);
 }
 
 #[inline]
 fn ztg_fee() -> Balance {
-    fee(BalanceFractionalDecimals::get().into())
+    fee(BalanceFractionalDecimals::get().into(), 8)
 }
 
 #[inline]
-fn fee(decimals: u32) -> Balance {
-    calc_fee(default_per_second(decimals))
+fn fee(decimals: u32, multiplier: Balance) -> Balance {
+    calc_fee(default_per_second(decimals), multiplier)
 }
 
 // The fee associated with transferring roc tokens
 #[inline]
 fn roc_fee() -> Balance {
-    fee(12)
+    fee(12, 10)
 }
 
 #[inline]
 fn btc_fee() -> Balance {
-    fee(8)
+    fee(8, 8)
 }
 
 #[inline]
-const fn calc_fee(fee_per_second: Balance) -> Balance {
+const fn calc_fee(fee_per_second: Balance, multiplier: Balance) -> Balance {
     // Adjust fee per second to actual test execution time
-    fee_per_second / 1_000
+    fee_per_second / 10_000 * multiplier
 }

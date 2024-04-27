@@ -16,15 +16,12 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    parameters::ZeitgeistTreasuryAccount, xcm_config::config::{LocationToAccountId}, battery_station, Assets, DmpQueue,
+    xcm_config::config::{LocationToAccountId}, DmpQueue,
     XcmpQueue, ParachainInfo, PolkadotXcm, AssetManager, Balances, XTokens
 };
-use polkadot_runtime_parachains::configuration::HostConfiguration;
-use sp_runtime::BuildStorage;
 use xcm_emulator::{decl_test_networks, decl_test_parachains, decl_test_relay_chains, DefaultMessageProcessor};
-
-use super::setup::{roc, ztg, FOREIGN_PARENT_ID, PARA_ID_SIBLING, PARA_ID_BATTERY_STATION};
-use super::genesis::{battery_station as battery_station_genesis, rococo};
+use super::setup::{PARA_ID_SIBLING, PARA_ID_BATTERY_STATION};
+use super::genesis::{battery_station, rococo};
 
 decl_test_relay_chains! {
 	#[api_version(5)]
@@ -46,7 +43,7 @@ decl_test_relay_chains! {
 
 decl_test_parachains! {
 	pub struct BatteryStation {
-		genesis = battery_station_genesis::genesis(PARA_ID_BATTERY_STATION),
+		genesis = battery_station::genesis(PARA_ID_BATTERY_STATION),
 		on_init = (),
 		runtime = crate,
 		core = {
@@ -63,7 +60,7 @@ decl_test_parachains! {
 		}
 	},
 	pub struct Sibling {
-		genesis = battery_station_genesis::genesis(PARA_ID_SIBLING),
+		genesis = battery_station::genesis(PARA_ID_SIBLING),
 		on_init = (),
 		runtime = crate,
 		core = {
