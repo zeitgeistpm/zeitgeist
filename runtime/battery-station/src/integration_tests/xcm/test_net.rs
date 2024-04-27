@@ -24,12 +24,13 @@ use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_runtime::BuildStorage;
 use xcm_emulator::{decl_test_networks, decl_test_parachains, decl_test_relay_chains, DefaultMessageProcessor};
 
-use super::setup::{roc, ztg, FOREIGN_PARENT_ID, PARA_ID_SIBLING};
+use super::setup::{roc, ztg, FOREIGN_PARENT_ID, PARA_ID_SIBLING, PARA_ID_BATTERY_STATION};
+use super::genesis::{battery_station as battery_station_genesis, rococo};
 
 decl_test_relay_chains! {
 	#[api_version(5)]
 	pub struct Rococo {
-		genesis = crate::integration_tests::xcm::genesis::rococo::genesis(),
+		genesis = rococo::genesis(),
 		on_init = (),
 		runtime = rococo_runtime,
 		core = {
@@ -46,7 +47,24 @@ decl_test_relay_chains! {
 
 decl_test_parachains! {
 	pub struct BatteryStation {
-		genesis = crate::integration_tests::xcm::genesis::battery_station::genesis(),
+		genesis = battery_station_genesis::genesis(PARA_ID_BATTERY_STATION),
+		on_init = (),
+		runtime = crate,
+		core = {
+			XcmpMessageHandler: XcmpQueue,
+			DmpMessageHandler: DmpQueue,
+			LocationToAccountId: LocationToAccountId,
+			ParachainInfo: ParachainInfo,
+		},
+		pallets = {
+			PolkadotXcm: PolkadotXcm,
+			AssetManager: AssetManager,
+			Balances: Balances,
+            XTokens: XTokens,
+		}
+	},
+	pub struct Sibling {
+		genesis = battery_station_genesis::genesis(PARA_ID_SIBLING),
 		on_init = (),
 		runtime = crate,
 		core = {
@@ -64,24 +82,12 @@ decl_test_parachains! {
 	},
 }
 
-type BlockNumber = u64;
-
-/*
-decl_test_parachain! {
-    pub struct Sibling {
-        Runtime = Runtime,
-        XcmpMessageHandler = XcmpQueue,
-        DmpMessageHandler = DmpQueue,
-        new_ext = para_ext(PARA_ID_SIBLING),
-    }
-}
-*/
-
 decl_test_networks! {
     pub struct TestNet {
         relay_chain = Rococo,
         parachains = vec![
             BatteryStation,
+			Sibling,
         ],
         bridge = ()
     }

@@ -31,6 +31,7 @@ use polkadot_runtime_parachains::configuration::HostConfiguration;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use crate::integration_tests::xcm::setup::roc;
 use xcm_emulator::helpers::get_account_id_from_seed;
+use crate::integration_tests::xcm::setup::accounts::get_from_seed;
 use sp_core::sr25519;
 
 pub const ED: Balance = rococo_runtime_constants::currency::EXISTENTIAL_DEPOSIT;
@@ -54,13 +55,6 @@ fn session_keys(
 		authority_discovery,
 		beefy,
 	}
-}
-
-/// Helper function to generate a crypto pair from seed
-fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-	TPublic::Pair::from_string(&format!("//{}", seed), None)
-		.expect("static values are valid; qed")
-		.public()
 }
 
 fn get_host_config() -> HostConfiguration<BlockNumber> {

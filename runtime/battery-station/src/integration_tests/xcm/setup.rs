@@ -21,7 +21,7 @@ use crate::{
     AccountId, AssetRegistry, AssetRegistryStringLimit, Assets, Balance, ExistentialDeposit,
     Runtime, RuntimeOrigin, System,
 };
-use sp_core::sr25519;
+use sp_core::{Public, Pair, sr25519};
 use frame_support::assert_ok;
 use orml_traits::asset_registry::AssetMetadata;
 use sp_runtime::{AccountId32, BuildStorage};
@@ -65,11 +65,23 @@ pub(super) mod accounts {
 			get_account_id_from_seed::<sr25519::Public>(FERDIE_STASH),
 		]
 	}
+
+    pub fn alice() -> AccountId {
+        get_account_id_from_seed::<sr25519::Public>(ALICE)
+    }
+
+    /// Helper function to generate a crypto pair from seed
+    pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+        TPublic::Pair::from_string(&format!("//{}", seed), None)
+            .expect("static values are valid; qed")
+            .public()
+    }
 }
 
 /// A PARA ID used for a sibling parachain.
 /// It must be one that doesn't collide with any other in use.
 pub const PARA_ID_SIBLING: u32 = 3000;
+pub const PARA_ID_BATTERY_STATION: u32 = battery_station::ID;
 
 /// IDs that are used to represent tokens from other chains
 pub const FOREIGN_ZTG_ID: XcmAsset = XcmAsset::ForeignAsset(0);
