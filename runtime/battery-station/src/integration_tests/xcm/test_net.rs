@@ -1,5 +1,4 @@
 // Copyright 2022-2024 Forecasting Technologies LTD.
-// Copyright 2021-2022 Centrifuge GmbH (centrifuge.io).
 //
 // This file is part of Zeitgeist.
 //

@@ -1,5 +1,4 @@
 // Copyright 2022-2024 Forecasting Technologies LTD.
-// Copyright 2021 Centrifuge Foundation (centrifuge.io).
 //
 // This file is part of Zeitgeist.
 //
@@ -68,6 +67,10 @@ pub(super) mod accounts {
 
     pub fn alice() -> AccountId {
         get_account_id_from_seed::<sr25519::Public>(ALICE)
+    }
+
+    pub fn bob() -> AccountId {
+        get_account_id_from_seed::<sr25519::Public>(BOB)
     }
 
     /// Helper function to generate a crypto pair from seed
