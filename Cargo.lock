@@ -14746,7 +14746,7 @@ dependencies = [
 [[package]]
 name = "xcm-emulator"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#c8d2251cafadc108ba2f1f8a3208dc547ff38901"
+source = "git+https://github.com/zeitgeistpm/polkadot-sdk?branch=release-polkadot-v1.1.0-xcm-emulator-type-fix#84163279ce450f608de56b9d5151e65fe4bec51a"
 dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",

@@ -357,6 +357,10 @@ panic = "unwind"
 # Commits:
 #  - cb803be8cdc52d020890308a2076d752a8c4ce5c
 pallet-assets = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "zeitgeist-polkadot-v1.1.0" }
+# xcm-emulator incompatible block number type fixed
+# Commits:
+# - 
+xcm-emulator = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "release-polkadot-v1.1.0-xcm-emulator-type-fix" }
 
 [patch."https://github.com/galacticcouncil/HydraDX-node"]
 # Ensure same Substrate dependencies are used everywhere

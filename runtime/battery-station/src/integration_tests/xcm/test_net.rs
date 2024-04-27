@@ -64,6 +64,8 @@ decl_test_parachains! {
 	},
 }
 
+type BlockNumber = u64;
+
 /*
 decl_test_parachain! {
     pub struct Sibling {
