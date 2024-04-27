@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-// TODO: Replace with crate "rococo-emulated-chain" from Cumulus starting from polkadot-v1.4.0
+// TODO(#1325): Replace with crate "rococo-emulated-chain" from Cumulus starting from polkadot-v1.4.0
 
 use crate::integration_tests::xcm::setup::{accounts, accounts::get_from_seed, roc};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;

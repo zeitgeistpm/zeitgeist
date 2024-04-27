@@ -356,6 +356,9 @@ fn transfer_roc_to_relay_chain() {
         )
     });
 
+    #[cfg(not(feature = "runtime-benchmarks"))]
+    // rococo-runtime does not process messages when runtime-benchmarks is enabled:
+    // https://github.com/paritytech/polkadot-sdk/blob/release-polkadot-v1.1.0/polkadot/runtime/rococo/src/lib.rs#L1078-L1080
     Rococo::execute_with(|| {
         let expected_fee = 10_454_619;
         let expected_balance_bob = initial_balance_bob + transfer_amount - expected_fee;

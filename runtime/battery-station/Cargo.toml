@@ -102,7 +102,6 @@ pallet-message-queue = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
 polkadot-runtime-parachains = { workspace = true, optional = true }
 rococo-runtime = { workspace = true, optional = true }
-rococo-runtime-constants = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
 xcm-executor = { workspace = true, optional = true }
@@ -173,7 +172,6 @@ parachain = [
     "pallet-xcm",
     "polkadot-runtime-parachains",
     "rococo-runtime",
-    "rococo-runtime-constants",
     "xcm-builder",
     "xcm-executor",
     "xcm",
@@ -332,7 +330,6 @@ std = [
     "pallet-xcm?/std",
     "polkadot-runtime-parachains?/std",
     "rococo-runtime?/std",
-    "rococo-runtime-constants?/std",
     "xcm-builder?/std",
     "xcm-executor?/std",
     "xcm?/std",
@@ -340,6 +337,7 @@ std = [
     # Zeitgeist
 
     "zeitgeist-primitives/std",
+    "zrml-asset-router/std",
     "zrml-authorized/std",
     "zrml-court/std",
     "zrml-hybrid-router/std",

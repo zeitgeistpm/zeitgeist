@@ -855,7 +855,6 @@ dependencies = [
  "polkadot-primitives",
  "polkadot-runtime-parachains",
  "rococo-runtime",
- "rococo-runtime-constants",
  "scale-info",
  "session-keys-primitives",
  "sp-api",
