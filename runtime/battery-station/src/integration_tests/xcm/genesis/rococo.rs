@@ -1,4 +1,5 @@
 // Copyright 2024 Forecasting Technologies LTD.
+//
 // Copyright (C) Parity Technologies (UK) Ltd.
 //
 // This file is part of Zeitgeist.
