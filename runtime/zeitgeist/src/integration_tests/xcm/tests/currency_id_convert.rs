@@ -21,7 +21,7 @@ use crate::{
         setup::{
             foreign_parent_multilocation, foreign_sibling_multilocation, foreign_ztg_multilocation,
             register_foreign_parent, register_foreign_sibling, FOREIGN_PARENT_ID,
-            FOREIGN_SIBLING_ID,
+            FOREIGN_SIBLING_ID, PARA_ID_ZEITGEIST,
         },
         test_net::Zeitgeist,
     },
@@ -128,7 +128,7 @@ fn convert_any_registered_sibling_multilocation_xcm_assets() {
 #[test]
 fn convert_unkown_multilocation() {
     let unknown_location: MultiLocation =
-        MultiLocation::new(1, X2(Parachain(zeitgeist::ID), general_key(&[42])));
+        MultiLocation::new(1, X2(Parachain(PARA_ID_ZEITGEIST), general_key(&[42])));
 
     Zeitgeist::execute_with(|| {
         assert!(

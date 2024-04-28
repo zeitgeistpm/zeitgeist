@@ -29,7 +29,6 @@ use xcm::{
 use xcm_emulator::helpers::get_account_id_from_seed;
 use zeitgeist_primitives::types::{CustomMetadata, XcmAsset};
 
-/// Accounts
 pub(super) mod accounts {
     use super::*;
     pub const ALICE: &str = "Alice";
