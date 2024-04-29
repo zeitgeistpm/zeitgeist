@@ -60,7 +60,6 @@ parameter_types! {
     pub const MaxAuthorities: u32 = 32;
 
     // Grandpa
-    // Can be 0, as equivocation handling is not enabled (HandleEquivocation = ())
     pub const MaxSetIdSessionEntries: u32 = 0;
     pub const MaxNominators: u32 = 0;
 }
