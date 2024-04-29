@@ -20,11 +20,23 @@ use super::*;
 /// The `CampaignAsset` tuple struct represents all campaign assets.
 /// Campaign assets can have special properties, such as the capability
 /// to pay fees.
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
-    Clone, CompactAs, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo,
+    Clone,
+    CompactAs,
+    Copy,
+    Debug,
+    Decode,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+    serde::Deserialize,
+    serde::Serialize,
 )]
+#[serde(rename_all = "camelCase")]
 pub struct CampaignAssetClass(#[codec(compact)] pub CampaignAssetId);
 
 impl From<Compact<CampaignAssetId>> for CampaignAssetClass {

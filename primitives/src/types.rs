@@ -117,7 +117,7 @@ pub type XcmAsset = XcmAssetClass;
 pub type TxPaymentAssetId = u32;
 
 /// Index of a transaction in the chain.
-pub type Index = u64;
+pub type Nonce = u64;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;

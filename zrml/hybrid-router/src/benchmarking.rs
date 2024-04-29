@@ -25,6 +25,7 @@
 use crate::Pallet as HybridRouter;
 
 use crate::*;
+use alloc::{vec, vec::Vec};
 use frame_benchmarking::v2::*;
 use frame_support::{
     assert_ok,

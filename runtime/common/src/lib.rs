@@ -90,6 +90,10 @@ macro_rules! decl_common_types {
             // https://docs.rs/pallet-asset-tx-payment/latest/src/pallet_asset_tx_payment/lib.rs.html#32-34
             pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
         );
+        pub type EventRecord = frame_system::EventRecord<
+            <Runtime as frame_system::Config>::RuntimeEvent,
+            <Runtime as frame_system::Config>::Hash,
+        >;
         pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
         pub type UncheckedExtrinsic =
             generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
@@ -265,22 +269,18 @@ macro_rules! create_runtime {
         // `PredictionMarkets` depends on `SimpleDisputes`.
 
         construct_runtime!(
-            pub enum Runtime where
-                Block = crate::Block,
-                NodeBlock = crate::NodeBlock,
-                UncheckedExtrinsic = crate::UncheckedExtrinsic,
-            {
+            pub enum Runtime {
                 // System
-                System: frame_system::{Call, Config, Event<T>, Pallet, Storage} = 0,
+                System: frame_system::{Call, Config<T>, Event<T>, Pallet, Storage} = 0,
                 Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent} = 1,
-                RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
+                RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 2,
                 Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 3,
                 Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 4,
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
-                TransactionPayment: pallet_transaction_payment::{Config, Event<T>, Pallet, Storage} = 11,
-                Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
+                TransactionPayment: pallet_transaction_payment::{Config<T>, Event<T>, Pallet, Storage} = 11,
+                Treasury: pallet_treasury::{Call, Config<T>, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
                 Multisig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
                 Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
@@ -337,19 +337,19 @@ macro_rules! create_runtime_with_additional_pallets {
         #[cfg(feature = "parachain")]
         create_runtime!(
             // System
-            ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
-            ParachainInfo: parachain_info::{Config, Pallet, Storage} = 101,
+            ParachainSystem: cumulus_pallet_parachain_system::{Call, Config<T>, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
+            ParachainInfo: parachain_info::{Config<T>, Pallet, Storage} = 101,
 
             // Consensus
             ParachainStaking: pallet_parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 110,
             AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
-            AuthorFilter: pallet_author_slot_filter::{Call, Config, Event, Pallet, Storage} = 112,
+            AuthorFilter: pallet_author_slot_filter::{Call, Config<T>, Event, Pallet, Storage} = 112,
             AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
 
             // XCM
             CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
             DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
-            PolkadotXcm: pallet_xcm::{Call, Config, Event<T>, Origin, Pallet, Storage} = 122,
+            PolkadotXcm: pallet_xcm::{Call, Config<T>, Event<T>, Origin, Pallet, Storage} = 122,
             XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 123,
             AssetRegistry: orml_asset_registry::{Call, Config<T>, Event<T>, Pallet, Storage} = 124,
             UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 125,
@@ -363,7 +363,7 @@ macro_rules! create_runtime_with_additional_pallets {
         create_runtime!(
             // Consensus
             Aura: pallet_aura::{Config<T>, Pallet, Storage} = 100,
-            Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage} = 101,
+            Grandpa: pallet_grandpa::{Call, Config<T>, Event, Pallet, Storage} = 101,
 
             // Others
             $($additional_pallets)*
@@ -423,18 +423,17 @@ macro_rules! impl_config_traits {
             type AccountData = pallet_balances::AccountData<Balance>;
             type AccountId = AccountId;
             type BaseCallFilter = IsCallable;
+            type Block = Block;
             type BlockHashCount = BlockHashCount;
             type BlockLength = RuntimeBlockLength;
-            type BlockNumber = BlockNumber;
             type BlockWeights = RuntimeBlockWeights;
             type RuntimeCall = RuntimeCall;
             type DbWeight = RocksDbWeight;
             type RuntimeEvent = RuntimeEvent;
             type Hash = Hash;
             type Hashing = BlakeTwo256;
-            type Header = generic::Header<BlockNumber, BlakeTwo256>;
-            type Index = Index;
             type Lookup = AccountIdLookup<AccountId, ()>;
+            type Nonce = Nonce;
             type MaxConsumers = ConstU32<16>;
             type OnKilledAccount = ();
             type OnNewAccount = ();
@@ -451,6 +450,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(not(feature = "parachain"))]
         impl pallet_aura::Config for Runtime {
+            type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
             type AuthorityId = sp_consensus_aura::sr25519::AuthorityId;
             type DisabledValidators = ();
             type MaxAuthorities = MaxAuthorities;
@@ -459,8 +459,9 @@ macro_rules! impl_config_traits {
         #[cfg(feature = "parachain")]
         impl pallet_author_inherent::Config for Runtime {
             type AccountLookup = AuthorMapping;
+            type AuthorId = AccountId;
             type CanAuthor = AuthorFilter;
-            type SlotBeacon = cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
+            type SlotBeacon = cumulus_pallet_parachain_system::RelaychainDataProvider<Self>;
             type WeightInfo = weights::pallet_author_inherent::WeightInfo<Runtime>;
         }
 
@@ -487,21 +488,12 @@ macro_rules! impl_config_traits {
 
         #[cfg(not(feature = "parachain"))]
         impl pallet_grandpa::Config for Runtime {
-            type RuntimeEvent = RuntimeEvent;
-            type KeyOwnerProofSystem = ();
-            type KeyOwnerProof =
-                <Self::KeyOwnerProofSystem as frame_support::traits::KeyOwnerProofSystem<(
-                    KeyTypeId,
-                    pallet_grandpa::AuthorityId,
-                )>>::Proof;
-            type KeyOwnerIdentification =
-                <Self::KeyOwnerProofSystem as frame_support::traits::KeyOwnerProofSystem<(
-                    KeyTypeId,
-                    pallet_grandpa::AuthorityId,
-                )>>::IdentificationTuple;
-            type HandleEquivocation = ();
+            type EquivocationReportSystem = ();
+            type KeyOwnerProof = sp_core::Void;
             type MaxAuthorities = MaxAuthorities;
+            type MaxNominators = MaxNominators;
             type MaxSetIdSessionEntries = MaxSetIdSessionEntries;
+            type RuntimeEvent = RuntimeEvent;
             // Currently the benchmark does yield an invalid weight implementation
             // type WeightInfo = weights::pallet_grandpa::WeightInfo<Runtime>;
             type WeightInfo = ();
@@ -509,6 +501,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl pallet_xcm::Config for Runtime {
+            type AdminOrigin = EnsureRoot<AccountId>;
             type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
             type RuntimeCall = RuntimeCall;
             type RuntimeEvent = RuntimeEvent;
@@ -528,14 +521,41 @@ macro_rules! impl_config_traits {
             type CurrencyMatcher = ();
             type TrustedLockers = ();
             type SovereignAccountOf = LocationToAccountId;
-            type MaxLockers = ConstU32<8>;
+            type MaxLockers = MaxLockers;
+            type MaxRemoteLockConsumers = MaxRemoteLockConsumers;
             type WeightInfo = pallet_xcm::TestWeightInfo;
             #[cfg(feature = "runtime-benchmarks")]
             type ReachableDest = ReachableDest;
+            type RemoteLockConsumerIdentifier = ();
 
             const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
             // ^ Override for AdvertisedXcmVersion default
             type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+        }
+
+        #[cfg(feature = "parachain")]
+        pub struct OnInactiveCollator;
+        #[cfg(feature = "parachain")]
+        impl pallet_parachain_staking::OnInactiveCollator<Runtime> for OnInactiveCollator {
+            fn on_inactive_collator(
+                collator_id: AccountId,
+                round: pallet_parachain_staking::RoundIndex,
+            ) -> Result<
+                Weight,
+                sp_runtime::DispatchErrorWithPostInfo<frame_support::dispatch::PostDispatchInfo>,
+            > {
+                use pallet_parachain_staking::WeightInfo;
+
+                ParachainStaking::go_offline_inner(collator_id)?;
+                let extra_weight =
+                    <Runtime as pallet_parachain_staking::Config>::WeightInfo::go_offline(
+                        pallet_parachain_staking::MAX_CANDIDATES,
+                    );
+
+                Ok(<Runtime as frame_system::Config>::DbWeight::get()
+                    .reads(1)
+                    .saturating_add(extra_weight))
+            }
         }
 
         #[cfg(feature = "parachain")]
@@ -548,16 +568,17 @@ macro_rules! impl_config_traits {
             type LeaveCandidatesDelay = LeaveCandidatesDelay;
             type LeaveDelegatorsDelay = LeaveDelegatorsDelay;
             type MaxBottomDelegationsPerCandidate = MaxBottomDelegationsPerCandidate;
-            type MaxTopDelegationsPerCandidate = MaxTopDelegationsPerCandidate;
+            type MaxCandidates = MaxCandidates;
             type MaxDelegationsPerDelegator = MaxDelegationsPerDelegator;
+            type MaxTopDelegationsPerCandidate = MaxTopDelegationsPerCandidate;
+            type MaxOfflineRounds = MaxOfflineRounds;
             type MinBlocksPerRound = MinBlocksPerRound;
-            type MinCandidateStk = MinCollatorStk;
-            type MinCollatorStk = MinCollatorStk;
-            type MinDelegation = MinDelegatorStk;
-            type MinDelegatorStk = MinDelegatorStk;
+            type MinCandidateStk = MinCandidateStk;
+            type MinDelegation = MinDelegation;
             type MinSelectedCandidates = MinSelectedCandidates;
             type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
             type OnCollatorPayout = ();
+            type OnInactiveCollator = OnInactiveCollator;
             type PayoutCollatorReward = ();
             type OnNewRound = ();
             type RevokeDelegationDelay = RevokeDelegationDelay;
@@ -573,6 +594,7 @@ macro_rules! impl_config_traits {
             type Balance = Balance;
             type CustomMetadata = CustomMetadata;
             type RuntimeEvent = RuntimeEvent;
+            type StringLimit = AssetRegistryStringLimit;
             type WeightInfo = ();
         }
 
@@ -738,15 +760,30 @@ macro_rules! impl_config_traits {
             type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
         }
 
+        pub struct DustIntoTreasury;
+        type CreditOfBalances = pallet_balances::CreditOf<Runtime, ()>;
+        impl OnUnbalanced<CreditOfBalances> for DustIntoTreasury {
+            fn on_nonzero_unbalanced(mut dust: CreditOfBalances) {
+                let imbalance = NegativeImbalance::new(dust.peek());
+                Treasury::on_nonzero_unbalanced(imbalance);
+                // Ensure issuance is not reduced via OnDrop
+                core::mem::forget(dust);
+            }
+        }
+
         impl pallet_balances::Config for Runtime {
             type AccountStore = System;
             type Balance = Balance;
-            type DustRemoval = Treasury;
-            type RuntimeEvent = RuntimeEvent;
+            type DustRemoval = DustIntoTreasury;
             type ExistentialDeposit = ExistentialDeposit;
+            type FreezeIdentifier = ();
+            type MaxFreezes = ConstU32<0>;
+            type MaxHolds = ConstU32<0>;
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
             type ReserveIdentifier = [u8; 8];
+            type RuntimeEvent = RuntimeEvent;
+            type RuntimeHoldReason = RuntimeHoldReason;
             type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
         }
 
@@ -755,8 +792,10 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type MaxMembers = AdvisoryCommitteeMaxMembers;
             type MaxProposals = AdvisoryCommitteeMaxProposals;
+            type MaxProposalWeight = MaxProposalWeight;
             type MotionDuration = AdvisoryCommitteeMotionDuration;
             type RuntimeOrigin = RuntimeOrigin;
+            type SetMembersOrigin = EnsureRoot<AccountId>;
             type Proposal = RuntimeCall;
             type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
         }
@@ -766,8 +805,10 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type MaxMembers = CouncilMaxMembers;
             type MaxProposals = CouncilMaxProposals;
+            type MaxProposalWeight = MaxProposalWeight;
             type MotionDuration = CouncilMotionDuration;
             type RuntimeOrigin = RuntimeOrigin;
+            type SetMembersOrigin = EnsureRoot<AccountId>;
             type Proposal = RuntimeCall;
             type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
         }
@@ -777,8 +818,10 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type MaxMembers = TechnicalCommitteeMaxMembers;
             type MaxProposals = TechnicalCommitteeMaxProposals;
+            type MaxProposalWeight = MaxProposalWeight;
             type MotionDuration = TechnicalCommitteeMotionDuration;
             type RuntimeOrigin = RuntimeOrigin;
+            type SetMembersOrigin = EnsureRoot<AccountId>;
             type Proposal = RuntimeCall;
             type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
         }
@@ -788,17 +831,25 @@ macro_rules! impl_config_traits {
             type CallFilter = ContractsCallfilter;
             type CallStack = [pallet_contracts::Frame<Runtime>; 5];
             type ChainExtension = ();
+            type Debug = ();
+            type DefaultDepositLimit = ContractsDefaultDepositLimit;
+            type CodeHashLockupDepositPercent = ContractsCodeHashLockupDepositPercent;
             type Currency = Balances;
-            type DeletionQueueDepth = ContractsDeletionQueueDepth;
-            type DeletionWeightLimit = ContractsDeletionWeightLimit;
             type DepositPerItem = ContractsDepositPerItem;
             type DepositPerByte = ContractsDepositPerByte;
+            type Environment = ();
             type MaxCodeLen = ContractsMaxCodeLen;
             type MaxDebugBufferLen = ContractsMaxDebugBufferLen;
+            type MaxDelegateDependencies = ContractsMaxDelegateDependencies;
             type MaxStorageKeyLen = ContractsMaxStorageKeyLen;
+            #[cfg(not(feature = "runtime-benchmarks"))]
+            type Migrations = ();
+            #[cfg(feature = "runtime-benchmarks")]
+            type Migrations = pallet_contracts::migration::codegen::BenchMigrations;
             type Randomness = RandomnessCollectiveFlip;
-            type RuntimeEvent = RuntimeEvent;
             type RuntimeCall = RuntimeCall;
+            type RuntimeEvent = RuntimeEvent;
+            type RuntimeHoldReason = RuntimeHoldReason;
             type Schedule = ContractsSchedule;
             type Time = Timestamp;
             type UnsafeUnstableInterface = ContractsUnsafeUnstableInterface;
@@ -841,6 +892,7 @@ macro_rules! impl_config_traits {
             type CooloffPeriod = CooloffPeriod;
             type Slash = Treasury;
             type Scheduler = Scheduler;
+            type SubmitOrigin = EnsureSigned<AccountId>;
             type PalletsOrigin = OriginCaller;
             type MaxVotes = MaxVotes;
             type WeightInfo = weights::pallet_democracy::WeightInfo<Runtime>;
@@ -1034,7 +1086,7 @@ macro_rules! impl_config_traits {
             type AnnouncementDepositFactor = AnnouncementDepositFactor;
         }
 
-        impl pallet_randomness_collective_flip::Config for Runtime {}
+        impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 
         impl pallet_scheduler::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
@@ -1043,6 +1095,9 @@ macro_rules! impl_config_traits {
             type RuntimeCall = RuntimeCall;
             type MaximumWeight = MaximumSchedulerWeight;
             type ScheduleOrigin = EnsureRoot<AccountId>;
+            #[cfg(feature = "runtime-benchmarks")]
+            type MaxScheduledPerBlock = ConstU32<512>;
+            #[cfg(not(feature = "runtime-benchmarks"))]
             type MaxScheduledPerBlock = MaxScheduledPerBlock;
             type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
             type OriginPrivilegeCmp = EqualPrivilegeOnly;
@@ -1484,12 +1539,21 @@ macro_rules! create_runtime_api {
                             // return false if author mapping not registered like in can_author impl
                             return false
                         };
+
+                        let candidates = pallet_parachain_staking::Pallet::<Self>::compute_top_candidates();
+                        if candidates.is_empty() {
+                            // If there are zero selected candidates, we use the same eligibility
+                            // as the previous round
+                            return AuthorInherent::can_author(&author, &slot);
+                        }
+
                         // predict eligibility post-selection by computing selection results now
                         let (eligible, _) =
                             pallet_author_slot_filter::compute_pseudo_random_subset::<Self>(
-                                pallet_parachain_staking::Pallet::<Self>::compute_top_candidates(),
+                                candidates,
                                 &slot
                             );
+
                         eligible.contains(&author_account_id)
                     } else {
                         AuthorInherent::can_author(&author, &slot)
@@ -1503,6 +1567,7 @@ macro_rules! create_runtime_api {
                     Vec<frame_benchmarking::BenchmarkList>,
                     Vec<frame_support::traits::StorageInfo>,
                 ) {
+                    use alloc::vec::Vec;
                     use frame_benchmarking::{list_benchmark, baseline::Pallet as BaselineBench, Benchmarking, BenchmarkList};
                     use frame_support::traits::StorageInfoTrait;
                     use frame_system_benchmarking::Pallet as SystemBench;
@@ -1563,39 +1628,24 @@ macro_rules! create_runtime_api {
                     config: frame_benchmarking::BenchmarkConfig,
                 ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
                     use frame_benchmarking::{
-                        add_benchmark, baseline::{Pallet as BaselineBench, Config as BaselineConfig}, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
+                        add_benchmark,
+                        baseline::{
+                            Pallet as BaselineBench, Config as BaselineConfig
+                        },
+                        BenchmarkBatch, Benchmarking
                     };
+                    use alloc::{vec, vec::Vec};
+                    use frame_support::traits::{TrackedStorageKey, WhitelistedStorageKeys};
                     use frame_system_benchmarking::Pallet as SystemBench;
                     use orml_benchmarking::{add_benchmark as orml_add_benchmark};
 
+                    #[allow(non_local_definitions)]
                     impl frame_system_benchmarking::Config for Runtime {}
+                    #[allow(non_local_definitions)]
                     impl BaselineConfig for Runtime {}
 
-                    let whitelist: Vec<TrackedStorageKey> = vec![
-                        // Block Number
-                        hex_literal::hex!(  "26aa394eea5630e07c48ae0c9558cef7"
-                                            "02a5c1b19ab7a04f536c519aca4983ac")
-                            .to_vec().into(),
-                        // Total Issuance
-                        hex_literal::hex!(  "c2261276cc9d1f8598ea4b6a74b15c2f"
-                                            "57c875e4cff74148e4628f264b974c80")
-                            .to_vec().into(),
-                        // Execution Phase
-                        hex_literal::hex!(  "26aa394eea5630e07c48ae0c9558cef7"
-                                            "ff553b5a9862a516939d82b3d3d8661a")
-                            .to_vec().into(),
-                        // Event Count
-                        hex_literal::hex!(  "26aa394eea5630e07c48ae0c9558cef7"
-                                            "0a98fdbe9ce6c55837576c60c7af3850")
-                            .to_vec().into(),
-                        // System Events
-                        hex_literal::hex!(  "26aa394eea5630e07c48ae0c9558cef7"
-                                            "80d41e5e16056765bc8461851072c9d7")
-                            .to_vec().into(),
-                        // System BlockWeight
-                        hex_literal::hex!(  "26aa394eea5630e07c48ae0c9558cef7"
-                                            "34abf5cb34d6244378cddbf18e849d96")
-                            .to_vec().into(),
+                    let mut whitelist: Vec<TrackedStorageKey> = AllPalletsWithSystem::whitelisted_storage_keys();
+                    let additional_whitelist: Vec<TrackedStorageKey> = vec![
                         // ParachainStaking Round
                         hex_literal::hex!(  "a686a3043d0adcf2fa655e57bc595a78"
                                             "13792e785168f725b60e2969c7fc2552")
@@ -1612,6 +1662,7 @@ macro_rules! create_runtime_api {
                                             "04a74d81251e398fd8a0a4d55023bb3f")
                             .to_vec().into(),
                     ];
+                    whitelist.extend(additional_whitelist.into_iter());
 
                     let mut batches = Vec::<BenchmarkBatch>::new();
                     let params = (&config, &whitelist);
@@ -1665,21 +1716,26 @@ macro_rules! create_runtime_api {
                     }
 
                     if batches.is_empty() {
-                        return Err("Benchmark not found for this pallet.".into());
+                        return Err("Benchmark not found for this module.".into());
                     }
                     Ok(batches)
                 }
             }
 
-            impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
-                fn account_nonce(account: AccountId) -> Index {
+            impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce> for Runtime {
+                fn account_nonce(account: AccountId) -> Nonce {
                     System::account_nonce(account)
                 }
             }
 
-            impl pallet_contracts::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash>
-                for Runtime
-            {
+            impl pallet_contracts::ContractsApi<
+                Block,
+                AccountId,
+                Balance,
+                BlockNumber,
+                Hash,
+                EventRecord
+            > for Runtime {
                 fn call(
                     origin: AccountId,
                     dest: AccountId,
@@ -1687,7 +1743,7 @@ macro_rules! create_runtime_api {
                     gas_limit: Option<Weight>,
                     storage_deposit_limit: Option<Balance>,
                     input_data: Vec<u8>,
-                ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
+                ) -> pallet_contracts_primitives::ContractExecResult<Balance, EventRecord> {
                     let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
                     Contracts::bare_call(
                         origin,
@@ -1696,8 +1752,9 @@ macro_rules! create_runtime_api {
                         gas_limit,
                         storage_deposit_limit,
                         input_data,
-                        CONTRACTS_DEBUG_OUTPUT,
-                        pallet_contracts::Determinism::Deterministic,
+                        pallet_contracts::DebugInfo::UnsafeDebug,
+                        pallet_contracts::CollectEvents::UnsafeCollect,
+                        pallet_contracts::Determinism::Enforced,
                     )
                 }
 
@@ -1709,8 +1766,7 @@ macro_rules! create_runtime_api {
                     code: pallet_contracts_primitives::Code<Hash>,
                     data: Vec<u8>,
                     salt: Vec<u8>,
-                ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
-                {
+                ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance, EventRecord> {
                     let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
                     Contracts::bare_instantiate(
                         origin,
@@ -1720,7 +1776,8 @@ macro_rules! create_runtime_api {
                         code,
                         data,
                         salt,
-                        CONTRACTS_DEBUG_OUTPUT,
+                        pallet_contracts::DebugInfo::UnsafeDebug,
+                        pallet_contracts::CollectEvents::UnsafeCollect,
                     )
                 }
 
@@ -1731,12 +1788,7 @@ macro_rules! create_runtime_api {
                     determinism: pallet_contracts::Determinism,
                 ) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance>
                 {
-                    Contracts::bare_upload_code(
-                        origin,
-                        code,
-                        storage_deposit_limit,
-                        determinism,
-                    )
+                    Contracts::bare_upload_code(origin, code, storage_deposit_limit, determinism)
                 }
 
                 fn get_storage(
@@ -1828,6 +1880,14 @@ macro_rules! create_runtime_api {
                 fn metadata() -> OpaqueMetadata {
                     OpaqueMetadata::new(Runtime::metadata().into())
                 }
+
+                fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
+                    Runtime::metadata_at_version(version)
+                }
+
+                fn metadata_versions() -> Vec<u32> {
+                    Runtime::metadata_versions()
+                }
             }
 
             impl sp_block_builder::BlockBuilder<Block> for Runtime {
@@ -1863,29 +1923,32 @@ macro_rules! create_runtime_api {
             }
 
             #[cfg(not(feature = "parachain"))]
-            impl sp_finality_grandpa::GrandpaApi<Block> for Runtime {
-                fn current_set_id() -> pallet_grandpa::fg_primitives::SetId {
-                    Grandpa::current_set_id()
-                }
-
-                fn generate_key_ownership_proof(
-                    _set_id: pallet_grandpa::fg_primitives::SetId,
-                    _authority_id: pallet_grandpa::AuthorityId,
-                ) -> Option<pallet_grandpa::fg_primitives::OpaqueKeyOwnershipProof> {
-                    None
-                }
-
-                fn grandpa_authorities() -> pallet_grandpa::AuthorityList {
+            impl sp_consensus_grandpa::GrandpaApi<Block> for Runtime {
+                fn grandpa_authorities() -> sp_consensus_grandpa::AuthorityList {
                     Grandpa::grandpa_authorities()
                 }
 
+                fn current_set_id() -> sp_consensus_grandpa::SetId {
+                    Grandpa::current_set_id()
+                }
+
                 fn submit_report_equivocation_unsigned_extrinsic(
-                    _equivocation_proof: pallet_grandpa::fg_primitives::EquivocationProof<
+                    _equivocation_proof: sp_consensus_grandpa::EquivocationProof<
                         <Block as BlockT>::Hash,
-                        sp_runtime::traits::NumberFor<Block>,
+                        sp_api::NumberFor<Block>,
                     >,
-                    _key_owner_proof: pallet_grandpa::fg_primitives::OpaqueKeyOwnershipProof,
+                    _key_owner_proof: sp_consensus_grandpa::OpaqueKeyOwnershipProof,
                 ) -> Option<()> {
+                    None
+                }
+
+                fn generate_key_ownership_proof(
+                    _set_id: sp_consensus_grandpa::SetId,
+                    _authority_id: sp_consensus_grandpa::AuthorityId,
+                ) -> Option<sp_consensus_grandpa::OpaqueKeyOwnershipProof> {
+                    // NOTE: this is the only implementation possible since we've
+                    // defined our key owner proof type as a bottom type (i.e. a type
+                    // with no values).
                     None
                 }
             }
@@ -2012,7 +2075,8 @@ macro_rules! create_common_benchmark_logic {
                     AccountId, Amount, AssetManager, Balance, Assets, ExistentialDeposit,
                     GetNativeCurrencyId, Runtime
                 };
-                use frame_benchmarking::{account, vec, whitelisted_caller};
+                use alloc::vec;
+                use frame_benchmarking::{account, whitelisted_caller};
                 use frame_system::RawOrigin;
                 use sp_runtime::traits::UniqueSaturatedInto;
                 use orml_benchmarking::runtime_benchmarks;
@@ -2125,7 +2189,8 @@ macro_rules! create_common_benchmark_logic {
             pub(crate) mod tokens {
                 use super::utils::{lookup_of_account, set_balance as update_balance};
                 use crate::{AccountId, Balance, Tokens, Runtime};
-                use frame_benchmarking::{account, vec, whitelisted_caller};
+                use alloc::vec;
+                use frame_benchmarking::{account, whitelisted_caller};
                 use frame_system::RawOrigin;
                 use orml_benchmarking::runtime_benchmarks;
                 use orml_traits::MultiCurrency;
@@ -2229,8 +2294,11 @@ macro_rules! create_common_benchmark_logic {
 
                 #[cfg(test)]
                 pub mod tests {
+                    use crate::Runtime;
+                    use sp_runtime::BuildStorage;
+
                     pub fn new_test_ext() -> sp_io::TestExternalities {
-                        frame_system::GenesisConfig::default().build_storage::<crate::Runtime>().unwrap().into()
+                        frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into()
                     }
                 }
             }
@@ -2249,6 +2317,7 @@ macro_rules! create_common_tests {
                 use crate::*;
                 use frame_support::PalletId;
                 use test_case::test_case;
+                use sp_runtime::BuildStorage;
 
                 #[test_case(AuthorizedPalletId::get(); "authorized")]
                 #[test_case(CourtPalletId::get(); "court")]
@@ -2259,7 +2328,7 @@ macro_rules! create_common_tests {
                 #[test_case(TreasuryPalletId::get(); "treasury")]
                 fn whitelisted_pallet_accounts_dont_get_reaped(pallet_id: PalletId) {
                     let mut t: sp_io::TestExternalities =
-                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                        frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into();
                     t.execute_with(|| {
                         let pallet_main_account: AccountId = pallet_id.into_account_truncating();
                         let pallet_sub_account: AccountId = pallet_id.into_sub_account_truncating(42);
@@ -2271,7 +2340,7 @@ macro_rules! create_common_tests {
                 #[test]
                 fn non_whitelisted_accounts_get_reaped() {
                     let mut t: sp_io::TestExternalities =
-                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                        frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into();
                     t.execute_with(|| {
                         let not_whitelisted = AccountId::from([0u8; 32]);
                         assert!(!DustRemovalWhitelist::contains(&not_whitelisted))

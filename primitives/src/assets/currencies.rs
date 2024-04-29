@@ -19,11 +19,22 @@ use super::*;
 
 /// The `CurrencyClass` enum represents all non-ztg currencies
 // used in orml-tokens
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
-    Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, Ord, PartialEq, PartialOrd, TypeInfo,
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+    serde::Deserialize,
+    serde::Serialize,
 )]
+#[serde(rename_all = "camelCase")]
 pub enum CurrencyClass<MI> {
     // All Outcome and Share variants will be removed once the lazy migration from
     // orml-tokens to pallet-assets is complete

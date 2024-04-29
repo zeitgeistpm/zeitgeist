@@ -1,3 +1,10 @@
+[workspace.package]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
+edition = "2021"
+homepage = "https://zeitgeist.pm/"
+license = "GPL-3.0"
+repository = "https://github.com/zeitgeistpm/zeitgeist"
+
 [workspace]
 default-members = [
     "macros",
@@ -217,6 +224,7 @@ polkadot-service = { git = "https://github.com/paritytech/polkadot-sdk", branch 
 polkadot-test-service = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0" }
 
 # Polkadot / XCM (wasm)
+pallet-message-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 polkadot-parachain-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
