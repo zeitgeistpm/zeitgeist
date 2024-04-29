@@ -21,9 +21,9 @@ use crate::{
         setup::{
             foreign_parent_multilocation, foreign_sibling_multilocation, foreign_ztg_multilocation,
             register_foreign_parent, register_foreign_sibling, FOREIGN_PARENT_ID,
-            FOREIGN_SIBLING_ID,
+            FOREIGN_SIBLING_ID, PARA_ID_BATTERY_STATION,
         },
-        test_net::Zeitgeist,
+        test_net::BatteryStation,
     },
     xcm_config::config::{battery_station, general_key, AssetConvert},
     Assets, CustomMetadata, ScalarPosition, XcmAsset,
@@ -32,7 +32,7 @@ use core::fmt::Debug;
 use sp_runtime::traits::{Convert, MaybeEquivalence};
 use test_case::test_case;
 use xcm::latest::{Junction::*, Junctions::*, MultiLocation};
-use xcm_simulator::TestExt;
+use xcm_emulator::TestExt;
 
 fn convert_common_native<T>(expected: T)
 where
@@ -41,7 +41,7 @@ where
 {
     assert_eq!(battery_station::KEY.to_vec(), vec![0, 1]);
 
-    // The way Ztg is represented relative within the Zeitgeist runtime
+    // The way Ztg is represented relative within the Battery Station runtime
     let ztg_location_inner: MultiLocation =
         MultiLocation::new(0, X1(general_key(battery_station::KEY)));
 
@@ -51,7 +51,7 @@ where
     );
 
     // The canonical way Ztg is represented out in the wild
-    Zeitgeist::execute_with(|| {
+    BatteryStation::execute_with(|| {
         assert_eq!(
             <AssetConvert as Convert<_, _>>::convert(expected),
             Some(foreign_ztg_multilocation())
@@ -67,10 +67,10 @@ fn convert_common_non_native<T>(
     T: Copy + Debug + PartialEq,
     AssetConvert: MaybeEquivalence<MultiLocation, T> + Convert<T, Option<MultiLocation>>,
 {
-    Zeitgeist::execute_with(|| {
+    BatteryStation::execute_with(|| {
         assert_eq!(<AssetConvert as MaybeEquivalence<_, _>>::convert(&multilocation), None);
         assert_eq!(<AssetConvert as Convert<_, _>>::convert(expected), None);
-        // Register parent as foreign asset in the Zeitgeist parachain
+        // Register parent as foreign asset in the BatteryStation parachain
         register(None);
         assert_eq!(
             <AssetConvert as MaybeEquivalence<_, _>>::convert(&multilocation),
@@ -129,9 +129,9 @@ fn convert_any_registered_sibling_multilocation_xcm_assets() {
 #[test]
 fn convert_unkown_multilocation() {
     let unknown_location: MultiLocation =
-        MultiLocation::new(1, X2(Parachain(battery_station::ID), general_key(&[42])));
+        MultiLocation::new(1, X2(Parachain(PARA_ID_BATTERY_STATION), general_key(&[42])));
 
-    Zeitgeist::execute_with(|| {
+    BatteryStation::execute_with(|| {
         assert!(
             <AssetConvert as MaybeEquivalence<_, Assets>>::convert(&unknown_location).is_none()
         );
@@ -175,5 +175,7 @@ where
     T: Copy + Debug + PartialEq,
     AssetConvert: Convert<T, Option<MultiLocation>>,
 {
-    Zeitgeist::execute_with(|| assert_eq!(<AssetConvert as Convert<_, _>>::convert(asset), None));
+    BatteryStation::execute_with(|| {
+        assert_eq!(<AssetConvert as Convert<_, _>>::convert(asset), None)
+    });
 }
