@@ -29,7 +29,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use std::sync::Arc;
-use zeitgeist_primitives::types::{AccountId, Balance, Block, Nonce, MarketId, PoolId};
+use zeitgeist_primitives::types::{AccountId, Balance, Block, MarketId, Nonce, PoolId};
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {

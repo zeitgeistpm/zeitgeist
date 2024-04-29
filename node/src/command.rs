@@ -20,7 +20,7 @@
 use super::{
     benchmarking::{inherent_benchmark_data, RemarksExtrinsicBuilder, TransferKeepAliveBuilder},
     cli::{Cli, Subcommand},
-    service::{new_chain_ops, new_full, IdentifyVariant},
+    service::{new_chain_ops, new_full, HostFunctions, IdentifyVariant},
 };
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::SubstrateCli;
@@ -68,25 +68,23 @@ pub fn run() -> sc_cli::Result<()> {
                 // This switch needs to be in the client, since the client decides
                 // which sub-commands it wants to support.
                 BenchmarkCmd::Pallet(cmd) => {
-                    if !cfg!(feature = "runtime-benchmarks") {
+                    if cfg!(feature = "runtime-benchmarks") {
+                        match chain_spec {
+                            #[cfg(feature = "with-zeitgeist-runtime")]
+                            spec if spec.is_zeitgeist() => runner.sync_run(|config| {
+                                cmd.run::<zeitgeist_runtime::Block, HostFunctions>(config)
+                            }),
+                            #[cfg(feature = "with-battery-station-runtime")]
+                            _ => runner.sync_run(|config| {
+                                cmd.run::<battery_station_runtime::Block, HostFunctions>(config)
+                            }),
+                            #[cfg(not(feature = "with-battery-station-runtime"))]
+                            _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
+                        }
+                    } else {
                         return Err("Runtime benchmarking wasn't enabled when building the node. \
                                     You can enable it with `--features runtime-benchmarks`."
                             .into());
-                    }
-
-                    match chain_spec {
-                        #[cfg(feature = "with-zeitgeist-runtime")]
-                        spec if spec.is_zeitgeist() => runner.sync_run(|config| {
-                            cmd.run::<zeitgeist_runtime::Block, ZeitgeistExecutor>(config)
-                        }),
-                        #[cfg(feature = "with-battery-station-runtime")]
-                        _ => runner.sync_run(|config| {
-                            cmd.run::<battery_station_runtime::Block, BatteryStationExecutor>(
-                                config,
-                            )
-                        }),
-                        #[cfg(not(feature = "with-battery-station-runtime"))]
-                        _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
                     }
                 }
                 BenchmarkCmd::Block(cmd) => match chain_spec {
@@ -432,58 +430,11 @@ pub fn run() -> sc_cli::Result<()> {
                 Ok((cmd.run(client, backend, None), task_manager))
             })
         }
-        #[cfg(feature = "try-runtime")]
-        Some(Subcommand::TryRuntime(cmd)) => {
-            use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
-
-            let runner = cli.create_runner(cmd)?;
-            let chain_spec = &runner.config().chain_spec;
-
-            match chain_spec {
-                #[cfg(feature = "with-zeitgeist-runtime")]
-                spec if spec.is_zeitgeist() => {
-                    runner.async_run(|config| {
-                        // we don't need any of the components of new_partial, just a runtime, or a task
-                        // manager to do `async_run`.
-                        let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
-                        let task_manager =
-                            sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
-                                .map_err(|e| {
-                                    sc_cli::Error::Service(sc_service::Error::Prometheus(e))
-                                })?;
-                        return Ok((
-                            cmd.run::<zeitgeist_runtime::Block, ExtendedHostFunctions<
-                                sp_io::SubstrateHostFunctions,
-                                <ZeitgeistExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
-                            >>(),
-                            task_manager,
-                        ));
-                    })
-                }
-                #[cfg(feature = "with-battery-station-runtime")]
-                _ => runner.async_run(|config| {
-                    let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
-                    let task_manager =
-                        sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
-                            .map_err(|e| {
-                                sc_cli::Error::Service(sc_service::Error::Prometheus(e))
-                            })?;
-                    return Ok((
-                        cmd.run::<battery_station_runtime::Block, ExtendedHostFunctions<
-                            sp_io::SubstrateHostFunctions,
-                            <BatteryStationExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
-                        >>(),
-                        task_manager,
-                    ));
-                }),
-                #[cfg(not(feature = "with-battery-station-runtime"))]
-                _ => Err("Invalid chain spec"),
-            }
-        }
-        #[cfg(not(feature = "try-runtime"))]
-        Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
-                                             You can enable it with `--features try-runtime`."
-            .into()),
+		Some(Subcommand::TryRuntime(_)) => Err("The `try-runtime` subcommand has been migrated to a \
+			standalone CLI (https://github.com/paritytech/try-runtime-cli). It is no longer \
+			being maintained here and will be removed entirely some time after January 2024. \
+			Please remove this subcommand from your runtime and use the standalone CLI."
+			.into()),
         None => none_command(cli),
     }
 }

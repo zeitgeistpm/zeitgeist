@@ -108,8 +108,8 @@ macro_rules! generate_generic_genesis_function {
             acs: AdditionalChainSpec,
             endowed_accounts: Vec<EndowedAccountWithBalance>,
             wasm_binary: &[u8],
-        ) -> $runtime::GenesisConfig {
-            $runtime::GenesisConfig {
+        ) -> $runtime::RuntimeGenesisConfig {
+            $runtime::RuntimeGenesisConfig {
                 // Common genesis
                 advisory_committee: Default::default(),
                 advisory_committee_membership: $runtime::AdvisoryCommitteeMembershipConfig {
@@ -125,6 +125,7 @@ macro_rules! generate_generic_genesis_function {
                 #[cfg(feature = "parachain")]
                 author_filter: $runtime::AuthorFilterConfig {
                     eligible_count: EligibilityValue::new_unchecked(1),
+                    ..Default::default()
                 },
                 #[cfg(feature = "parachain")]
                 author_mapping: $runtime::AuthorMappingConfig {
@@ -147,6 +148,7 @@ macro_rules! generate_generic_genesis_function {
                 #[cfg(not(feature = "parachain"))]
                 grandpa: $runtime::GrandpaConfig {
                     authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
+                    ..Default::default()
                 },
                 liquidity_mining: $runtime::LiquidityMiningConfig {
                     initial_balance: LIQUIDITY_MINING,
@@ -174,7 +176,7 @@ macro_rules! generate_generic_genesis_function {
                 #[cfg(feature = "parachain")]
                 // Default should use the pallet configuration
                 polkadot_xcm: PolkadotXcmConfig::default(),
-                system: $runtime::SystemConfig { code: wasm_binary.to_vec() },
+                system: $runtime::SystemConfig { code: wasm_binary.to_vec(), ..Default::default() },
                 technical_committee: Default::default(),
                 technical_committee_membership: $runtime::TechnicalCommitteeMembershipConfig {
                     members: vec![].try_into().unwrap(),

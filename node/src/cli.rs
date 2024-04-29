@@ -26,7 +26,7 @@ use super::service::{
 use clap::Parser;
 #[cfg(feature = "parachain")]
 pub use cli_parachain::RelayChainCli;
-use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
+use sc_cli::{ChainSpec, SubstrateCli};
 use sc_client_api::{Backend as BackendT, BlockchainEvents, KeysIter, PairsIter};
 use sp_api::{CallApiAt, NumberFor, ProvideRuntimeApi};
 use sp_blockchain::HeaderBackend;
@@ -451,9 +451,8 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         hash: <Block as BlockT>::Hash,
         prefix: Option<&StorageKey>,
         start_key: Option<&StorageKey>,
-    ) -> sp_blockchain::Result<
-        KeysIter<<FullBackend as sc_client_api::Backend<Block>>::State, Block>,
-    > {
+    ) -> sp_blockchain::Result<KeysIter<<FullBackend as sc_client_api::Backend<Block>>::State, Block>>
+    {
         match_client!(self, storage_keys(hash, prefix, start_key))
     }
 
@@ -483,13 +482,9 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         child_info: ChildInfo,
         prefix: Option<&StorageKey>,
         start_key: Option<&StorageKey>,
-    ) -> sp_blockchain::Result<
-        KeysIter<<FullBackend as sc_client_api::Backend<Block>>::State, Block>,
-    > {
-        match_client!(
-            self,
-            child_storage_keys(hash, child_info, prefix, start_key)
-        )
+    ) -> sp_blockchain::Result<KeysIter<<FullBackend as sc_client_api::Backend<Block>>::State, Block>>
+    {
+        match_client!(self, child_storage_keys(hash, child_info, prefix, start_key))
     }
 
     fn child_storage_hash(

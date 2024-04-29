@@ -46,9 +46,9 @@ cfg_if::cfg_if! {
         const DEFAULT_COLLATOR_BALANCE_ZEITGEIST: Option<u128> =
             DEFAULT_STAKING_AMOUNT_ZEITGEIST.checked_add(CollatorDeposit::get());
         const NUM_SELECTED_CANDIDATES: u32 = 8;
-        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig, Extensions>;
+        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::RuntimeGenesisConfig, Extensions>;
     } else {
-        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig>;
+        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::RuntimeGenesisConfig>;
     }
 }
 

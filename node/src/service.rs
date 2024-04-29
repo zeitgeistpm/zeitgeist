@@ -21,8 +21,7 @@ mod service_parachain;
 #[cfg(not(feature = "parachain"))]
 mod service_standalone;
 
-use sp_runtime::traits::BlakeTwo256;
-use zeitgeist_primitives::types::{AccountId, Balance, Block, Nonce, MarketId, PoolId};
+use zeitgeist_primitives::types::{AccountId, Balance, Block, MarketId, Nonce, PoolId};
 
 use super::cli::Client;
 use sc_executor::NativeExecutionDispatch;
@@ -34,18 +33,20 @@ pub use service_parachain::{new_full, new_partial, FullBackend, FullClient};
 #[cfg(not(feature = "parachain"))]
 pub use service_standalone::{new_full, new_partial, FullBackend, FullClient};
 use sp_api::ConstructRuntimeApi;
-use sp_trie::PrefixedMemoryDB;
 use std::sync::Arc;
+
+#[cfg(feature = "runtime-benchmarks")]
+pub type HostFunctions =
+    (frame_benchmarking::benchmarking::HostFunctions, sp_io::SubstrateHostFunctions);
+#[cfg(not(feature = "runtime-benchmarks"))]
+pub type HostFunctions = (sp_io::SubstrateHostFunctions,);
 
 #[cfg(feature = "with-battery-station-runtime")]
 pub struct BatteryStationExecutor;
 
 #[cfg(feature = "with-battery-station-runtime")]
 impl sc_executor::NativeExecutionDispatch for BatteryStationExecutor {
-    #[cfg(feature = "runtime-benchmarks")]
-    type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
-    #[cfg(not(feature = "runtime-benchmarks"))]
-    type ExtendHostFunctions = ();
+    type ExtendHostFunctions = HostFunctions;
 
     fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
         battery_station_runtime::api::dispatch(method, data)
@@ -61,10 +62,7 @@ pub struct ZeitgeistExecutor;
 
 #[cfg(feature = "with-zeitgeist-runtime")]
 impl sc_executor::NativeExecutionDispatch for ZeitgeistExecutor {
-    #[cfg(feature = "runtime-benchmarks")]
-    type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
-    #[cfg(not(feature = "runtime-benchmarks"))]
-    type ExtendHostFunctions = ();
+    type ExtendHostFunctions = HostFunctions;
 
     fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
         zeitgeist_runtime::api::dispatch(method, data)
@@ -109,8 +107,7 @@ pub trait RuntimeApiCollection:
 {
 }
 
-impl<Api> RuntimeApiCollection for Api
-where
+impl<Api> RuntimeApiCollection for Api where
     Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
         + sp_api::ApiExt<Block>
         + sp_block_builder::BlockBuilder<Block>
@@ -119,7 +116,7 @@ where
         + sp_api::Metadata<Block>
         + sp_offchain::OffchainWorkerApi<Block>
         + sp_session::SessionKeys<Block>
-        + zrml_swaps_rpc::SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>,
+        + zrml_swaps_rpc::SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>
 {
 }
 
@@ -167,12 +164,7 @@ cfg_if::cfg_if! {
 pub fn new_chain_ops(
     config: &mut Configuration,
 ) -> Result<
-    (
-        Arc<Client>,
-        Arc<FullBackend>,
-        sc_consensus::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
-        TaskManager,
-    ),
+    (Arc<Client>, Arc<FullBackend>, sc_consensus::BasicQueue<Block>, TaskManager),
     ServiceError,
 > {
     match &config.chain_spec {
@@ -193,12 +185,7 @@ pub fn new_chain_ops(
 fn new_chain_ops_inner<RuntimeApi, Executor>(
     config: &mut Configuration,
 ) -> Result<
-    (
-        Arc<Client>,
-        Arc<FullBackend>,
-        sc_consensus::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
-        TaskManager,
-    ),
+    (Arc<Client>, Arc<FullBackend>, sc_consensus::BasicQueue<Block>, TaskManager),
     ServiceError,
 >
 where
