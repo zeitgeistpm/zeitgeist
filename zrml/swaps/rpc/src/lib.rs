@@ -31,7 +31,6 @@ use parity_scale_codec::{Codec, HasCompact, MaxEncodedLen};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{
-    generic::BlockId,
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr, NumberFor},
 };
 use zeitgeist_primitives::types::Asset;
@@ -133,11 +132,8 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> RpcResult<Asset<MarketId>> {
         let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or_else(||
-            //if the block hash is not supplied assume the best block
-            self.client.info().best_hash));
-
-        let res = api.pool_shares_id(&at, pool_id).map_err(|e| {
+        let hash = at.unwrap_or_else(|| self.client.info().best_hash);
+        let res = api.pool_shares_id(hash, pool_id).map_err(|e| {
             CallError::Custom(ErrorObject::owned(
                 Error::RuntimeError.into(),
                 "Unable to get pool shares identifier.",
@@ -153,11 +149,8 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> RpcResult<AccountId> {
         let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or_else(||
-            //if the block hash is not supplied assume the best block
-            self.client.info().best_hash));
-
-        let res = api.pool_account_id(&at, &pool_id).map_err(|e| {
+        let hash = at.unwrap_or_else(||self.client.info().best_hash);
+        let res = api.pool_account_id(hash, &pool_id).map_err(|e| {
             CallError::Custom(ErrorObject::owned(
                 Error::RuntimeError.into(),
                 "Unable to get pool account identifier.",
@@ -177,9 +170,9 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> RpcResult<Balance> {
         let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+        let hash = at.unwrap_or_else(|| self.client.info().best_hash);
         let res =
-            api.get_spot_price(&at, &pool_id, &asset_in, &asset_out, with_fees).map_err(|e| {
+            api.get_spot_price(hash, &pool_id, &asset_in, &asset_out, with_fees).map_err(|e| {
                 CallError::Custom(ErrorObject::owned(
                     Error::RuntimeError.into(),
                     "Unable to get spot price.",
@@ -200,10 +193,12 @@ where
         let api = self.client.runtime_api();
         blocks
             .into_iter()
-            .map(|block| {
-                let hash = BlockId::number(block);
+            .map(|block_number| {
+                let hash = self.client.hash(block_number)
+                    .unwrap_or(Some(self.client.info().best_hash))
+                    .unwrap_or(self.client.info().best_hash);
                 let res = api
-                    .get_spot_price(&hash, &pool_id, &asset_in, &asset_out, with_fees)
+                    .get_spot_price(hash, &pool_id, &asset_in, &asset_out, with_fees)
                     .map_err(|e| {
                         CallError::Custom(ErrorObject::owned(
                             Error::RuntimeError.into(),

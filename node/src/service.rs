@@ -22,7 +22,7 @@ mod service_parachain;
 mod service_standalone;
 
 use sp_runtime::traits::BlakeTwo256;
-use zeitgeist_primitives::types::{AccountId, Balance, Block, Index, MarketId, PoolId};
+use zeitgeist_primitives::types::{AccountId, Balance, Block, Nonce, MarketId, PoolId};
 
 use super::cli::Client;
 use sc_executor::NativeExecutionDispatch;
@@ -100,14 +100,12 @@ pub trait RuntimeApiCollection:
     sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
     + sp_api::ApiExt<Block>
     + sp_block_builder::BlockBuilder<Block>
-    + substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>
+    + substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
     + pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
     + sp_api::Metadata<Block>
     + sp_offchain::OffchainWorkerApi<Block>
     + sp_session::SessionKeys<Block>
     + zrml_swaps_rpc::SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>
-where
-    <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
 }
 
@@ -116,13 +114,12 @@ where
     Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
         + sp_api::ApiExt<Block>
         + sp_block_builder::BlockBuilder<Block>
-        + substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>
+        + substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
         + pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
         + sp_api::Metadata<Block>
         + sp_offchain::OffchainWorkerApi<Block>
         + sp_session::SessionKeys<Block>
         + zrml_swaps_rpc::SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>,
-    <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
 }
 
@@ -134,8 +131,6 @@ cfg_if::cfg_if! {
             + nimbus_primitives::NimbusApi<Block>
             + cumulus_primitives_core::CollectCollationInfo<Block>
             + session_keys_primitives::VrfApi<Block>
-        where
-            <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
         {
         }
 
@@ -145,26 +140,23 @@ cfg_if::cfg_if! {
                 + nimbus_primitives::NimbusApi<Block>
                 + cumulus_primitives_core::CollectCollationInfo<Block>
                 + session_keys_primitives::VrfApi<Block>,
-            <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
         {
         }
     } else {
         /// Additional APIs for standalone runtimes
         pub trait AdditionalRuntimeApiCollection:
             sp_api::ApiExt<Block>
-            + sp_finality_grandpa::GrandpaApi<Block>
+            + sp_consensus_grandpa::GrandpaApi<Block>
             + sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId>
         where
-            <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
         {
         }
 
         impl<Api> AdditionalRuntimeApiCollection for Api
         where
             Api: sp_api::ApiExt<Block>
-                + sp_finality_grandpa::GrandpaApi<Block>
+                + sp_consensus_grandpa::GrandpaApi<Block>
                 + sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId>,
-            <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
         {
         }
     }
@@ -213,10 +205,7 @@ where
     Client: From<Arc<FullClient<RuntimeApi, Executor>>>,
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
-        + AdditionalRuntimeApiCollection<
-            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
-        >,
+    RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
     Executor: NativeExecutionDispatch + 'static,
 {
     config.keystore = sc_service::config::KeystoreConfig::InMemory;

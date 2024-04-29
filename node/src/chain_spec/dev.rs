@@ -49,10 +49,10 @@ const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
 #[cfg(not(feature = "parachain"))]
 fn authority_keys_from_seed(
     s: &str,
-) -> (sp_consensus_aura::sr25519::AuthorityId, sp_finality_grandpa::AuthorityId) {
+) -> (sp_consensus_aura::sr25519::AuthorityId, sp_consensus_grandpa::AuthorityId) {
     (
         get_from_seed::<sp_consensus_aura::sr25519::AuthorityId>(s),
-        get_from_seed::<sp_finality_grandpa::AuthorityId>(s),
+        get_from_seed::<sp_consensus_grandpa::AuthorityId>(s),
     )
 }
 

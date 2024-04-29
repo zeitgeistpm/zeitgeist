@@ -27,7 +27,7 @@ use clap::Parser;
 #[cfg(feature = "parachain")]
 pub use cli_parachain::RelayChainCli;
 use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
-use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator};
+use sc_client_api::{Backend as BackendT, BlockchainEvents, KeysIter, PairsIter};
 use sp_api::{CallApiAt, NumberFor, ProvideRuntimeApi};
 use sp_blockchain::HeaderBackend;
 use sp_consensus::BlockStatus;
@@ -237,23 +237,6 @@ impl SubstrateCli for Cli {
         load_spec(id)
     }
 
-    fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        match spec {
-            spec if spec.is_zeitgeist() => {
-                #[cfg(feature = "with-zeitgeist-runtime")]
-                return &zeitgeist_runtime::VERSION;
-                #[cfg(not(feature = "with-zeitgeist-runtime"))]
-                panic!("{}", crate::ZEITGEIST_RUNTIME_NOT_AVAILABLE);
-            }
-            _spec => {
-                #[cfg(feature = "with-battery-station-runtime")]
-                return &battery_station_runtime::VERSION;
-                #[cfg(not(feature = "with-battery-station-runtime"))]
-                panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
-            }
-        }
-    }
-
     fn support_url() -> String {
         SUPPORT_URL.into()
     }
@@ -274,8 +257,7 @@ where
     Block: BlockT,
     Backend: BackendT<Block>,
     Backend::State: sp_api::StateBackend<BlakeTwo256>,
-    Self::Api: RuntimeApiCollection<StateBackend = Backend::State>
-        + AdditionalRuntimeApiCollection<StateBackend = Backend::State>,
+    Self::Api: RuntimeApiCollection + AdditionalRuntimeApiCollection,
 {
 }
 
@@ -291,8 +273,7 @@ where
         + Send
         + Sync
         + CallApiAt<Block, StateBackend = Backend::State>,
-    Client::Api: RuntimeApiCollection<StateBackend = Backend::State>
-        + AdditionalRuntimeApiCollection<StateBackend = Backend::State>,
+    Client::Api: RuntimeApiCollection + AdditionalRuntimeApiCollection,
 {
 }
 
@@ -316,11 +297,9 @@ pub trait ExecuteWithClient {
     /// Execute whatever should be executed with the given client instance.
     fn execute_with_client<Client, Api, Backend>(self, client: Arc<Client>) -> Self::Output
     where
-        <Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
         Backend: sc_client_api::Backend<Block>,
-        Backend::State: sp_api::StateBackend<BlakeTwo256>,
-        Api: RuntimeApiCollection<StateBackend = Backend::State>
-            + AdditionalRuntimeApiCollection<StateBackend = Backend::State>,
+        Backend::State: sc_client_api::backend::StateBackend<BlakeTwo256>,
+        Api: RuntimeApiCollection + AdditionalRuntimeApiCollection,
         Client: AbstractClient<Block, Backend, Api = Api> + 'static;
 }
 
@@ -459,14 +438,6 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match_client!(self, storage(hash, key))
     }
 
-    fn storage_keys(
-        &self,
-        hash: <Block as BlockT>::Hash,
-        key_prefix: &StorageKey,
-    ) -> sp_blockchain::Result<Vec<StorageKey>> {
-        match_client!(self, storage_keys(hash, key_prefix))
-    }
-
     fn storage_hash(
         &self,
         hash: <Block as BlockT>::Hash,
@@ -475,23 +446,26 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match_client!(self, storage_hash(hash, key))
     }
 
-    fn storage_pairs(
-        &self,
-        hash: <Block as BlockT>::Hash,
-        key_prefix: &StorageKey,
-    ) -> sp_blockchain::Result<Vec<(StorageKey, StorageData)>> {
-        match_client!(self, storage_pairs(hash, key_prefix))
-    }
-
-    fn storage_keys_iter(
+    fn storage_keys(
         &self,
         hash: <Block as BlockT>::Hash,
         prefix: Option<&StorageKey>,
         start_key: Option<&StorageKey>,
     ) -> sp_blockchain::Result<
-        KeyIterator<<FullBackend as sc_client_api::Backend<Block>>::State, Block>,
+        KeysIter<<FullBackend as sc_client_api::Backend<Block>>::State, Block>,
     > {
-        match_client!(self, storage_keys_iter(hash, prefix, start_key))
+        match_client!(self, storage_keys(hash, prefix, start_key))
+    }
+
+    fn storage_pairs(
+        &self,
+        hash: <Block as BlockT>::Hash,
+        key_prefix: Option<&StorageKey>,
+        start_key: Option<&StorageKey>,
+    ) -> sp_blockchain::Result<
+        PairsIter<<FullBackend as sc_client_api::Backend<Block>>::State, Block>,
+    > {
+        match_client!(self, storage_pairs(hash, key_prefix, start_key))
     }
 
     fn child_storage(
@@ -506,22 +480,16 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
     fn child_storage_keys(
         &self,
         hash: <Block as BlockT>::Hash,
-        child_info: &ChildInfo,
-        key_prefix: &StorageKey,
-    ) -> sp_blockchain::Result<Vec<StorageKey>> {
-        match_client!(self, child_storage_keys(hash, child_info, key_prefix))
-    }
-
-    fn child_storage_keys_iter(
-        &self,
-        hash: <Block as BlockT>::Hash,
         child_info: ChildInfo,
         prefix: Option<&StorageKey>,
         start_key: Option<&StorageKey>,
     ) -> sp_blockchain::Result<
-        KeyIterator<<FullBackend as sc_client_api::Backend<Block>>::State, Block>,
+        KeysIter<<FullBackend as sc_client_api::Backend<Block>>::State, Block>,
     > {
-        match_client!(self, child_storage_keys_iter(hash, child_info, prefix, start_key))
+        match_client!(
+            self,
+            child_storage_keys(hash, child_info, prefix, start_key)
+        )
     }
 
     fn child_storage_hash(

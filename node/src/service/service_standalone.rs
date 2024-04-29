@@ -25,7 +25,7 @@ use crate::{
 use sc_client_api::BlockBackend;
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
-use sc_finality_grandpa::{grandpa_peers_set_config, protocol_standard_name, SharedVoterState};
+use sc_consensus_grandpa::{grandpa_peers_set_config, protocol_standard_name, SharedVoterState};
 use sc_keystore::LocalKeystore;
 use sc_service::{
     error::Error as ServiceError, Configuration, TFullBackend, TFullClient, TaskManager,
@@ -91,7 +91,7 @@ where
     );
 
     config.network.extra_sets.push(grandpa_peers_set_config(grandpa_protocol_name.clone()));
-    let warp_sync = Arc::new(sc_finality_grandpa::warp_proof::NetworkProvider::new(
+    let warp_sync = Arc::new(sc_consensus_grandpa::warp_proof::NetworkProvider::new(
         backend.clone(),
         grandpa_link.shared_authority_set().clone(),
         Vec::default(),
@@ -221,7 +221,7 @@ where
     let keystore =
         if role.is_authority() { Some(keystore_container.sync_keystore()) } else { None };
 
-    let grandpa_config = sc_finality_grandpa::Config {
+    let grandpa_config = sc_consensus_grandpa::Config {
         gossip_duration: Duration::from_millis(333),
         justification_period: 512,
         name: Some(name),
@@ -239,11 +239,11 @@ where
         // and vote data availability than the observer. The observer has not
         // been tested extensively yet and having most nodes in a network run it
         // could lead to finality stalls.
-        let grandpa_config = sc_finality_grandpa::GrandpaParams {
+        let grandpa_config = sc_consensus_grandpa::GrandpaParams {
             config: grandpa_config,
             link: grandpa_link,
             network,
-            voting_rule: sc_finality_grandpa::VotingRulesBuilder::default().build(),
+            voting_rule: sc_consensus_grandpa::VotingRulesBuilder::default().build(),
             prometheus_registry,
             shared_voter_state: SharedVoterState::empty(),
             telemetry: telemetry.as_ref().map(|x| x.handle()),
@@ -254,7 +254,7 @@ where
         task_manager.spawn_essential_handle().spawn_blocking(
             "grandpa-voter",
             None,
-            sc_finality_grandpa::run_grandpa_voter(grandpa_config)?,
+            sc_consensus_grandpa::run_grandpa_voter(grandpa_config)?,
         );
     }
 
@@ -272,13 +272,13 @@ pub fn new_partial<RuntimeApi, Executor>(
         sc_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
         sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
         (
-            sc_finality_grandpa::GrandpaBlockImport<
+            sc_consensus_grandpa::GrandpaBlockImport<
                 FullBackend,
                 Block,
                 FullClient<RuntimeApi, Executor>,
                 FullSelectChain,
             >,
-            sc_finality_grandpa::LinkHalf<Block, FullClient<RuntimeApi, Executor>, FullSelectChain>,
+            sc_consensus_grandpa::LinkHalf<Block, FullClient<RuntimeApi, Executor>, FullSelectChain>,
             Option<Telemetry>,
         ),
     >,
@@ -338,7 +338,7 @@ where
         client.clone(),
     );
 
-    let (grandpa_block_import, grandpa_link) = sc_finality_grandpa::block_import(
+    let (grandpa_block_import, grandpa_link) = sc_consensus_grandpa::block_import(
         client.clone(),
         &(client.clone() as Arc<_>),
         select_chain.clone(),
