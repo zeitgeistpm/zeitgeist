@@ -62,10 +62,7 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (
-            MigrateScoringRuleAmmCdaHybridAndMarketId<Runtime>,
-            MigratePoolReservesToBoundedBTreeMap<Runtime>,
-        );
+        type Migrations = (pallet_contracts::Migration<Runtime>,);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -843,7 +840,14 @@ macro_rules! impl_config_traits {
             type MaxDelegateDependencies = ContractsMaxDelegateDependencies;
             type MaxStorageKeyLen = ContractsMaxStorageKeyLen;
             #[cfg(not(feature = "runtime-benchmarks"))]
-            type Migrations = ();
+            type Migrations = (
+                pallet_contracts::migration::v10::Migration<Self, Balances>,
+                pallet_contracts::migration::v11::Migration<Self>,
+                pallet_contracts::migration::v12::Migration<Self, Balances>,
+                pallet_contracts::migration::v13::Migration<Self>,
+                pallet_contracts::migration::v14::Migration<Self, Balances>,
+                pallet_contracts::migration::v15::Migration<Self>,
+            );
             #[cfg(feature = "runtime-benchmarks")]
             type Migrations = pallet_contracts::migration::codegen::BenchMigrations;
             type Randomness = RandomnessCollectiveFlip;
