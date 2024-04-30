@@ -207,7 +207,7 @@ impl Cli {
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => zeitgeist_runtime::VERSION,
             #[cfg(feature = "with-battery-station-runtime")]
-            _ => zeitgeist_runtime::VERSION,
+            _ => battery_station_runtime::VERSION,
             #[cfg(not(feature = "with-battery-station-runtime"))]
             _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
         }
