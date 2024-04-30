@@ -54,7 +54,7 @@ fn transfer_ztg_to_sibling() {
     });
 
     Zeitgeist::execute_with(|| {
-        alice_initial_balance = Balances::free_balance(&alice());
+        alice_initial_balance = Balances::free_balance(alice());
         assert_eq!(Balances::free_balance(sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(alice()),
@@ -74,7 +74,7 @@ fn transfer_ztg_to_sibling() {
         ));
 
         // Confirm that Alice's balance is initial_balance - amount_transferred
-        assert_eq!(Balances::free_balance(&alice()), alice_initial_balance - transfer_amount);
+        assert_eq!(Balances::free_balance(alice()), alice_initial_balance - transfer_amount);
         // Verify that the amount transferred is now part of the sibling account here
         assert_eq!(Balances::free_balance(sibling_parachain_account()), transfer_amount);
     });
@@ -114,7 +114,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
     });
 
     Zeitgeist::execute_with(|| {
-        let alice_initial_balance = Balances::free_balance(&alice());
+        let alice_initial_balance = Balances::free_balance(alice());
         assert_eq!(Balances::free_balance(sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
             RuntimeOrigin::signed(alice()),
@@ -133,7 +133,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
             WeightLimit::Limited(4_000_000_000.into()),
         ));
         // Confirm that Alice's balance is initial_balance - amount_transferred
-        assert_eq!(Balances::free_balance(&alice()), alice_initial_balance - transfer_amount);
+        assert_eq!(Balances::free_balance(alice()), alice_initial_balance - transfer_amount);
         // Verify that the amount transferred is now part of the sibling account here
         assert_eq!(Balances::free_balance(sibling_parachain_account()), transfer_amount);
     });
@@ -163,7 +163,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
 
     Zeitgeist::execute_with(|| {
         treasury_initial_balance = Balances::free_balance(ZeitgeistTreasuryAccount::get());
-        alice_initial_balance = Balances::free_balance(&alice());
+        alice_initial_balance = Balances::free_balance(alice());
         assert_eq!(
             Balances::set_balance(&sibling_parachain_account(), sibling_initial_balance),
             sibling_initial_balance
@@ -200,7 +200,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
     Zeitgeist::execute_with(|| {
         // Verify that alice() now has initial balance + amount transferred - fee
         assert_eq!(
-            Balances::free_balance(&alice()),
+            Balances::free_balance(alice()),
             alice_initial_balance + transfer_amount - ztg_fee(),
         );
         // Verify that the reserve has been adjusted properly
@@ -230,7 +230,7 @@ fn transfer_btc_sibling_to_zeitgeist() {
     });
 
     Sibling::execute_with(|| {
-        let alice_initial_balance = Balances::free_balance(&alice());
+        let alice_initial_balance = Balances::free_balance(alice());
         let initial_sovereign_balance = transfer_amount;
 
         // Set the sovereign balance such that it is not subject to dust collection
@@ -256,7 +256,7 @@ fn transfer_btc_sibling_to_zeitgeist() {
             WeightLimit::Limited(4_000_000_000.into()),
         ));
         // Confirm that Alice's balance is initial_balance - amount_transferred
-        assert_eq!(Balances::free_balance(&alice()), alice_initial_balance - transfer_amount);
+        assert_eq!(Balances::free_balance(alice()), alice_initial_balance - transfer_amount);
         // Verify that the amount transferred is now part of the zeitgeist account here
         assert_eq!(
             Balances::free_balance(zeitgeist_parachain_account()),
@@ -290,7 +290,7 @@ fn transfer_btc_zeitgeist_to_sibling() {
     let mut bob_initial_balance = 0;
 
     Sibling::execute_with(|| {
-        bob_initial_balance = Balances::free_balance(&bob());
+        bob_initial_balance = Balances::free_balance(bob());
         // Set the sovereign balance such that it is not subject to dust collection
         assert_eq!(
             Balances::set_balance(&zeitgeist_parachain_account(), initial_sovereign_balance,),
@@ -330,7 +330,7 @@ fn transfer_btc_zeitgeist_to_sibling() {
         let expected_sovereign = initial_sovereign_balance - transfer_amount;
 
         // Verify that Bob now has initial balance + amount transferred - fee
-        assert_eq!(Balances::free_balance(&bob()), expected);
+        assert_eq!(Balances::free_balance(bob()), expected);
         // Verify that the amount transferred is now subtracted from the zeitgeist account at sibling
         assert_eq!(Balances::free_balance(zeitgeist_parachain_account()), expected_sovereign);
     });
@@ -350,7 +350,7 @@ fn transfer_eth_sibling_to_zeitgeist() {
     });
 
     Sibling::execute_with(|| {
-        let alice_initial_balance = Balances::free_balance(&alice());
+        let alice_initial_balance = Balances::free_balance(alice());
         let initial_sovereign_balance = transfer_amount;
 
         // Set the sovereign balance such that it is not subject to dust collection
@@ -376,7 +376,7 @@ fn transfer_eth_sibling_to_zeitgeist() {
             WeightLimit::Limited(4_000_000_000.into()),
         ));
         // Confirm that Alice's balance is initial_balance - amount_transferred
-        assert_eq!(Balances::free_balance(&alice()), alice_initial_balance - transfer_amount);
+        assert_eq!(Balances::free_balance(alice()), alice_initial_balance - transfer_amount);
         // Verify that the amount transferred is now part of the zeitgeist account here
         assert_eq!(
             Balances::free_balance(zeitgeist_parachain_account()),
@@ -410,7 +410,7 @@ fn transfer_eth_zeitgeist_to_sibling() {
     let mut bob_initial_balance = 0;
 
     Sibling::execute_with(|| {
-        bob_initial_balance = Balances::free_balance(&bob());
+        bob_initial_balance = Balances::free_balance(bob());
         // Set the sovereign balance such that it is not subject to dust collection
         assert_eq!(
             Balances::set_balance(&zeitgeist_parachain_account(), initial_sovereign_balance,),
@@ -450,7 +450,7 @@ fn transfer_eth_zeitgeist_to_sibling() {
         let expected_sovereign = initial_sovereign_balance - transfer_amount;
 
         // Verify that Bob now has initial balance + amount transferred - fee
-        assert_eq!(Balances::free_balance(&bob()), expected);
+        assert_eq!(Balances::free_balance(bob()), expected);
         // Verify that the amount transferred is now subtracted from the zeitgeist account at sibling
         assert_eq!(Balances::free_balance(zeitgeist_parachain_account()), expected_sovereign);
     });
@@ -470,7 +470,7 @@ fn transfer_dot_from_relay_chain() {
     });
 
     Polkadot::execute_with(|| {
-        let initial_balance = polkadot_runtime::Balances::free_balance(&alice());
+        let initial_balance = polkadot_runtime::Balances::free_balance(alice());
         assert!(initial_balance >= transfer_amount);
 
         assert_ok!(polkadot_runtime::XcmPallet::reserve_transfer_assets(
@@ -503,7 +503,7 @@ fn transfer_dot_to_relay_chain() {
     let mut initial_balance_bob = 0;
 
     Polkadot::execute_with(|| {
-        initial_balance_bob = polkadot_runtime::Balances::free_balance(&bob());
+        initial_balance_bob = polkadot_runtime::Balances::free_balance(bob());
         let bs_acc = Polkadot::sovereign_account_id_of_child_para(PARA_ID_ZEITGEIST.into());
         assert_eq!(
             polkadot_runtime::Balances::set_balance(&bs_acc, transfer_amount),
