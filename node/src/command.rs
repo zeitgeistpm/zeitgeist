@@ -318,7 +318,7 @@ pub fn run() -> sc_cli::Result<()> {
             let _ = builder.init();
             let chain_spec =
                 &crate::cli::load_spec(&params.shared_params.chain.clone().unwrap_or_default())?;
-            let state_version = Cli::native_runtime_version(chain_spec).state_version();
+            let state_version = Cli::runtime_version(chain_spec).state_version();
 
             let buf = match chain_spec {
                 #[cfg(feature = "with-zeitgeist-runtime")]
@@ -430,11 +430,11 @@ pub fn run() -> sc_cli::Result<()> {
                 Ok((cmd.run(client, backend, None), task_manager))
             })
         }
-		Some(Subcommand::TryRuntime(_)) => Err("The `try-runtime` subcommand has been migrated to a \
-			standalone CLI (https://github.com/paritytech/try-runtime-cli). It is no longer \
-			being maintained here and will be removed entirely some time after January 2024. \
-			Please remove this subcommand from your runtime and use the standalone CLI."
-			.into()),
+        Some(Subcommand::TryRuntime(_)) => Err("The `try-runtime` subcommand has been migrated to a \
+            standalone CLI (https://github.com/paritytech/try-runtime-cli). It is no longer \
+            being maintained here and will be removed entirely some time after January 2024. \
+            Please remove this subcommand from your runtime and use the standalone CLI."
+            .into()),
         None => none_command(cli),
     }
 }
@@ -466,10 +466,10 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
             cli.parachain_id.or(parachain_id_extension).unwrap_or(super::POLKADOT_PARACHAIN_ID),
         );
         let parachain_account =
-            AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account_truncating(
+            AccountIdConversion::<polkadot_primitives::AccountId>::into_account_truncating(
                 &parachain_id,
             );
-        let state_version = Cli::native_runtime_version(chain_spec).state_version();
+        let state_version = Cli::runtime_version(chain_spec).state_version();
         let block: zeitgeist_runtime::Block =
             cumulus_client_cli::generate_genesis_block(&**chain_spec, state_version)
                 .map_err(|e| format!("{:?}", e))?;
@@ -496,7 +496,7 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
             if parachain_config.role.is_authority() { "yes" } else { "no" }
         );
 
-        if !collator_options.relay_chain_rpc_urls.is_empty() && !cli.relaychain_args.is_empty() {
+        if !cli.run.relay_chain_rpc_urls.is_empty() && !cli.relaychain_args.is_empty() {
             log::warn!(
                 "Detected relay chain node arguments together with --relay-chain-rpc-url. This \
                  command starts a minimal Polkadot node that only uses a network-related subset \

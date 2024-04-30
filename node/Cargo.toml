@@ -78,6 +78,7 @@ pallet-author-inherent = { workspace = true, features = ["default"], optional = 
 pallet-parachain-staking = { workspace = true, features = ["default"], optional = true }
 parity-scale-codec = { workspace = true, features = ["default"], optional = true }
 sc-chain-spec = { workspace = true, optional = true }
+sc-network-sync = { workspace = true, optional = true }
 sc-tracing = { workspace = true, optional = true }
 serde = { workspace = true, features = ["default"], optional = true }
 session-keys-primitives = { workspace = true, features = ["default"], optional = true }
@@ -149,6 +150,7 @@ parachain = [
     "parity-scale-codec",
     "session-keys-primitives",
     "sc-chain-spec",
+    "sc-network-sync",
     "sc-tracing",
     "serde",
     "sp-keystore",

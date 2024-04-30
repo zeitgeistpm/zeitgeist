@@ -76,18 +76,11 @@ impl sc_executor::NativeExecutionDispatch for ZeitgeistExecutor {
 /// Can be called for a `Configuration` to check if it is a configuration for
 /// the `Zeitgeist` network.
 pub trait IdentifyVariant {
-    /// Returns `true` if this is a configuration for the `Battery Station` network.
-    fn is_battery_station(&self) -> bool;
-
     /// Returns `true` if this is a configuration for the `Zeitgeist` network.
     fn is_zeitgeist(&self) -> bool;
 }
 
 impl IdentifyVariant for Box<dyn ChainSpec> {
-    fn is_battery_station(&self) -> bool {
-        self.id().starts_with("battery_station")
-    }
-
     fn is_zeitgeist(&self) -> bool {
         self.id().starts_with("zeitgeist")
     }

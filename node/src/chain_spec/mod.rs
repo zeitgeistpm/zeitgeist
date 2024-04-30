@@ -155,7 +155,10 @@ macro_rules! generate_generic_genesis_function {
                     per_block_distribution: LIQUIDITY_MINING_PTD.mul_ceil(LIQUIDITY_MINING),
                 },
                 #[cfg(feature = "parachain")]
-                parachain_info: $runtime::ParachainInfoConfig { parachain_id: acs.parachain_id },
+                parachain_info: $runtime::ParachainInfoConfig {
+                    parachain_id: acs.parachain_id,
+                    ..Default::default()
+                },
                 #[cfg(feature = "parachain")]
                 parachain_staking: $runtime::ParachainStakingConfig {
                     blocks_per_round: acs.blocks_per_round,
@@ -232,7 +235,7 @@ pub struct Extensions {
     /// The relay chain of the Parachain.
     pub relay_chain: String,
     /// Known bad block hashes.
-    pub bad_blocks: sc_client_api::BadBlocks<polkadot_primitives::v2::Block>,
+    pub bad_blocks: sc_client_api::BadBlocks<polkadot_primitives::Block>,
 }
 
 #[cfg(feature = "parachain")]

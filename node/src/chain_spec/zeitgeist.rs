@@ -36,13 +36,13 @@ use {
     zeitgeist_primitives::constants::ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
     zeitgeist_runtime::{
         CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
-        DefaultParachainBondReservePercent, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
+        DefaultParachainBondReservePercent, EligibilityValue, MinCandidateStk, PolkadotXcmConfig,
     },
 };
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
-        const DEFAULT_STAKING_AMOUNT_ZEITGEIST: u128 = MinCollatorStk::get();
+        const DEFAULT_STAKING_AMOUNT_ZEITGEIST: u128 = MinCandidateStk::get();
         const DEFAULT_COLLATOR_BALANCE_ZEITGEIST: Option<u128> =
             DEFAULT_STAKING_AMOUNT_ZEITGEIST.checked_add(CollatorDeposit::get());
         const NUM_SELECTED_CANDIDATES: u32 = 8;
