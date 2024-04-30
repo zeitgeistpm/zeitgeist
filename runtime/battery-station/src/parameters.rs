@@ -111,6 +111,8 @@ parameter_types! {
 
     // Balance
     pub const ExistentialDeposit: u128 = 5 * MILLI;
+    pub const MaxHolds: u32 = 1;
+    pub const MaxFreezes: u32 = 1;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 
@@ -130,7 +132,7 @@ parameter_types! {
 
     // Contracts
     pub const ContractsCodeHashLockupDepositPercent: Perbill = Perbill::from_percent(10);
-    pub const ContractsDefaultDepositLimit: Balance = deposit(16, 16 * 1024);
+    pub const ContractsDefaultDepositLimit: Balance = deposit(16, 16 * 1024 * 1024);
     pub const ContractsDepositPerByte: Balance = deposit(0,1);
     pub const ContractsDepositPerItem: Balance = deposit(1,0);
     pub const ContractsMaxCodeLen: u32 = 123 * 1024;

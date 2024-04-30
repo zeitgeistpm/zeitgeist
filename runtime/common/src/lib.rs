@@ -777,8 +777,8 @@ macro_rules! impl_config_traits {
             type DustRemoval = DustIntoTreasury;
             type ExistentialDeposit = ExistentialDeposit;
             type FreezeIdentifier = ();
-            type MaxFreezes = ConstU32<0>;
-            type MaxHolds = ConstU32<0>;
+            type MaxFreezes = MaxFreezes;
+            type MaxHolds = MaxHolds;
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
             type ReserveIdentifier = [u8; 8];
