@@ -156,6 +156,9 @@ fn dist<T: AtLeast32BitUnsigned>(x: T, y: T) -> T {
 
 #[cfg(test)]
 mod tests {
+    // TODO(#1328): Remove after rustc nightly-2024-04-22
+    #![allow(clippy::duplicated_attributes)]
+
     use super::*;
     use crate::{constants::BASE, math::fixed::FixedMul};
     use test_case::test_case;

@@ -429,7 +429,7 @@ parameter_types! {
     /// The maximum number of approvals that can wait in the spending queue.
     pub const MaxApprovals: u32 = 100;
     /// Maximum amount a verified origin can spend
-    pub const MaxTreasurySpend: Balance = Balance::max_value();
+    pub const MaxTreasurySpend: Balance = Balance::MAX;
     /// Fraction of a proposal's value that should be bonded in order to place the proposal.
     /// An accepted proposal gets these back. A rejected proposal does not.
     pub const ProposalBond: Permill = Permill::from_percent(5);

@@ -63,7 +63,6 @@ mod pallet {
     };
 
     use frame_system::pallet_prelude::BlockNumberFor;
-    use log;
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
     use sp_runtime::{

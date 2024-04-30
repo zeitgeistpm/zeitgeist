@@ -82,9 +82,9 @@ pub fn run() -> sc_cli::Result<()> {
                             _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
                         }
                     } else {
-                        return Err("Runtime benchmarking wasn't enabled when building the node. \
-                                    You can enable it with `--features runtime-benchmarks`."
-                            .into());
+                        Err("Runtime benchmarking wasn't enabled when building the node. \
+                            You can enable it with `--features runtime-benchmarks`."
+                            .into())
                     }
                 }
                 BenchmarkCmd::Block(cmd) => match chain_spec {

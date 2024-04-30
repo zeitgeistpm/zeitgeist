@@ -67,7 +67,6 @@ mod pallet {
         ensure_root,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
-    use log;
     use sp_runtime::{
         traits::{AccountIdConversion, Saturating},
         TransactionOutcome,

@@ -330,6 +330,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    // TODO(#1328): Remove after rustc nightly-2024-04-22
+    #![allow(clippy::duplicated_attributes)]
+
     use super::*;
     use crate::assert_approx;
     use fixed::{traits::ToFixed, FixedU128};

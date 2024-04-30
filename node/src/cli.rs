@@ -108,6 +108,7 @@ pub fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
 }
 
 #[derive(Debug, clap::Subcommand)]
+#[allow(clippy::large_enum_variant)]
 pub enum Subcommand {
     /// The custom benchmark subcommmand benchmarking runtime pallets.
     #[clap(subcommand)]
@@ -202,6 +203,7 @@ pub struct Cli {
 
 #[cfg(feature = "parachain")]
 impl Cli {
+    #[allow(clippy::borrowed_box)]
     pub(crate) fn runtime_version(spec: &Box<dyn sc_service::ChainSpec>) -> sc_cli::RuntimeVersion {
         match spec {
             #[cfg(feature = "with-zeitgeist-runtime")]

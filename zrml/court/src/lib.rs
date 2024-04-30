@@ -52,7 +52,6 @@ use frame_system::{
     ensure_signed,
     pallet_prelude::{BlockNumberFor, OriginFor},
 };
-use log;
 use rand::{seq::SliceRandom, Rng, RngCore, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use sp_arithmetic::{

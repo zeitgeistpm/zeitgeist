@@ -120,15 +120,15 @@ fn routes_currencies_correctly() {
 }
 
 #[test_case(0, Some(0); "zero")]
-#[test_case(Amount::max_value(), Some(Amount::max_value().unsigned_abs() as Balance); "max")]
-#[test_case(Amount::min_value(), None; "min")]
-#[test_case(Amount::min_value() + 1, Some((Amount::min_value() + 1).unsigned_abs() as Balance); "min_plus_one")]
+#[test_case(Amount::MAX, Some(Amount::MAX.unsigned_abs() as Balance); "max")]
+#[test_case(Amount::MIN, None; "min")]
+#[test_case(Amount::MIN + 1, Some((Amount::MIN + 1).unsigned_abs() as Balance); "min_plus_one")]
 fn update_balance_handles_overflows_correctly(update: Amount, expected: Option<Balance>) {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
 
         if update.is_negative() {
-            assert_ok!(AssetRouter::update_balance(CAMPAIGN_ASSET, &ALICE, Amount::max_value()));
+            assert_ok!(AssetRouter::update_balance(CAMPAIGN_ASSET, &ALICE, Amount::MAX));
         }
 
         if let Some(expected_inner) = expected {
@@ -137,7 +137,7 @@ fn update_balance_handles_overflows_correctly(update: Amount, expected: Option<B
             if update.is_negative() {
                 assert_eq!(
                     AssetRouter::free_balance(CAMPAIGN_ASSET, &ALICE),
-                    Amount::max_value() as Balance - expected_inner
+                    Amount::MAX as Balance - expected_inner
                 );
             } else {
                 assert_eq!(AssetRouter::free_balance(CAMPAIGN_ASSET, &ALICE), expected_inner);

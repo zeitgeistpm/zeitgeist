@@ -58,7 +58,7 @@ where
             });
             counter = counter.saturating_add(1);
         }
-        let _ = <BlockSoldShares<T>>::clear(u32::max_value(), None);
+        let _ = <BlockSoldShares<T>>::clear(u32::MAX, None);
         counter
     }
 }

@@ -82,7 +82,7 @@ fn campaign_assets_panic_on_write_balance() {
 fn campaign_assets_panic_on_handle_dust() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CAMPAIGN_ASSET, ALICE, true, CAMPAIGN_ASSET_MIN_BALANCE));
-        let _ = AssetRouter::handle_dust(Dust(CAMPAIGN_ASSET, 1));
+        AssetRouter::handle_dust(Dust(CAMPAIGN_ASSET, 1));
     });
 }
 
@@ -114,7 +114,7 @@ fn custom_assets_panic_on_write_balance() {
 fn custom_assets_panic_on_handle_dust() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(CUSTOM_ASSET, ALICE, true, CUSTOM_ASSET_MIN_BALANCE));
-        let _ = AssetRouter::handle_dust(Dust(CUSTOM_ASSET, 1));
+        AssetRouter::handle_dust(Dust(CUSTOM_ASSET, 1));
     });
 }
 
@@ -146,7 +146,7 @@ fn market_assets_panic_on_write_balance() {
 fn market_assets_panic_on_handle_dust() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(AssetRouter::create(MARKET_ASSET, ALICE, true, MARKET_ASSET_MIN_BALANCE));
-        let _ = AssetRouter::handle_dust(Dust(MARKET_ASSET, 1));
+        AssetRouter::handle_dust(Dust(MARKET_ASSET, 1));
     });
 }
 

@@ -263,9 +263,9 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
             } else {
                 Self::withdraw(currency_id, who, amount).map(|_| Zero::zero()).unwrap_or(amount)
             }
-        } else if let Ok(_) = T::CampaignAssetType::try_from(currency_id) {
+        } else if T::CampaignAssetType::try_from(currency_id).is_ok() {
             Self::withdraw(currency_id, who, amount).map(|_| Zero::zero()).unwrap_or(amount)
-        } else if let Ok(_) = T::CustomAssetType::try_from(currency_id) {
+        } else if T::CustomAssetType::try_from(currency_id).is_ok() {
             Self::withdraw(currency_id, who, amount).map(|_| Zero::zero()).unwrap_or(amount)
         } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             T::Currencies::slash(currency, who, amount)
