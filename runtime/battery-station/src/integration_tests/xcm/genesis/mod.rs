@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -15,9 +15,5 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(all(feature = "parachain", test))]
-
-mod genesis;
-mod setup;
-mod test_net;
-mod tests;
+pub(super) mod battery_station;
+pub(super) mod rococo;

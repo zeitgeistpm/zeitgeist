@@ -129,9 +129,13 @@ zrml-swaps-runtime-api = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
+pallet-im-online = { workspace = true, features = ["default"] }
+sp-authority-discovery = { workspace = true, features = ["default"] }
+sp-consensus-babe = { workspace = true, features = ["default"] }
+sp-consensus-beefy = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 test-case = { workspace = true }
-xcm-simulator = { workspace = true }
+xcm-emulator = { workspace = true }
 
 [features]
 default = ["std"]
@@ -333,6 +337,7 @@ std = [
     # Zeitgeist
 
     "zeitgeist-primitives/std",
+    "zrml-asset-router/std",
     "zrml-authorized/std",
     "zrml-court/std",
     "zrml-hybrid-router/std",

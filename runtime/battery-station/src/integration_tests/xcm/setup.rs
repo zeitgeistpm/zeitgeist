@@ -1,5 +1,4 @@
 // Copyright 2022-2024 Forecasting Technologies LTD.
-// Copyright 2021 Centrifuge Foundation (centrifuge.io).
 //
 // This file is part of Zeitgeist.
 //
@@ -18,102 +17,70 @@
 
 use crate::{
     xcm_config::config::{battery_station, general_key},
-    AccountId, AssetRegistry, AssetRegistryStringLimit, Assets, Balance, ExistentialDeposit,
-    Runtime, RuntimeOrigin, System,
+    AccountId, AssetRegistry, AssetRegistryStringLimit, Balance, ExistentialDeposit, RuntimeOrigin,
 };
 use frame_support::assert_ok;
 use orml_traits::asset_registry::AssetMetadata;
-use sp_runtime::{AccountId32, BuildStorage};
+use sp_core::{sr25519, Pair, Public};
 use xcm::{
     latest::{Junction::Parachain, Junctions::X2, MultiLocation},
     VersionedMultiLocation,
 };
+use xcm_emulator::helpers::get_account_id_from_seed;
 use zeitgeist_primitives::types::{CustomMetadata, XcmAsset};
 
-pub(super) struct ExtBuilder {
-    balances: Vec<(AccountId, Assets, Balance)>,
-    parachain_id: u32,
-    safe_xcm_version: Option<u32>,
-}
+pub(super) mod accounts {
+    use super::*;
+    pub const ALICE: &str = "Alice";
+    pub const BOB: &str = "Bob";
+    pub const CHARLIE: &str = "Charlie";
+    pub const DAVE: &str = "Dave";
+    pub const EVE: &str = "Eve";
+    pub const FERDIE: &str = "Ferdie";
+    pub const ALICE_STASH: &str = "Alice//stash";
+    pub const BOB_STASH: &str = "Bob//stash";
+    pub const CHARLIE_STASH: &str = "Charlie//stash";
+    pub const DAVE_STASH: &str = "Dave//stash";
+    pub const EVE_STASH: &str = "Eve//stash";
+    pub const FERDIE_STASH: &str = "Ferdie//stash";
 
-impl Default for ExtBuilder {
-    fn default() -> Self {
-        Self { balances: vec![], parachain_id: battery_station::ID, safe_xcm_version: None }
+    pub fn init_balances() -> Vec<AccountId> {
+        vec![
+            get_account_id_from_seed::<sr25519::Public>(ALICE),
+            get_account_id_from_seed::<sr25519::Public>(BOB),
+            get_account_id_from_seed::<sr25519::Public>(CHARLIE),
+            get_account_id_from_seed::<sr25519::Public>(DAVE),
+            get_account_id_from_seed::<sr25519::Public>(EVE),
+            get_account_id_from_seed::<sr25519::Public>(FERDIE),
+            get_account_id_from_seed::<sr25519::Public>(ALICE_STASH),
+            get_account_id_from_seed::<sr25519::Public>(BOB_STASH),
+            get_account_id_from_seed::<sr25519::Public>(CHARLIE_STASH),
+            get_account_id_from_seed::<sr25519::Public>(DAVE_STASH),
+            get_account_id_from_seed::<sr25519::Public>(EVE_STASH),
+            get_account_id_from_seed::<sr25519::Public>(FERDIE_STASH),
+        ]
+    }
+
+    pub fn alice() -> AccountId {
+        get_account_id_from_seed::<sr25519::Public>(ALICE)
+    }
+
+    pub fn bob() -> AccountId {
+        get_account_id_from_seed::<sr25519::Public>(BOB)
+    }
+
+    /// Helper function to generate a crypto pair from seed
+    pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+        TPublic::Pair::from_string(&format!("//{}", seed), None)
+            .expect("static values are valid; qed")
+            .public()
     }
 }
-
-impl ExtBuilder {
-    pub fn set_balances(mut self, balances: Vec<(AccountId, Assets, Balance)>) -> Self {
-        self.balances = balances;
-        self
-    }
-
-    pub fn set_parachain_id(mut self, parachain_id: u32) -> Self {
-        self.parachain_id = parachain_id;
-        self
-    }
-
-    pub fn with_safe_xcm_version(mut self, safe_xcm_version: u32) -> Self {
-        self.safe_xcm_version = Some(safe_xcm_version);
-        self
-    }
-
-    pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
-        let native_currency_id = Assets::Ztg;
-
-        pallet_balances::GenesisConfig::<Runtime> {
-            balances: self
-                .balances
-                .clone()
-                .into_iter()
-                .filter(|(_, currency_id, _)| *currency_id == native_currency_id)
-                .map(|(account_id, _, initial_balance)| (account_id, initial_balance))
-                .collect::<Vec<_>>(),
-        }
-        .assimilate_storage(&mut t)
-        .unwrap();
-
-        orml_tokens::GenesisConfig::<Runtime> {
-            balances: self
-                .balances
-                .into_iter()
-                .filter(|(_, currency_id, _)| *currency_id != native_currency_id)
-                .map(|(account_id, currency_id, initial_balance)| {
-                    (account_id, currency_id.try_into().unwrap(), initial_balance)
-                })
-                .collect::<Vec<_>>(),
-        }
-        .assimilate_storage(&mut t)
-        .unwrap();
-
-        parachain_info::GenesisConfig::<Runtime> {
-            _config: Default::default(),
-            parachain_id: self.parachain_id.into(),
-        }
-        .assimilate_storage(&mut t)
-        .unwrap();
-
-        pallet_xcm::GenesisConfig::<Runtime> {
-            _config: Default::default(),
-            safe_xcm_version: self.safe_xcm_version,
-        }
-        .assimilate_storage(&mut t)
-        .unwrap();
-
-        let mut ext = sp_io::TestExternalities::new(t);
-        ext.execute_with(|| System::set_block_number(1));
-        ext
-    }
-}
-
-/// Accounts
-pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
-pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
 
 /// A PARA ID used for a sibling parachain.
 /// It must be one that doesn't collide with any other in use.
 pub const PARA_ID_SIBLING: u32 = 3000;
+pub const PARA_ID_BATTERY_STATION: u32 = battery_station::ID;
 
 /// IDs that are used to represent tokens from other chains
 pub const FOREIGN_ZTG_ID: XcmAsset = XcmAsset::ForeignAsset(0);
@@ -158,7 +125,7 @@ pub(super) const fn adjusted_balance(foreign_base: Balance, amount: Balance) -> 
 // Multilocations that are used to represent tokens from other chains
 #[inline]
 pub(super) fn foreign_ztg_multilocation() -> MultiLocation {
-    MultiLocation::new(1, X2(Parachain(battery_station::ID), general_key(battery_station::KEY)))
+    MultiLocation::new(1, X2(Parachain(PARA_ID_BATTERY_STATION), general_key(battery_station::KEY)))
 }
 
 #[inline]
@@ -237,7 +204,7 @@ pub(super) fn sibling_parachain_account() -> AccountId {
 
 #[inline]
 pub(super) fn zeitgeist_parachain_account() -> AccountId {
-    parachain_account(battery_station::ID)
+    parachain_account(PARA_ID_BATTERY_STATION)
 }
 
 #[inline]

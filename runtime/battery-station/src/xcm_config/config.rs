@@ -54,7 +54,7 @@ use xcm_executor::{traits::TransactAsset, Assets as ExecutorAssets};
 use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::XcmAsset};
 
 pub mod battery_station {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "runtime-benchmarks"))]
     pub const ID: u32 = 2101;
     pub const KEY: &[u8] = &[0, 1];
 }
