@@ -10700,6 +10700,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "sc-network-statement"
+version = "0.10.0-dev"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#c8d2251cafadc108ba2f1f8a3208dc547ff38901"
+dependencies = [
+ "array-bytes",
+ "async-channel 1.9.0",
+ "futures 0.3.30",
+ "libp2p",
+ "log",
+ "parity-scale-codec",
+ "sc-network",
+ "sc-network-common",
+ "sp-consensus",
+ "sp-statement-store",
+ "substrate-prometheus-endpoint",
+]
+
+[[package]]
 name = "sc-network-sync"
 version = "0.10.0-dev"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#c8d2251cafadc108ba2f1f8a3208dc547ff38901"
@@ -14863,7 +14881,9 @@ dependencies = [
  "sc-executor",
  "sc-keystore",
  "sc-network",
- "sc-network-common",
+ "sc-network-statement",
+ "sc-network-sync",
+ "sc-offchain",
  "sc-rpc",
  "sc-rpc-api",
  "sc-service",

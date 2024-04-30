@@ -48,10 +48,10 @@ cfg_if::cfg_if! {
         pub(super) const DEFAULT_STAKING_AMOUNT_BATTERY_STATION: u128 = 2_000 * BASE;
         const DEFAULT_COLLATOR_BALANCE_BATTERY_STATION: Option<u128> =
             DEFAULT_STAKING_AMOUNT_BATTERY_STATION.checked_add(CollatorDeposit::get());
-        pub type BatteryStationChainSpec = sc_service::GenericChainSpec<battery_station_runtime::GenesisConfig, Extensions>;
+        pub type BatteryStationChainSpec = sc_service::GenericChainSpec<battery_station_runtime::RuntimeGenesisConfig, Extensions>;
         const NUM_SELECTED_CANDIDATES: u32 = 8;
     } else {
-        pub type BatteryStationChainSpec = sc_service::GenericChainSpec<battery_station_runtime::GenesisConfig>;
+        pub type BatteryStationChainSpec = sc_service::GenericChainSpec<battery_station_runtime::RuntimeGenesisConfig>;
     }
 }
 

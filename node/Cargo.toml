@@ -17,6 +17,9 @@ sc-client-db = { workspace = true }
 sc-consensus = { workspace = true }
 sc-executor = { workspace = true }
 sc-keystore = { workspace = true }
+sc-network = { workspace = true }
+sc-network-statement = { workspace = true }
+sc-offchain = { workspace = true }
 sc-rpc = { workspace = true }
 sc-rpc-api = { workspace = true }
 sc-service = { workspace = true }
@@ -75,8 +78,7 @@ pallet-author-inherent = { workspace = true, features = ["default"], optional = 
 pallet-parachain-staking = { workspace = true, features = ["default"], optional = true }
 parity-scale-codec = { workspace = true, features = ["default"], optional = true }
 sc-chain-spec = { workspace = true, optional = true }
-sc-network = { workspace = true, optional = true }
-sc-network-common = { workspace = true, optional = true }
+sc-network-sync = { workspace = true, optional = true }
 sc-tracing = { workspace = true, optional = true }
 serde = { workspace = true, features = ["default"], optional = true }
 session-keys-primitives = { workspace = true, features = ["default"], optional = true }
@@ -148,8 +150,7 @@ parachain = [
     "parity-scale-codec",
     "session-keys-primitives",
     "sc-chain-spec",
-    "sc-network",
-    "sc-network-common",
+    "sc-network-sync",
     "sc-tracing",
     "serde",
     "sp-keystore",
