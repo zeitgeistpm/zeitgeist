@@ -17,6 +17,7 @@ check-dummy:
 
 # Pseudo private target is invoked by public targets for different chains
 --try-runtime:
+	cargo build --release --features=parachain,try-runtime
 	RUST_LOG=runtime=trace,try-runtime::cli=trace,executor=trace \
 		try-runtime \
 		--runtime=${RUNTIME_PATH} \
