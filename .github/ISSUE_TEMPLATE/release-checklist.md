@@ -24,7 +24,7 @@ The following checks can be performed after we have forked off to the release-ca
 
 - [ ] Verify the new migrations complete successfully, and the runtime state is correctly updated for any public (non-private/test) networks.
 - [ ] Verify the SDK is up-to-date with the latest changes.
-- [ ] Push runtime upgrade to local clone of Battery Station and ensure the upgrade is executed without errors.
+- [ ] Run integration tests and check if upgrade tests executed successfully.
 - [ ] Push runtime upgrade to Battery Station and ensure network stability for 24 hours.
 - [ ] Push runtime upgrade to Zeitgeist mainnet.
 
