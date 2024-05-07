@@ -30,12 +30,10 @@ impl<T: Config> Unbalanced<T::AccountId> for Pallet<T> {
             // Route "pre new asset system" market assets to `CurrencyType`
             if T::MarketAssets::asset_exists(asset) {
                 T::MarketAssets::handle_dust(Dust(asset, amount));
+            } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
+                T::Currencies::handle_dust(Dust(currency, amount));
             } else {
-                if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
-                    T::Currencies::handle_dust(Dust(currency, amount));
-                } else {
-                    T::MarketAssets::handle_dust(Dust(asset, amount));
-                }
+                T::MarketAssets::handle_dust(Dust(asset, amount));
             }
         } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
             T::CampaignAssets::handle_dust(Dust(asset, amount));

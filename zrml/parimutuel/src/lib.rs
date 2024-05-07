@@ -47,7 +47,6 @@ mod pallet {
         ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
-    use log;
     use orml_traits::MultiCurrency;
     use pallet_assets::ManagedDestroy;
     use sp_runtime::{

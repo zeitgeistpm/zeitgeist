@@ -69,14 +69,11 @@ fn create_spot_prices<T: Config>(asset_count: u16) -> Vec<BalanceOf<T>> {
     amounts
 }
 
-fn create_market<T>(
+fn create_market<T: Config>(
     caller: T::AccountId,
     base_asset: BaseAssetClass,
     asset_count: u16,
-) -> MarketIdOf<T>
-where
-    T: Config,
-{
+) -> MarketIdOf<T> {
     let market = Market {
         market_id: 0u8.into(),
         base_asset,
@@ -105,10 +102,7 @@ fn create_market_and_deploy_pool<T: Config>(
     base_asset: BaseAssetClass,
     asset_count: u16,
     amount: BalanceOf<T>,
-) -> MarketIdOf<T>
-where
-    T: Config,
-{
+) -> MarketIdOf<T> {
     let market_id = create_market::<T>(caller.clone(), base_asset, asset_count);
     let total_cost = amount + T::AssetManager::minimum_balance(base_asset.into());
     assert_ok!(T::AssetManager::deposit(base_asset.into(), &caller, total_cost));

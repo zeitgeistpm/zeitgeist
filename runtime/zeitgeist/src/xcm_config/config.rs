@@ -427,7 +427,7 @@ impl MaybeEquivalence<MultiLocation, Assets> for AssetConvert {
 
 impl MaybeEquivalence<MultiLocation, XcmAsset> for AssetConvert {
     fn convert(location: &MultiLocation) -> Option<XcmAsset> {
-        <Self as MaybeEquivalence<MultiLocation, Assets>>::convert(&location)
+        <Self as MaybeEquivalence<MultiLocation, Assets>>::convert(location)
             .and_then(|asset| asset.try_into().ok())
     }
 

@@ -63,8 +63,8 @@ pub(crate) fn genesis(parachain_id: u32) -> Storage {
         tokens: crate::TokensConfig {
             balances: accounts::init_balances()
                 .iter()
-                .chain(vec![(ZeitgeistTreasuryAccount::get())].iter())
-                .map(|k| {
+                .chain([(ZeitgeistTreasuryAccount::get())].iter())
+                .flat_map(|k| {
                     vec![
                         (k.clone(), Asset::from(FOREIGN_PARENT_ID).try_into().unwrap(), ENDOWMENT),
                         (k.clone(), Asset::from(FOREIGN_SIBLING_ID).try_into().unwrap(), ENDOWMENT),
@@ -73,7 +73,6 @@ pub(crate) fn genesis(parachain_id: u32) -> Storage {
                         (k.clone(), Asset::from(ETH_ID).try_into().unwrap(), ENDOWMENT),
                     ]
                 })
-                .flatten()
                 .collect::<Vec<_>>(),
         },
         ..Default::default()

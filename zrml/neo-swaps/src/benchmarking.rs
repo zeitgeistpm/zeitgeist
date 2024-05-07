@@ -56,10 +56,7 @@ macro_rules! assert_ok_with_transaction {
     }};
 }
 
-trait LiquidityTreeBenchmarkHelper<T>
-where
-    T: Config,
-{
+trait LiquidityTreeBenchmarkHelper<T: Config> {
     fn calculate_min_pool_shares_amount(&self) -> BalanceOf<T>;
 }
 
@@ -83,10 +80,7 @@ struct BenchmarkHelper<T> {
     _marker: PhantomData<T>,
 }
 
-impl<T> BenchmarkHelper<T>
-where
-    T: Config,
-{
+impl<T: Config> BenchmarkHelper<T> {
     fn new() -> Self {
         BenchmarkHelper { current_id: Cell::new(0), _marker: PhantomData }
     }
@@ -175,14 +169,11 @@ where
     }
 }
 
-fn create_market<T>(
+fn create_market<T: Config>(
     caller: T::AccountId,
     base_asset: AssetOf<T>,
     asset_count: AssetIndexType,
-) -> MarketIdOf<T>
-where
-    T: Config,
-{
+) -> MarketIdOf<T> {
     let market = Market {
         market_id: 0u8.into(),
         base_asset: base_asset.try_into().unwrap(),
@@ -219,10 +210,7 @@ fn create_market_and_deploy_pool<T: Config>(
     base_asset: AssetOf<T>,
     asset_count: AssetIndexType,
     amount: BalanceOf<T>,
-) -> MarketIdOf<T>
-where
-    T: Config,
-{
+) -> MarketIdOf<T> {
     let market_id = create_market::<T>(caller.clone(), base_asset, asset_count);
     let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
     assert_ok!(T::MultiCurrency::deposit(base_asset, &caller, total_cost));
@@ -241,10 +229,7 @@ where
     market_id
 }
 
-fn deposit_fees<T>(market_id: MarketIdOf<T>, amount: BalanceOf<T>)
-where
-    T: Config,
-{
+fn deposit_fees<T: Config>(market_id: MarketIdOf<T>, amount: BalanceOf<T>) {
     let mut pool = Pools::<T>::get(market_id).unwrap();
     assert_ok!(T::MultiCurrency::deposit(pool.collateral, &pool.account_id, amount));
     assert_ok!(pool.liquidity_shares_manager.deposit_fees(amount));
@@ -252,10 +237,7 @@ where
 }
 
 // Let `caller` join the pool of `market_id` after adding the  required funds to their account.
-fn add_liquidity_provider_to_market<T>(market_id: MarketIdOf<T>, caller: AccountIdOf<T>)
-where
-    T: Config,
-{
+fn add_liquidity_provider_to_market<T: Config>(market_id: MarketIdOf<T>, caller: AccountIdOf<T>) {
     let pool = Pools::<T>::get(market_id).unwrap();
     // Buy a little more to account for rounding.
     let pool_shares_amount =

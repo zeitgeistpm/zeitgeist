@@ -74,6 +74,7 @@ fn get_host_config() -> HostConfiguration<BlockNumber> {
 mod validators {
     use super::*;
 
+    #[allow(clippy::type_complexity)]
     pub fn initial_authorities() -> Vec<(
         AccountId,
         AccountId,

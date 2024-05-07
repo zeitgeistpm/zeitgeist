@@ -109,6 +109,8 @@ parameter_types! {
 
     // Balance
     pub const ExistentialDeposit: u128 = 5 * MILLI;
+    pub const MaxHolds: u32 = 1;
+    pub const MaxFreezes: u32 = 1;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 
@@ -128,7 +130,7 @@ parameter_types! {
 
     // Contracts
     pub const ContractsCodeHashLockupDepositPercent: Perbill = Perbill::from_percent(10);
-    pub const ContractsDefaultDepositLimit: Balance = deposit(16, 16 * 1024);
+    pub const ContractsDefaultDepositLimit: Balance = deposit(16, 16 * 1024 * 1024);
     pub const ContractsDepositPerByte: Balance = deposit(0,1);
     pub const ContractsDepositPerItem: Balance = deposit(1,0);
     pub const ContractsMaxCodeLen: u32 = 123 * 1024;
@@ -429,7 +431,7 @@ parameter_types! {
     /// The maximum number of approvals that can wait in the spending queue.
     pub const MaxApprovals: u32 = 100;
     /// Maximum amount a verified origin can spend
-    pub const MaxTreasurySpend: Balance = Balance::max_value();
+    pub const MaxTreasurySpend: Balance = Balance::MAX;
     /// Fraction of a proposal's value that should be bonded in order to place the proposal.
     /// An accepted proposal gets these back. A rejected proposal does not.
     pub const ProposalBond: Permill = Permill::from_percent(5);

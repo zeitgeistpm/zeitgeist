@@ -55,7 +55,6 @@ mod pallet {
         ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
-    use log;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
         DispatchError, DispatchResult,
