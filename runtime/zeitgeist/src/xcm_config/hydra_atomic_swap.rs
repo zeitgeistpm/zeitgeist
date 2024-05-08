@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -14,10 +14,24 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
-
 #![cfg(feature = "parachain")]
 
-pub mod asset_registry;
-pub mod config;
-pub mod fees;
-pub mod hydra_atomic_swap;
+use crate::RuntimeCall;
+use cumulus_primitives_core::Xcm;
+use frame_support::traits::Contains;
+use xcm::latest::{prelude::AccountId32, Junctions, MultiLocation};
+
+pub struct AllowHydraDxAtomicSwap;
+
+impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
+    fn contains((ref origin, ref msg): &(MultiLocation, Xcm<RuntimeCall>)) -> bool {
+        match origin {
+            MultiLocation { parents: 0, interior: Junctions::X1(AccountId32 { .. }) } => {
+                // TODO if msg matches HydraDX atomic swap messages then true, otherwise false
+
+                false
+            }
+            _ => false,
+        }
+    }
+}

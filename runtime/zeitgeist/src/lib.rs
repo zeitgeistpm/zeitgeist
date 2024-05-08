@@ -81,6 +81,9 @@ use sp_runtime::{
 use nimbus_primitives::CanAuthor;
 use sp_version::RuntimeVersion;
 
+#[cfg(feature = "parachain")]
+use crate::xcm_config::hydra_atomic_swap::AllowHydraDxAtomicSwap;
+
 #[cfg(test)]
 pub mod integration_tests;
 #[cfg(feature = "parachain")]

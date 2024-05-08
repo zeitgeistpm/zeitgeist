@@ -516,7 +516,7 @@ macro_rules! impl_config_traits {
             type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
             type UniversalLocation = UniversalLocation;
             type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-            type XcmExecuteFilter = Nothing;
+            type XcmExecuteFilter = AllowHydraDxAtomicSwap;
             // ^ Disable dispatchable execute on the XCM pallet.
             // Needs to be `Everything` for local testing.
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
