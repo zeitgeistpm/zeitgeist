@@ -17,9 +17,10 @@
 #![cfg(feature = "parachain")]
 
 use crate::RuntimeCall;
-use cumulus_primitives_core::Xcm;
 use frame_support::traits::Contains;
-use xcm::latest::{prelude::AccountId32, Junctions, MultiLocation};
+use xcm::prelude::*;
+
+pub const HYDRA_PARA_ID: u32 = 2034;
 
 pub struct AllowHydraDxAtomicSwap;
 
@@ -28,6 +29,29 @@ impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
         match origin {
             MultiLocation { parents: 0, interior: Junctions::X1(AccountId32 { .. }) } => {
                 // TODO if msg matches HydraDX atomic swap messages then true, otherwise false
+                // TODO figure out which stablecoin pairs to swap atomically with HydraDX
+                let mut it = msg.inner().iter();
+                match (it.next(), it.next(), it.next()) {
+                    (
+                        Some(SetFeesMode { jit_withdraw: true }),
+                        Some(TransferReserveAsset { assets, dest, xcm }),
+                        None,
+                    ) => {
+                        let mut xit = xcm.inner().iter();
+                        let valid_xcm = match (xit.next(), xit.next(), xit.next(), xit.next()) {
+                            (
+                                Some(BuyExecution { .. }),
+                                Some(ExchangeAsset { .. }),
+                                Some(DepositAsset { .. }),
+                                None,
+                            ) => true,
+                            _ => false,
+                        };
+                        let valid_dest = *dest == MultiLocation::new(1, X1(Parachain(HYDRA_PARA_ID)));
+                        // TODO Do we want to check the assets from TransferReserveAsset?
+                    }
+                    _ => return false,
+                }
 
                 false
             }
