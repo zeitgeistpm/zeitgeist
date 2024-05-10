@@ -21,6 +21,7 @@ use cumulus_primitives_core::Xcm;
 use frame_support::traits::Contains;
 use xcm::latest::{prelude::AccountId32, Junctions, MultiLocation};
 
+// TODO: Maybe name it AllowBasiliskAtomicSwap and ask HydraDX if we can test atomic swaps on Basilisk
 pub struct AllowHydraDxAtomicSwap;
 
 impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
