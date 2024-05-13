@@ -47,8 +47,11 @@ pub mod weights;
 macro_rules! decl_common_types {
     () => {
         use core::marker::PhantomData;
-        use frame_support::traits::{
-            Currency, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced,
+        use frame_support::{
+            migrations::RemovePallet,
+            pallet_prelude::StorageVersion,
+            parameter_types,
+            traits::{Currency, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced},
         };
         #[cfg(feature = "try-runtime")]
         use frame_try_runtime::{TryStateSelect, UpgradeCheckSelect};
@@ -62,7 +65,43 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (pallet_contracts::Migration<Runtime>,);
+        struct FixStorageVersions;
+
+        impl OnRuntimeUpgrade for FixStorageVersions {
+            fn on_runtime_upgrade() -> frame_support::weights::Weight {
+                StorageVersion::new(4).put::<AdvisoryCommittee>();
+                StorageVersion::new(4).put::<AdvisoryCommitteeMembership>();
+                StorageVersion::new(4).put::<Council>();
+                StorageVersion::new(4).put::<CouncilMembership>();
+                StorageVersion::new(4).put::<TechnicalCommittee>();
+                StorageVersion::new(4).put::<TechnicalCommitteeMembership>();
+                StorageVersion::new(4).put::<Bounties>();
+                StorageVersion::new(1).put::<CampaignAssets>();
+                StorageVersion::new(1).put::<MarketAssets>();
+                StorageVersion::new(1).put::<CustomAssets>();
+                StorageVersion::new(15).put::<Contracts>();
+                StorageVersion::new(1).put::<Balances>(); // TODO
+                <Runtime as frame_system::Config>::DbWeight::get().writes(11)
+            }
+
+            #[cfg(feature = "try-runtime")]
+            fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
+                Ok(vec![])
+            }
+
+            #[cfg(feature = "try-runtime")]
+            fn post_upgrade(_: Vec<u8>) -> Result<(), DispatchError> {
+                Ok(())
+            }
+        }
+
+        parameter_types! {
+            pub const ContractsPalletStr: &'static str = "Contracts";
+        }
+
+        type ResetContracts = RemovePallet<ContractsPalletStr, RocksDbWeight>;
+
+        type Migrations = (ResetContracts, FixStorageVersions);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
