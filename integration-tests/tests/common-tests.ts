@@ -1,4 +1,20 @@
 // Copyright (C) Moondance Labs Ltd.
+// Copyright 2024 Forecasting Technologies LTD.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 import { expect, ChopsticksContext } from "@moonwall/cli";
 import { generateKeyringPair } from "@moonwall/util";
@@ -204,4 +220,109 @@ export async function canSendXcmTransfer(
     receiverBalanceAfter - receiverBalanceBefore,
     "Unexpected xcm transfer balance diff"
   ).toBe(amount - xcmFee);
+}
+
+export async function canExecuteAtomicSwap(
+  context: ChopsticksContext,
+  log: Debugger,
+  senderProviderName: string,
+  senderParaApi: ApiPromise,
+  hydradxParaApi: ApiPromise,
+  hydradxParaId: number
+) {
+  const keyring = new Keyring({ type: "sr25519" });
+  const alice = keyring.addFromUri("//Alice", { name: "Alice default" });
+  const bob = keyring.addFromUri("//Bob", { name: "Bob default" });
+
+  const senderBalanceBefore = (
+    (await senderParaApi.query.system.account(
+      alice.address
+    )) as unknown as AccountInfo
+  ).data.free.toBigInt();
+  const tokensIndex = 0;
+  const receiverBalanceBefore = (
+    (await hydradxParaApi.query.tokens.accounts(
+      bob.address,
+      tokensIndex
+    )) as AccountData
+  ).free.toBigInt();
+
+  const ztg = { Ztg: null };
+  const amount: bigint = BigInt("192913122185847181");
+  const bobAccountId = senderParaApi
+    .createType("AccountId32", bob.address)
+    .toHex();
+  const destination = {
+    V3: {
+      parents: 1,
+      interior: {
+        X2: [
+          { Parachain: hydradxParaId },
+          { AccountId32: { id: bobAccountId, network: null } },
+        ],
+      },
+    },
+  };
+  const destWeightLimit = { Unlimited: null };
+
+  const xcmTransfer = senderParaApi.tx.xTokens.transfer(
+    ztg,
+    amount,
+    destination,
+    destWeightLimit
+  );
+
+  const { partialFee, weight } = await xcmTransfer.paymentInfo(alice.address);
+  const transferFee: bigint = partialFee.toBigInt();
+
+  await xcmTransfer.signAndSend(alice, { nonce: -1 });
+
+  await context.createBlock({
+    providerName: senderProviderName,
+    count: 1,
+    allowFailures: false,
+  });
+
+  const senderBalanceAfter = (
+    (await senderParaApi.query.system.account(
+      alice.address
+    )) as unknown as AccountInfo
+  ).data.free.toBigInt();
+  expect(
+    senderBalanceBefore - senderBalanceAfter,
+    "Unexpected balance diff"
+  ).toBe(amount + transferFee);
+
+  // RpcError: 1: Block 0x... not found, if using this `await context.createBlock({ providerName: "ReceiverPara", count: 1 });`
+  // Reported Bug here https://github.com/Moonsong-Labs/moonwall/issues/343
+
+  // use a workaround for creating a block
+  const newBlockPromise = new Promise((resolve, reject) => {
+    // ws://127.0.0.1:8001 represents the receiver chain endpoint
+    const ws = new WebSocket("ws://127.0.0.1:8001");
+
+    ws.on("open", function open() {
+      const message = {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "dev_newBlock",
+        params: [{ count: 1 }],
+      };
+
+      ws.send(JSON.stringify(message));
+    });
+
+    ws.on("message", async function message(data) {
+      const dataObj = JSON.parse(data.toString());
+      log("Received message:", dataObj);
+      resolve(dataObj.result);
+    });
+
+    ws.on("error", function error(error) {
+      log("Error:", error.toString());
+      reject(error);
+    });
+  });
+
+  await newBlockPromise;
 }
