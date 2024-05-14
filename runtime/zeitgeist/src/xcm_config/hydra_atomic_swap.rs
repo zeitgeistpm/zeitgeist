@@ -29,6 +29,7 @@ pub struct AllowHydraDxAtomicSwap;
 
 impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
     fn contains((ref origin, ref msg): &(MultiLocation, Xcm<RuntimeCall>)) -> bool {
+        // TODO incoming xcm from HyrdaDX should be allowed here
         match origin {
             MultiLocation { parents: 0, interior: Junctions::X1(AccountId32 { .. }) } => {
                 // TODO figure out which stablecoin pairs to swap atomically with HydraDX
