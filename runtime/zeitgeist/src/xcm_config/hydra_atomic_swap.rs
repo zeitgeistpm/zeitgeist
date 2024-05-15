@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 #![cfg(feature = "parachain")]
 
-use crate::RuntimeCall;
+use crate::{ParachainInfo, RuntimeCall};
 use frame_support::{parameter_types, traits::Contains};
 use xcm::prelude::*;
 
@@ -34,10 +34,9 @@ impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
             return true;
         }
 
-        // TODO incoming xcm from HyrdaDX should be allowed here
         match origin {
+            // the outgoing XCMs to HydraDX
             MultiLocation { parents: 0, interior: Junctions::X1(AccountId32 { .. }) } => {
-                // TODO figure out which stablecoin pairs to swap atomically with HydraDX
                 match msg.inner() {
                     [
                         SetFeesMode { jit_withdraw: true },
@@ -50,7 +49,8 @@ impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
                             _ => false,
                         };
                         let valid_dest = *dest == HydraDxMultiLocation::get();
-                        // TODO Do we want to check the assets from TransferReserveAsset? If yes, we could check this here too!
+                        // TODO Do we want to check the multi assets and fees from TransferReserveAsset and ExchangeAsset and BuyExecution and DepositAsset? If yes, we could check this here too!
+                        // TODO I suggest a pattern matching to only allow our stablecoin assets here. On the other hand this would require us to change this pattern if we change the configuration of stablecoins we have
                         return valid_xcm && valid_dest;
                     }
                     [WithdrawAsset(_), InitiateReserveWithdraw { assets: _, reserve: _, xcm }] => {
@@ -86,7 +86,25 @@ impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
                     _ => return false,
                 }
             }
-            _ => false,
+            // the incoming XCMs from HydraDX
+            MultiLocation { parents: 1, interior: Junctions::X1(Parachain(para_id)) } => {
+                if para_id != ParachainInfo::parachain_id().into() {
+                    return false;
+                }
+
+                match msg.inner() {
+                    [BuyExecution { .. }, DepositAsset { assets: _, beneficiary }] => {
+                        match beneficiary {
+                            Junction::AccountId32 { .. } => {
+                                return true;
+                            }
+                            _ => return false,
+                        }
+                    }
+                    _ => return false,
+                }
+            }
+            _ => return false,
         }
     }
 }
