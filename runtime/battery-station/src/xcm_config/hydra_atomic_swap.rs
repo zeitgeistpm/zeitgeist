@@ -21,18 +21,16 @@ use cumulus_primitives_core::Xcm;
 use frame_support::traits::Contains;
 use xcm::latest::{prelude::AccountId32, Junctions, MultiLocation};
 
-// TODO: Maybe name it AllowBasiliskAtomicSwap and ask HydraDX if we can test atomic swaps on Basilisk
+parameter_types! {
+    pub const BasiliskParachainId: u32 = 2090;
+    pub BasiliskMultiLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(BasiliskParachainId::get())));
+}
+
 pub struct AllowHydraDxAtomicSwap;
 
 impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
     fn contains((ref origin, ref msg): &(MultiLocation, Xcm<RuntimeCall>)) -> bool {
-        match origin {
-            MultiLocation { parents: 0, interior: Junctions::X1(AccountId32 { .. }) } => {
-                // TODO if msg matches HydraDX atomic swap messages then true, otherwise false
-
-                false
-            }
-            _ => false,
-        }
+        // TODO just copy the same code as for the hydra dx main net filter since the basilisk node uses the same code as the mainnet here https://github.com/galacticcouncil/Basilisk-node/blob/24ffc88d5cbc75e2f00f43c95f7d48db2d3a618f/Cargo.toml#L30
+        false
     }
 }
