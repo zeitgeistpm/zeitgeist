@@ -18,8 +18,8 @@
 
 use crate::RuntimeCall;
 use cumulus_primitives_core::Xcm;
-use frame_support::traits::Contains;
-use xcm::latest::{prelude::AccountId32, Junctions, MultiLocation};
+use frame_support::{parameter_types, traits::Contains};
+use xcm::prelude::*;
 
 parameter_types! {
     pub const BasiliskParachainId: u32 = 2090;
@@ -30,6 +30,11 @@ pub struct AllowHydraDxAtomicSwap;
 
 impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
     fn contains((ref origin, ref msg): &(MultiLocation, Xcm<RuntimeCall>)) -> bool {
+        // allow root to execute XCM
+        if origin == &MultiLocation::here() {
+            return true;
+        }
+
         // TODO just copy the same code as for the hydra dx main net filter since the basilisk node uses the same code as the mainnet here https://github.com/galacticcouncil/Basilisk-node/blob/24ffc88d5cbc75e2f00f43c95f7d48db2d3a618f/Cargo.toml#L30
         false
     }
