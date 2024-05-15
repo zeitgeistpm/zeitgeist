@@ -88,14 +88,19 @@ impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
             }
             // the incoming XCMs from HydraDX
             MultiLocation { parents: 1, interior: Junctions::X1(Parachain(para_id)) } => {
-                if para_id != ParachainInfo::parachain_id().into() {
+                if *para_id != u32::from(ParachainInfo::parachain_id()) {
                     return false;
                 }
 
                 match msg.inner() {
                     [BuyExecution { .. }, DepositAsset { assets: _, beneficiary }] => {
                         match beneficiary {
-                            Junction::AccountId32 { .. } => {
+                            // TODO or is it parents: 1 ?
+                            // TODO or is it interior: Junctions::X2(Parachain(zeitgeist_parachain_id), AccountId32 { .. }) ?
+                            MultiLocation {
+                                parents: 0,
+                                interior: Junctions::X1(AccountId32 { .. }),
+                            } => {
                                 return true;
                             }
                             _ => return false,
