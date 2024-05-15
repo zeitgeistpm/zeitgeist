@@ -80,7 +80,6 @@ macro_rules! decl_common_types {
                 StorageVersion::new(1).put::<MarketAssets>();
                 StorageVersion::new(1).put::<CustomAssets>();
                 StorageVersion::new(15).put::<Contracts>();
-                StorageVersion::new(1).put::<Balances>(); // TODO
                 <Runtime as frame_system::Config>::DbWeight::get().writes(11)
             }
 
