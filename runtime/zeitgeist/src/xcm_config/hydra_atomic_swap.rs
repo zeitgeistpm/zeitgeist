@@ -42,16 +42,14 @@ impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
                         SetFeesMode { jit_withdraw: true },
                         TransferReserveAsset { assets: _, dest, xcm },
                     ] => {
-                        let valid_xcm = match xcm.inner() {
-                            [BuyExecution { .. }, ExchangeAsset { .. }, DepositAsset { .. }] => {
-                                true
-                            }
-                            _ => false,
-                        };
+                        let valid_xcm = matches!(
+                            xcm.inner(),
+                            [BuyExecution { .. }, ExchangeAsset { .. }, DepositAsset { .. }]
+                        );
                         let valid_dest = *dest == HydraDxMultiLocation::get();
                         // TODO Do we want to check the multi assets and fees from TransferReserveAsset and ExchangeAsset and BuyExecution and DepositAsset? If yes, we could check this here too!
                         // TODO I suggest a pattern matching to only allow our stablecoin assets here. On the other hand this would require us to change this pattern if we change the configuration of stablecoins we have
-                        return valid_xcm && valid_dest;
+                        valid_xcm && valid_dest
                     }
                     [WithdrawAsset(_), InitiateReserveWithdraw { assets: _, reserve: _, xcm }] => {
                         let xcm_3 = match xcm.inner() {
@@ -78,12 +76,10 @@ impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
                             ] => xcm,
                             _ => return false,
                         };
-                        return match xcm_1.inner() {
-                            [BuyExecution { .. }, DepositAsset { .. }] => true,
-                            _ => false,
-                        };
+
+                        return matches!(xcm_1.inner(), [BuyExecution { .. }, DepositAsset { .. }]);
                     }
-                    _ => return false,
+                    _ => false,
                 }
             }
             // the incoming XCMs from HydraDX
@@ -93,23 +89,24 @@ impl Contains<(MultiLocation, Xcm<RuntimeCall>)> for AllowHydraDxAtomicSwap {
                 }
 
                 match msg.inner() {
-                    [BuyExecution { .. }, DepositAsset { assets: _, beneficiary }] => {
-                        match beneficiary {
-                            // TODO or is it parents: 1 ?
-                            // TODO or is it interior: Junctions::X2(Parachain(zeitgeist_parachain_id), AccountId32 { .. }) ?
-                            MultiLocation {
-                                parents: 0,
-                                interior: Junctions::X1(AccountId32 { .. }),
-                            } => {
-                                return true;
-                            }
-                            _ => return false,
-                        }
-                    }
-                    _ => return false,
+                    // TODO maybe check the assets here?
+                    // TODO or is it parents: 1 ?
+                    // TODO or is it interior: Junctions::X2(Parachain(zeitgeist_parachain_id), AccountId32 { .. }) ?
+                    [
+                        BuyExecution { .. },
+                        DepositAsset {
+                            assets: _,
+                            beneficiary:
+                                MultiLocation {
+                                    parents: 0,
+                                    interior: Junctions::X1(AccountId32 { .. }),
+                                },
+                        },
+                    ] => true,
+                    _ => false,
                 }
             }
-            _ => return false,
+            _ => false,
         }
     }
 }
