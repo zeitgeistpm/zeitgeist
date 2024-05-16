@@ -227,6 +227,7 @@ export async function canExecuteAtomicSwap(
   log: Debugger,
   senderProviderName: string,
   senderParaApi: ApiPromise,
+  senderParaId: number,
   hydradxParaApi: ApiPromise,
   hydradxParaId: number
 ) {
@@ -252,18 +253,153 @@ export async function canExecuteAtomicSwap(
   const bobAccountId = senderParaApi
     .createType("AccountId32", bob.address)
     .toHex();
+
+  // TODO: fill in bobs AccountId32 address in beneficiary of DepositAsset for the polkadot js org reference below
+  console.log("bobAccountId", bobAccountId);
+
+  // TODO: register HDX token on Zeitgeist chain first in order to swap ZTG for HDX on HydraDX chain
+
+  const dest = {
+    parents: 1,
+    interior: {
+      X1: { Parachain: hydradxParaId },
+    },
+  };
+
   const destination = {
-    V3: {
-      parents: 1,
-      interior: {
-        X2: [
-          { Parachain: hydradxParaId },
-          { AccountId32: { id: bobAccountId, network: null } },
-        ],
+    V3: dest,
+  };
+
+  // taken from here https://github.com/galacticcouncil/HydraDX-node/blob/e3821e078bdb72a0416f8aebca21ba4a7a599f64/runtime/hydradx/src/xcm.rs#L312-L315
+  const localHDX = {
+    parents: 0,
+    interior: {
+      X1: { GeneralIndex: 0 },
+    },
+  };
+
+  // TODO: mint HDX token on HydraDX for the swap executor to pay for the XCM execution
+  const buyExecution = {
+    BuyExecution: {
+      fees: {
+        id: {
+          Concrete: localHDX,
+        },
+        fun: {
+          // 100 HDX (12 decimals base)
+          Fungible: 100_000_000_000_000n,
+        },
+      },
+      weightLimit: {
+        Unlimited: null,
       },
     },
   };
-  const destWeightLimit = { Unlimited: null };
+
+  const ztgOnHydraDX = {
+    parents: 1,
+    interior: {
+      X2: [
+        { Parachain: senderParaId },
+        {
+          GeneralKey: {
+            length: 2,
+            data: "0x0001000000000000000000000000000000000000000000000000000000000000",
+          },
+        },
+      ],
+    },
+  };
+
+  const exchangeAsset = {
+    ExchangeAsset: {
+      give: {
+        Definite: [
+          {
+            id: {
+              Concrete: ztgOnHydraDX,
+            },
+            fun: {
+              // 100 ZTG (10 decimals base)
+              Fungible: 1_000_000_000_000n,
+            },
+          },
+        ],
+      },
+      want: {
+        id: {
+          Concrete: localHDX,
+        },
+        fun: {
+          // 50 HDX (12 decimals base)
+          Fungible: 50_000_000_000_000n,
+        },
+      },
+      // Reference: https://github.com/paritytech/polkadot-sdk/blob/289f5bbf7a45dc0380904a435464b15ec711ed03/polkadot/xcm/src/v3/mod.rs#L722-L724
+      // give as little ZTG as possible to receive at least 50 HDX
+      maximal: false,
+    },
+  };
+
+  const depositAsset = {
+    DepositAsset: {
+      assets: { Wild: { AllCounted: 2 } },
+      beneficiary: {
+        parents: 0,
+        interior: {
+          X1: { AccountId32: { id: bobAccountId, network: null } },
+        },
+      },
+    },
+  };
+
+  // executed on HydraDX
+  const hydradxXcm = {
+    V3: [buyExecution, exchangeAsset, depositAsset],
+  };
+
+  const setFeesMode = {
+    SetFeesMode: {
+      jitWithdraw: true,
+    },
+  };
+
+  const localZTG = {
+    parents: 0,
+    interior: {
+      X1: {
+        GeneralKey: {
+          length: 2,
+          data: "0x0001000000000000000000000000000000000000000000000000000000000000",
+        },
+      },
+    },
+  };
+
+  const assets = [
+    {
+      id: {
+        Concrete: localZTG,
+      },
+      fun: {
+        // 100 ZTG (10 decimals base)
+        Fungible: 1_000_000_000_000n,
+      },
+    },
+  ];
+
+  const transferReserveAsset = {
+    TransferReserveAsset: {
+      assets: assets,
+      dest: dest,
+      xcm: hydradxXcm,
+    },
+  };
+
+  // Reference: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fzeitgeist-rpc.dwellir.com#/extrinsics/decode/0x7a0003010100c91f03082b0105040000010602000100000000000000000000000000000000000000000000000000000000000000070010a5d4e8010100c91f0c130000010500000b00407a10f35a000f000400010200b1200602000100000000000000000000000000000000000000000000000000000000000000070010a5d4e8040000010500000b00203d88792d000d0102080001010032324422424000000000f3230040020423040032003000f0302f30300f000323
+  const xcmMessage = {
+    V3: [setFeesMode, transferReserveAsset],
+  };
 
   const xcmTransfer = senderParaApi.tx.xTokens.transfer(
     ztg,
