@@ -234,7 +234,6 @@ export async function canExecuteAtomicSwap(
 ) {
   const keyring = new Keyring({ type: "sr25519" });
   const alice = keyring.addFromUri("//Alice", { name: "Alice default" });
-  const bob = keyring.addFromUri("//Bob", { name: "Bob default" });
 
   const senderBalanceBefore = (
     (await senderParaApi.query.system.account(
@@ -242,21 +241,11 @@ export async function canExecuteAtomicSwap(
     )) as unknown as AccountInfo
   ).data.free.toBigInt();
   const tokensIndex = 0;
-  const receiverBalanceBefore = (
-    (await hydradxParaApi.query.tokens.accounts(
-      bob.address,
-      tokensIndex
-    )) as AccountData
-  ).free.toBigInt();
 
   const ztg = { Ztg: null };
-  const amount: bigint = BigInt("192913122185847181");
-  const bobAccountId = senderParaApi
-    .createType("AccountId32", bob.address)
+  const aliceAccountId = senderParaApi
+    .createType("AccountId32", alice.address)
     .toHex();
-
-  // TODO: fill in bobs AccountId32 address in beneficiary of DepositAsset for the polkadot js org reference below
-  console.log("bobAccountId", bobAccountId);
 
   // TODO: register HDX token on Zeitgeist chain first in order to swap ZTG for HDX on HydraDX chain
 
@@ -348,7 +337,7 @@ export async function canExecuteAtomicSwap(
       beneficiary: {
         parents: 0,
         interior: {
-          X1: { AccountId32: { id: bobAccountId, network: null } },
+          X1: { AccountId32: { id: aliceAccountId, network: null } },
         },
       },
     },
