@@ -77,9 +77,10 @@ macro_rules! decl_common_types {
 
         impl OnRuntimeUpgrade for FixStorageVersions {
             fn on_runtime_upgrade() -> frame_support::weights::Weight {
-                log::info!("FixStorageVersion: Starting...");
+                log::info!("FixStorageVersions: Starting...");
                 StorageVersion::new(4).put::<AdvisoryCommittee>();
                 StorageVersion::new(4).put::<AdvisoryCommitteeMembership>();
+                StorageVersion::new(1).put::<Balances>();
                 StorageVersion::new(4).put::<Council>();
                 StorageVersion::new(4).put::<CouncilMembership>();
                 StorageVersion::new(4).put::<TechnicalCommittee>();
@@ -89,8 +90,8 @@ macro_rules! decl_common_types {
                 StorageVersion::new(1).put::<MarketAssets>();
                 StorageVersion::new(1).put::<CustomAssets>();
                 StorageVersion::new(15).put::<Contracts>();
-                log::info!("FixStorageVersion: Done!");
-                <Runtime as frame_system::Config>::DbWeight::get().writes(11)
+                log::info!("FixStorageVersions: Done!");
+                <Runtime as frame_system::Config>::DbWeight::get().writes(12)
             }
 
             #[cfg(feature = "try-runtime")]
@@ -124,6 +125,7 @@ macro_rules! decl_common_types {
         impl OnRuntimeUpgrade for ClearContractsChildTries {
             fn on_runtime_upgrade() -> frame_support::weights::Weight {
                 log::info!("ClearContractsChildTries: Starting...");
+                let mut total_reads = 0u64;
                 let mut total_writes = 0u64;
                 for (_, contract_info) in storage_key_iter::<AccountId, ContractInfo, Twox64Concat>(
                     b"Contracts",
@@ -139,10 +141,12 @@ macro_rules! decl_common_types {
                         inner_trie_id,
                         writes
                     );
+                    total_reads = total_reads.saturating_add(1);
                     total_writes = total_writes.saturating_add(writes);
                 }
                 log::info!("ClearContractsChildTries: Done!");
-                <Runtime as frame_system::Config>::DbWeight::get().writes(total_writes)
+                <Runtime as frame_system::Config>::DbWeight::get()
+                    .reads_writes(total_reads, total_writes)
             }
 
             #[cfg(feature = "try-runtime")]
