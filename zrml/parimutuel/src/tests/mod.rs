@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -17,7 +17,6 @@
 
 #![cfg(test)]
 
-mod assets;
 mod buy;
 mod claim;
 mod refund;

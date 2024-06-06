@@ -144,10 +144,10 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// The range of component `w` is `[1, 10]`.
     fn add_vote_outcome(_w: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `777 + w * (32 ±0)`
-        //  Estimated: `11515`
-        // Minimum execution time: 70_410 nanoseconds.
-        Weight::from_parts(98_017_145, 11515)
+        //  Measured:  `690 + w * (32 ±0)`
+        //  Estimated: `11501`
+        // Minimum execution time: 69_591 nanoseconds.
+        Weight::from_parts(88_511_398, 11501)
             .saturating_add(T::DbWeight::get().reads(4))
             .saturating_add(T::DbWeight::get().writes(3))
     }

@@ -20,7 +20,7 @@
 
 extern crate alloc;
 
-mod assets;
+mod asset;
 pub mod constants;
 pub mod hybrid_router_api_types;
 mod market;
@@ -29,5 +29,6 @@ mod max_runtime_usize;
 pub mod orderbook;
 mod outcome_report;
 mod proxy_type;
+mod serde_wrapper;
 pub mod traits;
 pub mod types;

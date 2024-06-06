@@ -29,6 +29,7 @@ use crate::{
 };
 use alloc::{
     collections::{BTreeMap, BTreeSet},
+    format,
     vec::Vec,
 };
 use core::marker::PhantomData;
@@ -65,7 +66,7 @@ use zeitgeist_primitives::{
     math::checked_ops_res::{CheckedAddRes, CheckedRemRes, CheckedSubRes},
     traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
     types::{
-        BaseAsset, GlobalDisputeItem, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
+        GlobalDisputeItem, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
         ResultWithWeightInfo,
     },
 };
@@ -224,7 +225,6 @@ mod pallet {
         BalanceOf<T>,
         <T as frame_system::Config>::BlockNumber,
         MomentOf<T>,
-        BaseAsset,
         MarketIdOf<T>,
     >;
     pub(crate) type HashOf<T> = <T as frame_system::Config>::Hash;
