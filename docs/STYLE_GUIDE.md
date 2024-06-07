@@ -140,8 +140,7 @@ duplicating documentation.
 - Every merge into a feature branch requires a review.
 - Aim for at most 500 LOC added per PR. Only exceed 1,000 LOC lines added in a
   PR in exceptional circumstances. Plan ahead and break a large PR into smaller
-  PRs targeting a feature branch. Feature branches are exempt from this rule.
-- Reviews take priority over most other tasks.
+  PRs.
 - Reviewing a PR should not take longer than two business days. Aim for shorter
   PRs if the changes are complex.
 - A PR should not be in flight (going from first `s:ready-for-review` to
