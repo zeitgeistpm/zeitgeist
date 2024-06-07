@@ -17,20 +17,19 @@
 
 #![no_main]
 
-use libfuzzer_sys::fuzz_target;
-use zrml_swaps::mock::{AssetManager, ExtBuilder, RuntimeOrigin, Swaps};
-
 mod utils;
+
+use libfuzzer_sys::fuzz_target;
 use orml_traits::currency::MultiCurrency;
 use utils::{construct_asset, SwapExactAmountOutData};
+use zrml_swaps::mock::{Currencies, ExtBuilder, RuntimeOrigin, Swaps};
 
 fuzz_target!(|data: SwapExactAmountOutData| {
     let mut ext = ExtBuilder::default().build();
     ext.execute_with(|| {
         // ensure that the account origin has a sufficient balance
-        // use orml_traits::MultiCurrency; required for this
         for a in &data.pool_creation.assets {
-            let _ = AssetManager::deposit(
+            let _ = Currencies::deposit(
                 construct_asset(*a),
                 &data.pool_creation.origin,
                 data.pool_creation.amount,
@@ -39,7 +38,7 @@ fuzz_target!(|data: SwapExactAmountOutData| {
         let pool_id = data.pool_creation.create_pool();
 
         if let Some(amount) = data.asset_amount_in {
-            let _ = AssetManager::deposit(construct_asset(data.asset_in), &data.origin, amount);
+            let _ = Currencies::deposit(construct_asset(data.asset_in), &data.origin, amount);
         }
 
         let _ = Swaps::swap_exact_amount_out(
