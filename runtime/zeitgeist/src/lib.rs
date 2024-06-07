@@ -104,8 +104,6 @@ pub type ContractsCallfilter = Nothing;
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-// Currently disables Rikiddo and creation of markets using SimpleDisputes
-// dispute mechanism.
 impl Contains<RuntimeCall> for IsCallable {
     fn contains(runtime_call: &RuntimeCall) -> bool {
         #[cfg(feature = "parachain")]
