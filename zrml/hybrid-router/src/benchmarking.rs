@@ -38,10 +38,7 @@ use zeitgeist_primitives::{
     constants::{base_multiples::*, CENT},
     math::fixed::{BaseProvider, FixedDiv, ZeitgeistBase},
     traits::{CompleteSetOperationsApi, DeployPoolApi, HybridRouterOrderbookApi},
-    types::{
-        Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType,
-        ScoringRule,
-    },
+    types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -68,11 +65,7 @@ fn create_spot_prices<T: Config>(asset_count: u16) -> Vec<BalanceOf<T>> {
     amounts
 }
 
-fn create_market<T>(
-    caller: T::AccountId,
-    base_asset: AssetOf<T>,
-    asset_count: u16,
-) -> MarketIdOf<T>
+fn create_market<T>(caller: T::AccountId, base_asset: AssetOf<T>, asset_count: u16) -> MarketIdOf<T>
 where
     T: Config,
 {
