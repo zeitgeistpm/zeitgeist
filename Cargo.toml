@@ -165,7 +165,6 @@ frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", b
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-asset-tx-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
-pallet-assets = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.38" }
 pallet-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
 pallet-bounties = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.38", default-features = false }
@@ -335,8 +334,6 @@ opt-level = 3
 panic = "unwind"
 
 [patch."https://github.com/paritytech/substrate"]
-# pallet-asset adjustments (managed asset destruction)
-
 # fix that allow to build with recent rustc
 substrate-wasm-builder = { git = "https://github.com/zeitgeistpm/substrate.git", branch = "polkadot-v0.9.38-zeitgeist-adjustments" }
 
