@@ -625,7 +625,6 @@ dependencies = [
  "zrml-court",
  "zrml-global-disputes",
  "zrml-hybrid-router",
- "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-neo-swaps",
  "zrml-orderbook",
@@ -14379,7 +14378,6 @@ dependencies = [
  "url",
  "zeitgeist-primitives",
  "zeitgeist-runtime",
- "zrml-liquidity-mining",
  "zrml-swaps-rpc",
 ]
 
@@ -14501,7 +14499,6 @@ dependencies = [
  "zrml-court",
  "zrml-global-disputes",
  "zrml-hybrid-router",
- "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-neo-swaps",
  "zrml-orderbook",
@@ -14651,31 +14648,11 @@ dependencies = [
  "zrml-court",
  "zrml-global-disputes",
  "zrml-hybrid-router",
- "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-neo-swaps",
  "zrml-orderbook",
  "zrml-prediction-markets",
  "zrml-simple-disputes",
-]
-
-[[package]]
-name = "zrml-liquidity-mining"
-version = "0.5.2"
-dependencies = [
- "env_logger 0.10.1",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-balances",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-io",
- "sp-runtime",
- "zeitgeist-primitives",
- "zrml-market-commons",
 ]
 
 [[package]]
@@ -14733,7 +14710,6 @@ dependencies = [
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
- "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-neo-swaps",
  "zrml-prediction-markets",
@@ -14836,7 +14812,6 @@ dependencies = [
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
- "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
