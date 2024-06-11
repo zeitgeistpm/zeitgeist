@@ -136,9 +136,7 @@ where
         crate::Markets::<T>::translate::<OldMarketOf<T>, _>(|_, old_market| {
             translated.saturating_inc();
             let dispute_mechanism = match old_market.dispute_mechanism {
-                Some(mdm) if mdm == OldMarketDisputeMechanism::Court => {
-                    Some(MarketDisputeMechanism::Court)
-                }
+                Some(OldMarketDisputeMechanism::Court) => Some(MarketDisputeMechanism::Court),
                 Some(_) => Some(MarketDisputeMechanism::Authorized),
                 None => None,
             };
