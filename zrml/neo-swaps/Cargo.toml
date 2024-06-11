@@ -37,7 +37,6 @@ zrml-global-disputes = { workspace = true, optional = true }
 zrml-liquidity-mining = { workspace = true, optional = true }
 zrml-prediction-markets = { workspace = true, optional = true }
 zrml-prediction-markets-runtime-api = { workspace = true, optional = true }
-zrml-simple-disputes = { workspace = true, optional = true }
 
 [dev-dependencies]
 more-asserts = { workspace = true }
@@ -70,7 +69,6 @@ mock = [
     "zrml-asset-router/std",
     "zrml-authorized/std",
     "zrml-liquidity-mining/std",
-    "zrml-simple-disputes/std",
     "zrml-global-disputes/std",
     "zrml-prediction-markets/std",
     "zrml-prediction-markets/mock",

@@ -52,7 +52,7 @@ fn fails_if_user_cannot_afford_bonds_advised(
                 gen_metadata(2),
                 market_creation,
                 MarketType::Scalar(0..=1),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid,
             ),
             pallet_balances::Error::<Runtime>::InsufficientBalance
@@ -75,7 +75,7 @@ fn fails_on_fee_too_high() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Scalar(0..=1),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::FeeTooHigh
@@ -101,7 +101,7 @@ fn fails_on_invalid_multihash() {
                 multihash,
                 MarketCreation::Permissionless,
                 MarketType::Scalar(0..=1),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::InvalidMultihash
@@ -124,7 +124,7 @@ fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Scalar(range),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::InvalidOutcomeRange
@@ -151,7 +151,7 @@ fn create_market_fails_on_min_dispute_period() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::DisputeDurationSmallerThanMinDisputeDuration
@@ -178,7 +178,7 @@ fn create_market_fails_on_min_oracle_duration() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::OracleDurationSmallerThanMinOracleDuration
@@ -205,7 +205,7 @@ fn create_market_fails_on_max_dispute_period() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::DisputeDurationGreaterThanMaxDisputeDuration
@@ -232,7 +232,7 @@ fn create_market_fails_on_max_grace_period() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::GracePeriodGreaterThanMaxGracePeriod
@@ -259,7 +259,7 @@ fn create_market_fails_on_max_oracle_duration() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::OracleDurationGreaterThanMaxOracleDuration
@@ -291,7 +291,7 @@ fn create_market_with_foreign_assets() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::InvalidBaseAsset,
@@ -308,7 +308,7 @@ fn create_market_with_foreign_assets() {
                 gen_metadata(2),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(2),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid,
             ),
             Error::<Runtime>::UnregisteredForeignAsset,
@@ -324,7 +324,7 @@ fn create_market_with_foreign_assets() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
         let market = MarketCommons::market(&0).unwrap();
@@ -346,7 +346,7 @@ fn it_does_not_create_market_with_too_few_categories() {
                 gen_metadata(2),
                 MarketCreation::Advised,
                 MarketType::Categorical(<Runtime as Config>::MinCategories::get() - 1),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid
             ),
             Error::<Runtime>::NotEnoughCategories
@@ -368,7 +368,7 @@ fn it_does_not_create_market_with_too_many_categories() {
                 gen_metadata(2),
                 MarketCreation::Advised,
                 MarketType::Categorical(<Runtime as Config>::MaxCategories::get() + 1),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid
             ),
             Error::<Runtime>::TooManyCategories

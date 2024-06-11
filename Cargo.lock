@@ -632,7 +632,6 @@ dependencies = [
  "zrml-parimutuel",
  "zrml-prediction-markets",
  "zrml-rikiddo",
- "zrml-simple-disputes",
  "zrml-styx",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
@@ -14508,7 +14507,6 @@ dependencies = [
  "zrml-parimutuel",
  "zrml-prediction-markets",
  "zrml-rikiddo",
- "zrml-simple-disputes",
  "zrml-styx",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
@@ -14656,7 +14654,6 @@ dependencies = [
  "zrml-neo-swaps",
  "zrml-orderbook",
  "zrml-prediction-markets",
- "zrml-simple-disputes",
 ]
 
 [[package]]
@@ -14738,7 +14735,6 @@ dependencies = [
  "zrml-neo-swaps",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
- "zrml-simple-disputes",
 ]
 
 [[package]]
@@ -14840,7 +14836,6 @@ dependencies = [
  "zrml-market-commons",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
- "zrml-simple-disputes",
 ]
 
 [[package]]
@@ -14853,7 +14848,6 @@ dependencies = [
  "sp-arithmetic",
  "zeitgeist-primitives",
  "zrml-prediction-markets",
- "zrml-simple-disputes",
 ]
 
 [[package]]
@@ -14897,27 +14891,6 @@ dependencies = [
  "libfuzzer-sys",
  "substrate-fixed",
  "zrml-rikiddo",
-]
-
-[[package]]
-name = "zrml-simple-disputes"
-version = "0.5.2"
-dependencies = [
- "env_logger 0.10.1",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
- "zeitgeist-primitives",
- "zrml-market-commons",
 ]
 
 [[package]]

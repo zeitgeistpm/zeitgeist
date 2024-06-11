@@ -131,13 +131,6 @@ parameter_types! {
     pub const ValidityBond: Balance = 50 * CENT;
 }
 
-// Simple disputes parameters
-parameter_types! {
-    pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
-    pub const OutcomeBond: Balance = 5 * BASE;
-    pub const OutcomeFactor: Balance = 2 * BASE;
-}
-
 // Swaps parameters
 parameter_types! {
     pub const ExitFee: Balance = 3 * BASE / 1000; // 0.3%

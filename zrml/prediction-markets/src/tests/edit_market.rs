@@ -61,7 +61,7 @@ fn only_creator_can_edit_market() {
                 get_deadlines(),
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid
             ),
             Error::<Runtime>::EditorNotCreator
@@ -104,7 +104,7 @@ fn edit_cycle_for_proposed_markets() {
             get_deadlines(),
             gen_metadata(2),
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid
         ));
         let edited_market = MarketCommons::market(&0).expect("Market not found");
@@ -155,7 +155,7 @@ fn edit_market_with_foreign_asset() {
                 get_deadlines(),
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid
             ),
             Error::<Runtime>::UnregisteredForeignAsset
@@ -171,7 +171,7 @@ fn edit_market_with_foreign_asset() {
                 get_deadlines(),
                 gen_metadata(2),
                 MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-                Some(MarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Court),
                 ScoringRule::AmmCdaHybrid
             ),
             Error::<Runtime>::InvalidBaseAsset,
@@ -186,7 +186,7 @@ fn edit_market_with_foreign_asset() {
             get_deadlines(),
             gen_metadata(2),
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid
         ));
         let market = MarketCommons::market(&0).unwrap();

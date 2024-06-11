@@ -57,9 +57,9 @@ use zeitgeist_primitives::{
         MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
         MaxMarketLifetime, MaxOracleDuration, MaxOwners, MaxRejectReasonLen, MaxReserves,
         MaxSelectedDraws, MaxYearlyInflation, MinCategories, MinDisputeDuration, MinJurorStake,
-        MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod, OutcomeBond, OutcomeFactor,
-        OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId,
-        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT, MILLISECS_PER_BLOCK,
+        MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod, OutsiderBond, PmPalletId,
+        RemoveKeysLimit, RequestInterval, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE,
+        CENT, MILLISECS_PER_BLOCK,
     },
     traits::{DeployPoolApi, MarketTransitionApi},
     types::{
@@ -235,7 +235,6 @@ construct_runtime!(
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
-        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
@@ -288,7 +287,6 @@ impl crate::Config for Runtime {
     type RejectOrigin = EnsureSignedBy<RejectOrigin, AccountIdTest>;
     type RequestEditOrigin = EnsureSignedBy<RequestEditOrigin, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<ResolveOrigin, AccountIdTest>;
-    type SimpleDisputes = SimpleDisputes;
     type Slash = Treasury;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
@@ -543,18 +541,6 @@ impl zrml_market_commons::Config for Runtime {
     type Balance = Balance;
     type MarketId = MarketId;
     type Timestamp = Timestamp;
-}
-
-impl zrml_simple_disputes::Config for Runtime {
-    type Currency = Balances;
-    type RuntimeEvent = RuntimeEvent;
-    type OutcomeBond = OutcomeBond;
-    type OutcomeFactor = OutcomeFactor;
-    type DisputeResolution = prediction_markets::Pallet<Runtime>;
-    type MarketCommons = MarketCommons;
-    type MaxDisputes = MaxDisputes;
-    type PalletId = SimpleDisputesPalletId;
-    type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_global_disputes::Config for Runtime {

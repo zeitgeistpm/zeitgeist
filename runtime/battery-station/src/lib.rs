@@ -193,19 +193,7 @@ impl Contains<RuntimeCall> for IsCallable {
                 finish_destroy { .. } => false,
                 _ => true,
             },
-            RuntimeCall::SimpleDisputes(_) => false,
             RuntimeCall::LiquidityMining(_) => false,
-            RuntimeCall::PredictionMarkets(inner_call) => match inner_call {
-                create_market {
-                    dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
-                    ..
-                } => false,
-                edit_market {
-                    dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
-                    ..
-                } => false,
-                _ => true,
-            },
             RuntimeCall::Swaps(inner_call) => match inner_call {
                 force_pool_exit { .. } => true,
                 _ => false,

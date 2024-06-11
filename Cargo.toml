@@ -19,7 +19,6 @@ default-members = [
     "zrml/prediction-markets",
     "zrml/prediction-markets/runtime-api",
     "zrml/rikiddo",
-    "zrml/simple-disputes",
     "zrml/swaps",
     "zrml/swaps/rpc",
     "zrml/swaps/runtime-api",
@@ -48,7 +47,6 @@ members = [
     "zrml/prediction-markets/runtime-api",
     "zrml/rikiddo",
     "zrml/rikiddo/fuzz",
-    "zrml/simple-disputes",
     "zrml/swaps",
     "zrml/swaps/fuzz",
     "zrml/swaps/rpc",
@@ -250,7 +248,6 @@ zrml-parimutuel = { path = "zrml/parimutuel", default-features = false }
 zrml-prediction-markets = { path = "zrml/prediction-markets", default-features = false }
 zrml-prediction-markets-runtime-api = { path = "zrml/prediction-markets/runtime-api", default-features = false }
 zrml-rikiddo = { path = "zrml/rikiddo", default-features = false }
-zrml-simple-disputes = { path = "zrml/simple-disputes", default-features = false }
 zrml-styx = { path = "zrml/styx", default-features = false }
 zrml-swaps = { path = "zrml/swaps", default-features = false }
 zrml-swaps-runtime-api = { path = "zrml/swaps/runtime-api", default-features = false }

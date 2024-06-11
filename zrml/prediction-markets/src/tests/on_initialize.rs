@@ -39,7 +39,7 @@ fn on_initialize_skips_the_genesis_block() {
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
 
