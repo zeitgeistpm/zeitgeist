@@ -57,9 +57,9 @@ use zeitgeist_primitives::{
         MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOrders,
         MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation,
         MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount,
-        MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OrderbookPalletId,
-        OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
-        TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT, MAX_ASSETS,
+        MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OrderbookPalletId, OutsiderBond,
+        PmPalletId, RemoveKeysLimit, RequestInterval, TreasuryPalletId, VotePeriod,
+        VotingOutcomeFee, BASE, CENT, MAX_ASSETS,
     },
     traits::DistributeFees,
     types::{
