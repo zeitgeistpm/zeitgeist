@@ -982,7 +982,9 @@ macro_rules! impl_config_traits {
                     ),
                     ProxyType::Trading => matches!(
                         c,
-                        RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
+                        RuntimeCall::HybridRouter(zrml_hybrid_router::Call::buy { .. })
+                            | RuntimeCall::HybridRouter(zrml_hybrid_router::Call::sell { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::sell { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::place_order { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::fill_order { .. })
@@ -990,7 +992,9 @@ macro_rules! impl_config_traits {
                     ),
                     ProxyType::HandleAssets => matches!(
                         c,
-                        RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::join { .. })
+                        RuntimeCall::HybridRouter(zrml_hybrid_router::Call::buy { .. })
+                            | RuntimeCall::HybridRouter(zrml_hybrid_router::Call::sell { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::join { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::exit { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::sell { .. })
