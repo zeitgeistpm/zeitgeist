@@ -196,7 +196,6 @@ macro_rules! decl_common_types {
                     CourtPalletId::get(),
                     GlobalDisputesPalletId::get(),
                     HybridRouterPalletId::get(),
-                    LiquidityMiningPalletId::get(),
                     OrderbookPalletId::get(),
                     ParimutuelPalletId::get(),
                     PmPalletId::get(),
@@ -312,7 +311,6 @@ macro_rules! create_runtime {
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 50,
                 Authorized: zrml_authorized::{Call, Event<T>, Pallet, Storage} = 51,
                 Court: zrml_court::{Call, Event<T>, Pallet, Storage} = 52,
-                LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 53,
                 RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 54,
                 SimpleDisputes: zrml_simple_disputes::{Call, Event<T>, Pallet, Storage} = 55,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
@@ -982,7 +980,9 @@ macro_rules! impl_config_traits {
                     ),
                     ProxyType::Trading => matches!(
                         c,
-                        RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
+                        RuntimeCall::HybridRouter(zrml_hybrid_router::Call::buy { .. })
+                            | RuntimeCall::HybridRouter(zrml_hybrid_router::Call::sell { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::sell { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::place_order { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::fill_order { .. })
@@ -990,7 +990,9 @@ macro_rules! impl_config_traits {
                     ),
                     ProxyType::HandleAssets => matches!(
                         c,
-                        RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::join { .. })
+                        RuntimeCall::HybridRouter(zrml_hybrid_router::Call::buy { .. })
+                            | RuntimeCall::HybridRouter(zrml_hybrid_router::Call::sell { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::join { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::exit { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::sell { .. })
@@ -1221,40 +1223,10 @@ macro_rules! impl_config_traits {
             type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
         }
 
-        impl zrml_liquidity_mining::Config for Runtime {
-            type RuntimeEvent = RuntimeEvent;
-            type Currency = Balances;
-            type MarketCommons = MarketCommons;
-            type MarketId = MarketId;
-            type PalletId = LiquidityMiningPalletId;
-            type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
-        }
-
         impl zrml_market_commons::Config for Runtime {
             type Balance = Balance;
             type MarketId = MarketId;
             type Timestamp = Timestamp;
-        }
-
-        // NoopLiquidityMining implements LiquidityMiningPalletApi with no-ops.
-        // Has to be public because it will be exposed by Runtime.
-        pub struct NoopLiquidityMining;
-
-        impl zrml_liquidity_mining::LiquidityMiningPalletApi for NoopLiquidityMining {
-            type AccountId = AccountId;
-            type Balance = Balance;
-            type BlockNumber = BlockNumber;
-            type MarketId = MarketId;
-
-            fn add_shares(_: Self::AccountId, _: Self::MarketId, _: Self::Balance) {}
-
-            fn distribute_market_incentives(
-                _: &Self::MarketId,
-            ) -> frame_support::pallet_prelude::DispatchResult {
-                Ok(())
-            }
-
-            fn remove_shares(_: &Self::AccountId, _: &Self::MarketId, _: Self::Balance) {}
         }
 
         impl zrml_prediction_markets::Config for Runtime {
@@ -1279,10 +1251,6 @@ macro_rules! impl_config_traits {
             type DisputeBond = DisputeBond;
             type RuntimeEvent = RuntimeEvent;
             type GlobalDisputes = GlobalDisputes;
-            // LiquidityMining is currently unstable.
-            // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
-            type LiquidityMining = NoopLiquidityMining;
-            // type LiquidityMining = LiquidityMining;
             type MaxCategories = MaxCategories;
             type MaxCreatorFee = MaxCreatorFee;
             type MaxDisputes = MaxDisputes;
@@ -1540,7 +1508,6 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_hybrid_router, HybridRouter);
                     #[cfg(not(feature = "parachain"))]
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
-                    list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
                     list_benchmark!(list, extra, zrml_styx, Styx);
                     list_benchmark!(list, extra, zrml_neo_swaps, NeoSwaps);
 
@@ -1646,7 +1613,6 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_hybrid_router, HybridRouter);
                     #[cfg(not(feature = "parachain"))]
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
-                    add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
                     add_benchmark!(params, batches, zrml_styx, Styx);
                     add_benchmark!(params, batches, zrml_neo_swaps, NeoSwaps);
 
@@ -2252,7 +2218,6 @@ macro_rules! create_common_tests {
 
                 #[test_case(AuthorizedPalletId::get(); "authorized")]
                 #[test_case(CourtPalletId::get(); "court")]
-                #[test_case(LiquidityMiningPalletId::get(); "liquidity_mining")]
                 #[test_case(PmPalletId::get(); "prediction_markets")]
                 #[test_case(SimpleDisputesPalletId::get(); "simple_disputes")]
                 #[test_case(SwapsPalletId::get(); "swaps")]
