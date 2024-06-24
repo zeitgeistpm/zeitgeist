@@ -57,9 +57,9 @@ use zeitgeist_primitives::{
         MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxMarketLifetime,
         MaxOracleDuration, MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws,
         MaxYearlyInflation, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
-        MinOutcomeVoteAmount, MinimumPeriod, OutsiderBond, PmPalletId,
-        RemoveKeysLimit, RequestInterval, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE,
-        CENT, MILLISECS_PER_BLOCK,
+        MinOutcomeVoteAmount, MinimumPeriod, OutsiderBond, PmPalletId, RemoveKeysLimit,
+        RequestInterval, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
+        MILLISECS_PER_BLOCK,
     },
     traits::{DeployPoolApi, MarketTransitionApi},
     types::{
