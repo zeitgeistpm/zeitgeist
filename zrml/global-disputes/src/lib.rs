@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -79,9 +79,6 @@ mod pallet {
     type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     pub type LockInfoOf<T> =
         BoundedVec<(MarketIdOf<T>, BalanceOf<T>), <T as Config>::MaxGlobalDisputeVotes>;
-
-    // TODO(#968): to remove after the storage migration
-    pub type WinnerInfoOf<T> = OldWinnerInfo<BalanceOf<T>, OwnerInfoOf<T>>;
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -180,11 +177,6 @@ mod pallet {
     #[pallet::storage]
     pub type GlobalDisputesInfo<T: Config> =
         StorageMap<_, Twox64Concat, MarketIdOf<T>, GlobalDisputeInfoOf<T>, OptionQuery>;
-
-    // TODO(#986): to remove after the storage migration
-    #[pallet::storage]
-    pub type Winners<T: Config> =
-        StorageMap<_, Twox64Concat, MarketIdOf<T>, WinnerInfoOf<T>, OptionQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
