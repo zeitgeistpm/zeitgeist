@@ -238,10 +238,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(692), added: 3167, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Asset (r:64 w:64)
-    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Account (r:64 w:64)
-    /// Proof: MarketAssets Account (max_values: None, max_size: Some(117), added: 2592, mode: MaxEncodedLen)
     /// The range of component `a` is `[2, 64]`.
     fn buy_complete_set(a: u32) -> Weight {
         // Proof Size summary in bytes:
@@ -272,14 +268,14 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// The range of component `m` is `[0, 63]`.
     fn create_market(m: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `316 + m * (16 ±0)`
-        //  Estimated: `181063`
-        // Minimum execution time: 580_722 nanoseconds.
-        Weight::from_parts(746_949_580, 181063)
-            // Standard Error: 134_673
-            .saturating_add(Weight::from_parts(95_879, 0).saturating_mul(m.into()))
-            .saturating_add(T::DbWeight::get().reads(68))
-            .saturating_add(T::DbWeight::get().writes(68))
+        //  Measured:  `240 + m * (16 ±0)`
+        //  Estimated: `8263`
+        // Minimum execution time: 55_550 nanoseconds.
+        Weight::from_parts(74_259_340, 8263)
+            // Standard Error: 7_534
+            .saturating_add(Weight::from_parts(63_015, 0).saturating_mul(m.into()))
+            .saturating_add(T::DbWeight::get().reads(4))
+            .saturating_add(T::DbWeight::get().writes(4))
     }
     /// Storage: PredictionMarkets MarketIdsForEdit (r:1 w:1)
     /// Proof: PredictionMarkets MarketIdsForEdit (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
@@ -290,14 +286,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: Timestamp Now (r:1 w:0)
     /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
     /// The range of component `m` is `[0, 63]`.
-    fn edit_market(m: u32) -> Weight {
+    fn edit_market(_m: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `751 + m * (16 ±0)`
-        //  Estimated: `10720`
-        // Minimum execution time: 56_321 nanoseconds.
-        Weight::from_parts(74_197_986, 10720)
-            // Standard Error: 12_078
-            .saturating_add(Weight::from_parts(99_545, 0).saturating_mul(m.into()))
+        //  Measured:  `735 + m * (16 ±0)`
+        //  Estimated: `10706`
+        // Minimum execution time: 53_490 nanoseconds.
+        Weight::from_parts(75_146_182, 10706)
             .saturating_add(T::DbWeight::get().reads(4))
             .saturating_add(T::DbWeight::get().writes(3))
     }
@@ -462,11 +456,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(5))
     }
     /// Storage: MarketCommons Markets (r:1 w:0)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(692), added: 3167, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Asset (r:1 w:1)
-    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Account (r:1 w:1)
-    /// Proof: MarketAssets Account (max_values: None, max_size: Some(117), added: 2592, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
     /// Storage: AssetRouter DestroyAssets (r:1 w:1)
@@ -485,11 +474,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(4))
     }
     /// Storage: MarketCommons Markets (r:1 w:0)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(692), added: 3167, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Asset (r:2 w:2)
-    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Account (r:2 w:2)
-    /// Proof: MarketAssets Account (max_values: None, max_size: Some(117), added: 2592, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
     /// Storage: AssetRouter DestroyAssets (r:1 w:1)
@@ -573,10 +557,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(692), added: 3167, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Asset (r:64 w:64)
-    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Account (r:64 w:64)
-    /// Proof: MarketAssets Account (max_values: None, max_size: Some(117), added: 2592, mode: MaxEncodedLen)
     /// The range of component `a` is `[2, 64]`.
     fn sell_complete_set(a: u32) -> Weight {
         // Proof Size summary in bytes:
@@ -650,14 +630,16 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: PredictionMarkets MarketIdsPerCloseTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
     /// The range of component `o` is `[0, 63]`.
     /// The range of component `n` is `[0, 63]`.
-    fn schedule_early_close_as_authority(o: u32, _n: u32) -> Weight {
+    fn schedule_early_close_as_authority(o: u32, n: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `763 + o * (16 ±0)`
-        //  Estimated: `10720`
-        // Minimum execution time: 53_380 nanoseconds.
-        Weight::from_parts(69_829_159, 10720)
-            // Standard Error: 9_438
-            .saturating_add(Weight::from_parts(58_622, 0).saturating_mul(o.into()))
+        //  Measured:  `747 + o * (16 ±0)`
+        //  Estimated: `10706`
+        // Minimum execution time: 51_230 nanoseconds.
+        Weight::from_parts(61_363_456, 10706)
+            // Standard Error: 13_970
+            .saturating_add(Weight::from_parts(50_244, 0).saturating_mul(o.into()))
+            // Standard Error: 13_970
+            .saturating_add(Weight::from_parts(62_184, 0).saturating_mul(n.into()))
             .saturating_add(T::DbWeight::get().reads(4))
             .saturating_add(T::DbWeight::get().writes(3))
     }
@@ -671,12 +653,16 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: PredictionMarkets MarketIdsPerCloseTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
     /// The range of component `o` is `[0, 63]`.
     /// The range of component `n` is `[0, 63]`.
-    fn schedule_early_close_after_dispute(_o: u32, _n: u32) -> Weight {
+    fn schedule_early_close_after_dispute(o: u32, n: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `986 + o * (16 ±0)`
-        //  Estimated: `14444`
-        // Minimum execution time: 98_240 nanoseconds.
-        Weight::from_parts(129_586_211, 14444)
+        //  Measured:  `970 + o * (16 ±0)`
+        //  Estimated: `14430`
+        // Minimum execution time: 96_271 nanoseconds.
+        Weight::from_parts(119_475_237, 14430)
+            // Standard Error: 22_292
+            .saturating_add(Weight::from_parts(90_541, 0).saturating_mul(o.into()))
+            // Standard Error: 22_292
+            .saturating_add(Weight::from_parts(12_780, 0).saturating_mul(n.into()))
             .saturating_add(T::DbWeight::get().reads(5))
             .saturating_add(T::DbWeight::get().writes(4))
     }
@@ -692,14 +678,14 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// The range of component `n` is `[0, 63]`.
     fn schedule_early_close_as_market_creator(o: u32, n: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `824 + o * (16 ±0)`
-        //  Estimated: `14444`
-        // Minimum execution time: 75_620 nanoseconds.
-        Weight::from_parts(92_020_605, 14444)
-            // Standard Error: 13_677
-            .saturating_add(Weight::from_parts(115_579, 0).saturating_mul(o.into()))
-            // Standard Error: 13_677
-            .saturating_add(Weight::from_parts(28_959, 0).saturating_mul(n.into()))
+        //  Measured:  `808 + o * (16 ±0)`
+        //  Estimated: `14430`
+        // Minimum execution time: 74_650 nanoseconds.
+        Weight::from_parts(92_510_070, 14430)
+            // Standard Error: 11_870
+            .saturating_add(Weight::from_parts(29_343, 0).saturating_mul(o.into()))
+            // Standard Error: 11_870
+            .saturating_add(Weight::from_parts(37_672, 0).saturating_mul(n.into()))
             .saturating_add(T::DbWeight::get().reads(5))
             .saturating_add(T::DbWeight::get().writes(4))
     }
@@ -713,14 +699,16 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: PredictionMarkets MarketIdsPerCloseTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
     /// The range of component `o` is `[0, 63]`.
     /// The range of component `n` is `[0, 63]`.
-    fn dispute_early_close(_o: u32, n: u32) -> Weight {
+    fn dispute_early_close(o: u32, n: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `940 + o * (16 ±0) + n * (16 ±0)`
-        //  Estimated: `14444`
-        // Minimum execution time: 72_551 nanoseconds.
-        Weight::from_parts(96_247_822, 14444)
-            // Standard Error: 11_213
-            .saturating_add(Weight::from_parts(22_013, 0).saturating_mul(n.into()))
+        //  Measured:  `924 + o * (16 ±0) + n * (16 ±0)`
+        //  Estimated: `14430`
+        // Minimum execution time: 71_610 nanoseconds.
+        Weight::from_parts(86_696_361, 14430)
+            // Standard Error: 13_050
+            .saturating_add(Weight::from_parts(59_792, 0).saturating_mul(o.into()))
+            // Standard Error: 13_050
+            .saturating_add(Weight::from_parts(64_792, 0).saturating_mul(n.into()))
             .saturating_add(T::DbWeight::get().reads(5))
             .saturating_add(T::DbWeight::get().writes(4))
     }
@@ -732,12 +720,16 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: PredictionMarkets MarketIdsPerCloseTimeFrame (max_values: None, max_size: Some(1050), added: 3525, mode: MaxEncodedLen)
     /// The range of component `o` is `[0, 63]`.
     /// The range of component `n` is `[0, 63]`.
-    fn reject_early_close_after_authority(_o: u32, _n: u32) -> Weight {
+    fn reject_early_close_after_authority(o: u32, n: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `830 + o * (16 ±0) + n * (16 ±0)`
-        //  Estimated: `10720`
-        // Minimum execution time: 57_031 nanoseconds.
-        Weight::from_parts(75_086_876, 10720)
+        //  Measured:  `814 + o * (16 ±0) + n * (16 ±0)`
+        //  Estimated: `10706`
+        // Minimum execution time: 55_950 nanoseconds.
+        Weight::from_parts(70_714_615, 10706)
+            // Standard Error: 14_905
+            .saturating_add(Weight::from_parts(63_828, 0).saturating_mul(o.into()))
+            // Standard Error: 14_905
+            .saturating_add(Weight::from_parts(40_198, 0).saturating_mul(n.into()))
             .saturating_add(T::DbWeight::get().reads(4))
             .saturating_add(T::DbWeight::get().writes(3))
     }
@@ -805,7 +797,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(Weight::from_parts(0, 7884).saturating_mul(n.into()))
     }
     /// Storage: MarketCommons Markets (r:1 w:1)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(692), added: 3167, mode: MaxEncodedLen)
     /// Storage: Timestamp Now (r:1 w:0)
     /// Proof: Timestamp Now (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
     /// Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:1 w:1)

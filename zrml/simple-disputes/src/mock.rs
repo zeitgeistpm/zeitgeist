@@ -30,13 +30,13 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDepositsAssets, GetNativeCurrencyId, MaxDisputes, MaxReserves,
+        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxDisputes, MaxReserves,
         MinimumPeriod, OutcomeBond, OutcomeFactor, SimpleDisputesPalletId, BASE,
     },
     traits::{DisputeResolutionApi, MarketOfDisputeResolutionApi},
     types::{
-        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, Hash,
-        Index, MarketId, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
+        Hash, Index, MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 
@@ -165,10 +165,10 @@ impl orml_currencies::Config for Runtime {
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
-    type CurrencyId = Assets;
+    type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = Everything;
     type RuntimeEvent = ();
-    type ExistentialDeposits = ExistentialDepositsAssets;
+    type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
     type CurrencyHooks = ();

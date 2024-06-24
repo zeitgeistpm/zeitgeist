@@ -28,47 +28,44 @@ use crate::{consts::*, AssetOf, MarketIdOf};
 use core::marker::PhantomData;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{AsEnsureOriginWithArg, Contains, Everything, NeverEnsureOrigin},
+    traits::{Contains, Everything, NeverEnsureOrigin},
 };
-use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
+use frame_system::{EnsureRoot, EnsureSignedBy};
 #[cfg(feature = "parachain")]
 use orml_asset_registry::AssetMetadata;
 use orml_traits::MultiCurrency;
-use parity_scale_codec::Compact;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, ConstU32, Get, IdentityLookup, Zero},
+    traits::{BlakeTwo256, Get, IdentityLookup, Zero},
     DispatchResult, Perbill, Percent, SaturatedConversion,
 };
+#[cfg(feature = "parachain")]
+use zeitgeist_primitives::types::Asset;
 use zeitgeist_primitives::{
     constants::{
         base_multiples::*,
         mock::{
-            AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AssetsAccountDeposit,
-            AssetsApprovalDeposit, AssetsDeposit, AssetsMetadataDepositBase,
-            AssetsMetadataDepositPerByte, AssetsStringLimit, AuthorizedPalletId, BlockHashCount,
-            BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
+            AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
+            BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
             CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
             CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
-            DestroyAccountWeight, DestroyApprovalWeight, DestroyFinishWeight, ExistentialDeposit,
-            ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId,
-            GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId, LockId, MaxAppeals,
-            MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration,
-            MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
-            MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners,
-            MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinCategories,
-            MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount,
-            MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor,
-            OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId,
-            TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
+            ExistentialDeposit, ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId,
+            GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
+            LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations,
+            MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
+            MaxGracePeriod, MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration,
+            MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation,
+            MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
+            MinOutcomeVoteAmount, MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond,
+            OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
+            SimpleDisputesPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
         },
     },
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
     types::{
-        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CampaignAsset, CampaignAssetId, Currencies, CustomAsset, CustomAssetId, Hash, Index,
-        MarketAsset, MarketId, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
+        Hash, Index, MarketId, Moment, UncheckedExtrinsicTest,
     },
 };
 use zrml_neo_swaps::BalanceOf;
@@ -84,7 +81,7 @@ pub const SUDO: AccountIdTest = 123456;
 pub const EXTERNAL_FEES: Balance = CENT;
 
 #[cfg(feature = "parachain")]
-pub const FOREIGN_ASSET: Assets = Assets::ForeignAsset(1);
+pub const FOREIGN_ASSET: Asset<MarketId> = Asset::ForeignAsset(1);
 
 parameter_types! {
     pub const FeeAccount: AccountIdTest = FEE_ACCOUNT;
@@ -164,10 +161,6 @@ impl Contains<AccountIdTest> for DustRemovalWhitelist {
     }
 }
 
-pub(super) type CustomAssetsInstance = pallet_assets::Instance1;
-pub(super) type CampaignAssetsInstance = pallet_assets::Instance2;
-pub(super) type MarketAssetsInstance = pallet_assets::Instance3;
-
 construct_runtime!(
     pub enum Runtime
     where
@@ -176,15 +169,11 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         NeoSwaps: zrml_neo_swaps::{Call, Event<T>, Pallet},
-        AssetManager: orml_currencies::{Call, Pallet, Storage},
-        AssetRouter: zrml_asset_router::{Pallet},
         Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        CampaignAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>},
         Court: zrml_court::{Event<T>, Pallet, Storage},
-        CustomAssets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>},
+        AssetManager: orml_currencies::{Call, Pallet, Storage},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
-        MarketAssets: pallet_assets::<Instance3>::{Call, Pallet, Storage, Event<T>},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: zrml_prediction_markets::{Event<T>, Pallet, Storage},
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
@@ -209,130 +198,12 @@ impl crate::Config for Runtime {
     type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
 }
 
-pallet_assets::runtime_benchmarks_enabled! {
-    pub struct AssetsBenchmarkHelper;
-
-    impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter>
-        for AssetsBenchmarkHelper
-    where
-        AssetIdParameter: From<u128>,
-    {
-        fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
-            (id as u128).into()
-        }
-    }
-}
-
-pallet_assets::runtime_benchmarks_enabled! {
-    use zeitgeist_primitives::types::CategoryIndex;
-
-    pub struct MarketAssetsBenchmarkHelper;
-
-    impl pallet_assets::BenchmarkHelper<MarketAsset>
-        for MarketAssetsBenchmarkHelper
-    {
-        fn create_asset_id_parameter(id: u32) -> MarketAsset {
-            MarketAsset::CategoricalOutcome(0, id as CategoryIndex)
-        }
-    }
-}
-
-impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
-    type ApprovalDeposit = AssetsApprovalDeposit;
-    type AssetAccountDeposit = AssetsAccountDeposit;
-    type AssetDeposit = AssetsDeposit;
-    type AssetId = CampaignAsset;
-    type AssetIdParameter = Compact<CampaignAssetId>;
-    type Balance = Balance;
-    #[cfg(feature = "runtime-benchmarks")]
-    type BenchmarkHelper = AssetsBenchmarkHelper;
-    type CallbackHandle = ();
-    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<Self::AccountId>>;
-    type Currency = Balances;
-    type Extra = ();
-    type ForceOrigin = EnsureRoot<AccountIdTest>;
-    type Freezer = ();
-    type Destroyer = AssetRouter;
-    type MetadataDepositBase = AssetsMetadataDepositBase;
-    type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
-    type RemoveItemsLimit = ConstU32<50>;
-    type RuntimeEvent = RuntimeEvent;
-    type StringLimit = AssetsStringLimit;
-    type WeightInfo = ();
-}
-
-impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
-    type ApprovalDeposit = AssetsApprovalDeposit;
-    type AssetAccountDeposit = AssetsAccountDeposit;
-    type AssetDeposit = AssetsDeposit;
-    type AssetId = CustomAsset;
-    type AssetIdParameter = Compact<CustomAssetId>;
-    type Balance = Balance;
-    #[cfg(feature = "runtime-benchmarks")]
-    type BenchmarkHelper = AssetsBenchmarkHelper;
-    type CallbackHandle = ();
-    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<Self::AccountId>>;
-    type Currency = Balances;
-    type Extra = ();
-    type ForceOrigin = EnsureRoot<AccountIdTest>;
-    type Freezer = ();
-    type Destroyer = AssetRouter;
-    type MetadataDepositBase = AssetsMetadataDepositBase;
-    type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
-    type RemoveItemsLimit = ConstU32<50>;
-    type RuntimeEvent = RuntimeEvent;
-    type StringLimit = AssetsStringLimit;
-    type WeightInfo = ();
-}
-
-impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
-    type ApprovalDeposit = AssetsApprovalDeposit;
-    type AssetAccountDeposit = AssetsAccountDeposit;
-    type AssetDeposit = AssetsDeposit;
-    type AssetId = MarketAsset;
-    type AssetIdParameter = MarketAsset;
-    type Balance = Balance;
-    #[cfg(feature = "runtime-benchmarks")]
-    type BenchmarkHelper = MarketAssetsBenchmarkHelper;
-    type CallbackHandle = ();
-    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<Self::AccountId>>;
-    type Currency = Balances;
-    type Extra = ();
-    type ForceOrigin = EnsureRoot<AccountIdTest>;
-    type Freezer = ();
-    type Destroyer = AssetRouter;
-    type MetadataDepositBase = AssetsMetadataDepositBase;
-    type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
-    type RemoveItemsLimit = ConstU32<50>;
-    type RuntimeEvent = RuntimeEvent;
-    type StringLimit = AssetsStringLimit;
-    type WeightInfo = ();
-}
-
-impl zrml_asset_router::Config for Runtime {
-    type AssetType = Assets;
-    type Balance = Balance;
-    type CurrencyType = Currencies;
-    type Currencies = Tokens;
-    type CampaignAssetType = CampaignAsset;
-    type CampaignAssets = CampaignAssets;
-    type CustomAssetType = CustomAsset;
-    type CustomAssets = CustomAssets;
-    type DestroyAccountWeight = DestroyAccountWeight;
-    type DestroyApprovalWeight = DestroyApprovalWeight;
-    type DestroyFinishWeight = DestroyFinishWeight;
-    type MarketAssetType = MarketAsset;
-    type MarketAssets = MarketAssets;
-}
-
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type AssetCreator = AssetRouter;
-    type AssetDestroyer = AssetRouter;
     #[cfg(feature = "parachain")]
     type AssetRegistry = MockRegistry;
     type Authorized = Authorized;
@@ -363,7 +234,6 @@ impl zrml_prediction_markets::Config for Runtime {
     type MinCategories = MinCategories;
     type MaxEditReasonLen = MaxEditReasonLen;
     type MaxRejectReasonLen = MaxRejectReasonLen;
-    type OnStateTransition = ();
     type OracleBond = OracleBond;
     type OutsiderBond = OutsiderBond;
     type PalletId = PmPalletId;
@@ -454,7 +324,7 @@ impl frame_system::Config for Runtime {
 
 impl orml_currencies::Config for Runtime {
     type GetNativeCurrencyId = GetNativeCurrencyId;
-    type MultiCurrency = AssetRouter;
+    type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
     type WeightInfo = ();
 }
@@ -462,7 +332,7 @@ impl orml_currencies::Config for Runtime {
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
-    type CurrencyId = Currencies;
+    type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = DustRemovalWhitelist;
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
@@ -549,7 +419,7 @@ impl pallet_treasury::Config for Runtime {
 #[cfg(feature = "parachain")]
 zrml_prediction_markets::impl_mock_registry! {
     MockRegistry,
-    zeitgeist_primitives::types::XcmAsset,
+    CurrencyId,
     Balance,
     zeitgeist_primitives::types::CustomMetadata
 }
@@ -580,7 +450,7 @@ impl ExtBuilder {
         {
             use frame_support::traits::GenesisBuild;
             orml_tokens::GenesisConfig::<Runtime> {
-                balances: vec![(ALICE, FOREIGN_ASSET.try_into().unwrap(), 100_000_000_001 * _1)],
+                balances: vec![(ALICE, FOREIGN_ASSET, 100_000_000_001 * _1)],
             }
             .assimilate_storage(&mut t)
             .unwrap();
@@ -590,7 +460,7 @@ impl ExtBuilder {
             };
             orml_asset_registry_mock::GenesisConfig {
                 metadata: vec![(
-                    FOREIGN_ASSET.try_into().unwrap(),
+                    FOREIGN_ASSET,
                     AssetMetadata {
                         decimals: 18,
                         name: "MKL".as_bytes().to_vec(),
