@@ -114,9 +114,6 @@ pub const MAX_ORACLE_DURATION: BlockNumber = 14 * BLOCKS_PER_DAY;
 /// Pallet identifier, mainly used for named balance reserves.
 pub const PM_PALLET_ID: PalletId = PalletId(*b"zge/pred");
 
-// Simple Disputes
-pub const SD_PALLET_ID: PalletId = PalletId(*b"zge/sedp");
-
 // Swaps
 /// Max. assets in a swap pool.
 pub const MAX_ASSETS: u16 = MAX_CATEGORIES + 1;
