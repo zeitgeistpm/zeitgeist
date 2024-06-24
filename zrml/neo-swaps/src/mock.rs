@@ -52,15 +52,15 @@ use zeitgeist_primitives::{
             CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
             DestroyAccountWeight, DestroyApprovalWeight, DestroyFinishWeight, ExistentialDeposit,
             ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId,
-            GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId, LockId, MaxAppeals,
-            MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration,
-            MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
-            MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners,
-            MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinCategories,
-            MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount,
-            MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutcomeBond, OutcomeFactor,
-            OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId,
-            TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
+            GlobalDisputesPalletId, InflationPeriod, LockId, MaxAppeals, MaxApprovals,
+            MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes,
+            MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxLiquidityTreeDepth,
+            MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners, MaxRejectReasonLen,
+            MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinCategories, MinDisputeDuration,
+            MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod, NeoMaxSwapFee,
+            NeoSwapsPalletId, OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId,
+            RemoveKeysLimit, RequestInterval, SimpleDisputesPalletId, TreasuryPalletId, VotePeriod,
+            VotingOutcomeFee, BASE, CENT,
         },
     },
     math::fixed::FixedMul,
@@ -183,7 +183,6 @@ construct_runtime!(
         CampaignAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>},
         Court: zrml_court::{Event<T>, Pallet, Storage},
         CustomAssets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>},
-        LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketAssets: pallet_assets::<Instance3>::{Call, Pallet, Storage, Event<T>},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: zrml_prediction_markets::{Event<T>, Pallet, Storage},
@@ -350,7 +349,6 @@ impl zrml_prediction_markets::Config for Runtime {
     type DisputeBond = DisputeBond;
     type RuntimeEvent = RuntimeEvent;
     type GlobalDisputes = GlobalDisputes;
-    type LiquidityMining = LiquidityMining;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type MinDisputeDuration = MinDisputeDuration;
@@ -414,15 +412,6 @@ impl zrml_court::Config for Runtime {
     type Slash = Treasury;
     type TreasuryPalletId = TreasuryPalletId;
     type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
-}
-
-impl zrml_liquidity_mining::Config for Runtime {
-    type Currency = Balances;
-    type RuntimeEvent = RuntimeEvent;
-    type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
-    type PalletId = LiquidityMiningPalletId;
-    type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {

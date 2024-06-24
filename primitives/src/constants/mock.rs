@@ -89,11 +89,6 @@ parameter_types! {
     pub const MaxOrders: u32 = 100;
 }
 
-// Liquidity Mining parameters
-parameter_types! {
-    pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
-}
-
 // NeoSwaps
 parameter_types! {
     pub storage NeoExitFee: Balance = CENT;

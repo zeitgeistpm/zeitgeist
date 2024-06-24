@@ -114,7 +114,6 @@ zrml-authorized = { workspace = true }
 zrml-court = { workspace = true }
 zrml-global-disputes = { workspace = true, optional = true }
 zrml-hybrid-router = { workspace = true }
-zrml-liquidity-mining = { workspace = true }
 zrml-market-commons = { workspace = true }
 zrml-neo-swaps = { workspace = true }
 zrml-orderbook = { workspace = true }
@@ -216,7 +215,6 @@ runtime-benchmarks = [
     "zrml-authorized/runtime-benchmarks",
     "zrml-court/runtime-benchmarks",
     "zrml-hybrid-router/runtime-benchmarks",
-    "zrml-liquidity-mining/runtime-benchmarks",
     "zrml-neo-swaps/runtime-benchmarks",
     "zrml-parimutuel/runtime-benchmarks",
     "zrml-prediction-markets/runtime-benchmarks",
@@ -332,7 +330,6 @@ std = [
     "zrml-authorized/std",
     "zrml-court/std",
     "zrml-hybrid-router/std",
-    "zrml-liquidity-mining/std",
     "zrml-market-commons/std",
     "zrml-neo-swaps/std",
     "zrml-parimutuel/std",
@@ -391,7 +388,6 @@ try-runtime = [
     "zrml-authorized/try-runtime",
     "zrml-court/try-runtime",
     "zrml-hybrid-router/try-runtime",
-    "zrml-liquidity-mining/try-runtime",
     "zrml-market-commons/try-runtime",
     "zrml-neo-swaps/try-runtime",
     "zrml-parimutuel/try-runtime",
