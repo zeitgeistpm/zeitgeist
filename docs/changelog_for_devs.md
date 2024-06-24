@@ -14,6 +14,7 @@ APIs/RPC interface.
 
 ## v0.5.4
 
+- ⚠️  Remove zrml-liquidity-mining from code base.
 - ⚠️  Remove zrml-rikiddo from the code base.
 
 ## v0.5.2

@@ -192,7 +192,6 @@ impl Contains<RuntimeCall> for IsCallable {
                 _ => true,
             },
             RuntimeCall::SimpleDisputes(_) => false,
-            RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => match inner_call {
                 create_market {
                     dispute_mechanism: Some(MarketDisputeMechanism::SimpleDisputes),
