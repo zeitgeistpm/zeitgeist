@@ -27,7 +27,6 @@ zrml-asset-router = { workspace = true, optional = true }
 zrml-authorized = { workspace = true, optional = true }
 zrml-court = { workspace = true, optional = true }
 zrml-global-disputes = { workspace = true, optional = true }
-zrml-liquidity-mining = { workspace = true, optional = true }
 zrml-neo-swaps = { workspace = true, optional = true }
 zrml-orderbook = { workspace = true, optional = true }
 zrml-prediction-markets = { workspace = true, optional = true }
@@ -62,7 +61,6 @@ mock = [
     "zrml-authorized/default",
     "zrml-court/default",
     "zrml-global-disputes/default",
-    "zrml-liquidity-mining/default",
 ]
 parachain = [
     "zrml-prediction-markets/parachain",

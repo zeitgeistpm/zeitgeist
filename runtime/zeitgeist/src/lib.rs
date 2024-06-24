@@ -181,7 +181,6 @@ impl Contains<RuntimeCall> for IsCallable {
             RuntimeCall::Council(set_members { .. }) => false,
             #[cfg(feature = "parachain")]
             RuntimeCall::DmpQueue(service_overweight { .. }) => false,
-            RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => match inner_call {
                 admin_move_market_to_closed { .. } => false,
                 admin_move_market_to_resolved { .. } => false,

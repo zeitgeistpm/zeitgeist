@@ -81,7 +81,6 @@ mod pallet {
         },
     };
     use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
-    use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::{types::MarketBuilder, MarketCommonsPalletApi};
 
     /// The current storage version.
@@ -1629,13 +1628,6 @@ mod pallet {
                 Self::BlockNumber,
             >;
 
-        type LiquidityMining: LiquidityMiningPalletApi<
-                AccountId = Self::AccountId,
-                Balance = BalanceOf<Self>,
-                BlockNumber = Self::BlockNumber,
-                MarketId = MarketIdOf<Self>,
-            >;
-
         /// The maximum number of categories available for categorical markets.
         #[pallet::constant]
         type MaxCategories: Get<u16>;
@@ -2749,9 +2741,6 @@ mod pallet {
                 }
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
-            // TODO: https://github.com/zeitgeistpm/zeitgeist/issues/815
-            // Following call should return weight consumed by it.
-            T::LiquidityMining::distribute_market_incentives(market_id)?;
 
             let mut updated_market = market.clone();
 

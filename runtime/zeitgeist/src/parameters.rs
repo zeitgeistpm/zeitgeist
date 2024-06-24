@@ -226,10 +226,6 @@ parameter_types! {
     /// be another trie item whose value is the size of an account ID plus 32 bytes.
     pub const SubAccountDeposit: Balance = deposit(1, 53);
 
-    // Liquidity Mining parameters
-    /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
-    pub const LiquidityMiningPalletId: PalletId = LM_PALLET_ID;
-
     // Multisig
     // One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
     pub const DepositBase: Balance = deposit(1, 88);

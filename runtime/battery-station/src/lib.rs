@@ -193,7 +193,6 @@ impl Contains<RuntimeCall> for IsCallable {
                 finish_destroy { .. } => false,
                 _ => true,
             },
-            RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::Swaps(inner_call) => match inner_call {
                 force_pool_exit { .. } => true,
                 _ => false,
