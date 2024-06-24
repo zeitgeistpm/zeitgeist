@@ -240,7 +240,6 @@ export async function canExecuteAtomicSwap(
       alice.address
     )) as unknown as AccountInfo
   ).data.free.toBigInt();
-  const tokensIndex = 0;
 
   const ztg = { Ztg: null };
   const aliceAccountId = senderParaApi
@@ -366,14 +365,16 @@ export async function canExecuteAtomicSwap(
     },
   };
 
+  // 100 ZTG (10 decimals base)
+  const ztgAmount = 1_000_000_000_000n;
+
   const assets = [
     {
       id: {
         Concrete: localZTG,
       },
       fun: {
-        // 100 ZTG (10 decimals base)
-        Fungible: 1_000_000_000_000n,
+        Fungible: ztgAmount,
       },
     },
   ];
@@ -391,17 +392,15 @@ export async function canExecuteAtomicSwap(
     V3: [setFeesMode, transferReserveAsset],
   };
 
-  const xcmTransfer = senderParaApi.tx.xTokens.transfer(
-    ztg,
-    amount,
+  const xcmAtomicSwap = senderParaApi.tx.polkadotXcm.send(
     destination,
-    destWeightLimit
+    xcmMessage
   );
 
-  const { partialFee, weight } = await xcmTransfer.paymentInfo(alice.address);
+  const { partialFee, weight } = await xcmAtomicSwap.paymentInfo(alice.address);
   const transferFee: bigint = partialFee.toBigInt();
 
-  await xcmTransfer.signAndSend(alice, { nonce: -1 });
+  await xcmAtomicSwap.signAndSend(alice, { nonce: -1 });
 
   await context.createBlock({
     providerName: senderProviderName,
@@ -417,7 +416,7 @@ export async function canExecuteAtomicSwap(
   expect(
     senderBalanceBefore - senderBalanceAfter,
     "Unexpected balance diff"
-  ).toBe(amount + transferFee);
+  ).toBe(ztgAmount + transferFee);
 
   // RpcError: 1: Block 0x... not found, if using this `await context.createBlock({ providerName: "ReceiverPara", count: 1 });`
   // Reported Bug here https://github.com/Moonsong-Labs/moonwall/issues/343
