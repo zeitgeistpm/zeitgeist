@@ -46,7 +46,6 @@ sp-session = { workspace = true }
 sp-std = { workspace = true }
 sp-transaction-pool = { workspace = true }
 sp-version = { workspace = true }
-substrate-fixed = { workspace = true, features = ["serde"] }
 
 # Try-Runtime
 
@@ -119,7 +118,6 @@ zrml-neo-swaps = { workspace = true }
 zrml-orderbook = { workspace = true }
 zrml-parimutuel = { workspace = true }
 zrml-prediction-markets = { workspace = true }
-zrml-rikiddo = { workspace = true }
 zrml-styx = { workspace = true }
 zrml-swaps = { workspace = true }
 zrml-swaps-runtime-api = { workspace = true }
@@ -267,7 +265,6 @@ std = [
     "sp-session/std",
     "sp-transaction-pool/std",
     "sp-version/std",
-    "substrate-fixed/std",
 
     # Try-Runtime
     "frame-try-runtime/std",
@@ -332,7 +329,6 @@ std = [
     "zrml-neo-swaps/std",
     "zrml-parimutuel/std",
     "zrml-prediction-markets/std",
-    "zrml-rikiddo/std",
     "zrml-global-disputes/std",
     "zrml-styx/std",
     "zrml-swaps-runtime-api/std",
@@ -389,7 +385,6 @@ try-runtime = [
     "zrml-neo-swaps/try-runtime",
     "zrml-parimutuel/try-runtime",
     "zrml-prediction-markets/try-runtime",
-    "zrml-rikiddo/try-runtime",
     "zrml-global-disputes/try-runtime",
     "zrml-styx/try-runtime",
     "zrml-swaps/try-runtime",
