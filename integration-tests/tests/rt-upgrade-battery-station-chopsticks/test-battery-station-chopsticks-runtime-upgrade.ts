@@ -51,32 +51,33 @@ describeSuite({
       basiliskParaApi = context.polkadotJs("BasiliskPara");
 
       const paraZeitgeistNetwork = (
-        batteryStationParaApi.consts.system.version as RuntimeVersion
+        batteryStationParaApi.consts.system.version as unknown as RuntimeVersion
       ).specName.toString();
       expect(paraZeitgeistNetwork, "Para API incorrect").to.contain(
         "zeitgeist"
       );
 
       const relayNetwork = (
-        relayApi.consts.system.version as RuntimeVersion
+        relayApi.consts.system.version as unknown as RuntimeVersion
       ).specName.toString();
       expect(relayNetwork, "Relay API incorrect").to.contain("rococo");
 
       const paraBasiliskNetwork = (
-        basiliskParaApi.consts.system.version as RuntimeVersion
+        basiliskParaApi.consts.system.version as unknown as RuntimeVersion
       ).specName.toString();
       expect(paraBasiliskNetwork, "Para API incorrect").to.contain("basilisk");
 
       const rtBefore = (
-        batteryStationParaApi.consts.system.version as RuntimeVersion
+        batteryStationParaApi.consts.system.version as unknown as RuntimeVersion
       ).specVersion.toNumber();
       log(`About to upgrade to runtime at:`);
-      log(MoonwallContext.getContext().rtUpgradePath);
+      const moonwallContext = await MoonwallContext.getContext();
+      log(moonwallContext.rtUpgradePath);
 
-      await context.upgradeRuntime();
+      await context.upgradeRuntime("BatteryStationPara");
 
       const rtafter = (
-        batteryStationParaApi.consts.system.version as RuntimeVersion
+        batteryStationParaApi.consts.system.version as unknown as RuntimeVersion
       ).specVersion.toNumber();
       log(
         `RT upgrade has increased specVersion from ${rtBefore} to ${rtafter}`

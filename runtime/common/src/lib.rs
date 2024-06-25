@@ -35,6 +35,24 @@
 //
 //     You should have received a copy of the GNU General Public License
 //     along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//     Copyright (C) Parity Technologies (UK) Ltd.
+//     SPDX-License-Identifier: Apache-2.0
+//
+//     Licensed under the Apache License, Version 2.0 (the "License");
+//     you may not use this file except in compliance with the License.
+//     You may obtain a copy of the License at
+//
+//     	http://www.apache.org/licenses/LICENSE-2.0
+//
+//     Unless required by applicable law or agreed to in writing, software
+//     distributed under the License is distributed on an "AS IS" BASIS,
+//     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//     See the License for the specific language governing permissions and
+//     limitations under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "512"]
@@ -47,13 +65,24 @@ pub mod weights;
 macro_rules! decl_common_types {
     () => {
         use core::marker::PhantomData;
-        use frame_support::traits::{
-            Currency, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced,
+        use frame_support::{
+            migration::storage_key_iter,
+            migrations::RemovePallet,
+            pallet_prelude::StorageVersion,
+            parameter_types,
+            storage::child,
+            traits::{Currency, Get, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced},
+            BoundedVec, Twox64Concat,
         };
         #[cfg(feature = "try-runtime")]
         use frame_try_runtime::{TryStateSelect, UpgradeCheckSelect};
         use orml_traits::MultiCurrency;
-        use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
+        use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+        use scale_info::TypeInfo;
+        use sp_core::storage::ChildInfo;
+        use sp_runtime::{
+            generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
+        };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
         use zrml_market_commons::migrations::MigrateScoringRuleAmmCdaHybridAndMarketId;
         use zrml_neo_swaps::migration::MigratePoolReservesToBoundedBTreeMap;
@@ -62,7 +91,100 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (pallet_contracts::Migration<Runtime>,);
+        struct FixStorageVersions;
+
+        impl OnRuntimeUpgrade for FixStorageVersions {
+            fn on_runtime_upgrade() -> frame_support::weights::Weight {
+                log::info!("FixStorageVersions: Starting...");
+                StorageVersion::new(4).put::<AdvisoryCommittee>();
+                StorageVersion::new(4).put::<AdvisoryCommitteeMembership>();
+                StorageVersion::new(1).put::<Balances>();
+                StorageVersion::new(4).put::<Council>();
+                StorageVersion::new(4).put::<CouncilMembership>();
+                StorageVersion::new(4).put::<TechnicalCommittee>();
+                StorageVersion::new(4).put::<TechnicalCommitteeMembership>();
+                StorageVersion::new(4).put::<Bounties>();
+                StorageVersion::new(1).put::<CampaignAssets>();
+                StorageVersion::new(1).put::<MarketAssets>();
+                StorageVersion::new(1).put::<CustomAssets>();
+                StorageVersion::new(15).put::<Contracts>();
+                log::info!("FixStorageVersions: Done!");
+                <Runtime as frame_system::Config>::DbWeight::get().writes(12)
+            }
+
+            #[cfg(feature = "try-runtime")]
+            fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
+                Ok(vec![])
+            }
+
+            #[cfg(feature = "try-runtime")]
+            fn post_upgrade(_: Vec<u8>) -> Result<(), DispatchError> {
+                Ok(())
+            }
+        }
+
+        type TrieId = BoundedVec<u8, ConstU32<128>>;
+
+        // `ContractInfo` struct that we need for `ClearContractsChildTries` but pallet-contracts
+        // doesn't expose publicly.
+        #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+        pub struct ContractInfo {
+            pub trie_id: TrieId,
+            pub code_hash: <Runtime as frame_system::Config>::Hash,
+            pub storage_bytes: u32,
+            pub storage_items: u32,
+            pub storage_byte_deposit: Balance,
+            pub storage_item_deposit: Balance,
+            pub storage_base_deposit: Balance,
+        }
+
+        struct ClearContractsChildTries;
+
+        impl OnRuntimeUpgrade for ClearContractsChildTries {
+            fn on_runtime_upgrade() -> frame_support::weights::Weight {
+                log::info!("ClearContractsChildTries: Starting...");
+                let mut total_reads = 0u64;
+                let mut total_writes = 0u64;
+                for (_, contract_info) in storage_key_iter::<AccountId, ContractInfo, Twox64Concat>(
+                    b"Contracts",
+                    b"ContractInfoOf",
+                ) {
+                    let trie_id = contract_info.trie_id;
+                    let inner_trie_id = trie_id.into_inner();
+                    let child_info = ChildInfo::new_default(&inner_trie_id);
+                    let multi_removal_result = child::clear_storage(&child_info, None, None);
+                    let writes = multi_removal_result.loops as u64;
+                    log::info!(
+                        "ClearContractsChildTries: Cleared trie {:?} in {:?} loops",
+                        inner_trie_id,
+                        writes
+                    );
+                    total_reads = total_reads.saturating_add(1);
+                    total_writes = total_writes.saturating_add(writes);
+                }
+                log::info!("ClearContractsChildTries: Done!");
+                <Runtime as frame_system::Config>::DbWeight::get()
+                    .reads_writes(total_reads, total_writes)
+            }
+
+            #[cfg(feature = "try-runtime")]
+            fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
+                Ok(vec![])
+            }
+
+            #[cfg(feature = "try-runtime")]
+            fn post_upgrade(_: Vec<u8>) -> Result<(), DispatchError> {
+                Ok(())
+            }
+        }
+
+        parameter_types! {
+            pub const ContractsPalletStr: &'static str = "Contracts";
+        }
+
+        type ResetContracts = RemovePallet<ContractsPalletStr, RocksDbWeight>;
+
+        type Migrations = (ClearContractsChildTries, ResetContracts, FixStorageVersions);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -840,14 +962,7 @@ macro_rules! impl_config_traits {
             type MaxDelegateDependencies = ContractsMaxDelegateDependencies;
             type MaxStorageKeyLen = ContractsMaxStorageKeyLen;
             #[cfg(not(feature = "runtime-benchmarks"))]
-            type Migrations = (
-                pallet_contracts::migration::v10::Migration<Self, Balances>,
-                pallet_contracts::migration::v11::Migration<Self>,
-                pallet_contracts::migration::v12::Migration<Self, Balances>,
-                pallet_contracts::migration::v13::Migration<Self>,
-                pallet_contracts::migration::v14::Migration<Self, Balances>,
-                pallet_contracts::migration::v15::Migration<Self>,
-            );
+            type Migrations = ();
             #[cfg(feature = "runtime-benchmarks")]
             type Migrations = pallet_contracts::migration::codegen::BenchMigrations;
             type Randomness = RandomnessCollectiveFlip;

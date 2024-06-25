@@ -43,12 +43,12 @@ describeSuite({
       relayApi = context.polkadotJs("Relay");
 
       const relayNetwork = (
-        relayApi.consts.system.version as RuntimeVersion
+        relayApi.consts.system.version as unknown as RuntimeVersion
       ).specName.toString();
       expect(relayNetwork, "Relay API incorrect").to.contain("rococo");
 
       const paraNetwork = (
-        paraApi.consts.system.version as RuntimeVersion
+        paraApi.consts.system.version as unknown as RuntimeVersion
       ).specName.toString();
       expect(paraNetwork, "Para API incorrect").to.contain("zeitgeist");
 
@@ -82,7 +82,7 @@ describeSuite({
         const currentCode = await paraApi.rpc.state.getStorage(":code");
         const codeString = currentCode.toString();
 
-        const moonwallContext = MoonwallContext.getContext();
+        const moonwallContext = await MoonwallContext.getContext();
         log(
           "Moonwall Context providers: " +
             moonwallContext.providers.map((p) => p.name).join(", ")
