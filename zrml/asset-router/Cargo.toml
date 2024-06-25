@@ -36,4 +36,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "zrml-asset-router"
-version = "0.4.1"
+version = "0.5.3"

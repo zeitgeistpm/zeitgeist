@@ -788,7 +788,7 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
 name = "battery-station-runtime"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "cfg-if",
  "common-runtime",
@@ -1451,7 +1451,7 @@ checksum = "2382f75942f4b3be3690fe4f86365e9c853c1587d6ee58212cebf6e2a9ccd101"
 
 [[package]]
 name = "common-runtime"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "cfg-if",
  "cumulus-pallet-xcmp-queue",
@@ -14836,11 +14836,11 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-macros"
-version = "0.5.2"
+version = "0.5.3"
 
 [[package]]
 name = "zeitgeist-node"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "battery-station-runtime",
  "cfg-if",
@@ -14934,7 +14934,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-primitives"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "arbitrary",
  "fixed",
@@ -14958,7 +14958,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-runtime"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "cfg-if",
  "common-runtime",
@@ -15110,7 +15110,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-asset-router"
-version = "0.4.1"
+version = "0.5.3"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -15130,7 +15130,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-authorized"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "env_logger 0.10.2",
  "frame-benchmarking",
@@ -15148,7 +15148,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-court"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "arrayvec 0.7.4",
  "env_logger 0.10.2",
@@ -15175,7 +15175,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-global-disputes"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "env_logger 0.10.2",
  "frame-benchmarking",
@@ -15197,7 +15197,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-hybrid-router"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "cfg-if",
  "env_logger 0.10.2",
@@ -15238,7 +15238,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-liquidity-mining"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "env_logger 0.10.2",
  "frame-benchmarking",
@@ -15258,7 +15258,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-market-commons"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "env_logger 0.10.2",
  "frame-support",
@@ -15277,7 +15277,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-neo-swaps"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "cfg-if",
  "env_logger 0.10.2",
@@ -15323,7 +15323,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-orderbook"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "env_logger 0.10.2",
  "frame-benchmarking",
@@ -15361,7 +15361,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-parimutuel"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "env_logger 0.10.2",
  "frame-benchmarking",
@@ -15387,7 +15387,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "cfg-if",
  "env_logger 0.10.2",
@@ -15441,7 +15441,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-runtime-api"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -15450,7 +15450,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-rikiddo"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "arbitrary",
  "cfg-if",
@@ -15484,7 +15484,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-simple-disputes"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "env_logger 0.10.2",
  "frame-benchmarking",
@@ -15505,7 +15505,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-styx"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "env_logger 0.10.2",
  "frame-benchmarking",
@@ -15522,7 +15522,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "env_logger 0.10.2",
  "frame-benchmarking",
@@ -15565,7 +15565,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-rpc"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -15578,7 +15578,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-runtime-api"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

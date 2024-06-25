@@ -439,7 +439,7 @@ force-debug = ["sp-debug-derive/force-debug"]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "battery-station-runtime"
-version = "0.5.2"
+version = "0.5.3"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

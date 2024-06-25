@@ -34,4 +34,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "zrml-market-commons"
-version = "0.5.2"
+version = "0.5.3"
