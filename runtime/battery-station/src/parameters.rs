@@ -327,16 +327,6 @@ parameter_types! {
     pub const MaxScheduledPerBlock: u32 = 50;
     pub const NoPreimagePostponement: Option<u64> = Some(5 * BLOCKS_PER_MINUTE);
 
-    // Simple disputes parameters
-    /// Pallet identifier, mainly used for named balance reserves.
-    pub const SimpleDisputesPalletId: PalletId = SD_PALLET_ID;
-    /// (Slashable) Bond that is provided for overriding the last outcome addition.
-    /// Slashed in case the final outcome does not match the dispute for which the `OutcomeBond`
-    /// was deposited.
-    pub const OutcomeBond: Balance = 5 * BASE;
-    /// `OutcomeBond` is increased by this factor after every new outcome addition.
-    pub const OutcomeFactor: Balance = 2 * BASE;
-
     // Swaps parameters
     /// A precentage from the withdrawal amount a liquidity provider wants to withdraw
     /// from a pool before the pool is closed.

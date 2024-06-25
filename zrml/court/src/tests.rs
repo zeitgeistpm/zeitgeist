@@ -1740,7 +1740,7 @@ fn check_appealable_market_fails_if_dispute_mechanism_wrong() {
 
         let market_id = <CourtIdToMarketId<Runtime>>::get(court_id).unwrap();
         MarketCommons::mutate_market(&market_id, |market| {
-            market.dispute_mechanism = Some(MarketDisputeMechanism::SimpleDisputes);
+            market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
             Ok(())
         })
         .unwrap();
@@ -2450,7 +2450,7 @@ fn reassign_court_stakes_rewards_treasury_if_no_winner() {
 fn on_dispute_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.dispute_mechanism = Some(MarketDisputeMechanism::SimpleDisputes);
+        market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
         assert_noop!(
             Court::on_dispute(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveCourtMechanism
@@ -2487,7 +2487,7 @@ fn on_resolution_fails_if_court_not_found() {
 fn on_resolution_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.dispute_mechanism = Some(MarketDisputeMechanism::SimpleDisputes);
+        market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
         assert_noop!(
             Court::on_resolution(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveCourtMechanism
@@ -2499,7 +2499,7 @@ fn on_resolution_denies_non_court_markets() {
 fn exchange_fails_if_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.dispute_mechanism = Some(MarketDisputeMechanism::SimpleDisputes);
+        market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
         assert_noop!(
             Court::exchange(&0, &market, &ORACLE_REPORT, NegativeImbalance::<Runtime>::zero()),
             Error::<Runtime>::MarketDoesNotHaveCourtMechanism
@@ -2610,7 +2610,7 @@ fn on_global_dispute_removes_draws() {
 fn on_global_dispute_fails_if_wrong_dispute_mechanism() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.dispute_mechanism = Some(MarketDisputeMechanism::SimpleDisputes);
+        market.dispute_mechanism = Some(MarketDisputeMechanism::Authorized);
         assert_noop!(
             Court::on_global_dispute(&0, &market),
             Error::<Runtime>::MarketDoesNotHaveCourtMechanism

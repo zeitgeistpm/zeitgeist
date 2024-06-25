@@ -55,17 +55,13 @@ macro_rules! decl_common_types {
         use orml_traits::MultiCurrency;
         use sp_runtime::{generic, DispatchError, DispatchResult, SaturatedConversion};
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
-        use zrml_market_commons::migrations::MigrateScoringRuleAmmCdaHybridAndMarketId;
-        use zrml_neo_swaps::migration::MigratePoolReservesToBoundedBTreeMap;
+        use zrml_market_commons::migrations::MigrateDisputeMechanism;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (
-            MigrateScoringRuleAmmCdaHybridAndMarketId<Runtime>,
-            MigratePoolReservesToBoundedBTreeMap<Runtime>,
-        );
+        type Migrations = (MigrateDisputeMechanism<Runtime>);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -198,7 +194,6 @@ macro_rules! decl_common_types {
                     OrderbookPalletId::get(),
                     ParimutuelPalletId::get(),
                     PmPalletId::get(),
-                    SimpleDisputesPalletId::get(),
                     SwapsPalletId::get(),
                     TreasuryPalletId::get(),
                 ];
@@ -259,8 +254,8 @@ macro_rules! create_runtime {
         use alloc::{boxed::Box, vec::Vec};
         // Pallets are enumerated based on the dependency graph.
         //
-        // For example, `PredictionMarkets` is pĺaced after `SimpleDisputes` because
-        // `PredictionMarkets` depends on `SimpleDisputes`.
+        // For example, `PredictionMarkets` is pĺaced after `MarketCommons` because
+        // `PredictionMarkets` depends on `MarketCommons`.
 
         construct_runtime!(
             pub enum Runtime where
@@ -310,7 +305,6 @@ macro_rules! create_runtime {
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 50,
                 Authorized: zrml_authorized::{Call, Event<T>, Pallet, Storage} = 51,
                 Court: zrml_court::{Call, Event<T>, Pallet, Storage} = 52,
-                SimpleDisputes: zrml_simple_disputes::{Call, Event<T>, Pallet, Storage} = 55,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
                 Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
@@ -1271,22 +1265,9 @@ macro_rules! impl_config_traits {
             type RejectOrigin = EnsureRootOrMoreThanTwoThirdsAdvisoryCommittee;
             type RequestEditOrigin = EnsureRootOrMoreThanOneThirdAdvisoryCommittee;
             type ResolveOrigin = EnsureRoot<AccountId>;
-            type SimpleDisputes = SimpleDisputes;
             type Slash = Treasury;
             type ValidityBond = ValidityBond;
             type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
-        }
-
-        impl zrml_simple_disputes::Config for Runtime {
-            type Currency = Balances;
-            type OutcomeBond = OutcomeBond;
-            type OutcomeFactor = OutcomeFactor;
-            type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
-            type RuntimeEvent = RuntimeEvent;
-            type MarketCommons = MarketCommons;
-            type MaxDisputes = MaxDisputes;
-            type PalletId = SimpleDisputesPalletId;
-            type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
         }
 
         impl zrml_global_disputes::Config for Runtime {
@@ -1484,7 +1465,6 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_swaps, Swaps);
                     list_benchmark!(list, extra, zrml_authorized, Authorized);
                     list_benchmark!(list, extra, zrml_court, Court);
-                    list_benchmark!(list, extra, zrml_simple_disputes, SimpleDisputes);
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
                     list_benchmark!(list, extra, zrml_orderbook, Orderbook);
                     list_benchmark!(list, extra, zrml_parimutuel, Parimutuel);
@@ -1589,7 +1569,6 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_swaps, Swaps);
                     add_benchmark!(params, batches, zrml_authorized, Authorized);
                     add_benchmark!(params, batches, zrml_court, Court);
-                    add_benchmark!(params, batches, zrml_simple_disputes, SimpleDisputes);
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
                     add_benchmark!(params, batches, zrml_orderbook, Orderbook);
                     add_benchmark!(params, batches, zrml_parimutuel, Parimutuel);
@@ -2202,7 +2181,6 @@ macro_rules! create_common_tests {
                 #[test_case(AuthorizedPalletId::get(); "authorized")]
                 #[test_case(CourtPalletId::get(); "court")]
                 #[test_case(PmPalletId::get(); "prediction_markets")]
-                #[test_case(SimpleDisputesPalletId::get(); "simple_disputes")]
                 #[test_case(SwapsPalletId::get(); "swaps")]
                 #[test_case(TreasuryPalletId::get(); "treasury")]
                 fn whitelisted_pallet_accounts_dont_get_reaped(pallet_id: PalletId) {

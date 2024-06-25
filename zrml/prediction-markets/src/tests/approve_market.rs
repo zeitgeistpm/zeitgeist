@@ -125,7 +125,7 @@ fn approve_market_correctly_unreserves_advisory_bond() {
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
         let market_id = 0;

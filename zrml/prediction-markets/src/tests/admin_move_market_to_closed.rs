@@ -67,7 +67,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid
         ));
         let market_id = 0;
@@ -148,7 +148,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
         assert_ok!(PredictionMarkets::create_market(
@@ -161,7 +161,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
         assert_ok!(PredictionMarkets::admin_move_market_to_closed(

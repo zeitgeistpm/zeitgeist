@@ -118,7 +118,6 @@ zrml-neo-swaps = { workspace = true }
 zrml-orderbook = { workspace = true }
 zrml-parimutuel = { workspace = true }
 zrml-prediction-markets = { workspace = true }
-zrml-simple-disputes = { workspace = true }
 zrml-styx = { workspace = true }
 zrml-swaps = { workspace = true }
 zrml-swaps-runtime-api = { workspace = true }
@@ -216,7 +215,6 @@ runtime-benchmarks = [
     "zrml-neo-swaps/runtime-benchmarks",
     "zrml-parimutuel/runtime-benchmarks",
     "zrml-prediction-markets/runtime-benchmarks",
-    "zrml-simple-disputes/runtime-benchmarks",
     "zrml-global-disputes/runtime-benchmarks",
     "zrml-styx/runtime-benchmarks",
     "zrml-swaps/runtime-benchmarks",
@@ -331,7 +329,6 @@ std = [
     "zrml-neo-swaps/std",
     "zrml-parimutuel/std",
     "zrml-prediction-markets/std",
-    "zrml-simple-disputes/std",
     "zrml-global-disputes/std",
     "zrml-styx/std",
     "zrml-swaps-runtime-api/std",
@@ -388,7 +385,6 @@ try-runtime = [
     "zrml-neo-swaps/try-runtime",
     "zrml-parimutuel/try-runtime",
     "zrml-prediction-markets/try-runtime",
-    "zrml-simple-disputes/try-runtime",
     "zrml-global-disputes/try-runtime",
     "zrml-styx/try-runtime",
     "zrml-swaps/try-runtime",

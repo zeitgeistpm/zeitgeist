@@ -11,7 +11,6 @@ libfuzzer-sys = { workspace = true }
 sp-arithmetic = { workspace = true, features = ["default"] }
 zeitgeist-primitives = { workspace = true, features = ["arbitrary", "mock", "default"] }
 zrml-prediction-markets = { workspace = true, features = ["mock", "default"] }
-zrml-simple-disputes = { workspace = true, features = ["default"] }
 
 [package]
 authors = ["Automatically generated"]
