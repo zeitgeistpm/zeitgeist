@@ -56,12 +56,10 @@ use parity_scale_codec::Compact;
 use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
-use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
 use zrml_prediction_markets::Call::{
     buy_complete_set, create_market, dispute, edit_market, redeem_shares, report, sell_complete_set,
 };
-use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use zrml_swaps::Call::{
     force_pool_exit, pool_exit, pool_exit_with_exact_asset_amount,
     pool_exit_with_exact_pool_amount, pool_join, pool_join_with_exact_asset_amount,

@@ -612,7 +612,6 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "substrate-fixed",
  "substrate-wasm-builder",
  "test-case",
  "xcm",
@@ -630,7 +629,6 @@ dependencies = [
  "zrml-orderbook",
  "zrml-parimutuel",
  "zrml-prediction-markets",
- "zrml-rikiddo",
  "zrml-simple-disputes",
  "zrml-styx",
  "zrml-swaps",
@@ -12024,7 +12022,6 @@ source = "git+https://github.com/encointer/substrate-fixed#df67f97a6db9b40215f10
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "serde",
  "typenum 1.16.0 (git+https://github.com/encointer/typenum?tag=polkadot-v1.0.0)",
 ]
 
@@ -14486,7 +14483,6 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "substrate-fixed",
  "substrate-wasm-builder",
  "test-case",
  "xcm",
@@ -14504,7 +14500,6 @@ dependencies = [
  "zrml-orderbook",
  "zrml-parimutuel",
  "zrml-prediction-markets",
- "zrml-rikiddo",
  "zrml-simple-disputes",
  "zrml-styx",
  "zrml-swaps",
@@ -14838,40 +14833,6 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "zeitgeist-primitives",
-]
-
-[[package]]
-name = "zrml-rikiddo"
-version = "0.5.2"
-dependencies = [
- "arbitrary",
- "cfg-if",
- "env_logger 0.10.1",
- "frame-support",
- "frame-system",
- "hashbrown 0.12.3",
- "pallet-balances",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "substrate-fixed",
- "zeitgeist-primitives",
- "zrml-rikiddo",
-]
-
-[[package]]
-name = "zrml-rikiddo-fuzz"
-version = "0.0.0"
-dependencies = [
- "arbitrary",
- "frame-support",
- "frame-system",
- "libfuzzer-sys",
- "substrate-fixed",
- "zrml-rikiddo",
 ]
 
 [[package]]

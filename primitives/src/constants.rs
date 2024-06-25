@@ -51,8 +51,8 @@ pub const fn deposit(items: u32, bytes: u32) -> Balance {
     items as Balance * 150 * CENT + (bytes as Balance) * 75 * MICRO
 }
 
-// Rikiddo and TokensConfig
 parameter_types! {
+    // Returns the number of decimals used on chain.
     pub const BalanceFractionalDecimals: u8 = {
         let mut base = BASE;
         let mut counter: u8 = 0;

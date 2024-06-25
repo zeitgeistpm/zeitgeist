@@ -78,7 +78,6 @@ macro_rules! decl_common_types {
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
         pub(crate) type NodeBlock = generic::Block<Header, sp_runtime::OpaqueExtrinsic>;
-        type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
         pub type SignedExtra = (
             CheckNonZeroSender<Runtime>,
             CheckSpecVersion<Runtime>,
@@ -311,7 +310,6 @@ macro_rules! create_runtime {
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 50,
                 Authorized: zrml_authorized::{Call, Event<T>, Pallet, Storage} = 51,
                 Court: zrml_court::{Call, Event<T>, Pallet, Storage} = 52,
-                RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 54,
                 SimpleDisputes: zrml_simple_disputes::{Call, Event<T>, Pallet, Storage} = 55,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
@@ -1277,21 +1275,6 @@ macro_rules! impl_config_traits {
             type Slash = Treasury;
             type ValidityBond = ValidityBond;
             type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
-        }
-
-        impl zrml_rikiddo::Config<RikiddoSigmoidFeeMarketVolumeEma> for Runtime {
-            type Timestamp = Timestamp;
-            type Balance = Balance;
-            type FixedTypeU = FixedU128<U33>;
-            type FixedTypeS = FixedI128<U33>;
-            type BalanceFractionalDecimals = BalanceFractionalDecimals;
-            type PoolId = PoolId;
-            type Rikiddo = RikiddoSigmoidMV<
-                Self::FixedTypeU,
-                Self::FixedTypeS,
-                FeeSigmoid<Self::FixedTypeS>,
-                EmaMarketVolume<Self::FixedTypeU>,
-            >;
         }
 
         impl zrml_simple_disputes::Config for Runtime {
