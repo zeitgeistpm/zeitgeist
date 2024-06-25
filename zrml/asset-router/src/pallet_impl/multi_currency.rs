@@ -49,16 +49,36 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
         if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
             // Route "pre new asset system" market assets to `CurrencyType`
             if T::MarketAssets::asset_exists(asset) {
-                T::MarketAssets::reducible_balance(asset, who, false)
+                T::MarketAssets::reducible_balance(
+                    asset,
+                    who,
+                    Preservation::Expendable,
+                    Fortitude::Polite,
+                )
             } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 T::Currencies::free_balance(currency, who)
             } else {
-                T::MarketAssets::reducible_balance(asset, who, false)
+                T::MarketAssets::reducible_balance(
+                    asset,
+                    who,
+                    Preservation::Expendable,
+                    Fortitude::Polite,
+                )
             }
         } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
-            T::CampaignAssets::reducible_balance(asset, who, false)
+            T::CampaignAssets::reducible_balance(
+                asset,
+                who,
+                Preservation::Expendable,
+                Fortitude::Polite,
+            )
         } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
-            T::CustomAssets::reducible_balance(asset, who, false)
+            T::CustomAssets::reducible_balance(
+                asset,
+                who,
+                Preservation::Expendable,
+                Fortitude::Polite,
+            )
         } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             T::Currencies::free_balance(currency, who)
         } else {
@@ -91,7 +111,7 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
             return Err(Error::<T>::UnknownAsset.into());
         };
 
-        withdraw_consequence.into_result().map(|_| ())
+        withdraw_consequence.into_result(false).map(|_| ())
     }
 
     fn transfer(
@@ -103,16 +123,19 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
         if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
             // Route "pre new asset system" market assets to `CurrencyType`
             if T::MarketAssets::asset_exists(asset) {
-                T::MarketAssets::transfer(asset, from, to, amount, false).map(|_| ())
+                T::MarketAssets::transfer(asset, from, to, amount, Preservation::Expendable)
+                    .map(|_| ())
             } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 T::Currencies::transfer(currency, from, to, amount)
             } else {
-                T::MarketAssets::transfer(asset, from, to, amount, false).map(|_| ())
+                T::MarketAssets::transfer(asset, from, to, amount, Preservation::Expendable)
+                    .map(|_| ())
             }
         } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
-            T::CampaignAssets::transfer(asset, from, to, amount, false).map(|_| ())
+            T::CampaignAssets::transfer(asset, from, to, amount, Preservation::Expendable)
+                .map(|_| ())
         } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
-            T::CustomAssets::transfer(asset, from, to, amount, false).map(|_| ())
+            T::CustomAssets::transfer(asset, from, to, amount, Preservation::Expendable).map(|_| ())
         } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             T::Currencies::transfer(currency, from, to, amount)
         } else {
@@ -125,7 +148,28 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
         who: &T::AccountId,
         amount: Self::Balance,
     ) -> DispatchResult {
-        route_call!(currency_id, deposit, mint_into, who, amount)?
+        let eval_fungible_result = |b: Self::Balance| {
+            if b != amount { Err(Error::<T>::DepositOnlyPartial.into()) } else { Ok(()) }
+        };
+
+        if let Ok(asset) = T::MarketAssetType::try_from(currency_id) {
+            // Route "pre new asset system" market assets to `CurrencyType`
+            if T::MarketAssets::asset_exists(asset) {
+                T::MarketAssets::mint_into(asset, who, amount).and_then(eval_fungible_result)
+            } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
+                T::Currencies::deposit(currency, who, amount)
+            } else {
+                T::MarketAssets::mint_into(asset, who, amount).and_then(eval_fungible_result)
+            }
+        } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
+            T::CampaignAssets::mint_into(asset, who, amount).and_then(eval_fungible_result)
+        } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
+            T::CustomAssets::mint_into(asset, who, amount).and_then(eval_fungible_result)
+        } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
+            T::Currencies::deposit(currency, who, amount)
+        } else {
+            Err(Error::<T>::UnknownAsset.into())
+        }
     }
 
     fn withdraw(
@@ -138,16 +182,20 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
             if T::MarketAssets::asset_exists(asset) {
                 // Resulting balance can be ignored as `burn_from` ensures that the
                 // requested amount can be burned.
-                T::MarketAssets::burn_from(asset, who, amount).map(|_| ())
+                T::MarketAssets::burn_from(asset, who, amount, Precision::Exact, Fortitude::Force)
+                    .map(|_| ())
             } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 T::Currencies::withdraw(currency, who, amount)
             } else {
-                T::MarketAssets::burn_from(asset, who, amount).map(|_| ())
+                T::MarketAssets::burn_from(asset, who, amount, Precision::Exact, Fortitude::Force)
+                    .map(|_| ())
             }
         } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
-            T::CampaignAssets::burn_from(asset, who, amount).map(|_| ())
+            T::CampaignAssets::burn_from(asset, who, amount, Precision::Exact, Fortitude::Force)
+                .map(|_| ())
         } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
-            T::CustomAssets::burn_from(asset, who, amount).map(|_| ())
+            T::CustomAssets::burn_from(asset, who, amount, Precision::Exact, Fortitude::Force)
+                .map(|_| ())
         } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             T::Currencies::withdraw(currency, who, amount)
         } else {
@@ -161,16 +209,36 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
             if T::MarketAssets::asset_exists(asset) {
                 // Resulting balance can be ignored as `burn_from` ensures that the
                 // requested amount can be burned.
-                T::MarketAssets::reducible_balance(asset, who, false) >= value
+                T::MarketAssets::reducible_balance(
+                    asset,
+                    who,
+                    Preservation::Expendable,
+                    Fortitude::Force,
+                ) >= value
             } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 T::Currencies::can_slash(currency, who, value)
             } else {
-                T::MarketAssets::reducible_balance(asset, who, false) >= value
+                T::MarketAssets::reducible_balance(
+                    asset,
+                    who,
+                    Preservation::Expendable,
+                    Fortitude::Force,
+                ) >= value
             }
         } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
-            T::CampaignAssets::reducible_balance(asset, who, false) >= value
+            T::CampaignAssets::reducible_balance(
+                asset,
+                who,
+                Preservation::Expendable,
+                Fortitude::Force,
+            ) >= value
         } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
-            T::CustomAssets::reducible_balance(asset, who, false) >= value
+            T::CustomAssets::reducible_balance(
+                asset,
+                who,
+                Preservation::Expendable,
+                Fortitude::Force,
+            ) >= value
         } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             T::Currencies::can_slash(currency, who, value)
         } else {
@@ -189,24 +257,16 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
             if T::MarketAssets::asset_exists(asset) {
                 // Resulting balance can be ignored as `burn_from` ensures that the
                 // requested amount can be burned.
-                T::MarketAssets::slash(asset, who, amount)
-                    .map(|b| amount.saturating_sub(b))
-                    .unwrap_or_else(|_| amount)
+                Self::withdraw(currency_id, who, amount).map(|_| Zero::zero()).unwrap_or(amount)
             } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
                 T::Currencies::slash(currency, who, amount)
             } else {
-                T::MarketAssets::slash(asset, who, amount)
-                    .map(|b| amount.saturating_sub(b))
-                    .unwrap_or_else(|_| amount)
+                Self::withdraw(currency_id, who, amount).map(|_| Zero::zero()).unwrap_or(amount)
             }
-        } else if let Ok(asset) = T::CampaignAssetType::try_from(currency_id) {
-            T::CampaignAssets::slash(asset, who, amount)
-                .map(|b| amount.saturating_sub(b))
-                .unwrap_or_else(|_| amount)
-        } else if let Ok(asset) = T::CustomAssetType::try_from(currency_id) {
-            T::CustomAssets::slash(asset, who, amount)
-                .map(|b| amount.saturating_sub(b))
-                .unwrap_or_else(|_| amount)
+        } else if T::CampaignAssetType::try_from(currency_id).is_ok() {
+            Self::withdraw(currency_id, who, amount).map(|_| Zero::zero()).unwrap_or(amount)
+        } else if T::CustomAssetType::try_from(currency_id).is_ok() {
+            Self::withdraw(currency_id, who, amount).map(|_| Zero::zero()).unwrap_or(amount)
         } else if let Ok(currency) = T::CurrencyType::try_from(currency_id) {
             T::Currencies::slash(currency, who, amount)
         } else {

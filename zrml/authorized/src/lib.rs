@@ -44,7 +44,7 @@ mod pallet {
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         PalletId, Twox64Concat,
     };
-    use frame_system::pallet_prelude::OriginFor;
+    use frame_system::pallet_prelude::{BlockNumberFor, OriginFor};
     use sp_runtime::{traits::Saturating, DispatchError, DispatchResult};
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
@@ -70,7 +70,7 @@ mod pallet {
     pub(crate) type MarketOf<T> = Market<
         <T as frame_system::Config>::AccountId,
         BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
+        BlockNumberFor<T>,
         MomentOf<T>,
         BaseAsset,
         MarketIdOf<T>,
@@ -134,18 +134,18 @@ mod pallet {
         /// The period, in which the authority can correct the outcome of a market.
         /// This value must not be zero.
         #[pallet::constant]
-        type CorrectionPeriod: Get<Self::BlockNumber>;
+        type CorrectionPeriod: Get<BlockNumberFor<Self>>;
 
         type DisputeResolution: DisputeResolutionApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 MarketId = MarketIdOf<Self>,
                 Moment = MomentOf<Self>,
             >;
 
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 Balance = BalanceOf<Self>,
             >;
 
@@ -181,7 +181,7 @@ mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -192,7 +192,7 @@ mod pallet {
         T: Config,
     {
         /// Return the resolution block number for the given market.
-        fn get_auto_resolve(market_id: &MarketIdOf<T>) -> Option<T::BlockNumber> {
+        fn get_auto_resolve(market_id: &MarketIdOf<T>) -> Option<BlockNumberFor<T>> {
             AuthorizedOutcomeReports::<T>::get(market_id).map(|report| report.resolve_at)
         }
 
@@ -246,7 +246,7 @@ mod pallet {
         type AccountId = T::AccountId;
         type Balance = BalanceOf<T>;
         type NegativeImbalance = NegativeImbalanceOf<T>;
-        type BlockNumber = T::BlockNumber;
+        type BlockNumber = BlockNumberFor<T>;
         type MarketId = MarketIdOf<T>;
         type Moment = MomentOf<T>;
         type Origin = T::RuntimeOrigin;
@@ -361,7 +361,7 @@ mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn outcomes)]
     pub type AuthorizedOutcomeReports<T: Config> =
-        StorageMap<_, Twox64Concat, MarketIdOf<T>, AuthorityReport<T::BlockNumber>, OptionQuery>;
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, AuthorityReport<BlockNumberFor<T>>, OptionQuery>;
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]

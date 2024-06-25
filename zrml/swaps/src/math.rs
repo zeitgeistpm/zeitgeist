@@ -25,7 +25,7 @@
 #![allow(clippy::let_and_return)]
 
 use crate::fixed::bpow;
-use frame_support::dispatch::DispatchError;
+use sp_runtime::DispatchError;
 use zeitgeist_primitives::{
     constants::BASE,
     math::{

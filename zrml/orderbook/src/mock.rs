@@ -27,13 +27,12 @@ use frame_support::{
     parameter_types,
     traits::{AsEnsureOriginWithArg, Everything},
 };
-use frame_system::{EnsureRoot, EnsureSigned};
+use frame_system::{mocking::MockBlock, EnsureRoot, EnsureSigned};
 use orml_traits::MultiCurrency;
 use parity_scale_codec::Compact;
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, ConstU32, IdentityLookup, Zero},
-    Perbill, SaturatedConversion,
+    BuildStorage, Perbill, SaturatedConversion,
 };
 use zeitgeist_primitives::{
     constants::mock::{
@@ -44,19 +43,16 @@ use zeitgeist_primitives::{
     },
     traits::DistributeFees,
     types::{
-        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CampaignAsset, CampaignAssetId, Currencies, CustomAsset, CustomAssetId, Hash, Index,
-        MarketAsset, MarketId, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, CampaignAsset,
+        CampaignAssetId, Currencies, CustomAsset, CustomAssetId, Hash, MarketAsset, MarketId,
+        Moment,
     },
 };
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
-
 pub const MARKET_CREATOR: AccountIdTest = 42;
-
 pub const INITIAL_BALANCE: Balance = 100 * BASE;
-
 pub const EXTERNAL_FEES: Balance = CENT;
 
 parameter_types! {
@@ -105,23 +101,18 @@ where
 }
 
 construct_runtime!(
-    pub enum Runtime
-    where
-        Block = BlockTest<Runtime>,
-        NodeBlock = BlockTest<Runtime>,
-        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
-    {
-        AssetManager: orml_currencies::{Call, Pallet, Storage},
-        AssetRouter: zrml_asset_router::{Pallet},
-        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        CampaignAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>},
-        CustomAssets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>},
-        MarketAssets: pallet_assets::<Instance3>::{Call, Pallet, Storage, Event<T>},
-        MarketCommons: zrml_market_commons::{Pallet, Storage},
-        Orderbook: orderbook::{Call, Event<T>, Pallet},
-        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+    pub enum Runtime {
+        AssetManager: orml_currencies,
+        AssetRouter: zrml_asset_router,
+        Balances: pallet_balances,
+        CampaignAssets: pallet_assets::<Instance2>,
+        CustomAssets: pallet_assets::<Instance1>,
+        MarketAssets: pallet_assets::<Instance3>,
+        MarketCommons: zrml_market_commons,
+        Orderbook: orderbook,
+        System: frame_system,
+        Timestamp: pallet_timestamp,
+        Tokens: orml_tokens,
     }
 );
 
@@ -138,18 +129,17 @@ impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountIdTest;
     type BaseCallFilter = Everything;
+    type Block = MockBlock<Runtime>;
     type BlockHashCount = BlockHashCount;
     type BlockLength = ();
-    type BlockNumber = BlockNumber;
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
     type DbWeight = ();
     type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
-    type Header = Header;
-    type Index = Index;
     type Lookup = IdentityLookup<Self::AccountId>;
+    type Nonce = u64;
     type MaxConsumers = frame_support::traits::ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
@@ -286,8 +276,12 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
+    type FreezeIdentifier = ();
+    type RuntimeHoldReason = ();
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
+    type MaxHolds = ();
+    type MaxFreezes = ();
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
@@ -334,7 +328,7 @@ impl Default for ExtBuilder {
 }
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
         // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
         let _ = env_logger::builder().is_test(true).try_init();

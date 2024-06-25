@@ -5,6 +5,7 @@ frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 hydra-dx-math = { workspace = true }
+log = { workspace = true }
 orml-traits = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
@@ -21,7 +22,7 @@ orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
 pallet-assets = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
-pallet-randomness-collective-flip = { workspace = true, optional = true }
+pallet-insecure-randomness-collective-flip = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
 pallet-treasury = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
@@ -50,7 +51,7 @@ mock = [
     "orml-currencies/default",
     "orml-tokens/default",
     "pallet-balances",
-    "pallet-randomness-collective-flip/default",
+    "pallet-insecure-randomness-collective-flip/default",
     "pallet-timestamp/default",
     "pallet-treasury/default",
     "sp-api/default",
@@ -106,6 +107,6 @@ try-runtime = [
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2021"
+edition.workspace = true
 name = "zrml-neo-swaps"
 version = "0.5.2"

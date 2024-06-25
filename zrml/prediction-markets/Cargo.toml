@@ -2,6 +2,7 @@
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+log = { workspace = true }
 orml-traits = { workspace = true }
 pallet-assets = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
@@ -19,12 +20,13 @@ zrml-simple-disputes = { workspace = true }
 
 # Mock
 
+cfg-if = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
 orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
-pallet-randomness-collective-flip = { workspace = true, optional = true }
+pallet-insecure-randomness-collective-flip = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
 pallet-treasury = { workspace = true, optional = true }
 sp-api = { workspace = true, optional = true }
@@ -41,13 +43,14 @@ zrml-prediction-markets = { workspace = true, features = ["mock", "default"] }
 [features]
 default = ["std"]
 mock = [
+    "cfg-if",
     "env_logger/default",
     "orml-asset-registry/default",
     "orml-currencies/default",
     "orml-tokens/default",
     "pallet-assets/default",
     "pallet-balances/default",
-    "pallet-randomness-collective-flip/default",
+    "pallet-insecure-randomness-collective-flip/default",
     "pallet-timestamp/default",
     "pallet-treasury/default",
     "serde/default",
@@ -95,6 +98,6 @@ try-runtime = [
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2021"
+edition.workspace = true
 name = "zrml-prediction-markets"
 version = "0.5.2"

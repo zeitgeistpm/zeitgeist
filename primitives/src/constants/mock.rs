@@ -164,7 +164,7 @@ parameter_types! {
 // Shared within tests
 // Balance
 parameter_types! {
-    pub const ExistentialDeposit: u128 = CENT;
+    pub const ExistentialDeposit: u128 = 2;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 }
@@ -191,7 +191,7 @@ parameter_type_with_key! {
 
 // System
 parameter_types! {
-    pub const BlockHashCount: u64 = 250;
+    pub const BlockHashCount: u32 = 250;
 }
 
 // Time

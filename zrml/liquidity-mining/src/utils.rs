@@ -1,3 +1,4 @@
+// Copyright 2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,6 +18,7 @@
 
 use crate::MomentOf;
 use core::ops::{Div, Range};
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{
     traits::{CheckedDiv, Saturating, UniqueSaturatedInto},
     SaturatedConversion,
@@ -29,7 +31,7 @@ use zeitgeist_primitives::constants::MILLISECS_PER_BLOCK;
 // To convert the block number type to the moment type, is is necessary to first convert the
 // block number value to `u32`, which caps the maximum output to `u32::MAX`. Since this function
 // is only used to evaluate perpetual balances, such limitation shouldn't be a problem.
-pub fn calculate_average_blocks_of_a_time_period<T>(range: &Range<MomentOf<T>>) -> T::BlockNumber
+pub fn calculate_average_blocks_of_a_time_period<T>(range: &Range<MomentOf<T>>) -> BlockNumberFor<T>
 where
     T: crate::Config,
 {

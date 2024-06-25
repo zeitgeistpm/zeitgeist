@@ -1,3 +1,4 @@
+// Copyright 2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -18,7 +19,7 @@
 #![cfg(test)]
 
 use crate::{mock::*, Crossings, Error, Event};
-use frame_support::{assert_noop, assert_ok, error::BadOrigin};
+use frame_support::{assert_noop, assert_ok, error::BadOrigin, traits::fungible::Mutate};
 
 #[test]
 fn cross_slashes_funds_and_stores_crossing() {
@@ -68,7 +69,7 @@ fn set_burn_amount_should_fail_with_unathorized_caller() {
 fn account_should_not_cross_without_sufficient_funds() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), ALICE, 0, 0));
+        assert_eq!(Balances::set_balance(&ALICE, 0), 0);
         assert_noop!(
             Styx::cross(RuntimeOrigin::signed(ALICE)),
             Error::<Runtime>::FundDoesNotHaveEnoughFreeBalance

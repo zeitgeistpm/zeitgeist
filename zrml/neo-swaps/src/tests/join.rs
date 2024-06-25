@@ -216,7 +216,7 @@ fn join_fails_on_insufficient_funds() {
                 _100,
                 vec![u128::MAX, u128::MAX]
             ),
-            pallet_assets::Error::<Runtime, MarketAssetsInstance>::NoAccount
+            DispatchError::Arithmetic(ArithmeticError::Underflow)
         );
     });
 }

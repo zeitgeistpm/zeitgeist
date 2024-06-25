@@ -20,8 +20,7 @@ use crate::{mock::*, utils::market_mock, Error, Event, Order, Orders};
 use frame_support::{assert_noop, assert_ok, traits::fungibles::Create};
 use orml_tokens::Error as AError;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use pallet_balances::Error as BError;
-use sp_runtime::{Perbill, Perquintill};
+use sp_runtime::{DispatchError, Perbill, Perquintill, TokenError};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
@@ -495,7 +494,7 @@ fn place_order_fails_if_maker_has_insufficient_funds() {
                 taker_asset,
                 25 * BASE,
             ),
-            BError::<Runtime>::InsufficientBalance,
+            DispatchError::Token(TokenError::FundsUnavailable)
         );
     });
 }

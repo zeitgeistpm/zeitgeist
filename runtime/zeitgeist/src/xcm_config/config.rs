@@ -36,8 +36,8 @@ use orml_xcm_support::{
     DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
 };
 use pallet_xcm::XcmPassthrough;
-use polkadot_parachain::primitives::Sibling;
-use sp_runtime::traits::Convert;
+use polkadot_parachain_primitives::primitives::Sibling;
+use sp_runtime::traits::{ConstU32, Convert, MaybeEquivalence};
 use xcm::{
     latest::{
         prelude::{AccountId32, AssetId, Concrete, GeneralKey, MultiAsset, XcmContext, X1, X2},
@@ -50,13 +50,13 @@ use xcm_builder::{
     AllowTopLevelPaidExecutionFrom, FixedRateOfFungible, FixedWeightBounds, ParentIsPreset,
     RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
-    TakeWeightCredit,
+    TakeWeightCredit, WithComputedOrigin,
 };
-use xcm_executor::{traits::TransactAsset, Assets as ExecutorAssets, Config};
+use xcm_executor::{traits::TransactAsset, Assets as ExecutorAssets};
 use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::XcmAsset};
 
 pub mod zeitgeist {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "runtime-benchmarks"))]
     pub const ID: u32 = 2092;
     pub const KEY: &[u8] = &[0, 1];
 }
@@ -66,7 +66,10 @@ pub struct XcmConfig;
 /// The main XCM config
 /// This is where we configure the core of our XCM integrations: how tokens are transferred,
 /// how fees are calculated, what barriers we impose on incoming XCM messages, etc.
-impl Config for XcmConfig {
+impl xcm_executor::Config for XcmConfig {
+    /// A list of (Origin, Target) pairs allowing a given Origin to be substituted with its
+    /// corresponding Target pair.
+    type Aliasers = Nothing;
     /// Handler for exchanging assets.
     type AssetExchanger = ();
     /// The handler for when there is an instruction to claim assets.
@@ -124,12 +127,18 @@ impl Config for XcmConfig {
 pub type Barrier = (
     // Execution barrier that just takes max_weight from weight_credit
     TakeWeightCredit,
-    // Ensures that execution time is bought with BuyExecution instruction
-    AllowTopLevelPaidExecutionFrom<Everything>,
     // Expected responses are OK.
     AllowKnownQueryResponses<PolkadotXcm>,
-    // Subscriptions for version tracking are OK.
-    AllowSubscriptionsFrom<Everything>,
+    WithComputedOrigin<
+        (
+            // If the message is one that immediately attemps to pay for execution, then allow it.
+            AllowTopLevelPaidExecutionFrom<Everything>,
+            // Subscriptions for version tracking are OK.
+            AllowSubscriptionsFrom<Everything>,
+        ),
+        UniversalLocation,
+        ConstU32<8>,
+    >,
 );
 
 /// The means of purchasing weight credit for XCM execution.
@@ -153,11 +162,10 @@ pub struct ToTreasury;
 impl TakeRevenue for ToTreasury {
     fn take_revenue(revenue: MultiAsset) {
         use orml_traits::MultiCurrency;
-        use xcm_executor::traits::Convert;
 
         if let MultiAsset { id: Concrete(location), fun: Fungible(_amount) } = revenue {
-            if let Ok(asset_id) =
-                <AssetConvert as Convert<MultiLocation, Assets>>::convert(location)
+            if let Some(asset_id) =
+                <AssetConvert as MaybeEquivalence<MultiLocation, Assets>>::convert(&location)
             {
                 let adj_am =
                     AlignedFractionalMultiAssetTransactor::adjust_fractional_places(&revenue).fun;
@@ -348,6 +356,58 @@ pub struct AssetConvert;
 /// handle it on their side.
 impl Convert<Assets, Option<MultiLocation>> for AssetConvert {
     fn convert(id: Assets) -> Option<MultiLocation> {
+        <Self as MaybeEquivalence<_, _>>::convert_back(&id)
+    }
+}
+
+impl Convert<MultiLocation, Option<Assets>> for AssetConvert {
+    fn convert(location: MultiLocation) -> Option<Assets> {
+        <Self as MaybeEquivalence<_, _>>::convert(&location)
+    }
+}
+
+impl Convert<XcmAsset, Option<MultiLocation>> for AssetConvert {
+    fn convert(id: XcmAsset) -> Option<MultiLocation> {
+        <Self as MaybeEquivalence<_, _>>::convert_back(&id)
+    }
+}
+
+/// Convert an incoming `MultiLocation` into a `Asset` if possible.
+/// Here we need to know the canonical representation of all the tokens we handle in order to
+/// correctly convert their `MultiLocation` representation into our internal `Asset` type.
+impl MaybeEquivalence<MultiLocation, Assets> for AssetConvert {
+    fn convert(location: &MultiLocation) -> Option<Assets> {
+        match location {
+            MultiLocation { parents: 0, interior: X1(GeneralKey { data, length }) } => {
+                let key = &data[..data.len().min(*length as usize)];
+
+                if key == zeitgeist::KEY {
+                    return Some(Assets::Ztg);
+                }
+
+                None
+            }
+            MultiLocation {
+                parents: 1,
+                interior: X2(Junction::Parachain(para_id), GeneralKey { data, length }),
+            } => {
+                let key = &data[..data.len().min(*length as usize)];
+
+                if *para_id == u32::from(ParachainInfo::parachain_id()) {
+                    if key == zeitgeist::KEY {
+                        return Some(Assets::Ztg);
+                    }
+
+                    return None;
+                }
+
+                AssetRegistry::location_to_asset_id(location).map(|a| a.into())
+            }
+            _ => AssetRegistry::location_to_asset_id(location).map(|a| a.into()),
+        }
+    }
+
+    fn convert_back(id: &Assets) -> Option<MultiLocation> {
         match id {
             Assets::Ztg => Some(MultiLocation::new(
                 1,
@@ -357,7 +417,7 @@ impl Convert<Assets, Option<MultiLocation>> for AssetConvert {
                 ),
             )),
             Assets::ForeignAsset(_) => {
-                let asset = XcmAsset::try_from(id).ok()?;
+                let asset = XcmAsset::try_from(*id).ok()?;
                 AssetRegistry::multilocation(&asset).ok()?
             }
             _ => None,
@@ -365,68 +425,24 @@ impl Convert<Assets, Option<MultiLocation>> for AssetConvert {
     }
 }
 
-impl Convert<XcmAsset, Option<MultiLocation>> for AssetConvert {
-    fn convert(id: XcmAsset) -> Option<MultiLocation> {
-        <Self as Convert<Assets, Option<MultiLocation>>>::convert(id.into())
+impl MaybeEquivalence<MultiLocation, XcmAsset> for AssetConvert {
+    fn convert(location: &MultiLocation) -> Option<XcmAsset> {
+        <Self as MaybeEquivalence<MultiLocation, Assets>>::convert(location)
+            .and_then(|asset| asset.try_into().ok())
     }
-}
 
-/// Convert an incoming `MultiLocation` into a `Asset` if possible.
-/// Here we need to know the canonical representation of all the tokens we handle in order to
-/// correctly convert their `MultiLocation` representation into our internal `Asset` type.
-impl xcm_executor::traits::Convert<MultiLocation, Assets> for AssetConvert {
-    fn convert(location: MultiLocation) -> Result<Assets, MultiLocation> {
-        match location {
-            MultiLocation { parents: 0, interior: X1(GeneralKey { data, length }) } => {
-                let key = &data[..data.len().min(length as usize)];
-
-                if key == zeitgeist::KEY {
-                    return Ok(Assets::Ztg);
-                }
-
-                Err(location)
-            }
-            MultiLocation {
-                parents: 1,
-                interior: X2(Junction::Parachain(para_id), GeneralKey { data, length }),
-            } => {
-                let key = &data[..data.len().min(length as usize)];
-
-                if para_id == u32::from(ParachainInfo::parachain_id()) {
-                    if key == zeitgeist::KEY {
-                        return Ok(Assets::Ztg);
-                    }
-
-                    return Err(location);
-                }
-
-                AssetRegistry::location_to_asset_id(location).ok_or(location).map(|a| a.into())
-            }
-            _ => AssetRegistry::location_to_asset_id(location).ok_or(location).map(|a| a.into()),
-        }
-    }
-}
-
-impl xcm_executor::traits::Convert<MultiLocation, XcmAsset> for AssetConvert {
-    fn convert(location: MultiLocation) -> Result<XcmAsset, MultiLocation> {
-        <Self as xcm_executor::traits::Convert<MultiLocation, Assets>>::convert(location)
-            .and_then(|asset| asset.try_into().map_err(|_| location))
+    fn convert_back(id: &XcmAsset) -> Option<MultiLocation> {
+        <Self as MaybeEquivalence<MultiLocation, Assets>>::convert_back(&Assets::from(*id))
     }
 }
 
 impl Convert<MultiAsset, Option<Assets>> for AssetConvert {
     fn convert(asset: MultiAsset) -> Option<Assets> {
         if let MultiAsset { id: Concrete(location), .. } = asset {
-            <AssetConvert as xcm_executor::traits::Convert<_, _>>::convert(location).ok()
+            <AssetConvert as MaybeEquivalence<_, _>>::convert(&location)
         } else {
             None
         }
-    }
-}
-
-impl Convert<MultiLocation, Option<Assets>> for AssetConvert {
-    fn convert(location: MultiLocation) -> Option<Assets> {
-        <AssetConvert as xcm_executor::traits::Convert<_, _>>::convert(location).ok()
     }
 }
 

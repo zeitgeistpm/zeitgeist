@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::hybrid_router_api_types::{AmmSoftFail, AmmTrade, ApiError};
-use frame_support::dispatch::DispatchError;
+use sp_runtime::DispatchError;
 
 /// A type alias for the return struct of AMM buy and sell.
 type AmmTradeOf<T> = AmmTrade<<T as HybridRouterAmmApi>::Balance>;

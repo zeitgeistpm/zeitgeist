@@ -80,7 +80,7 @@ zrml-rikiddo = { workspace = true, features = ["arbitrary", "mock", "default"] }
 
 [package]
 authors = ["Automatically generated"]
-edition = "2021"
+edition.workspace = true
 name = "zrml-rikiddo-fuzz"
 publish = false
 version = "0.0.0"

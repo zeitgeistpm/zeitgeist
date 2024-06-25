@@ -21,37 +21,41 @@ use crate::{
         setup::{
             foreign_parent_multilocation, foreign_sibling_multilocation, foreign_ztg_multilocation,
             register_foreign_parent, register_foreign_sibling, FOREIGN_PARENT_ID,
-            FOREIGN_SIBLING_ID,
+            FOREIGN_SIBLING_ID, PARA_ID_BATTERY_STATION,
         },
-        test_net::Zeitgeist,
+        test_net::BatteryStation,
     },
     xcm_config::config::{battery_station, general_key, AssetConvert},
     Assets, CustomMetadata, ScalarPosition, XcmAsset,
 };
 use core::fmt::Debug;
-use frame_support::assert_err;
-use sp_runtime::traits::Convert as C2;
+use sp_runtime::traits::{Convert, MaybeEquivalence};
 use test_case::test_case;
 use xcm::latest::{Junction::*, Junctions::*, MultiLocation};
 use xcm_emulator::TestExt;
-use xcm_executor::traits::Convert as C1;
 
 fn convert_common_native<T>(expected: T)
 where
     T: Copy + Debug + PartialEq,
-    AssetConvert: C1<MultiLocation, T> + C2<T, Option<MultiLocation>>,
+    AssetConvert: MaybeEquivalence<MultiLocation, T> + Convert<T, Option<MultiLocation>>,
 {
     assert_eq!(battery_station::KEY.to_vec(), vec![0, 1]);
 
-    // The way Ztg is represented relative within the Zeitgeist runtime
+    // The way Ztg is represented relative within the Battery Station runtime
     let ztg_location_inner: MultiLocation =
         MultiLocation::new(0, X1(general_key(battery_station::KEY)));
 
-    assert_eq!(<AssetConvert as C1<_, _>>::convert(ztg_location_inner), Ok(expected));
+    assert_eq!(
+        <AssetConvert as MaybeEquivalence<_, _>>::convert(&ztg_location_inner),
+        Some(expected)
+    );
 
     // The canonical way Ztg is represented out in the wild
-    Zeitgeist::execute_with(|| {
-        assert_eq!(<AssetConvert as C2<_, _>>::convert(expected), Some(foreign_ztg_multilocation()))
+    BatteryStation::execute_with(|| {
+        assert_eq!(
+            <AssetConvert as Convert<_, _>>::convert(expected),
+            Some(foreign_ztg_multilocation())
+        )
     });
 }
 
@@ -61,15 +65,18 @@ fn convert_common_non_native<T>(
     register: fn(Option<CustomMetadata>),
 ) where
     T: Copy + Debug + PartialEq,
-    AssetConvert: C1<MultiLocation, T> + C2<T, Option<MultiLocation>>,
+    AssetConvert: MaybeEquivalence<MultiLocation, T> + Convert<T, Option<MultiLocation>>,
 {
-    Zeitgeist::execute_with(|| {
-        assert_err!(<AssetConvert as C1<_, _>>::convert(multilocation), multilocation);
-        assert_eq!(<AssetConvert as C2<_, _>>::convert(expected), None);
-        // Register parent as foreign asset in the Zeitgeist parachain
+    BatteryStation::execute_with(|| {
+        assert_eq!(<AssetConvert as MaybeEquivalence<_, _>>::convert(&multilocation), None);
+        assert_eq!(<AssetConvert as Convert<_, _>>::convert(expected), None);
+        // Register parent as foreign asset in the BatteryStation parachain
         register(None);
-        assert_eq!(<AssetConvert as C1<_, _>>::convert(multilocation), Ok(expected));
-        assert_eq!(<AssetConvert as C2<_, _>>::convert(expected), Some(multilocation));
+        assert_eq!(
+            <AssetConvert as MaybeEquivalence<_, _>>::convert(&multilocation),
+            Some(expected)
+        );
+        assert_eq!(<AssetConvert as Convert<_, _>>::convert(expected), Some(multilocation));
     });
 }
 
@@ -122,10 +129,12 @@ fn convert_any_registered_sibling_multilocation_xcm_assets() {
 #[test]
 fn convert_unkown_multilocation() {
     let unknown_location: MultiLocation =
-        MultiLocation::new(1, X2(Parachain(battery_station::ID), general_key(&[42])));
+        MultiLocation::new(1, X2(Parachain(PARA_ID_BATTERY_STATION), general_key(&[42])));
 
-    Zeitgeist::execute_with(|| {
-        assert!(<AssetConvert as C1<_, Assets>>::convert(unknown_location).is_err());
+    BatteryStation::execute_with(|| {
+        assert!(
+            <AssetConvert as MaybeEquivalence<_, Assets>>::convert(&unknown_location).is_none()
+        );
     });
 }
 
@@ -164,7 +173,9 @@ fn convert_unkown_multilocation() {
 fn convert_unsupported_asset<T>(asset: T)
 where
     T: Copy + Debug + PartialEq,
-    AssetConvert: C2<T, Option<MultiLocation>>,
+    AssetConvert: Convert<T, Option<MultiLocation>>,
 {
-    Zeitgeist::execute_with(|| assert_eq!(<AssetConvert as C2<_, _>>::convert(asset), None));
+    BatteryStation::execute_with(|| {
+        assert_eq!(<AssetConvert as Convert<_, _>>::convert(asset), None)
+    });
 }

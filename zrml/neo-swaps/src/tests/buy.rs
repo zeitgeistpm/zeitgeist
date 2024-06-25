@@ -299,7 +299,7 @@ fn buy_fails_on_insufficient_funds() {
         );
         let amount_in = _10;
         #[cfg(not(feature = "parachain"))]
-        let expected_error = pallet_balances::Error::<Runtime>::InsufficientBalance;
+        let expected_error = DispatchError::Token(TokenError::FundsUnavailable);
         #[cfg(feature = "parachain")]
         let expected_error = orml_tokens::Error::<Runtime>::BalanceTooLow;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in - 1));

@@ -17,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]
 
 extern crate alloc;
 
@@ -79,11 +79,10 @@ use {
 
 use frame_support::construct_runtime;
 
-use sp_api::impl_runtime_apis;
+use sp_api::{impl_runtime_apis, BlockT};
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str,
-    traits::Block as BlockT,
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
@@ -105,8 +104,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 55,
-    impl_version: 1,
+    spec_version: 56,
+    impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 29,
     state_version: 1,
@@ -224,6 +223,7 @@ create_runtime_with_additional_pallets!(
 impl pallet_sudo::Config for Runtime {
     type RuntimeCall = RuntimeCall;
     type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = ();
 }
 
 impl_config_traits!();

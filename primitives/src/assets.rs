@@ -45,11 +45,22 @@ mod tests;
 /// meaning that they think the outcome will be closer to the upper bound
 /// or a `Short` position meaning that they think the outcome will be closer
 /// to the lower bound.
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
-    Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, Ord, PartialEq, PartialOrd, TypeInfo,
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    TypeInfo,
+    serde::Deserialize,
+    serde::Serialize,
 )]
+#[serde(rename_all = "camelCase")]
 pub enum ScalarPosition {
     Long,
     Short,

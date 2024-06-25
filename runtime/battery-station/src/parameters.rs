@@ -47,7 +47,7 @@ use zeitgeist_primitives::{constants::*, types::*};
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
     WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
-    polkadot_primitives::v2::MAX_POV_SIZE as u64,
+    polkadot_primitives::MAX_POV_SIZE as u64,
 );
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
@@ -56,11 +56,12 @@ pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
 #[cfg(not(feature = "parachain"))]
 parameter_types! {
     // Aura
+    pub const AllowMultipleBlocksPerSlot: bool = false;
     pub const MaxAuthorities: u32 = 32;
 
     // Grandpa
-    // Can be 0, as equivocation handling is not enabled (HandleEquivocation = ())
     pub const MaxSetIdSessionEntries: u32 = 0;
+    pub const MaxNominators: u32 = 0;
 }
 
 parameter_types! {
@@ -110,6 +111,8 @@ parameter_types! {
 
     // Balance
     pub const ExistentialDeposit: u128 = 5 * MILLI;
+    pub const MaxHolds: u32 = 1;
+    pub const MaxFreezes: u32 = 1;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 
@@ -122,22 +125,19 @@ parameter_types! {
     pub const CouncilMaxMembers: u32 = 100;
     pub const CouncilMaxProposals: u32 = 100;
     pub const CouncilMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub MaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
     pub const TechnicalCommitteeMaxMembers: u32 = 100;
     pub const TechnicalCommitteeMaxProposals: u32 = 64;
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Contracts
-    pub const ContractsDeletionQueueDepth: u32 = 128;
-    pub ContractsDeletionWeightLimit: Weight = Perbill::from_percent(10)
-        * RuntimeBlockWeights::get()
-            .per_class
-            .get(DispatchClass::Normal)
-            .max_total
-            .unwrap_or(RuntimeBlockWeights::get().max_block);
+    pub const ContractsCodeHashLockupDepositPercent: Perbill = Perbill::from_percent(10);
+    pub const ContractsDefaultDepositLimit: Balance = deposit(16, 16 * 1024 * 1024);
     pub const ContractsDepositPerByte: Balance = deposit(0,1);
     pub const ContractsDepositPerItem: Balance = deposit(1,0);
     pub const ContractsMaxCodeLen: u32 = 123 * 1024;
     pub const ContractsMaxDebugBufferLen: u32 = 2 * 1024 * 1024;
+    pub const ContractsMaxDelegateDependencies: u32 = 32;
     pub const ContractsMaxStorageKeyLen: u32 = 128;
     pub const ContractsUnsafeUnstableInterface: bool = true;
     pub ContractsSchedule: pallet_contracts::Schedule<Runtime> = Default::default();
@@ -429,7 +429,7 @@ parameter_types! {
     /// The maximum number of approvals that can wait in the spending queue.
     pub const MaxApprovals: u32 = 100;
     /// Maximum amount a verified origin can spend
-    pub const MaxTreasurySpend: Balance = Balance::max_value();
+    pub const MaxTreasurySpend: Balance = Balance::MAX;
     /// Fraction of a proposal's value that should be bonded in order to place the proposal.
     /// An accepted proposal gets these back. A rejected proposal does not.
     pub const ProposalBond: Permill = Permill::from_percent(5);

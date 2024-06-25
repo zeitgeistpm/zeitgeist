@@ -34,17 +34,19 @@ use alloc::{
 use core::marker::PhantomData;
 use frame_support::{
     dispatch::DispatchResult,
-    ensure, log,
+    ensure,
     pallet_prelude::{
         ConstU32, Decode, DispatchResultWithPostInfo, Encode, EnsureOrigin, Hooks, OptionQuery,
-        StorageMap, StorageValue, TypeInfo, ValueQuery, Weight,
+        StorageMap, StorageValue, TypeInfo, ValueQuery,
     },
     traits::{
         Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
         NamedReservableCurrency, OnUnbalanced, Randomness, ReservableCurrency, StorageVersion,
         WithdrawReasons,
     },
-    transactional, Blake2_128Concat, BoundedVec, PalletId, RuntimeDebug, Twox64Concat,
+    transactional,
+    weights::Weight,
+    Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
 };
 use frame_system::{
     ensure_signed,
@@ -58,7 +60,7 @@ use sp_arithmetic::{
 };
 use sp_runtime::{
     traits::{AccountIdConversion, CheckedDiv, Hash, Saturating, StaticLookup, Zero},
-    DispatchError, Perbill, SaturatedConversion,
+    DispatchError, Perbill, RuntimeDebug, SaturatedConversion,
 };
 use zeitgeist_macros::unreachable_non_terminating;
 use zeitgeist_primitives::{
@@ -97,19 +99,19 @@ mod pallet {
 
         /// The expected blocks per year to calculate the inflation emission.
         #[pallet::constant]
-        type BlocksPerYear: Get<Self::BlockNumber>;
+        type BlocksPerYear: Get<BlockNumberFor<Self>>;
 
         /// The time in which the jurors can cast their commitment vote.
         #[pallet::constant]
-        type VotePeriod: Get<Self::BlockNumber>;
+        type VotePeriod: Get<BlockNumberFor<Self>>;
 
         /// The time in which the jurors should reveal their commitment vote.
         #[pallet::constant]
-        type AggregationPeriod: Get<Self::BlockNumber>;
+        type AggregationPeriod: Get<BlockNumberFor<Self>>;
 
         /// The time in which a court case can get appealed.
         #[pallet::constant]
-        type AppealPeriod: Get<Self::BlockNumber>;
+        type AppealPeriod: Get<BlockNumberFor<Self>>;
 
         /// The court lock identifier.
         #[pallet::constant]
@@ -122,12 +124,12 @@ mod pallet {
         /// The currency implementation used to transfer, lock and reserve tokens.
         type Currency: Currency<Self::AccountId>
             + NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>
-            + LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
+            + LockableCurrency<Self::AccountId, Moment = BlockNumberFor<Self>>;
 
         /// The functionality to allow controlling the markets resolution time.
         type DisputeResolution: DisputeResolutionApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 MarketId = MarketIdOf<Self>,
                 Moment = MomentOf<Self>,
             >;
@@ -137,12 +139,12 @@ mod pallet {
 
         /// The inflation period in which new tokens are minted.
         #[pallet::constant]
-        type InflationPeriod: Get<Self::BlockNumber>;
+        type InflationPeriod: Get<BlockNumberFor<Self>>;
 
         /// Market commons
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 Balance = BalanceOf<Self>,
             >;
 
@@ -184,11 +186,11 @@ mod pallet {
         type MonetaryGovernanceOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Randomness source
-        type Random: Randomness<Self::Hash, Self::BlockNumber>;
+        type Random: Randomness<Self::Hash, BlockNumberFor<Self>>;
 
         /// The global interval which schedules the start of new court vote periods.
         #[pallet::constant]
-        type RequestInterval: Get<Self::BlockNumber>;
+        type RequestInterval: Get<BlockNumberFor<Self>>;
 
         /// Handler for slashed funds.
         type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
@@ -222,7 +224,7 @@ mod pallet {
     pub(crate) type MarketOf<T> = Market<
         AccountIdOf<T>,
         BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
+        BlockNumberFor<T>,
         MomentOf<T>,
         BaseAsset,
         MarketIdOf<T>,
@@ -230,7 +232,7 @@ mod pallet {
     pub(crate) type HashOf<T> = <T as frame_system::Config>::Hash;
     pub(crate) type AccountIdLookupOf<T> =
         <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
-    pub(crate) type CourtOf<T> = CourtInfo<<T as frame_system::Config>::BlockNumber, AppealsOf<T>>;
+    pub(crate) type CourtOf<T> = CourtInfo<BlockNumberFor<T>, AppealsOf<T>>;
     pub(crate) type DelegatedStakesOf<T> =
         BoundedVec<(AccountIdOf<T>, BalanceOf<T>), <T as Config>::MaxDelegations>;
     pub(crate) type SelectionValueOf<T> = SelectionValue<BalanceOf<T>, DelegatedStakesOf<T>>;
@@ -296,7 +298,7 @@ mod pallet {
     /// The future block number when jurors should start voting.
     /// This is useful for the user experience of the jurors to vote for multiple courts at once.
     #[pallet::storage]
-    pub type RequestBlock<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+    pub type RequestBlock<T: Config> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
     #[pallet::type_value]
     pub fn DefaultYearlyInflation<T: Config>() -> Perbill {
@@ -489,8 +491,8 @@ mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        fn on_initialize(now: T::BlockNumber) -> Weight {
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_initialize(now: BlockNumberFor<T>) -> Weight {
             let mut total_weight: Weight = Weight::zero();
             total_weight = total_weight.saturating_add(Self::handle_inflation(now));
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
@@ -1363,7 +1365,7 @@ mod pallet {
         }
 
         // Handle the external incentivisation of the court system.
-        pub(crate) fn handle_inflation(now: T::BlockNumber) -> Weight {
+        pub(crate) fn handle_inflation(now: BlockNumberFor<T>) -> Weight {
             let inflation_period = T::InflationPeriod::get();
             match now.checked_rem(&inflation_period) {
                 Some(rem) if rem.is_zero() => (),
@@ -1968,7 +1970,7 @@ mod pallet {
         pub(crate) fn check_appealable_market(
             court_id: CourtId,
             court: &CourtOf<T>,
-            now: T::BlockNumber,
+            now: BlockNumberFor<T>,
         ) -> Result<(), DispatchError> {
             if let Some(market_id) = <CourtIdToMarketId<T>>::get(court_id) {
                 let market = T::MarketCommons::market(&market_id)?;
@@ -2308,7 +2310,7 @@ mod pallet {
         type AccountId = T::AccountId;
         type Balance = BalanceOf<T>;
         type NegativeImbalance = NegativeImbalanceOf<T>;
-        type BlockNumber = T::BlockNumber;
+        type BlockNumber = BlockNumberFor<T>;
         type MarketId = MarketIdOf<T>;
         type Moment = MomentOf<T>;
         type Origin = T::RuntimeOrigin;

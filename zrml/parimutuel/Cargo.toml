@@ -2,6 +2,7 @@
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+log = { workspace = true }
 orml-traits = { workspace = true }
 pallet-assets = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
@@ -15,7 +16,7 @@ zrml-market-commons = { workspace = true }
 env_logger = { workspace = true }
 orml-currencies = { workspace = true, features = ["default"] }
 orml-tokens = { workspace = true, features = ["default"] }
-pallet-balances = { workspace = true, features = ["default"] }
+pallet-balances = { workspace = true, features = ["default", "insecure_zero_ed"] }
 pallet-timestamp = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 zeitgeist-primitives = { workspace = true, features = ["mock", "default"] }
@@ -48,6 +49,6 @@ try-runtime = [
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2021"
+edition.workspace = true
 name = "zrml-parimutuel"
 version = "0.5.2"

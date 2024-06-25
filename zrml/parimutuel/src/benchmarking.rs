@@ -29,7 +29,7 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::{SaturatedConversion, Saturating};
+use sp_runtime::{traits::Zero, SaturatedConversion, Saturating};
 use zeitgeist_primitives::{
     traits::MarketTransitionApi,
     types::{MarketStatus, MarketType, OutcomeReport},
@@ -60,6 +60,7 @@ fn buy_asset<T: Config>(
 #[benchmarks]
 mod benchmarks {
     use super::*;
+    use alloc::vec;
 
     #[benchmark]
     fn buy() {
@@ -95,11 +96,11 @@ mod benchmarks {
             T::MinBetSize::get().saturating_mul(10u128.saturated_into::<BalanceOf<T>>());
         buy_asset::<T>(market_id, loser_asset, &loser, loser_amount);
 
-        T::MarketCommons::mutate_market(&market_id, |market| {
+        assert_ok!(T::MarketCommons::mutate_market(&market_id, |market| {
             market.status = MarketStatus::Resolved;
             market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
             Ok(())
-        })?;
+        }));
 
         #[extrinsic_call]
         claim_rewards(RawOrigin::Signed(winner), market_id);
@@ -125,7 +126,7 @@ mod benchmarks {
             T::MinBetSize::get().saturating_mul(10u128.saturated_into::<BalanceOf<T>>());
         buy_asset::<T>(market_id, loser_1_asset, &loser_1, loser_1_amount);
 
-        T::MarketCommons::mutate_market(&market_id, |market| {
+        assert_ok!(T::MarketCommons::mutate_market(&market_id, |market| {
             market.status = MarketStatus::Resolved;
             let resolved_index = 9u16;
             let resolved_outcome = OutcomeReport::Categorical(resolved_index);
@@ -136,7 +137,7 @@ mod benchmarks {
             assert!(resolved_issuance_asset.is_zero());
             market.resolved_outcome = Some(resolved_outcome);
             Ok(())
-        })?;
+        }));
 
         #[extrinsic_call]
         claim_refunds(RawOrigin::Signed(loser_0), loser_0_asset);
@@ -167,12 +168,12 @@ mod benchmarks {
             assert!(T::AssetCreator::asset_exists(asset));
         }
 
-        T::MarketCommons::mutate_market(&market_id, |market| {
+        assert_ok!(T::MarketCommons::mutate_market(&market_id, |market| {
             market.status = MarketStatus::Resolved;
             let resolved_outcome = OutcomeReport::Categorical(0u16);
             market.resolved_outcome = Some(resolved_outcome);
             Ok(())
-        })?;
+        }));
 
         #[block]
         {

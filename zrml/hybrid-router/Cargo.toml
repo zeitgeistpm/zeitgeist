@@ -9,13 +9,13 @@ sp-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 zrml-market-commons = { workspace = true }
 
-
+cfg-if = { workspace = true, optional = true }
 orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
 pallet-assets = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
-pallet-randomness-collective-flip = { workspace = true, optional = true }
+pallet-insecure-randomness-collective-flip = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
 pallet-treasury = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
@@ -41,12 +41,13 @@ zrml-hybrid-router = { workspace = true, features = ["mock"] }
 [features]
 default = ["std"]
 mock = [
+    "cfg-if",
     "orml-asset-registry/default",
     "orml-currencies/default",
     "orml-tokens/default",
     "pallet-assets/default",
     "pallet-balances/default",
-    "pallet-randomness-collective-flip/default",
+    "pallet-insecure-randomness-collective-flip/default",
     "pallet-timestamp/default",
     "pallet-treasury/default",
     "pallet-xcm/default",
@@ -96,6 +97,6 @@ try-runtime = [
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2021"
+edition.workspace = true
 name = "zrml-hybrid-router"
 version = "0.5.2"

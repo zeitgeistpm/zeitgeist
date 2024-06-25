@@ -23,55 +23,43 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
     type Balance = T::Balance;
 
     fn total_issuance(asset: Self::AssetId) -> Self::Balance {
-        route_call!(asset, total_issuance, total_issuance,).unwrap_or(Zero::zero())
+        route_call_with_trait!(asset, Inspect, total_issuance,).unwrap_or(Zero::zero())
+    }
+
+    fn active_issuance(asset: Self::AssetId) -> Self::Balance {
+        route_call_with_trait!(asset, Inspect, active_issuance,).unwrap_or(Zero::zero())
     }
 
     fn minimum_balance(asset: Self::AssetId) -> Self::Balance {
-        route_call!(asset, minimum_balance, minimum_balance,).unwrap_or(Zero::zero())
+        route_call_with_trait!(asset, Inspect, minimum_balance,).unwrap_or(Zero::zero())
     }
 
     fn balance(asset: Self::AssetId, who: &T::AccountId) -> Self::Balance {
-        route_call!(asset, total_balance, balance, who).unwrap_or(Zero::zero())
+        route_call_with_trait!(asset, Inspect, balance, who).unwrap_or(Zero::zero())
+    }
+
+    fn total_balance(asset: Self::AssetId, who: &T::AccountId) -> Self::Balance {
+        route_call_with_trait!(asset, Inspect, total_balance, who).unwrap_or(Zero::zero())
     }
 
     fn reducible_balance(
         asset: Self::AssetId,
         who: &T::AccountId,
-        keep_alive: bool,
+        preservation: Preservation,
+        force: Fortitude,
     ) -> Self::Balance {
-        if T::CurrencyType::try_from(asset).is_ok() {
-            <Self as MultiCurrency<T::AccountId>>::free_balance(asset, who)
-        } else {
-            only_asset!(asset, Zero::zero(), Inspect, reducible_balance, who, keep_alive)
-        }
+        route_call_with_trait!(asset, Inspect, reducible_balance, who, preservation, force)
+            .unwrap_or(Zero::zero())
     }
 
     fn can_deposit(
         asset: Self::AssetId,
         who: &T::AccountId,
         amount: Self::Balance,
-        mint: bool,
+        provenance: Provenance,
     ) -> DepositConsequence {
-        if T::CurrencyType::try_from(asset).is_err() {
-            return only_asset!(
-                asset,
-                DepositConsequence::UnknownAsset,
-                Inspect,
-                can_deposit,
-                who,
-                amount,
-                mint
-            );
-        }
-
-        let total_balance = <Self as MultiCurrency<T::AccountId>>::total_balance(asset, who);
-        let min_balance = <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
-
-        if total_balance.saturating_add(amount) < min_balance {
-            DepositConsequence::BelowMinimum
-        } else {
-            DepositConsequence::Success
-        }
+        route_call_with_trait!(asset, Inspect, can_deposit, who, amount, provenance)
+            .unwrap_or(DepositConsequence::UnknownAsset)
     }
 
     fn can_withdraw(
@@ -79,46 +67,11 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
         who: &T::AccountId,
         amount: Self::Balance,
     ) -> WithdrawConsequence<Self::Balance> {
-        if T::CurrencyType::try_from(asset).is_err() {
-            return only_asset!(
-                asset,
-                WithdrawConsequence::UnknownAsset,
-                Inspect,
-                can_withdraw,
-                who,
-                amount
-            );
-        }
-
-        let can_withdraw =
-            <Self as MultiCurrency<T::AccountId>>::ensure_can_withdraw(asset, who, amount);
-
-        if let Err(_e) = can_withdraw {
-            return WithdrawConsequence::NoFunds;
-        }
-
-        let total_balance = <Self as MultiCurrency<T::AccountId>>::total_balance(asset, who);
-        let min_balance = <Self as MultiCurrency<T::AccountId>>::minimum_balance(asset);
-        let remainder = total_balance.saturating_sub(amount);
-
-        if remainder < min_balance {
-            WithdrawConsequence::ReducedToZero(remainder)
-        } else {
-            WithdrawConsequence::Success
-        }
+        route_call_with_trait!(asset, Inspect, can_withdraw, who, amount)
+            .unwrap_or(WithdrawConsequence::UnknownAsset)
     }
 
     fn asset_exists(asset: Self::AssetId) -> bool {
-        if let Ok(currency) = T::CurrencyType::try_from(asset) {
-            if <T::Currencies as MultiCurrency<T::AccountId>>::total_issuance(currency)
-                > Zero::zero()
-            {
-                true
-            } else {
-                only_asset!(asset, false, Inspect, asset_exists,)
-            }
-        } else {
-            only_asset!(asset, false, Inspect, asset_exists,)
-        }
+        route_call_with_trait!(asset, Inspect, asset_exists,).unwrap_or(false)
     }
 }

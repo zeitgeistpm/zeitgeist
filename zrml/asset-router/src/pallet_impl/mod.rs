@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+pub mod balanced;
 pub mod create;
 pub mod destroy;
 pub mod inspect;
