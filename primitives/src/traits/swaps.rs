@@ -18,8 +18,8 @@
 
 use crate::types::PoolId;
 use alloc::vec::Vec;
-use frame_support::dispatch::{DispatchError, Weight};
-use sp_runtime::DispatchResult;
+use frame_support::weights::Weight;
+use sp_runtime::{DispatchError, DispatchResult};
 
 pub trait Swaps<AccountId> {
     type Asset;

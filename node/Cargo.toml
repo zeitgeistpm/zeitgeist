@@ -17,6 +17,9 @@ sc-client-db = { workspace = true }
 sc-consensus = { workspace = true }
 sc-executor = { workspace = true }
 sc-keystore = { workspace = true }
+sc-network = { workspace = true }
+sc-network-statement = { workspace = true }
+sc-offchain = { workspace = true }
 sc-rpc = { workspace = true }
 sc-rpc-api = { workspace = true }
 sc-service = { workspace = true }
@@ -75,8 +78,7 @@ pallet-author-inherent = { workspace = true, features = ["default"], optional = 
 pallet-parachain-staking = { workspace = true, features = ["default"], optional = true }
 parity-scale-codec = { workspace = true, features = ["default"], optional = true }
 sc-chain-spec = { workspace = true, optional = true }
-sc-network = { workspace = true, optional = true }
-sc-network-common = { workspace = true, optional = true }
+sc-network-sync = { workspace = true, optional = true }
 sc-tracing = { workspace = true, optional = true }
 serde = { workspace = true, features = ["default"], optional = true }
 session-keys-primitives = { workspace = true, features = ["default"], optional = true }
@@ -86,7 +88,7 @@ substrate-prometheus-endpoint = { workspace = true, optional = true }
 # Polkadot
 
 polkadot-cli = { workspace = true, optional = true }
-polkadot-parachain = { workspace = true, features = ["default"], optional = true }
+polkadot-parachain-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-service = { workspace = true, optional = true }
 polkadot-test-service = { workspace = true, optional = true }
@@ -94,9 +96,9 @@ polkadot-test-service = { workspace = true, optional = true }
 # Standalone
 
 sc-consensus-aura = { workspace = true }
-sc-finality-grandpa = { workspace = true }
+sc-consensus-grandpa = { workspace = true }
 sp-consensus-aura = { workspace = true }
-sp-finality-grandpa = { workspace = true, features = ["default"] }
+sp-consensus-grandpa = { workspace = true, features = ["default"] }
 
 # Utility
 cfg-if = { workspace = true }
@@ -148,8 +150,7 @@ parachain = [
     "parity-scale-codec",
     "session-keys-primitives",
     "sc-chain-spec",
-    "sc-network",
-    "sc-network-common",
+    "sc-network-sync",
     "sc-tracing",
     "serde",
     "sp-keystore",
@@ -158,7 +159,7 @@ parachain = [
     # Polkadot
 
     "polkadot-cli",
-    "polkadot-parachain",
+    "polkadot-parachain-primitives",
     "polkadot-primitives",
     "polkadot-service",
     "polkadot-test-service",
@@ -184,7 +185,7 @@ with-zeitgeist-runtime = ["zeitgeist-runtime"]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 build = "build.rs"
 description = "An evolving blockchain for prediction markets and futarchy."
-edition = "2021"
+edition.workspace = true
 homepage = "https://zeitgeist.pm"
 name = "zeitgeist-node"
 version = "0.5.2"

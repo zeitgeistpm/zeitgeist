@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -64,34 +64,34 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:2 w:2)
     fn suggest_outcome(d: u32, r: u32, e: u32) -> Weight {
-        Weight::from_ref_time(400_160_000)
+        Weight::from_parts(400_160_000, 0)
             // Standard Error: 1_302_000
-            .saturating_add(Weight::from_ref_time(3_511_000).saturating_mul(d.into()))
+            .saturating_add(Weight::from_parts(3_511_000, 0).saturating_mul(d.into()))
             // Standard Error: 69_000
-            .saturating_add(Weight::from_ref_time(324_000).saturating_mul(r.into()))
+            .saturating_add(Weight::from_parts(324_000, 0).saturating_mul(r.into()))
             // Standard Error: 69_000
-            .saturating_add(Weight::from_ref_time(311_000).saturating_mul(e.into()))
+            .saturating_add(Weight::from_parts(311_000, 0).saturating_mul(e.into()))
             .saturating_add(T::DbWeight::get().reads(5))
             .saturating_add(T::DbWeight::get().writes(4))
     }
 
     fn on_dispute_weight() -> Weight {
-        Weight::from_ref_time(0)
+        Weight::from_all(0)
     }
     // Storage: SimpleDisputes Disputes (r:1 w:0)
     fn on_resolution_weight(d: u32) -> Weight {
-        Weight::from_ref_time(5_464_000)
+        Weight::from_parts(5_464_000, 0)
             // Standard Error: 3_000
-            .saturating_add(Weight::from_ref_time(210_000).saturating_mul(d.into()))
+            .saturating_add(Weight::from_parts(210_000, 0).saturating_mul(d.into()))
             .saturating_add(T::DbWeight::get().reads(1))
     }
     // Storage: SimpleDisputes Disputes (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     fn exchange_weight(d: u32) -> Weight {
-        Weight::from_ref_time(18_573_000)
+        Weight::from_parts(18_573_000, 0)
             // Standard Error: 14_000
-            .saturating_add(Weight::from_ref_time(19_710_000).saturating_mul(d.into()))
+            .saturating_add(Weight::from_parts(19_710_000, 0).saturating_mul(d.into()))
             .saturating_add(T::DbWeight::get().reads(1))
             .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(d.into())))
             .saturating_add(T::DbWeight::get().writes(1))
@@ -99,32 +99,32 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     // Storage: SimpleDisputes Disputes (r:1 w:0)
     fn get_auto_resolve_weight(d: u32) -> Weight {
-        Weight::from_ref_time(5_535_000)
+        Weight::from_parts(5_535_000, 0)
             // Standard Error: 3_000
-            .saturating_add(Weight::from_ref_time(145_000).saturating_mul(d.into()))
+            .saturating_add(Weight::from_parts(145_000, 0).saturating_mul(d.into()))
             .saturating_add(T::DbWeight::get().reads(1))
     }
     // Storage: SimpleDisputes Disputes (r:1 w:0)
     fn has_failed_weight(d: u32) -> Weight {
-        Weight::from_ref_time(5_685_000)
+        Weight::from_parts(5_685_000, 0)
             // Standard Error: 2_000
-            .saturating_add(Weight::from_ref_time(117_000).saturating_mul(d.into()))
+            .saturating_add(Weight::from_parts(117_000, 0).saturating_mul(d.into()))
             .saturating_add(T::DbWeight::get().reads(1))
     }
     // Storage: SimpleDisputes Disputes (r:1 w:0)
     fn on_global_dispute_weight(d: u32) -> Weight {
-        Weight::from_ref_time(5_815_000)
+        Weight::from_parts(5_815_000, 0)
             // Standard Error: 2_000
-            .saturating_add(Weight::from_ref_time(66_000).saturating_mul(d.into()))
+            .saturating_add(Weight::from_parts(66_000, 0).saturating_mul(d.into()))
             .saturating_add(T::DbWeight::get().reads(1))
     }
     // Storage: SimpleDisputes Disputes (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     fn clear_weight(d: u32) -> Weight {
-        Weight::from_ref_time(15_958_000)
+        Weight::from_parts(15_958_000, 0)
             // Standard Error: 17_000
-            .saturating_add(Weight::from_ref_time(13_085_000).saturating_mul(d.into()))
+            .saturating_add(Weight::from_parts(13_085_000, 0).saturating_mul(d.into()))
             .saturating_add(T::DbWeight::get().reads(1))
             .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(d.into())))
             .saturating_add(T::DbWeight::get().writes(1))

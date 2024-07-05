@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -40,7 +40,7 @@ mod pallet {
     use crate::{types::*, weights::WeightInfoZeitgeist, GlobalDisputesPalletApi, InitialItemOf};
     use core::marker::PhantomData;
     use frame_support::{
-        ensure, log,
+        ensure,
         pallet_prelude::{
             DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, StorageMap, ValueQuery,
         },
@@ -51,7 +51,10 @@ mod pallet {
         },
         Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{
+        ensure_signed,
+        pallet_prelude::{BlockNumberFor, OriginFor},
+    };
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
         DispatchError, DispatchResult,
@@ -69,12 +72,8 @@ mod pallet {
 
     pub(crate) type OwnerInfoOf<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxOwners>;
     pub type OutcomeInfoOf<T> = OutcomeInfo<AccountIdOf<T>, BalanceOf<T>, OwnerInfoOf<T>>;
-    pub type GlobalDisputeInfoOf<T> = GlobalDisputeInfo<
-        AccountIdOf<T>,
-        BalanceOf<T>,
-        OwnerInfoOf<T>,
-        <T as frame_system::Config>::BlockNumber,
-    >;
+    pub type GlobalDisputeInfoOf<T> =
+        GlobalDisputeInfo<AccountIdOf<T>, BalanceOf<T>, OwnerInfoOf<T>, BlockNumberFor<T>>;
 
     type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     pub type LockInfoOf<T> =
@@ -91,16 +90,16 @@ mod pallet {
     pub trait Config: frame_system::Config {
         /// The time period in which the addition of new outcomes are allowed.
         #[pallet::constant]
-        type AddOutcomePeriod: Get<Self::BlockNumber>;
+        type AddOutcomePeriod: Get<BlockNumberFor<Self>>;
 
         /// The currency implementation used to lock tokens for voting.
-        type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
+        type Currency: LockableCurrency<Self::AccountId, Moment = BlockNumberFor<Self>>;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type DisputeResolution: DisputeResolutionApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 MarketId = MarketIdOf<Self>,
                 Moment = MomentOf<Self>,
             >;
@@ -117,7 +116,7 @@ mod pallet {
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
                 Balance = BalanceOf<Self>,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
             >;
 
         /// The maximum numbers of distinct markets
@@ -142,7 +141,7 @@ mod pallet {
 
         /// The time period in which votes are allowed.
         #[pallet::constant]
-        type GdVotingPeriod: Get<Self::BlockNumber>;
+        type GdVotingPeriod: Get<BlockNumberFor<Self>>;
 
         /// The fee required to add a voting outcome.
         #[pallet::constant]
@@ -764,16 +763,16 @@ mod pallet {
         }
     }
 
-    impl<T> GlobalDisputesPalletApi<MarketIdOf<T>, AccountIdOf<T>, BalanceOf<T>, T::BlockNumber>
+    impl<T> GlobalDisputesPalletApi<MarketIdOf<T>, AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
         for Pallet<T>
     where
         T: Config,
     {
-        fn get_add_outcome_period() -> T::BlockNumber {
+        fn get_add_outcome_period() -> BlockNumberFor<T> {
             T::AddOutcomePeriod::get()
         }
 
-        fn get_vote_period() -> T::BlockNumber {
+        fn get_vote_period() -> BlockNumberFor<T> {
             T::GdVotingPeriod::get()
         }
 

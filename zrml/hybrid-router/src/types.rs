@@ -19,7 +19,7 @@ use crate::{AmmTradeOf, BalanceOf, Config, OrderTradeOf};
 use alloc::vec::Vec;
 use frame_support::pallet_prelude::*;
 use scale_info::TypeInfo;
-use sp_runtime::traits::Zero;
+use sp_runtime::{traits::Zero, DispatchError};
 use zeitgeist_primitives::math::checked_ops_res::{CheckedAddRes, CheckedSubRes};
 
 /// Represents the strategy used when placing an order in a trading environment.

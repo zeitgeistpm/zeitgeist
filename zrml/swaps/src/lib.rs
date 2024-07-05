@@ -58,12 +58,13 @@ mod pallet {
     use alloc::{collections::btree_map::BTreeMap, vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
-        dispatch::Weight,
         ensure,
         pallet_prelude::{OptionQuery, StorageMap, StorageValue, ValueQuery},
         require_transactional,
         traits::{Get, IsType, StorageVersion},
-        transactional, Blake2_128Concat, PalletError, PalletId, Parameter,
+        transactional,
+        weights::Weight,
+        Blake2_128Concat, PalletError, PalletId, Parameter,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
@@ -81,7 +82,7 @@ mod pallet {
             fixed::FixedMul,
         },
         traits::{PoolSharesId, Swaps},
-        types::{PoolId, SerdeWrapper},
+        types::PoolId,
     };
 
     /// The current storage version.
@@ -366,7 +367,7 @@ mod pallet {
             + MaybeSerializeDeserialize
             + Ord
             + TypeInfo
-            + PoolSharesId<SerdeWrapper<PoolId>>;
+            + PoolSharesId<PoolId>;
 
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = Self::Asset>;
 
@@ -564,7 +565,6 @@ mod pallet {
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
-    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
@@ -1092,7 +1092,7 @@ mod pallet {
         }
 
         pub(crate) fn pool_shares_id(pool_id: PoolId) -> AssetOf<T> {
-            T::Asset::pool_shares_id(SerdeWrapper(pool_id))
+            T::Asset::pool_shares_id(pool_id)
         }
 
         pub fn pool_by_id(pool_id: PoolId) -> Result<PoolOf<T>, DispatchError>

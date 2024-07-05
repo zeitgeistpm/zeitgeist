@@ -3,6 +3,7 @@ arrayvec = { workspace = true }
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 rand = { workspace = true, features = ["alloc", "std_rng"] }
 rand_chacha = { workspace = true }
@@ -16,7 +17,7 @@ zrml-market-commons = { workspace = true }
 [dev-dependencies]
 env_logger = { workspace = true }
 pallet-balances = { workspace = true, features = ["default"] }
-pallet-randomness-collective-flip = { workspace = true, features = ["default"] }
+pallet-insecure-randomness-collective-flip = { workspace = true, features = ["default"] }
 pallet-timestamp = { workspace = true, features = ["default"] }
 pallet-treasury = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
@@ -46,6 +47,6 @@ try-runtime = [
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2021"
+edition.workspace = true
 name = "zrml-court"
 version = "0.5.2"

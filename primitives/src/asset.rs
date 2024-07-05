@@ -20,44 +20,40 @@
 use crate::traits::ZeitgeistAssetEnumerator;
 use crate::{
     traits::PoolSharesId,
-    types::{CategoryIndex, PoolId, SerdeWrapper},
+    types::{CategoryIndex, PoolId},
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use serde::{Deserialize, Serialize};
 
 /// The `Asset` enum represents all types of assets available in the Zeitgeist
 /// system.
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
     Clone,
     Copy,
     Debug,
     Decode,
     Default,
+    Deserialize,
     Eq,
     Encode,
     MaxEncodedLen,
     Ord,
     PartialEq,
     PartialOrd,
+    Serialize,
     TypeInfo,
 )]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub enum Asset<MarketId> {
     CategoricalOutcome(MarketId, CategoryIndex),
     ScalarOutcome(MarketId, ScalarPosition),
     CombinatorialOutcome,
-    PoolShare(SerdeWrapper<PoolId>),
+    PoolShare(PoolId),
     #[default]
     Ztg,
     ForeignAsset(u32),
     ParimutuelShare(MarketId, CategoryIndex),
-}
-
-impl<MarketId: MaxEncodedLen> PoolSharesId<SerdeWrapper<PoolId>> for Asset<MarketId> {
-    fn pool_shares_id(pool_id: SerdeWrapper<PoolId>) -> Self {
-        Self::PoolShare(pool_id)
-    }
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -67,15 +63,32 @@ impl<MarketId: MaxEncodedLen> ZeitgeistAssetEnumerator<MarketId> for Asset<Marke
     }
 }
 
+impl<MarketId: MaxEncodedLen> PoolSharesId<PoolId> for Asset<MarketId> {
+    fn pool_shares_id(pool_id: PoolId) -> Self {
+        Self::PoolShare(pool_id)
+    }
+}
+
 /// In a scalar market, users can either choose a `Long` position,
 /// meaning that they think the outcome will be closer to the upper bound
 /// or a `Short` position meaning that they think the outcome will be closer
 /// to the lower bound.
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
-    Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, Ord, PartialEq, PartialOrd, TypeInfo,
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Deserialize,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    TypeInfo,
 )]
+#[serde(rename_all = "camelCase")]
 pub enum ScalarPosition {
     Long,
     Short,

@@ -29,8 +29,8 @@ use frame_support::{
     traits::{Currency, ReservableCurrency},
     BoundedVec,
 };
-use pallet_balances::{BalanceLock, Error as BalancesError};
-use sp_runtime::{traits::Zero, SaturatedConversion};
+use pallet_balances::BalanceLock;
+use sp_runtime::{traits::Zero, DispatchError, SaturatedConversion, TokenError};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::mock::{
@@ -479,7 +479,7 @@ fn add_vote_outcome_fails_if_balance_too_low() {
                 market_id,
                 OutcomeReport::Scalar(80),
             ),
-            BalancesError::<Runtime>::InsufficientBalance
+            DispatchError::Token(TokenError::FundsUnavailable)
         );
     });
 }
@@ -846,7 +846,7 @@ fn transfer_fails_with_fully_locked_balance() {
 
         assert_noop!(
             Balances::transfer(RuntimeOrigin::signed(*disputor), BOB, arbitrary_amount + 1),
-            pallet_balances::Error::<Runtime>::LiquidityRestrictions
+            DispatchError::Token(TokenError::Frozen)
         );
         assert_ok!(Balances::transfer(RuntimeOrigin::signed(*disputor), BOB, arbitrary_amount));
     });

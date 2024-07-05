@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -18,11 +18,10 @@
 
 use clap::Parser;
 use sc_cli::{
-    self, ChainSpec, ImportParams, KeystoreParams, NetworkParams, RuntimeVersion, SharedParams,
-    SubstrateCli,
+    self, ChainSpec, ImportParams, KeystoreParams, NetworkParams, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
-use std::{net::SocketAddr, path::PathBuf};
+use std::path::PathBuf;
 
 const BATTERY_STATION_RELAY_ID: &str = "battery_station_relay_v3";
 
@@ -46,12 +45,13 @@ impl RelayChainCli {
     ) -> Self {
         let extension = crate::chain_spec::Extensions::try_get(&*para_config.chain_spec);
         let chain_id = extension.map(|e| e.relay_chain.clone());
-        let base_path = para_config
-            .base_path
-            .as_ref()
-            .map(|x| x.path().join(chain_id.clone().unwrap_or_else(|| "polkadot".into())));
+        let base_path = para_config.base_path.path().join("polkadot");
 
-        Self { base_path, chain_id, base: clap::Parser::parse_from(relay_chain_args) }
+        Self {
+            base_path: Some(base_path),
+            chain_id,
+            base: polkadot_cli::RunCmd::parse_from(relay_chain_args),
+        }
     }
 }
 
@@ -127,24 +127,12 @@ impl sc_cli::CliConfiguration<Self> for RelayChainCli {
         self.base.base.rpc_cors(is_dev)
     }
 
-    fn rpc_http(&self, default_listen_port: u16) -> sc_cli::Result<Option<SocketAddr>> {
-        self.base.base.rpc_http(default_listen_port)
-    }
-
-    fn rpc_ipc(&self) -> sc_cli::Result<Option<String>> {
-        self.base.base.rpc_ipc()
-    }
-
     fn rpc_methods(&self) -> sc_cli::Result<sc_service::config::RpcMethods> {
         self.base.base.rpc_methods()
     }
 
-    fn rpc_ws(&self, default_listen_port: u16) -> sc_cli::Result<Option<SocketAddr>> {
-        self.base.base.rpc_ws(default_listen_port)
-    }
-
-    fn rpc_ws_max_connections(&self) -> sc_cli::Result<Option<usize>> {
-        self.base.base.rpc_ws_max_connections()
+    fn rpc_max_connections(&self) -> sc_cli::Result<u32> {
+        self.base.base.rpc_max_connections()
     }
 
     fn shared_params(&self) -> &SharedParams {
@@ -168,11 +156,7 @@ impl sc_cli::DefaultConfigurationValues for RelayChainCli {
         9616
     }
 
-    fn rpc_http_listen_port() -> u16 {
-        9934
-    }
-
-    fn rpc_ws_listen_port() -> u16 {
+    fn rpc_listen_port() -> u16 {
         9945
     }
 }
@@ -209,10 +193,6 @@ impl sc_cli::SubstrateCli for RelayChainCli {
             )
             .load_spec(id)
         }
-    }
-
-    fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        polkadot_cli::Cli::native_runtime_version(chain_spec)
     }
 
     fn support_url() -> String {

@@ -22,20 +22,20 @@ use crate::{
 use alloc::collections::BTreeMap;
 use core::marker::PhantomData;
 use frame_support::{
-    dispatch::Weight,
-    log,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
-    RuntimeDebug,
+    weights::Weight,
 };
+use log;
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
-use sp_runtime::Saturating;
+use sp_runtime::{RuntimeDebug, Saturating};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "try-runtime")] {
         use crate::{MarketIdOf};
         use alloc::{format, vec::Vec};
         use frame_support::{migration::storage_key_iter, pallet_prelude::Twox64Concat};
+        use sp_runtime::DispatchError;
     }
 }
 
@@ -111,7 +111,7 @@ where
     }
 
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
         let old_pools =
             storage_key_iter::<MarketIdOf<T>, OldPoolOf<T>, Twox64Concat>(NEO_SWAPS, POOLS)
                 .collect::<BTreeMap<_, _>>();
@@ -119,7 +119,7 @@ where
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(previous_state: Vec<u8>) -> Result<(), DispatchError> {
         let old_pools: BTreeMap<MarketIdOf<T>, OldPoolOf<T>> =
             Decode::decode(&mut &previous_state[..])
                 .map_err(|_| "Failed to decode state: Invalid state")?;
@@ -152,11 +152,11 @@ mod tests {
         MarketIdOf, PoolOf, Pools,
     };
     use alloc::collections::BTreeMap;
-    use frame_support::{
-        dispatch::fmt::Debug, migration::put_storage_value, storage_root, StateVersion,
-        StorageHasher, Twox64Concat,
-    };
+    use core::fmt::Debug;
+    use frame_support::{migration::put_storage_value, StorageHasher, Twox64Concat};
     use parity_scale_codec::Encode;
+    use sp_io::storage::root as storage_root;
+    use sp_runtime::StateVersion;
     use zeitgeist_primitives::types::Asset;
 
     #[test]

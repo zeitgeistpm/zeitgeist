@@ -24,6 +24,8 @@
 
 #![cfg(all(feature = "mock", test))]
 #![allow(clippy::too_many_arguments)]
+// TODO(#1328): Remove after rustc nightly-2024-04-22
+#![allow(clippy::duplicated_attributes)]
 
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},

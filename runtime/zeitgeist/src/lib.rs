@@ -17,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]
 
 extern crate alloc;
 
@@ -64,11 +64,10 @@ use {
 
 use frame_support::construct_runtime;
 
-use sp_api::impl_runtime_apis;
+use sp_api::{impl_runtime_apis, BlockT};
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str,
-    traits::Block as BlockT,
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
@@ -90,8 +89,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 55,
-    impl_version: 1,
+    spec_version: 56,
+    impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 29,
     state_version: 1,
@@ -112,7 +111,7 @@ impl Contains<RuntimeCall> for IsCallable {
             kill_prefix, kill_storage, set_code, set_code_without_checks, set_storage,
         };
         use orml_currencies::Call::update_balance;
-        use pallet_balances::Call::{force_transfer, set_balance};
+        use pallet_balances::Call::{force_set_balance, force_transfer};
         use pallet_collective::Call::set_members;
         use pallet_contracts::Call::{
             call, call_old_weight, instantiate, instantiate_old_weight, remove_code,
@@ -129,7 +128,7 @@ impl Contains<RuntimeCall> for IsCallable {
         match runtime_call {
             // Membership is managed by the respective Membership instance
             RuntimeCall::AdvisoryCommittee(set_members { .. }) => false,
-            // See "balance.set_balance"
+            // See "balance.force_set_balance"
             RuntimeCall::AssetManager(update_balance { .. }) => false,
             RuntimeCall::Balances(inner_call) => {
                 match inner_call {
@@ -139,7 +138,7 @@ impl Contains<RuntimeCall> for IsCallable {
                     // in case something goes terribly wrong (like a hack that draws the funds
                     // from such an account, see Maganta hack). Invoking this function one can
                     // also easily mess up consistency in regards to reserved tokens and locks.
-                    set_balance { .. } => false,
+                    force_set_balance { .. } => false,
                     // There should be no reason to force an account to transfer funds.
                     force_transfer { .. } => false,
                     _ => true,

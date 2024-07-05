@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Balance, CurrencyId};
+use crate::{AssetRegistryStringLimit, Balance, CurrencyId};
 use orml_traits::asset_registry::{AssetMetadata, AssetProcessor};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -29,11 +29,16 @@ use zeitgeist_primitives::types::CustomMetadata;
 /// Only pre check is to ensure an asset id was passed.
 pub struct CustomAssetProcessor;
 
-impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for CustomAssetProcessor {
+impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit>>
+    for CustomAssetProcessor
+{
     fn pre_register(
         id: Option<CurrencyId>,
-        metadata: AssetMetadata<Balance, CustomMetadata>,
-    ) -> Result<(CurrencyId, AssetMetadata<Balance, CustomMetadata>), DispatchError> {
+        metadata: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit>,
+    ) -> Result<
+        (CurrencyId, AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit>),
+        DispatchError,
+    > {
         match id {
             Some(id) => Ok((id, metadata)),
             None => Err(DispatchError::Other("asset-registry: AssetId is required")),
@@ -42,7 +47,7 @@ impl AssetProcessor<CurrencyId, AssetMetadata<Balance, CustomMetadata>> for Cust
 
     fn post_register(
         _id: CurrencyId,
-        _asset_metadata: AssetMetadata<Balance, CustomMetadata>,
+        _asset_metadata: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit>,
     ) -> Result<(), DispatchError> {
         Ok(())
     }

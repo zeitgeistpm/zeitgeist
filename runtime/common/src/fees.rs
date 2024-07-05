@@ -41,8 +41,8 @@ macro_rules! impl_fee_types {
 
         pub struct DealWithForeignFees;
 
-        impl OnUnbalanced<CreditOf<AccountId, Tokens>> for DealWithForeignFees {
-            fn on_unbalanced(fees_and_tips: CreditOf<AccountId, Tokens>) {
+        impl OnUnbalanced<Credit<AccountId, Tokens>> for DealWithForeignFees {
+            fn on_unbalanced(fees_and_tips: Credit<AccountId, Tokens>) {
                 // We have to manage the mint / burn ratio on the Zeitgeist chain,
                 // but we do not have the responsibility and necessary knowledge to
                 // manage the mint / burn ratio for any other chain.
@@ -67,9 +67,10 @@ macro_rules! impl_foreign_fees {
         use frame_support::{
             pallet_prelude::InvalidTransaction,
             traits::{
-                fungibles::{CreditOf, Inspect},
+                fungibles::{Credit, Inspect},
                 tokens::{
-                    fungibles::Balanced, BalanceConversion, WithdrawConsequence, WithdrawReasons,
+                    fungibles::Balanced, ConversionToAssetBalance, Fortitude, Precision,
+                    Preservation, WithdrawConsequence, WithdrawReasons,
                 },
                 ExistenceRequirement,
             },
@@ -139,7 +140,9 @@ macro_rules! impl_foreign_fees {
         }
 
         pub struct TTCBalanceToAssetBalance;
-        impl BalanceConversion<Balance, TxPaymentAssetId, Balance> for TTCBalanceToAssetBalance {
+        impl ConversionToAssetBalance<Balance, TxPaymentAssetId, Balance>
+            for TTCBalanceToAssetBalance
+        {
             type Error = TransactionValidityError;
 
             fn to_asset_balance(
@@ -164,7 +167,7 @@ macro_rules! impl_foreign_fees {
 
         pub struct TTCHandleCredit;
         impl HandleCredit<AccountId, Tokens> for TTCHandleCredit {
-            fn handle_credit(final_fee: CreditOf<AccountId, Tokens>) {
+            fn handle_credit(final_fee: Credit<AccountId, Tokens>) {
                 // Handle the final fee and tip, e.g. by transferring to the treasury.
                 DealWithForeignFees::on_unbalanced(final_fee);
             }
@@ -174,7 +177,7 @@ macro_rules! impl_foreign_fees {
         impl pallet_asset_tx_payment::OnChargeAssetTransaction<Runtime> for TokensTxCharger {
             type AssetId = TxPaymentAssetId;
             type Balance = Balance;
-            type LiquidityInfo = CreditOf<AccountId, Tokens>;
+            type LiquidityInfo = Credit<AccountId, Tokens>;
 
             fn withdraw_fee(
                 who: &AccountId,
@@ -184,9 +187,9 @@ macro_rules! impl_foreign_fees {
                 native_fee: Self::Balance,
                 _tip: Self::Balance,
             ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
-                // We don't know the precision of the underlying asset. Because the converted fee could be
-                // less than one (e.g. 0.5) but gets rounded down by integer division we introduce a minimum
-                // fee.
+                // We don't know the precision of the underlying asset. Because the converted fee
+                // could be less than one (e.g. 0.5) but gets rounded down by integer division we
+                // introduce a minimum fee.
                 let min_converted_fee =
                     if native_fee.is_zero() { Zero::zero() } else { One::one() };
                 let converted_fee =
@@ -198,8 +201,15 @@ macro_rules! impl_foreign_fees {
                 if can_withdraw != WithdrawConsequence::Success {
                     return Err(InvalidTransaction::Payment.into());
                 }
-                <Tokens as Balanced<AccountId>>::withdraw(currency_id, who, converted_fee)
-                    .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
+                <Tokens as Balanced<AccountId>>::withdraw(
+                    currency_id,
+                    who,
+                    converted_fee,
+                    Precision::Exact,
+                    Preservation::Expendable,
+                    Fortitude::Force,
+                )
+                .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
             }
 
             fn correct_and_deposit_fee(
@@ -209,7 +219,7 @@ macro_rules! impl_foreign_fees {
                 corrected_native_fee: Self::Balance,
                 tip: Self::Balance,
                 paid: Self::LiquidityInfo,
-            ) -> Result<(), TransactionValidityError> {
+            ) -> Result<(Self::Balance, Self::Balance), TransactionValidityError> {
                 let min_converted_fee =
                     if corrected_native_fee.is_zero() { Zero::zero() } else { One::one() };
                 let asset_id = match paid.asset() {
@@ -228,15 +238,16 @@ macro_rules! impl_foreign_fees {
 
                 // Calculate how much refund we should return.
                 let (final_fee, refund) = paid.split(converted_fee);
-                // Refund to the account that paid the fees. If this fails, the account might have dropped
-                // below the existential balance. In that case we don't refund anything.
+                // Refund to the account that paid the fees. If this fails, the account might have
+                // dropped below the existential balance. In that case we don't refund anything.
                 let _ = <Tokens as Balanced<AccountId>>::resolve(who, refund);
 
                 // Handle the final fee and tip, e.g. by transferring to the treasury.
                 // Note: The `corrected_native_fee` already includes the `tip`.
+                let final_fee_peek = final_fee.peek();
                 TTCHandleCredit::handle_credit(final_fee);
 
-                Ok(())
+                Ok((final_fee_peek, tip))
             }
         }
     };
@@ -247,9 +258,9 @@ macro_rules! impl_market_creator_fees {
     () => {
         pub struct MarketCreatorFee;
 
-        /// Uses the `creator_fee` field defined by the specified market to deduct a fee for the market's
-        /// creator. Calling `distribute` is noop if the market doesn't exist or the transfer fails for any
-        /// reason.
+        /// Uses the `creator_fee` field defined by the specified market to deduct a fee for the
+        /// market's creator. Calling `distribute` is noop if the market doesn't exist or the
+        /// transfer fails for any reason.
         impl DistributeFees for MarketCreatorFee {
             type Asset = Asset<MarketId>;
             type AccountId = AccountId;
@@ -300,13 +311,13 @@ macro_rules! impl_market_creator_fees {
 
 #[macro_export]
 macro_rules! fee_tests {
-    () => {
+   () => {
         use crate::*;
         use frame_support::{assert_noop, assert_ok, dispatch::DispatchClass, weights::Weight};
         use orml_traits::MultiCurrency;
         use pallet_asset_tx_payment::OnChargeAssetTransaction;
         use sp_core::H256;
-        use sp_runtime::traits::Convert;
+        use sp_runtime::BuildStorage;
         use zeitgeist_primitives::constants::BASE;
 
         fn run_with_system_weight<F>(w: Weight, mut assertions: F)
@@ -314,7 +325,7 @@ macro_rules! fee_tests {
             F: FnMut(),
         {
             let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into();
             t.execute_with(|| {
                 System::set_block_consumed_resources(w, 0);
                 assertions()
@@ -324,7 +335,7 @@ macro_rules! fee_tests {
         #[test]
         fn treasury_receives_correct_amount_of_native_fees_and_tips() {
             let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into();
             t.execute_with(|| {
                 let fee_balance = 3 * ExistentialDeposit::get();
                 let fee_imbalance = Balances::issue(fee_balance);
@@ -342,7 +353,7 @@ macro_rules! fee_tests {
         #[test]
         fn treasury_receives_correct_amount_of_foreign_fees_and_tips() {
             let mut t: sp_io::TestExternalities =
-                frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into();
             t.execute_with(|| {
                 let fee_and_tip_balance = 10 * ExistentialDeposit::get();
                 let fees_and_tips = <Tokens as Balanced<AccountId>>::issue(
@@ -380,10 +391,11 @@ macro_rules! fee_tests {
 
             #[test]
             fn correct_and_deposit_fee_dot_foreign_asset() {
-                let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::default()
-                    .build_storage::<Runtime>()
-                    .unwrap()
-                    .into();
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::<Runtime>::default()
+                        .build_storage()
+                        .unwrap()
+                        .into();
                 t.execute_with(|| {
                     {
                         let alice =  AccountId::from([0u8; 32]);
@@ -392,10 +404,10 @@ macro_rules! fee_tests {
                             xcm: XcmMetadata { fee_factor: Some(fee_factor) },
                             ..Default::default()
                         };
-                        let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+                        let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> = AssetMetadata {
                             decimals: 10,
-                            name: "Polkadot".into(),
-                            symbol: "DOT".into(),
+                            name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
                             existential_deposit: ExistentialDeposit::get(),
                             location: Some(xcm::VersionedMultiLocation::V3(xcm::latest::MultiLocation::parent())),
                             additional: custom_metadata,
@@ -409,12 +421,12 @@ macro_rules! fee_tests {
 
                         let mock_call = RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
                         let mock_dispatch_info = frame_support::dispatch::DispatchInfo {
-                            weight:  frame_support::dispatch::Weight::zero(),
+                            weight: frame_support::weights::Weight::zero(),
                             class: DispatchClass::Normal,
                             pays_fee:  frame_support::dispatch::Pays::Yes,
                         };
                         let mock_post_info = frame_support::dispatch::PostDispatchInfo {
-                            actual_weight:  Some(frame_support::dispatch::Weight::zero()),
+                            actual_weight: Some(frame_support::weights::Weight::zero()),
                             pays_fee:  frame_support::dispatch::Pays::Yes,
                         };
 
@@ -449,25 +461,27 @@ macro_rules! fee_tests {
 
             #[test]
             fn get_fee_factor_works() {
-                let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::default()
-                    .build_storage::<Runtime>()
-                    .unwrap()
-                    .into();
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::<Runtime>::default()
+                        .build_storage()
+                        .unwrap()
+                        .into();
                 t.execute_with(|| {
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: Some(143_120_520u128) },
                         ..Default::default()
                     };
-                    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-                        decimals: 10,
-                        name: "Polkadot".into(),
-                        symbol: "DOT".into(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V3(
-                            xcm::latest::MultiLocation::parent(),
-                        )),
-                        additional: custom_metadata,
-                    };
+                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> =
+                        AssetMetadata {
+                            decimals: 10,
+                            name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: Some(xcm::VersionedMultiLocation::V3(
+                                xcm::latest::MultiLocation::parent(),
+                            )),
+                            additional: custom_metadata,
+                        };
                     let dot_asset_id = 0u32;
                     let dot = Asset::ForeignAsset(dot_asset_id);
 
@@ -483,10 +497,11 @@ macro_rules! fee_tests {
 
             #[test]
             fn get_fee_factor_metadata_not_found() {
-                let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::default()
-                    .build_storage::<Runtime>()
-                    .unwrap()
-                    .into();
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::<Runtime>::default()
+                        .build_storage()
+                        .unwrap()
+                        .into();
                 t.execute_with(|| {
                     {
                         // no registering of dot
@@ -500,25 +515,27 @@ macro_rules! fee_tests {
 
             #[test]
             fn get_fee_factor_fee_factor_not_found() {
-                let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::default()
-                    .build_storage::<Runtime>()
-                    .unwrap()
-                    .into();
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::<Runtime>::default()
+                        .build_storage()
+                        .unwrap()
+                        .into();
                 t.execute_with(|| {
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: None },
                         ..Default::default()
                     };
-                    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-                        decimals: 10,
-                        name: "Polkadot".into(),
-                        symbol: "DOT".into(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V3(
-                            xcm::latest::MultiLocation::parent(),
-                        )),
-                        additional: custom_metadata,
-                    };
+                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> =
+                        AssetMetadata {
+                            decimals: 10,
+                            name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: Some(xcm::VersionedMultiLocation::V3(
+                                xcm::latest::MultiLocation::parent(),
+                            )),
+                            additional: custom_metadata,
+                        };
                     let dot_asset_id = 0u32;
                     let dot = Asset::ForeignAsset(dot_asset_id);
 
@@ -537,23 +554,25 @@ macro_rules! fee_tests {
 
             #[test]
             fn get_fee_factor_none_location() {
-                let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::default()
-                    .build_storage::<Runtime>()
-                    .unwrap()
-                    .into();
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::<Runtime>::default()
+                        .build_storage()
+                        .unwrap()
+                        .into();
                 t.execute_with(|| {
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: Some(10_393) },
                         ..Default::default()
                     };
-                    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-                        decimals: 10,
-                        name: "NoneLocationToken".into(),
-                        symbol: "NONE".into(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: None,
-                        additional: custom_metadata,
-                    };
+                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> =
+                        AssetMetadata {
+                            decimals: 10,
+                            name: "NoneLocationToken".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "NONE".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: None,
+                            additional: custom_metadata,
+                        };
                     let non_location_token = Asset::ForeignAsset(1);
 
                     assert_ok!(AssetRegistry::register_asset(
@@ -568,26 +587,28 @@ macro_rules! fee_tests {
 
             #[test]
             fn withdraws_correct_dot_foreign_asset_fee() {
-                let mut t: sp_io::TestExternalities = frame_system::GenesisConfig::default()
-                    .build_storage::<Runtime>()
-                    .unwrap()
-                    .into();
+                let mut t: sp_io::TestExternalities =
+                    frame_system::GenesisConfig::<Runtime>::default()
+                        .build_storage()
+                        .unwrap()
+                        .into();
                 t.execute_with(|| {
                     let fee_factor = 143_120_520;
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: Some(fee_factor) },
                         ..Default::default()
                     };
-                    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-                        decimals: 10,
-                        name: "Polkadot".into(),
-                        symbol: "DOT".into(),
-                        existential_deposit: ExistentialDeposit::get(),
-                        location: Some(xcm::VersionedMultiLocation::V3(
-                            xcm::latest::MultiLocation::parent(),
-                        )),
-                        additional: custom_metadata,
-                    };
+                    let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> =
+                        AssetMetadata {
+                            decimals: 10,
+                            name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: ExistentialDeposit::get(),
+                            location: Some(xcm::VersionedMultiLocation::V3(
+                                xcm::latest::MultiLocation::parent(),
+                            )),
+                            additional: custom_metadata,
+                        };
                     let dot_asset_id = 0u32;
                     let dot = Asset::ForeignAsset(dot_asset_id);
 
@@ -607,7 +628,7 @@ macro_rules! fee_tests {
                     let mock_call =
                         RuntimeCall::System(frame_system::Call::remark { remark: vec![] });
                     let mock_dispatch_info = frame_support::dispatch::DispatchInfo {
-                        weight: frame_support::dispatch::Weight::zero(),
+                        weight: frame_support::weights::Weight::zero(),
                         class: DispatchClass::Normal,
                         pays_fee: frame_support::dispatch::Pays::Yes,
                     };

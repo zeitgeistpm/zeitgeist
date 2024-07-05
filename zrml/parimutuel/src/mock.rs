@@ -24,21 +24,20 @@ use crate::{AssetOf, BalanceOf, MarketIdOf};
 use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use frame_support::{construct_runtime, pallet_prelude::Get, parameter_types, traits::Everything};
+use frame_system::mocking::MockBlock;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Perbill, SaturatedConversion,
+    BuildStorage, Perbill, SaturatedConversion,
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxReserves, MinBetSize,
-        MinimumPeriod, ParimutuelPalletId, BASE, CENT,
+        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxLocks, MaxReserves,
+        MinBetSize, MinimumPeriod, ParimutuelPalletId, BASE, CENT,
     },
     traits::DistributeFees,
     types::{
-        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
-        Hash, Index, MarketId, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CurrencyId, Hash, MarketId, Moment,
     },
 };
 
@@ -92,19 +91,14 @@ where
 }
 
 construct_runtime!(
-    pub enum Runtime
-    where
-        Block = BlockTest<Runtime>,
-        NodeBlock = BlockTest<Runtime>,
-        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
-    {
-        Parimutuel: zrml_parimutuel::{Event<T>, Pallet, Storage},
-        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        AssetManager: orml_currencies::{Call, Pallet, Storage},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
-        MarketCommons: zrml_market_commons::{Pallet, Storage},
-        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet},
+    pub enum Runtime {
+        AssetManager: orml_currencies,
+        Balances: pallet_balances,
+        MarketCommons: zrml_market_commons,
+        Parimutuel: zrml_parimutuel,
+        System: frame_system,
+        Timestamp: pallet_timestamp,
+        Tokens: orml_tokens,
     }
 );
 
@@ -122,18 +116,17 @@ impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountIdTest;
     type BaseCallFilter = Everything;
+    type Block = MockBlock<Runtime>;
     type BlockHashCount = BlockHashCount;
     type BlockLength = ();
-    type BlockNumber = BlockNumber;
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
     type DbWeight = ();
     type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
-    type Header = Header;
-    type Index = Index;
     type Lookup = IdentityLookup<Self::AccountId>;
+    type Nonce = u64;
     type MaxConsumers = frame_support::traits::ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
@@ -149,9 +142,13 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
+    type FreezeIdentifier = ();
+    type RuntimeHoldReason = ();
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ();
-    type MaxLocks = ();
+    type MaxHolds = ();
+    type MaxFreezes = ();
+    type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
@@ -209,7 +206,7 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
         // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
         let _ = env_logger::builder().is_test(true).try_init();

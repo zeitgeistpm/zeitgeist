@@ -20,22 +20,15 @@
 #[cfg(feature = "parachain")]
 mod cli_parachain;
 
-use super::service::{
-    AdditionalRuntimeApiCollection, FullBackend, FullClient, IdentifyVariant, RuntimeApiCollection,
-};
+use super::service::{FullBackend, FullClient, IdentifyVariant};
 use clap::Parser;
 #[cfg(feature = "parachain")]
 pub use cli_parachain::RelayChainCli;
-use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
-use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator};
-use sp_api::{CallApiAt, NumberFor, ProvideRuntimeApi};
-use sp_blockchain::HeaderBackend;
+use sc_cli::{ChainSpec, SubstrateCli};
+use sc_client_api::{KeysIter, PairsIter};
+use sp_api::NumberFor;
 use sp_consensus::BlockStatus;
-use sp_runtime::{
-    generic::SignedBlock,
-    traits::{BlakeTwo256, Block as BlockT},
-    Justifications,
-};
+use sp_runtime::{generic::SignedBlock, traits::Block as BlockT, Justifications};
 use sp_storage::{ChildInfo, StorageData, StorageKey};
 use std::sync::Arc;
 use zeitgeist_primitives::types::{Block, Header};
@@ -115,6 +108,7 @@ pub fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
 }
 
 #[derive(Debug, clap::Subcommand)]
+#[allow(clippy::large_enum_variant)]
 pub enum Subcommand {
     /// The custom benchmark subcommmand benchmarking runtime pallets.
     #[clap(subcommand)]
@@ -166,11 +160,6 @@ pub enum Subcommand {
     Revert(sc_cli::RevertCmd),
 
     /// Try some command against runtime state.
-    #[cfg(feature = "try-runtime")]
-    TryRuntime(try_runtime_cli::TryRuntimeCmd),
-
-    /// Try some command against runtime state. Note: `try-runtime` feature must be enabled.
-    #[cfg(not(feature = "try-runtime"))]
     TryRuntime,
 }
 
@@ -212,6 +201,21 @@ pub struct Cli {
     pub storage_monitor: sc_storage_monitor::StorageMonitorParams,
 }
 
+#[cfg(feature = "parachain")]
+impl Cli {
+    #[allow(clippy::borrowed_box)]
+    pub(crate) fn runtime_version(spec: &Box<dyn sc_service::ChainSpec>) -> sc_cli::RuntimeVersion {
+        match spec {
+            #[cfg(feature = "with-zeitgeist-runtime")]
+            spec if spec.is_zeitgeist() => zeitgeist_runtime::VERSION,
+            #[cfg(feature = "with-battery-station-runtime")]
+            _ => battery_station_runtime::VERSION,
+            #[cfg(not(feature = "with-battery-station-runtime"))]
+            _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
+        }
+    }
+}
+
 impl SubstrateCli for Cli {
     fn author() -> String {
         env!("CARGO_PKG_AUTHORS").into()
@@ -237,103 +241,9 @@ impl SubstrateCli for Cli {
         load_spec(id)
     }
 
-    fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        match spec {
-            spec if spec.is_zeitgeist() => {
-                #[cfg(feature = "with-zeitgeist-runtime")]
-                return &zeitgeist_runtime::VERSION;
-                #[cfg(not(feature = "with-zeitgeist-runtime"))]
-                panic!("{}", crate::ZEITGEIST_RUNTIME_NOT_AVAILABLE);
-            }
-            _spec => {
-                #[cfg(feature = "with-battery-station-runtime")]
-                return &battery_station_runtime::VERSION;
-                #[cfg(not(feature = "with-battery-station-runtime"))]
-                panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
-            }
-        }
-    }
-
     fn support_url() -> String {
         SUPPORT_URL.into()
     }
-}
-
-/// Config that abstracts over all available client implementations.
-///
-/// For a concrete type there exists [`Client`].
-pub trait AbstractClient<Block, Backend>:
-    BlockchainEvents<Block>
-    + Sized
-    + Send
-    + Sync
-    + ProvideRuntimeApi<Block>
-    + HeaderBackend<Block>
-    + CallApiAt<Block, StateBackend = Backend::State>
-where
-    Block: BlockT,
-    Backend: BackendT<Block>,
-    Backend::State: sp_api::StateBackend<BlakeTwo256>,
-    Self::Api: RuntimeApiCollection<StateBackend = Backend::State>
-        + AdditionalRuntimeApiCollection<StateBackend = Backend::State>,
-{
-}
-
-impl<Block, Backend, Client> AbstractClient<Block, Backend> for Client
-where
-    Block: BlockT,
-    Backend: BackendT<Block>,
-    Backend::State: sp_api::StateBackend<BlakeTwo256>,
-    Client: BlockchainEvents<Block>
-        + ProvideRuntimeApi<Block>
-        + HeaderBackend<Block>
-        + Sized
-        + Send
-        + Sync
-        + CallApiAt<Block, StateBackend = Backend::State>,
-    Client::Api: RuntimeApiCollection<StateBackend = Backend::State>
-        + AdditionalRuntimeApiCollection<StateBackend = Backend::State>,
-{
-}
-
-/// Execute something with the client instance.
-///
-/// As there exist multiple chains inside Zeitgeist, like Zeitgeist itself,
-/// Battery Station etc., there can exist different kinds of client types. As these
-/// client types differ in the generics that are being used, we can not easily
-/// return them from a function. For returning them from a function there exists
-/// [`Client`]. However, the problem on how to use this client instance still
-/// exists. This trait "solves" it in a dirty way. It requires a type to
-/// implement this trait and than the [`execute_with_client`](ExecuteWithClient::execute_with_client)
-/// function can be called with any possible client
-/// instance.
-///
-/// In a perfect world, we could make a closure work in this way.
-pub trait ExecuteWithClient {
-    /// The return type when calling this instance.
-    type Output;
-
-    /// Execute whatever should be executed with the given client instance.
-    fn execute_with_client<Client, Api, Backend>(self, client: Arc<Client>) -> Self::Output
-    where
-        <Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
-        Backend: sc_client_api::Backend<Block>,
-        Backend::State: sp_api::StateBackend<BlakeTwo256>,
-        Api: RuntimeApiCollection<StateBackend = Backend::State>
-            + AdditionalRuntimeApiCollection<StateBackend = Backend::State>,
-        Client: AbstractClient<Block, Backend, Api = Api> + 'static;
-}
-
-/// A handle to a Zeitgeist client instance.
-///
-/// The Zeitgeist service supports multiple different runtimes (Zeitgeist, Battery
-/// Station, etc.). As each runtime has a specialized client, we need to hide them
-/// behind a trait. This is this trait.
-///
-/// When wanting to work with the inner client, you need to use `execute_with`.
-pub trait ClientHandle {
-    /// Execute the given something with the client.
-    fn execute_with<T: ExecuteWithClient>(&self, t: T) -> T::Output;
 }
 
 /// A client instance of Zeitgeist.
@@ -356,21 +266,6 @@ impl From<Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>> for
 impl From<Arc<FullClient<ZeitgeistRuntimeApi, ZeitgeistExecutor>>> for Client {
     fn from(client: Arc<FullClient<ZeitgeistRuntimeApi, ZeitgeistExecutor>>) -> Self {
         Self::Zeitgeist(client)
-    }
-}
-
-impl ClientHandle for Client {
-    fn execute_with<T: ExecuteWithClient>(&self, t: T) -> T::Output {
-        match self {
-            #[cfg(feature = "with-battery-station-runtime")]
-            Self::BatteryStation(client) => {
-                T::execute_with_client::<_, _, FullBackend>(t, client.clone())
-            }
-            #[cfg(feature = "with-zeitgeist-runtime")]
-            Self::Zeitgeist(client) => {
-                T::execute_with_client::<_, _, FullBackend>(t, client.clone())
-            }
-        }
     }
 }
 
@@ -459,14 +354,6 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match_client!(self, storage(hash, key))
     }
 
-    fn storage_keys(
-        &self,
-        hash: <Block as BlockT>::Hash,
-        key_prefix: &StorageKey,
-    ) -> sp_blockchain::Result<Vec<StorageKey>> {
-        match_client!(self, storage_keys(hash, key_prefix))
-    }
-
     fn storage_hash(
         &self,
         hash: <Block as BlockT>::Hash,
@@ -475,23 +362,25 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match_client!(self, storage_hash(hash, key))
     }
 
-    fn storage_pairs(
-        &self,
-        hash: <Block as BlockT>::Hash,
-        key_prefix: &StorageKey,
-    ) -> sp_blockchain::Result<Vec<(StorageKey, StorageData)>> {
-        match_client!(self, storage_pairs(hash, key_prefix))
-    }
-
-    fn storage_keys_iter(
+    fn storage_keys(
         &self,
         hash: <Block as BlockT>::Hash,
         prefix: Option<&StorageKey>,
         start_key: Option<&StorageKey>,
+    ) -> sp_blockchain::Result<KeysIter<<FullBackend as sc_client_api::Backend<Block>>::State, Block>>
+    {
+        match_client!(self, storage_keys(hash, prefix, start_key))
+    }
+
+    fn storage_pairs(
+        &self,
+        hash: <Block as BlockT>::Hash,
+        key_prefix: Option<&StorageKey>,
+        start_key: Option<&StorageKey>,
     ) -> sp_blockchain::Result<
-        KeyIterator<<FullBackend as sc_client_api::Backend<Block>>::State, Block>,
+        PairsIter<<FullBackend as sc_client_api::Backend<Block>>::State, Block>,
     > {
-        match_client!(self, storage_keys_iter(hash, prefix, start_key))
+        match_client!(self, storage_pairs(hash, key_prefix, start_key))
     }
 
     fn child_storage(
@@ -506,22 +395,12 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
     fn child_storage_keys(
         &self,
         hash: <Block as BlockT>::Hash,
-        child_info: &ChildInfo,
-        key_prefix: &StorageKey,
-    ) -> sp_blockchain::Result<Vec<StorageKey>> {
-        match_client!(self, child_storage_keys(hash, child_info, key_prefix))
-    }
-
-    fn child_storage_keys_iter(
-        &self,
-        hash: <Block as BlockT>::Hash,
         child_info: ChildInfo,
         prefix: Option<&StorageKey>,
         start_key: Option<&StorageKey>,
-    ) -> sp_blockchain::Result<
-        KeyIterator<<FullBackend as sc_client_api::Backend<Block>>::State, Block>,
-    > {
-        match_client!(self, child_storage_keys_iter(hash, child_info, prefix, start_key))
+    ) -> sp_blockchain::Result<KeysIter<<FullBackend as sc_client_api::Backend<Block>>::State, Block>>
+    {
+        match_client!(self, child_storage_keys(hash, child_info, prefix, start_key))
     }
 
     fn child_storage_hash(

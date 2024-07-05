@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -40,5 +40,5 @@ pub struct AdditionalChainSpec {
 #[cfg(not(feature = "parachain"))]
 pub struct AdditionalChainSpec {
     pub initial_authorities:
-        Vec<(sp_consensus_aura::sr25519::AuthorityId, sp_finality_grandpa::AuthorityId)>,
+        Vec<(sp_consensus_aura::sr25519::AuthorityId, sp_consensus_grandpa::AuthorityId)>,
 }

@@ -13,7 +13,7 @@ zrml-orderbook = { workspace = true, features = ["default", "mock"] }
 
 [package]
 authors = ["Automatically generated"]
-edition = "2021"
+edition.workspace = true
 name = "zrml-orderbook-fuzz"
 publish = false
 version = "0.0.0"

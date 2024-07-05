@@ -43,7 +43,8 @@ mod sell_complete_set;
 mod start_global_dispute;
 
 use crate::{
-    mock::*, AccountIdOf, AssetOf, BalanceOf, Config, Error, Event, MarketIdsPerDisputeBlock,
+    mock::*, AccountIdOf, AssetOf, BalanceOf, Config, DeadlinesOf, Error, Event,
+    MarketIdsPerDisputeBlock,
 };
 use core::ops::Range;
 use frame_support::{assert_noop, assert_ok, traits::NamedReservableCurrency};
@@ -62,7 +63,7 @@ use zrml_market_commons::MarketCommonsPalletApi;
 
 const SENTINEL_AMOUNT: u128 = BASE;
 
-fn get_deadlines() -> Deadlines<<Runtime as frame_system::Config>::BlockNumber> {
+fn get_deadlines() -> DeadlinesOf<Runtime> {
     Deadlines {
         grace_period: 1_u32.into(),
         oracle_duration: <Runtime as Config>::MinOracleDuration::get(),

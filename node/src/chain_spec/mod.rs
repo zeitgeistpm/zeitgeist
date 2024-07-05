@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -108,8 +108,8 @@ macro_rules! generate_generic_genesis_function {
             acs: AdditionalChainSpec,
             endowed_accounts: Vec<EndowedAccountWithBalance>,
             wasm_binary: &[u8],
-        ) -> $runtime::GenesisConfig {
-            $runtime::GenesisConfig {
+        ) -> $runtime::RuntimeGenesisConfig {
+            $runtime::RuntimeGenesisConfig {
                 // Common genesis
                 advisory_committee: Default::default(),
                 advisory_committee_membership: $runtime::AdvisoryCommitteeMembershipConfig {
@@ -125,6 +125,7 @@ macro_rules! generate_generic_genesis_function {
                 #[cfg(feature = "parachain")]
                 author_filter: $runtime::AuthorFilterConfig {
                     eligible_count: EligibilityValue::new_unchecked(1),
+                    ..Default::default()
                 },
                 #[cfg(feature = "parachain")]
                 author_mapping: $runtime::AuthorMappingConfig {
@@ -147,13 +148,17 @@ macro_rules! generate_generic_genesis_function {
                 #[cfg(not(feature = "parachain"))]
                 grandpa: $runtime::GrandpaConfig {
                     authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
+                    ..Default::default()
                 },
                 liquidity_mining: $runtime::LiquidityMiningConfig {
                     initial_balance: LIQUIDITY_MINING,
                     per_block_distribution: LIQUIDITY_MINING_PTD.mul_ceil(LIQUIDITY_MINING),
                 },
                 #[cfg(feature = "parachain")]
-                parachain_info: $runtime::ParachainInfoConfig { parachain_id: acs.parachain_id },
+                parachain_info: $runtime::ParachainInfoConfig {
+                    parachain_id: acs.parachain_id,
+                    ..Default::default()
+                },
                 #[cfg(feature = "parachain")]
                 parachain_staking: $runtime::ParachainStakingConfig {
                     blocks_per_round: acs.blocks_per_round,
@@ -174,7 +179,7 @@ macro_rules! generate_generic_genesis_function {
                 #[cfg(feature = "parachain")]
                 // Default should use the pallet configuration
                 polkadot_xcm: PolkadotXcmConfig::default(),
-                system: $runtime::SystemConfig { code: wasm_binary.to_vec() },
+                system: $runtime::SystemConfig { code: wasm_binary.to_vec(), ..Default::default() },
                 technical_committee: Default::default(),
                 technical_committee_membership: $runtime::TechnicalCommitteeMembershipConfig {
                     members: vec![].try_into().unwrap(),
@@ -230,7 +235,7 @@ pub struct Extensions {
     /// The relay chain of the Parachain.
     pub relay_chain: String,
     /// Known bad block hashes.
-    pub bad_blocks: sc_client_api::BadBlocks<polkadot_primitives::v2::Block>,
+    pub bad_blocks: sc_client_api::BadBlocks<polkadot_primitives::Block>,
 }
 
 #[cfg(feature = "parachain")]

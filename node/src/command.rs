@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2019-2022 PureStake Inc.
 //
@@ -20,7 +20,7 @@
 use super::{
     benchmarking::{inherent_benchmark_data, RemarksExtrinsicBuilder, TransferKeepAliveBuilder},
     cli::{Cli, Subcommand},
-    service::{new_chain_ops, new_full, IdentifyVariant},
+    service::{new_chain_ops, new_full, HostFunctions, IdentifyVariant},
 };
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::SubstrateCli;
@@ -68,25 +68,23 @@ pub fn run() -> sc_cli::Result<()> {
                 // This switch needs to be in the client, since the client decides
                 // which sub-commands it wants to support.
                 BenchmarkCmd::Pallet(cmd) => {
-                    if !cfg!(feature = "runtime-benchmarks") {
-                        return Err("Runtime benchmarking wasn't enabled when building the node. \
-                                    You can enable it with `--features runtime-benchmarks`."
-                            .into());
-                    }
-
-                    match chain_spec {
-                        #[cfg(feature = "with-zeitgeist-runtime")]
-                        spec if spec.is_zeitgeist() => runner.sync_run(|config| {
-                            cmd.run::<zeitgeist_runtime::Block, ZeitgeistExecutor>(config)
-                        }),
-                        #[cfg(feature = "with-battery-station-runtime")]
-                        _ => runner.sync_run(|config| {
-                            cmd.run::<battery_station_runtime::Block, BatteryStationExecutor>(
-                                config,
-                            )
-                        }),
-                        #[cfg(not(feature = "with-battery-station-runtime"))]
-                        _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
+                    if cfg!(feature = "runtime-benchmarks") {
+                        match chain_spec {
+                            #[cfg(feature = "with-zeitgeist-runtime")]
+                            spec if spec.is_zeitgeist() => runner.sync_run(|config| {
+                                cmd.run::<zeitgeist_runtime::Block, HostFunctions>(config)
+                            }),
+                            #[cfg(feature = "with-battery-station-runtime")]
+                            _ => runner.sync_run(|config| {
+                                cmd.run::<battery_station_runtime::Block, HostFunctions>(config)
+                            }),
+                            #[cfg(not(feature = "with-battery-station-runtime"))]
+                            _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
+                        }
+                    } else {
+                        Err("Runtime benchmarking wasn't enabled when building the node. \
+                            You can enable it with `--features runtime-benchmarks`."
+                            .into())
                     }
                 }
                 BenchmarkCmd::Block(cmd) => match chain_spec {
@@ -320,7 +318,7 @@ pub fn run() -> sc_cli::Result<()> {
             let _ = builder.init();
             let chain_spec =
                 &crate::cli::load_spec(&params.shared_params.chain.clone().unwrap_or_default())?;
-            let state_version = Cli::native_runtime_version(chain_spec).state_version();
+            let state_version = Cli::runtime_version(chain_spec).state_version();
 
             let buf = match chain_spec {
                 #[cfg(feature = "with-zeitgeist-runtime")]
@@ -432,57 +430,10 @@ pub fn run() -> sc_cli::Result<()> {
                 Ok((cmd.run(client, backend, None), task_manager))
             })
         }
-        #[cfg(feature = "try-runtime")]
-        Some(Subcommand::TryRuntime(cmd)) => {
-            use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
-
-            let runner = cli.create_runner(cmd)?;
-            let chain_spec = &runner.config().chain_spec;
-
-            match chain_spec {
-                #[cfg(feature = "with-zeitgeist-runtime")]
-                spec if spec.is_zeitgeist() => {
-                    runner.async_run(|config| {
-                        // we don't need any of the components of new_partial, just a runtime, or a task
-                        // manager to do `async_run`.
-                        let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
-                        let task_manager =
-                            sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
-                                .map_err(|e| {
-                                    sc_cli::Error::Service(sc_service::Error::Prometheus(e))
-                                })?;
-                        return Ok((
-                            cmd.run::<zeitgeist_runtime::Block, ExtendedHostFunctions<
-                                sp_io::SubstrateHostFunctions,
-                                <ZeitgeistExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
-                            >>(),
-                            task_manager,
-                        ));
-                    })
-                }
-                #[cfg(feature = "with-battery-station-runtime")]
-                _ => runner.async_run(|config| {
-                    let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
-                    let task_manager =
-                        sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
-                            .map_err(|e| {
-                                sc_cli::Error::Service(sc_service::Error::Prometheus(e))
-                            })?;
-                    return Ok((
-                        cmd.run::<battery_station_runtime::Block, ExtendedHostFunctions<
-                            sp_io::SubstrateHostFunctions,
-                            <BatteryStationExecutor as NativeExecutionDispatch>::ExtendHostFunctions,
-                        >>(),
-                        task_manager,
-                    ));
-                }),
-                #[cfg(not(feature = "with-battery-station-runtime"))]
-                _ => Err("Invalid chain spec"),
-            }
-        }
-        #[cfg(not(feature = "try-runtime"))]
-        Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
-                                             You can enable it with `--features try-runtime`."
+        Some(Subcommand::TryRuntime) => Err("The `try-runtime` subcommand has been migrated to a \
+            standalone CLI (https://github.com/paritytech/try-runtime-cli). It is no longer \
+            being maintained here and will be removed entirely some time after January 2024. \
+            Please remove this subcommand from your runtime and use the standalone CLI."
             .into()),
         None => none_command(cli),
     }
@@ -515,10 +466,10 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
             cli.parachain_id.or(parachain_id_extension).unwrap_or(super::POLKADOT_PARACHAIN_ID),
         );
         let parachain_account =
-            AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account_truncating(
+            AccountIdConversion::<polkadot_primitives::AccountId>::into_account_truncating(
                 &parachain_id,
             );
-        let state_version = Cli::native_runtime_version(chain_spec).state_version();
+        let state_version = Cli::runtime_version(chain_spec).state_version();
         let block: zeitgeist_runtime::Block =
             cumulus_client_cli::generate_genesis_block(&**chain_spec, state_version)
                 .map_err(|e| format!("{:?}", e))?;
@@ -545,7 +496,7 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
             if parachain_config.role.is_authority() { "yes" } else { "no" }
         );
 
-        if !collator_options.relay_chain_rpc_urls.is_empty() && !cli.relaychain_args.is_empty() {
+        if !cli.run.relay_chain_rpc_urls.is_empty() && !cli.relaychain_args.is_empty() {
             log::warn!(
                 "Detected relay chain node arguments together with --relay-chain-rpc-url. This \
                  command starts a minimal Polkadot node that only uses a network-related subset \
