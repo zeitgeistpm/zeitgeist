@@ -217,7 +217,11 @@ mod benchmarks {
             let order_creator: T::AccountId = account("order_creator", *order_id as u32, 0);
             let surplus = ((i + 1) as u128) * _1_2;
             let taker_amount = taker_amount + surplus.saturated_into::<BalanceOf<T>>();
-            assert_ok!(T::AssetManager::deposit(maker_asset, &order_creator, maker_amount + _100));
+            assert_ok!(T::AssetManager::deposit(
+                maker_asset,
+                &order_creator,
+                maker_amount + _100.saturated_into()
+            ));
             T::Orderbook::place_order(
                 order_creator,
                 market_id,
