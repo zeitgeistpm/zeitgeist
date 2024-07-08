@@ -23,7 +23,7 @@ mod utils;
 use libfuzzer_sys::fuzz_target;
 use orml_traits::currency::MultiCurrency;
 use utils::{construct_asset, GeneralPoolData};
-use zeitgeist_primitives::types::{Asset, SerdeWrapper};
+use zeitgeist_primitives::types::Asset;
 use zrml_swaps::mock::{Currencies, ExtBuilder, RuntimeOrigin, Swaps};
 
 fuzz_target!(|data: GeneralPoolData| {
@@ -40,11 +40,7 @@ fuzz_target!(|data: GeneralPoolData| {
         let pool_creator = data.pool_creation.origin;
         let pool_id = data.pool_creation.create_pool();
         // to exit a pool, origin also needs to have the pool tokens of the pool that they're exiting
-        let _ = Currencies::deposit(
-            Asset::PoolShare(SerdeWrapper(pool_id)),
-            &pool_creator,
-            data.pool_amount,
-        );
+        let _ = Currencies::deposit(Asset::PoolShare(pool_id), &pool_creator, data.pool_amount);
         let _ = Swaps::pool_exit(
             RuntimeOrigin::signed(data.origin),
             pool_id,
