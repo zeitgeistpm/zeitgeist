@@ -44,7 +44,7 @@ fn manually_close_market_after_long_stall() {
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
         assert_ok!(PredictionMarkets::create_market(
@@ -57,7 +57,7 @@ fn manually_close_market_after_long_stall() {
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
 
@@ -113,7 +113,7 @@ fn manually_close_market_fails_if_market_not_in_close_time_frame_list() {
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
 
@@ -154,7 +154,7 @@ fn manually_close_market_fails_if_not_allowed_for_block_based_markets() {
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
 

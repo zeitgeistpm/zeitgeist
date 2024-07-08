@@ -14,7 +14,6 @@ zrml-authorized = { workspace = true }
 zrml-court = { workspace = true }
 zrml-global-disputes = { workspace = true }
 zrml-market-commons = { workspace = true }
-zrml-simple-disputes = { workspace = true }
 
 # Mock
 
@@ -83,7 +82,6 @@ std = [
     "zrml-authorized/std",
     "zrml-court/std",
     "zrml-market-commons/std",
-    "zrml-simple-disputes/std",
     "zrml-global-disputes/std",
     "xcm?/std",
 ]

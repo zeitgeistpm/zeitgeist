@@ -142,7 +142,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid
         ));
 
@@ -290,7 +290,7 @@ fn report_fails_on_market_state_proposed() {
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid
         ));
         assert_noop!(
@@ -313,7 +313,7 @@ fn report_fails_on_market_state_closed_for_advised_market() {
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid
         ));
         assert_noop!(
@@ -336,7 +336,7 @@ fn report_fails_on_market_state_active() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid
         ));
         assert_noop!(
@@ -359,7 +359,7 @@ fn report_fails_on_market_state_resolved() {
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid
         ));
         let _ = MarketCommons::mutate_market(&0, |market| {
@@ -373,7 +373,7 @@ fn report_fails_on_market_state_resolved() {
     });
 }
 
-#[test_case(Some(MarketDisputeMechanism::SimpleDisputes); "with_dispute_mechanism")]
+#[test_case(Some(MarketDisputeMechanism::Court); "with_dispute_mechanism")]
 #[test_case(None; "without_dispute_mechanism")]
 fn does_trigger_market_transition_api(dispute_mechanism: Option<MarketDisputeMechanism>) {
     ExtBuilder::default().build().execute_with(|| {

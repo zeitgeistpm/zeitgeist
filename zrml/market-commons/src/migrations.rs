@@ -16,7 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AccountIdOf, BalanceOf, BlockNumberOf, Config, MomentOf, Pallet as MarketCommons};
+use crate::{
+    AccountIdOf, BalanceOf, BlockNumberOf, Config, MarketIdOf, MomentOf, Pallet as MarketCommons,
+};
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use frame_support::{
@@ -34,7 +36,6 @@ use zeitgeist_primitives::types::{
 
 #[cfg(feature = "try-runtime")]
 use {
-    crate::MarketIdOf,
     alloc::{collections::BTreeMap, format},
     frame_support::migration::storage_key_iter,
 };
@@ -48,48 +49,73 @@ const MARKET_COMMONS: &[u8] = b"MarketCommons";
 const MARKETS: &[u8] = b"Markets";
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct OldMarket<AI, BA, BN, M, A> {
-    pub base_asset: A,
-    pub creator: AI,
+pub struct OldMarket<AccountId, Balance, BlockNumber, Moment, Asset, MarketId> {
+    pub market_id: MarketId,
+    /// Base asset of the market.
+    pub base_asset: Asset,
+    /// Creator of this market.
+    pub creator: AccountId,
+    /// Creation type.
     pub creation: MarketCreation,
+    /// A fee that is charged each trade and given to the market creator.
     pub creator_fee: Perbill,
-    pub oracle: AI,
+    /// Oracle that reports the outcome of this market.
+    pub oracle: AccountId,
+    /// Metadata for the market, usually a content address of IPFS
+    /// hosted JSON. Currently limited to 66 bytes (see `MaxEncodedLen` implementation)
     pub metadata: Vec<u8>,
+    /// The type of the market.
     pub market_type: MarketType,
-    pub period: MarketPeriod<BN, M>,
-    pub deadlines: Deadlines<BN>,
-    pub scoring_rule: OldScoringRule,
+    /// Market start and end
+    pub period: MarketPeriod<BlockNumber, Moment>,
+    /// Market deadlines.
+    pub deadlines: Deadlines<BlockNumber>,
+    /// The scoring rule used for the market.
+    pub scoring_rule: ScoringRule,
+    /// The current status of the market.
     pub status: MarketStatus,
-    pub report: Option<Report<AI, BN>>,
+    /// The report of the market. Only `Some` if it has been reported.
+    pub report: Option<Report<AccountId, BlockNumber>>,
+    /// The resolved outcome.
     pub resolved_outcome: Option<OutcomeReport>,
-    pub dispute_mechanism: Option<MarketDisputeMechanism>,
-    pub bonds: MarketBonds<AI, BA>,
-    pub early_close: Option<EarlyClose<BN, M>>,
+    /// See [`MarketDisputeMechanism`].
+    pub dispute_mechanism: Option<OldMarketDisputeMechanism>,
+    /// The bonds reserved for this market.
+    pub bonds: MarketBonds<AccountId, Balance>,
+    /// The time at which the market was closed early.
+    pub early_close: Option<EarlyClose<BlockNumber, Moment>>,
 }
 
-type OldMarketOf<T> =
-    OldMarket<AccountIdOf<T>, BalanceOf<T>, BlockNumberOf<T>, MomentOf<T>, BaseAsset>;
+type OldMarketOf<T> = OldMarket<
+    AccountIdOf<T>,
+    BalanceOf<T>,
+    BlockNumberOf<T>,
+    MomentOf<T>,
+    BaseAsset,
+    MarketIdOf<T>,
+>;
 
 #[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
-pub enum OldScoringRule {
-    Lmsr,
-    Orderbook,
-    Parimutuel,
+pub enum OldMarketDisputeMechanism {
+    Authorized,
+    Court,
+    SimpleDisputes,
 }
 
-const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 10;
-const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 11;
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 11;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 12;
 
 #[cfg(feature = "try-runtime")]
 #[frame_support::storage_alias]
 pub(crate) type Markets<T: Config> =
     StorageMap<MarketCommons<T>, Blake2_128Concat, MarketIdOf<T>, OldMarketOf<T>>;
 
-pub struct MigrateScoringRuleAmmCdaHybridAndMarketId<T>(PhantomData<T>);
+pub struct MigrateDisputeMechanism<T>(PhantomData<T>);
 
-/// Migrates AMM and CDA markets to the new combined scoring rule and adds the market's ID to the
-/// struct.
-impl<T> OnRuntimeUpgrade for MigrateScoringRuleAmmCdaHybridAndMarketId<T>
+/// Removes the `SimpleDisputes` MDM by switching markets that use `SimpleDisputes` to `Authorized`.
+/// Note that this migration does not unreserve any funds bonded with zrml-simple-dispute's reserve
+/// ID.
+impl<T> OnRuntimeUpgrade for MigrateDisputeMechanism<T>
 where
     T: Config,
 {
@@ -98,25 +124,24 @@ where
         let market_commons_version = StorageVersion::get::<MarketCommons<T>>();
         if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "MigrateScoringRuleAmmCdaHybridAndMarketId: market-commons version is {:?}, but \
-                 {:?} is required",
+                "MigrateDisputeMechanism: market-commons version is {:?}, but {:?} is required",
                 market_commons_version,
                 MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
             );
             return total_weight;
         }
-        log::info!("MigrateScoringRuleAmmCdaHybridAndMarketId: Starting...");
+        log::info!("MigrateDisputeMechanism: Starting...");
 
         let mut translated = 0u64;
-        crate::Markets::<T>::translate::<OldMarketOf<T>, _>(|market_id, old_market| {
+        crate::Markets::<T>::translate::<OldMarketOf<T>, _>(|_, old_market| {
             translated.saturating_inc();
-            let scoring_rule = match old_market.scoring_rule {
-                OldScoringRule::Lmsr => ScoringRule::AmmCdaHybrid,
-                OldScoringRule::Orderbook => ScoringRule::AmmCdaHybrid,
-                OldScoringRule::Parimutuel => ScoringRule::Parimutuel,
+            let dispute_mechanism = match old_market.dispute_mechanism {
+                Some(OldMarketDisputeMechanism::Court) => Some(MarketDisputeMechanism::Court),
+                Some(_) => Some(MarketDisputeMechanism::Authorized),
+                None => None,
             };
             let new_market = Market {
-                market_id,
+                market_id: old_market.market_id,
                 base_asset: old_market.base_asset,
                 creator: old_market.creator,
                 creation: old_market.creation,
@@ -126,23 +151,23 @@ where
                 market_type: old_market.market_type,
                 period: old_market.period,
                 deadlines: old_market.deadlines,
-                scoring_rule,
+                scoring_rule: old_market.scoring_rule,
                 status: old_market.status,
                 report: old_market.report,
                 resolved_outcome: old_market.resolved_outcome,
-                dispute_mechanism: old_market.dispute_mechanism,
+                dispute_mechanism,
                 bonds: old_market.bonds,
                 early_close: old_market.early_close,
             };
             Some(new_market)
         });
-        log::info!("MigrateScoringRuleAmmCdaHybridAndMarketId: Upgraded {} markets.", translated);
+        log::info!("MigrateDisputeMechanism: Upgraded {} markets.", translated);
         total_weight =
             total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
 
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommons<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-        log::info!("MigrateScoringRuleAmmCdaHybridAndMarketId: Done!");
+        log::info!("MigrateDisputeMechanism: Done!");
         total_weight
     }
 
@@ -179,7 +204,7 @@ where
             let old_market = old_markets
                 .get(&market_id)
                 .expect(&format!("Market {:?} not found", market_id)[..]);
-            assert_eq!(market_id, new_market.market_id);
+            assert_eq!(old_market.market_id, new_market.market_id);
             assert_eq!(old_market.base_asset, new_market.base_asset);
             assert_eq!(old_market.creator, new_market.creator);
             assert_eq!(old_market.creation, new_market.creation);
@@ -192,14 +217,10 @@ where
             assert_eq!(old_market.status, new_market.status);
             assert_eq!(old_market.report, new_market.report);
             assert_eq!(old_market.resolved_outcome, new_market.resolved_outcome);
-            assert_eq!(old_market.dispute_mechanism, new_market.dispute_mechanism);
             assert_eq!(old_market.bonds, new_market.bonds);
             assert_eq!(old_market.early_close, new_market.early_close);
         }
-        log::info!(
-            "MigrateScoringRuleAmmCdaHybridAndMarketId: Post-upgrade market count is {}!",
-            new_market_count
-        );
+        log::info!("MigrateDisputeMechanism: Post-upgrade market count is {}!", new_market_count);
         Ok(())
     }
 }
@@ -224,7 +245,7 @@ mod tests {
     fn on_runtime_upgrade_increments_the_storage_version() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            MigrateScoringRuleAmmCdaHybridAndMarketId::<Runtime>::on_runtime_upgrade();
+            MigrateDisputeMechanism::<Runtime>::on_runtime_upgrade();
             assert_eq!(
                 StorageVersion::get::<MarketCommons<Runtime>>(),
                 MARKET_COMMONS_NEXT_STORAGE_VERSION
@@ -232,26 +253,31 @@ mod tests {
         });
     }
 
-    #[test_case(OldScoringRule::Orderbook, ScoringRule::AmmCdaHybrid)]
-    #[test_case(OldScoringRule::Lmsr, ScoringRule::AmmCdaHybrid)]
-    #[test_case(OldScoringRule::Parimutuel, ScoringRule::Parimutuel)]
+    #[test_case(None, None)]
+    #[test_case(
+        Some(OldMarketDisputeMechanism::Authorized),
+        Some(MarketDisputeMechanism::Authorized)
+    )]
+    #[test_case(Some(OldMarketDisputeMechanism::Court), Some(MarketDisputeMechanism::Court))]
+    #[test_case(
+        Some(OldMarketDisputeMechanism::SimpleDisputes),
+        Some(MarketDisputeMechanism::Authorized)
+    )]
     fn on_runtime_upgrade_works_as_expected(
-        old_scoring_rule: OldScoringRule,
-        new_scoring_rule: ScoringRule,
+        old_scoring_rule: Option<OldMarketDisputeMechanism>,
+        new_scoring_rule: Option<MarketDisputeMechanism>,
     ) {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            let (old_markets, new_markets) =
+            let (old_market, new_market) =
                 construct_old_new_tuple(old_scoring_rule, new_scoring_rule);
             populate_test_data::<Blake2_128Concat, MarketId, OldMarketOf<Runtime>>(
                 MARKET_COMMONS,
                 MARKETS,
-                old_markets,
+                vec![old_market],
             );
-            MigrateScoringRuleAmmCdaHybridAndMarketId::<Runtime>::on_runtime_upgrade();
-            assert_eq!(crate::Markets::<Runtime>::get(0).unwrap(), new_markets[0]);
-            assert_eq!(crate::Markets::<Runtime>::get(1).unwrap(), new_markets[1]);
-            assert_eq!(crate::Markets::<Runtime>::get(2).unwrap(), new_markets[2]);
+            MigrateDisputeMechanism::<Runtime>::on_runtime_upgrade();
+            assert_eq!(crate::Markets::<Runtime>::get(0).unwrap(), new_market);
         });
     }
 
@@ -288,7 +314,7 @@ mod tests {
             };
             crate::Markets::<Runtime>::insert(333, market);
             let tmp = storage_root(StateVersion::V1);
-            MigrateScoringRuleAmmCdaHybridAndMarketId::<Runtime>::on_runtime_upgrade();
+            MigrateDisputeMechanism::<Runtime>::on_runtime_upgrade();
             assert_eq!(tmp, storage_root(StateVersion::V1));
         });
     }
@@ -299,10 +325,12 @@ mod tests {
     }
 
     fn construct_old_new_tuple(
-        old_scoring_rule: OldScoringRule,
-        new_scoring_rule: ScoringRule,
-    ) -> (Vec<OldMarketOf<Runtime>>, Vec<MarketOf<Runtime>>) {
+        old_dispute_mechanism: Option<OldMarketDisputeMechanism>,
+        new_dispute_mechanism: Option<MarketDisputeMechanism>,
+    ) -> (OldMarketOf<Runtime>, MarketOf<Runtime>) {
+        let market_id = 0;
         let base_asset = BaseAsset::Ztg;
+        let creator = 1;
         let creation = MarketCreation::Advised;
         let creator_fee = Perbill::from_rational(2u32, 3u32);
         let oracle = 4;
@@ -310,10 +338,10 @@ mod tests {
         let market_type = MarketType::Scalar(6..=7);
         let period = MarketPeriod::Block(8..9);
         let deadlines = Deadlines { grace_period: 10, oracle_duration: 11, dispute_duration: 12 };
+        let scoring_rule = ScoringRule::AmmCdaHybrid;
         let status = MarketStatus::Resolved;
         let report = Some(Report { at: 13, by: 14, outcome: OutcomeReport::Categorical(15) });
         let resolved_outcome = Some(OutcomeReport::Categorical(16));
-        let dispute_mechanism = Some(MarketDisputeMechanism::Court);
         let bonds = MarketBonds {
             creation: Some(Bond { who: 17, value: 18, is_settled: true }),
             oracle: Some(Bond { who: 19, value: 20, is_settled: true }),
@@ -327,51 +355,45 @@ mod tests {
             new: MarketPeriod::Block(31..32),
             state: EarlyCloseState::Disputed,
         });
-        let sentinels = (0..3).map(|i| 10 - i);
-        let old_markets = sentinels
-            .clone()
-            .map(|sentinel| OldMarket {
-                base_asset,
-                creator: sentinel,
-                creation: creation.clone(),
-                creator_fee,
-                oracle,
-                metadata: metadata.clone(),
-                market_type: market_type.clone(),
-                period: period.clone(),
-                deadlines,
-                scoring_rule: old_scoring_rule,
-                status,
-                report: report.clone(),
-                resolved_outcome: resolved_outcome.clone(),
-                dispute_mechanism: dispute_mechanism.clone(),
-                bonds: bonds.clone(),
-                early_close: early_close.clone(),
-            })
-            .collect();
-        let new_markets = sentinels
-            .enumerate()
-            .map(|(index, sentinel)| Market {
-                market_id: index as u128,
-                base_asset,
-                creator: sentinel,
-                creation: creation.clone(),
-                creator_fee,
-                oracle,
-                metadata: metadata.clone(),
-                market_type: market_type.clone(),
-                period: period.clone(),
-                deadlines,
-                scoring_rule: new_scoring_rule,
-                status,
-                report: report.clone(),
-                resolved_outcome: resolved_outcome.clone(),
-                dispute_mechanism: dispute_mechanism.clone(),
-                bonds: bonds.clone(),
-                early_close: early_close.clone(),
-            })
-            .collect();
-        (old_markets, new_markets)
+        let old_markets = OldMarket {
+            market_id,
+            base_asset,
+            creator,
+            creation: creation.clone(),
+            creator_fee,
+            oracle,
+            metadata: metadata.clone(),
+            market_type: market_type.clone(),
+            period: period.clone(),
+            deadlines,
+            scoring_rule,
+            status,
+            report: report.clone(),
+            resolved_outcome: resolved_outcome.clone(),
+            dispute_mechanism: old_dispute_mechanism,
+            bonds: bonds.clone(),
+            early_close: early_close.clone(),
+        };
+        let new_market = Market {
+            market_id,
+            base_asset,
+            creator,
+            creation: creation.clone(),
+            creator_fee,
+            oracle,
+            metadata: metadata.clone(),
+            market_type: market_type.clone(),
+            period: period.clone(),
+            deadlines,
+            scoring_rule,
+            status,
+            report: report.clone(),
+            resolved_outcome: resolved_outcome.clone(),
+            dispute_mechanism: new_dispute_mechanism,
+            bonds: bonds.clone(),
+            early_close: early_close.clone(),
+        };
+        (old_markets, new_market)
     }
 
     #[allow(unused)]
