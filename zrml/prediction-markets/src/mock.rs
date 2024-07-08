@@ -58,7 +58,10 @@ use zeitgeist_primitives::{
     },
 };
 #[cfg(feature = "parachain")]
-use {orml_traits::asset_registry::AssetProcessor, zeitgeist_primitives::types::CustomMetadata};
+use {
+    orml_traits::asset_registry::AssetProcessor, parity_scale_codec::Encode,
+    zeitgeist_primitives::types::CustomMetadata,
+};
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
