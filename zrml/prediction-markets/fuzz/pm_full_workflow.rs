@@ -26,7 +26,7 @@ use sp_arithmetic::Perbill;
 use zeitgeist_primitives::{
     constants::mock::MaxCreatorFee,
     types::{
-        BaseAsset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType,
+        Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType,
         MultiHash, OutcomeReport, ScoringRule,
     },
 };
@@ -48,7 +48,7 @@ fuzz_target!(|data: Data| {
         let fee = Perbill::from_parts(bounded_parts.try_into().unwrap());
         let _ = PredictionMarkets::create_market(
             RuntimeOrigin::signed(data.create_scalar_market_origin.into()),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             fee,
             data.create_scalar_market_oracle.into(),
             MarketPeriod::Block(data.create_scalar_market_period),

@@ -18,20 +18,18 @@
 #![cfg(any(feature = "runtime-benchmarks", test))]
 
 use crate::*;
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::types::{
-    BaseAsset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-    MarketStatus, MarketType, ScoringRule,
+    Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+    MarketType, ScoringRule,
 };
-
-type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
 type MarketOf<T> = Market<
     <T as frame_system::Config>::AccountId,
     BalanceOf<T>,
-    <T as frame_system::Config>::BlockNumber,
+    BlockNumberFor<T>,
     MomentOf<T>,
-    BaseAsset,
     MarketIdOf<T>,
 >;
 
@@ -41,7 +39,7 @@ where
 {
     Market {
         market_id: Default::default(),
-        base_asset: BaseAsset::Ztg,
+        base_asset: Asset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),
         creator: T::PalletId::get().into_account_truncating(),

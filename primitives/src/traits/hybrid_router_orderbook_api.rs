@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::dispatch::DispatchError;
+use sp_runtime::DispatchError;
 
 use crate::hybrid_router_api_types::{ApiError, OrderbookSoftFail, OrderbookTrade};
 

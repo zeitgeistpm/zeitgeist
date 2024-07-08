@@ -17,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]
 
 extern crate alloc;
 
@@ -30,7 +30,7 @@ use common_runtime::{
 };
 pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
-    CheckTxVersion, CheckWeight, EnsureNever,
+    CheckTxVersion, CheckWeight,
 };
 #[cfg(feature = "parachain")]
 pub use pallet_author_slot_filter::EligibilityValue;
@@ -42,21 +42,16 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{
-        AsEnsureOriginWithArg, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly,
-        InstanceFilter,
-    },
+    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
-use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
+use frame_system::{EnsureRoot, EnsureWithSuccess};
 use orml_currencies::Call::transfer;
-use pallet_assets::Call::{destroy_accounts, destroy_approvals, finish_destroy};
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
-use parity_scale_codec::Compact;
 use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
-use zeitgeist_primitives::{constants::*, types::*};
+use zeitgeist_primitives::types::*;
 use zrml_prediction_markets::Call::{
     buy_complete_set, create_market, dispute, edit_market, redeem_shares, report, sell_complete_set,
 };
@@ -67,7 +62,7 @@ use zrml_swaps::Call::{
 };
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{Everything, Nothing},
+    frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
@@ -77,11 +72,10 @@ use {
 
 use frame_support::construct_runtime;
 
-use sp_api::impl_runtime_apis;
+use sp_api::{impl_runtime_apis, BlockT};
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str,
-    traits::Block as BlockT,
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
@@ -103,8 +97,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 55,
-    impl_version: 1,
+    spec_version: 56,
+    impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 29,
     state_version: 1,
@@ -171,26 +165,6 @@ impl Contains<RuntimeCall> for IsCallable {
     fn contains(call: &RuntimeCall) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match call {
-            // Asset destruction is managed. Instead of deleting those dispatchable calls, they are
-            // filtered here instead to allow root to interact in case of emergency.
-            RuntimeCall::CampaignAssets(inner_call) => match inner_call {
-                destroy_accounts { .. } => false,
-                destroy_approvals { .. } => false,
-                finish_destroy { .. } => false,
-                _ => true,
-            },
-            RuntimeCall::CustomAssets(inner_call) => match inner_call {
-                destroy_accounts { .. } => false,
-                destroy_approvals { .. } => false,
-                finish_destroy { .. } => false,
-                _ => true,
-            },
-            RuntimeCall::MarketAssets(inner_call) => match inner_call {
-                destroy_accounts { .. } => false,
-                destroy_approvals { .. } => false,
-                finish_destroy { .. } => false,
-                _ => true,
-            },
             RuntimeCall::Swaps(inner_call) => match inner_call {
                 force_pool_exit { .. } => true,
                 _ => false,
@@ -209,6 +183,7 @@ create_runtime_with_additional_pallets!(
 impl pallet_sudo::Config for Runtime {
     type RuntimeCall = RuntimeCall;
     type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = ();
 }
 
 impl_config_traits!();

@@ -64,7 +64,7 @@ zrml-swaps = { workspace = true, features = ["mock", "default"] }
 
 [package]
 authors = ["Automatically generated"]
-edition = "2021"
+edition.workspace = true
 name = "zrml-swaps-fuzz"
 publish = false
 version = "0.0.0"

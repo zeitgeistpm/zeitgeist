@@ -24,60 +24,43 @@
 
 use crate as prediction_markets;
 use frame_support::{
-    construct_runtime, ord_parameter_types,
-    pallet_prelude::Weight,
-    parameter_types,
-    storage::unhashed::put,
-    traits::{
-        AsEnsureOriginWithArg, Everything, GenesisBuild, NeverEnsureOrigin, OnFinalize, OnIdle,
-        OnInitialize,
-    },
+    construct_runtime, ord_parameter_types, parameter_types,
+    traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
-use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
-use parity_scale_codec::Compact;
+use frame_system::{mocking::MockBlock, EnsureRoot, EnsureSignedBy};
 use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, ConstU32, IdentityLookup},
-    DispatchError, DispatchResult,
+    BuildStorage, DispatchError, DispatchResult,
 };
 use std::cell::RefCell;
 use zeitgeist_primitives::{
     constants::mock::{
-        AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AssetsAccountDeposit,
-        AssetsApprovalDeposit, AssetsDeposit, AssetsMetadataDepositBase,
-        AssetsMetadataDepositPerByte, AssetsStringLimit, AuthorizedPalletId, BlockHashCount,
-        BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
+        AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
+        BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
         CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
         CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
-        DestroyAccountWeight, DestroyApprovalWeight, DestroyFinishWeight, ExistentialDeposit,
-        ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId,
-        GlobalDisputesPalletId, InflationPeriod, LockId, MaxAppeals, MaxApprovals, MaxCategories,
-        MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration, MaxDisputes,
-        MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod, MaxMarketLifetime,
-        MaxOracleDuration, MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws,
-        MaxYearlyInflation, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
-        MinOutcomeVoteAmount, MinimumPeriod, OutsiderBond, PmPalletId, RemoveKeysLimit,
-        RequestInterval, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
-        MILLISECS_PER_BLOCK,
+        ExistentialDeposit, ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId,
+        GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LockId, MaxAppeals,
+        MaxApprovals, MaxCategories, MaxCourtParticipants, MaxCreatorFee, MaxDelegations,
+        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
+        MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners, MaxRejectReasonLen, MaxReserves,
+        MaxSelectedDraws, MaxYearlyInflation, MinCategories, MinDisputeDuration, MinJurorStake,
+        MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod, OutsiderBond, PmPalletId,
+        RemoveKeysLimit, RequestInterval, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE,
+        CENT, MILLISECS_PER_BLOCK,
     },
-    traits::{DeployPoolApi, MarketTransitionApi},
+    traits::DeployPoolApi,
     types::{
-        AccountIdTest, Amount, Assets, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CampaignAsset, CampaignAssetClass, CampaignAssetId, Currencies, CustomAsset, CustomAssetId,
-        Hash, Index, MarketAsset, MarketId, Moment, ResultWithWeightInfo, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
+        CurrencyId, Hash, MarketId, Moment,
     },
 };
-
 #[cfg(feature = "parachain")]
-use {orml_asset_registry::AssetMetadata, zeitgeist_primitives::types::XcmAsset};
-
-pub(super) const ON_PROPOSAL_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x00];
-pub(super) const ON_ACTIVATION_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x01];
-pub(super) const ON_CLOSURE_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x02];
-pub(super) const ON_REPORT_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x03];
-pub(super) const ON_DISPUTE_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x04];
-pub(super) const ON_RESOLUTION_STORAGE: [u8; 4] = [0x09, 0x09, 0x00, 0x05];
+use {
+    orml_traits::asset_registry::AssetProcessor, parity_scale_codec::Encode,
+    zeitgeist_primitives::types::CustomMetadata,
+};
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
@@ -106,36 +89,6 @@ pub struct DeployPoolArgs {
     amount: Balance,
     swap_prices: Vec<Balance>,
     swap_fee: Balance,
-}
-
-// It just writes true to specific memory locations depending on the hook that's invoked.
-pub struct StateTransitionMock;
-
-impl MarketTransitionApi<MarketId> for StateTransitionMock {
-    fn on_proposal(_market_id: &MarketId) -> ResultWithWeightInfo<DispatchResult> {
-        put(&ON_PROPOSAL_STORAGE, &true);
-        ResultWithWeightInfo::new(Ok(()), Weight::zero())
-    }
-    fn on_activation(_market_id: &MarketId) -> ResultWithWeightInfo<DispatchResult> {
-        put(&ON_ACTIVATION_STORAGE, &true);
-        ResultWithWeightInfo::new(Ok(()), Weight::zero())
-    }
-    fn on_closure(_market_id: &MarketId) -> ResultWithWeightInfo<DispatchResult> {
-        put(&ON_CLOSURE_STORAGE, &true);
-        ResultWithWeightInfo::new(Ok(()), Weight::zero())
-    }
-    fn on_report(_market_id: &MarketId) -> ResultWithWeightInfo<DispatchResult> {
-        put(&ON_REPORT_STORAGE, &true);
-        ResultWithWeightInfo::new(Ok(()), Weight::zero())
-    }
-    fn on_dispute(_market_id: &MarketId) -> ResultWithWeightInfo<DispatchResult> {
-        put(&ON_DISPUTE_STORAGE, &true);
-        ResultWithWeightInfo::new(Ok(()), Weight::zero())
-    }
-    fn on_resolution(_market_id: &MarketId) -> ResultWithWeightInfo<DispatchResult> {
-        put(&ON_RESOLUTION_STORAGE, &true);
-        ResultWithWeightInfo::new(Ok(()), Weight::zero())
-    }
 }
 
 thread_local! {
@@ -212,33 +165,22 @@ parameter_types! {
     pub const DisputeBond: Balance = 109 * CENT;
 }
 
-type CustomAssetsInstance = pallet_assets::Instance1;
-type CampaignAssetsInstance = pallet_assets::Instance2;
-type MarketAssetsInstance = pallet_assets::Instance3;
-
 construct_runtime!(
-    pub enum Runtime
-    where
-        Block = BlockTest<Runtime>,
-        NodeBlock = BlockTest<Runtime>,
-        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
-    {
-        AssetRouter: zrml_asset_router::{Pallet},
-        Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
-        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        CampaignAssets: pallet_assets::<Instance2>::{Call, Pallet, Storage, Event<T>},
-        CustomAssets: pallet_assets::<Instance1>::{Call, Pallet, Storage, Event<T>},
-        Court: zrml_court::{Event<T>, Pallet, Storage},
-        AssetManager: orml_currencies::{Call, Pallet, Storage},
-        MarketAssets: pallet_assets::<Instance3>::{Call, Pallet, Storage, Event<T>},
-        MarketCommons: zrml_market_commons::{Pallet, Storage},
-        PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
-        GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
-        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
-        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
+    pub enum Runtime {
+        #[cfg(feature = "parachain")]
+        AssetRegistry: orml_asset_registry,
+        Authorized: zrml_authorized,
+        Balances: pallet_balances,
+        Court: zrml_court,
+        AssetManager: orml_currencies,
+        MarketCommons: zrml_market_commons,
+        PredictionMarkets: prediction_markets,
+        RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip,
+        GlobalDisputes: zrml_global_disputes,
+        System: frame_system,
+        Timestamp: pallet_timestamp,
+        Tokens: orml_tokens,
+        Treasury: pallet_treasury,
     }
 );
 
@@ -246,11 +188,8 @@ impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
     type ApproveOrigin = EnsureSignedBy<ApproveOrigin, AccountIdTest>;
-    type AssetCreator = AssetRouter;
-    type AssetDestroyer = AssetRouter;
-    type AssetManager = AssetManager;
     #[cfg(feature = "parachain")]
-    type AssetRegistry = MockRegistry;
+    type AssetRegistry = AssetRegistry;
     type Authorized = Authorized;
     type CloseEarlyDisputeBond = CloseEarlyDisputeBond;
     type CloseMarketEarlyOrigin = EnsureSignedBy<CloseMarketEarlyOrigin, AccountIdTest>;
@@ -276,7 +215,6 @@ impl crate::Config for Runtime {
     type MinCategories = MinCategories;
     type MaxEditReasonLen = MaxEditReasonLen;
     type MaxRejectReasonLen = MaxRejectReasonLen;
-    type OnStateTransition = (StateTransitionMock,);
     type OracleBond = OracleBond;
     type OutsiderBond = OutsiderBond;
     type PalletId = PmPalletId;
@@ -285,6 +223,7 @@ impl crate::Config for Runtime {
     type RejectOrigin = EnsureSignedBy<RejectOrigin, AccountIdTest>;
     type RequestEditOrigin = EnsureSignedBy<RequestEditOrigin, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<ResolveOrigin, AccountIdTest>;
+    type AssetManager = AssetManager;
     type Slash = Treasury;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
@@ -294,40 +233,68 @@ impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountIdTest;
     type BaseCallFilter = Everything;
+    type Block = MockBlock<Runtime>;
     type BlockHashCount = BlockHashCount;
     type BlockLength = ();
-    type BlockNumber = BlockNumber;
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
     type DbWeight = ();
     type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
-    type Header = Header;
-    type Index = Index;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type MaxConsumers = frame_support::traits::ConstU32<16>;
+    type Nonce = u64;
+    type MaxConsumers = ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
-    type OnSetCode = ();
     type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
     type Version = ();
+    type OnSetCode = ();
 }
 
 impl orml_currencies::Config for Runtime {
     type GetNativeCurrencyId = GetNativeCurrencyId;
-    type MultiCurrency = AssetRouter;
+    type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
     type WeightInfo = ();
 }
 
+cfg_if::cfg_if!(
+    if #[cfg(feature = "parachain")] {
+        type AssetMetadata = orml_traits::asset_registry::AssetMetadata<
+            Balance,
+            CustomMetadata,
+            ConstU32<1024>
+        >;
+        pub struct NoopAssetProcessor {}
+
+        impl AssetProcessor<CurrencyId, AssetMetadata> for NoopAssetProcessor {
+            fn pre_register(id: Option<CurrencyId>, asset_metadata: AssetMetadata)
+             -> Result<(CurrencyId, AssetMetadata), DispatchError> {
+                Ok((id.unwrap(), asset_metadata))
+            }
+        }
+
+        impl orml_asset_registry::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            type CustomMetadata = CustomMetadata;
+            type AssetId = CurrencyId;
+            type AuthorityOrigin = EnsureRoot<AccountIdTest>;
+            type AssetProcessor = NoopAssetProcessor;
+            type Balance = Balance;
+            type StringLimit = ConstU32<1024>;
+            type WeightInfo = ();
+        }
+    }
+);
+
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
-    type CurrencyId = Currencies;
+    type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = Everything;
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
@@ -338,27 +305,31 @@ impl orml_tokens::Config for Runtime {
     type WeightInfo = ();
 }
 
-#[cfg(feature = "parachain")]
-crate::orml_asset_registry::impl_mock_registry! {
-    MockRegistry,
-    XcmAsset,
-    Balance,
-    zeitgeist_primitives::types::CustomMetadata
-}
+// #[cfg(feature = "parachain")]
+// crate::orml_asset_registry::impl_mock_registry! {
+//     MockRegistry,
+//     CurrencyId,
+//     Balance,
+//     zeitgeist_primitives::types::CustomMetadata
+// }
 
 impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
+    type FreezeIdentifier = ();
+    type RuntimeHoldReason = ();
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
-    type MaxLocks = ();
+    type MaxHolds = ();
+    type MaxFreezes = ();
+    type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
+impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_timestamp::Config for Runtime {
     type MinimumPeriod = MinimumPeriod;
@@ -369,122 +340,6 @@ impl pallet_timestamp::Config for Runtime {
 
 ord_parameter_types! {
     pub const AuthorizedDisputeResolutionUser: AccountIdTest = ALICE;
-}
-
-pallet_assets::runtime_benchmarks_enabled! {
-    pub struct AssetsBenchmarkHelper;
-
-    impl<AssetIdParameter> pallet_assets::BenchmarkHelper<AssetIdParameter>
-        for AssetsBenchmarkHelper
-    where
-        AssetIdParameter: From<u128>,
-    {
-        fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
-            (id as u128).into()
-        }
-    }
-}
-
-pallet_assets::runtime_benchmarks_enabled! {
-    use zeitgeist_primitives::types::CategoryIndex;
-
-    pub struct MarketAssetsBenchmarkHelper;
-
-    impl pallet_assets::BenchmarkHelper<MarketAsset>
-        for MarketAssetsBenchmarkHelper
-    {
-        fn create_asset_id_parameter(id: u32) -> MarketAsset {
-            MarketAsset::CategoricalOutcome(0, id as CategoryIndex)
-        }
-    }
-}
-
-impl pallet_assets::Config<CampaignAssetsInstance> for Runtime {
-    type ApprovalDeposit = AssetsApprovalDeposit;
-    type AssetAccountDeposit = AssetsAccountDeposit;
-    type AssetDeposit = AssetsDeposit;
-    type AssetId = CampaignAsset;
-    type AssetIdParameter = Compact<CampaignAssetId>;
-    type Balance = Balance;
-    #[cfg(feature = "runtime-benchmarks")]
-    type BenchmarkHelper = AssetsBenchmarkHelper;
-    type CallbackHandle = ();
-    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<Self::AccountId>>;
-    type Currency = Balances;
-    type Extra = ();
-    type ForceOrigin = EnsureRoot<AccountIdTest>;
-    type Freezer = ();
-    type Destroyer = AssetRouter;
-    type MetadataDepositBase = AssetsMetadataDepositBase;
-    type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
-    type RemoveItemsLimit = ConstU32<50>;
-    type RuntimeEvent = RuntimeEvent;
-    type StringLimit = AssetsStringLimit;
-    type WeightInfo = ();
-}
-
-impl pallet_assets::Config<CustomAssetsInstance> for Runtime {
-    type ApprovalDeposit = AssetsApprovalDeposit;
-    type AssetAccountDeposit = AssetsAccountDeposit;
-    type AssetDeposit = AssetsDeposit;
-    type AssetId = CustomAsset;
-    type AssetIdParameter = Compact<CustomAssetId>;
-    type Balance = Balance;
-    #[cfg(feature = "runtime-benchmarks")]
-    type BenchmarkHelper = AssetsBenchmarkHelper;
-    type CallbackHandle = ();
-    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<Self::AccountId>>;
-    type Currency = Balances;
-    type Extra = ();
-    type ForceOrigin = EnsureRoot<AccountIdTest>;
-    type Freezer = ();
-    type Destroyer = AssetRouter;
-    type MetadataDepositBase = AssetsMetadataDepositBase;
-    type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
-    type RemoveItemsLimit = ConstU32<50>;
-    type RuntimeEvent = RuntimeEvent;
-    type StringLimit = AssetsStringLimit;
-    type WeightInfo = ();
-}
-
-impl pallet_assets::Config<MarketAssetsInstance> for Runtime {
-    type ApprovalDeposit = AssetsApprovalDeposit;
-    type AssetAccountDeposit = AssetsAccountDeposit;
-    type AssetDeposit = AssetsDeposit;
-    type AssetId = MarketAsset;
-    type AssetIdParameter = MarketAsset;
-    type Balance = Balance;
-    #[cfg(feature = "runtime-benchmarks")]
-    type BenchmarkHelper = MarketAssetsBenchmarkHelper;
-    type CallbackHandle = ();
-    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<Self::AccountId>>;
-    type Currency = Balances;
-    type Extra = ();
-    type ForceOrigin = EnsureRoot<AccountIdTest>;
-    type Freezer = ();
-    type Destroyer = AssetRouter;
-    type MetadataDepositBase = AssetsMetadataDepositBase;
-    type MetadataDepositPerByte = AssetsMetadataDepositPerByte;
-    type RemoveItemsLimit = ConstU32<50>;
-    type RuntimeEvent = RuntimeEvent;
-    type StringLimit = AssetsStringLimit;
-    type WeightInfo = ();
-}
-
-impl zrml_asset_router::Config for Runtime {
-    type AssetType = Assets;
-    type Balance = Balance;
-    type CurrencyType = Currencies;
-    type Currencies = Tokens;
-    type CampaignAssetType = CampaignAsset;
-    type CampaignAssets = CampaignAssets;
-    type CustomAssetType = CustomAsset;
-    type CustomAssets = CustomAssets;
-    type DestroyAccountWeight = DestroyAccountWeight;
-    type DestroyApprovalWeight = DestroyApprovalWeight;
-    type DestroyFinishWeight = DestroyFinishWeight;
-    type MarketAssetType = MarketAsset;
-    type MarketAssets = MarketAssets;
 }
 
 impl zrml_authorized::Config for Runtime {
@@ -591,71 +446,62 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
         // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
         let _ = env_logger::builder().is_test(true).try_init();
-
-        pallet_assets::GenesisConfig::<Runtime, CampaignAssetsInstance> {
-            assets: vec![(CampaignAssetClass(100), ALICE, true, 1)],
-            metadata: vec![],
-            accounts: self
-                .balances
-                .iter()
-                .map(|(account, balance)| (CampaignAssetClass(100), *account, *balance))
-                .collect(),
-        }
-        .assimilate_storage(&mut t)
-        .unwrap();
 
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
 
         #[cfg(feature = "parachain")]
-        orml_tokens::GenesisConfig::<Runtime> {
-            balances: (0..69)
-                .map(|idx| (idx, Currencies::ForeignAsset(100), INITIAL_BALANCE))
-                .collect(),
-        }
-        .assimilate_storage(&mut t)
-        .unwrap();
+        {
+            orml_tokens::GenesisConfig::<Runtime> {
+                balances: (0..69)
+                    .map(|idx| (idx, Asset::ForeignAsset(100), INITIAL_BALANCE))
+                    .collect(),
+            }
+            .assimilate_storage(&mut t)
+            .unwrap();
 
-        #[cfg(feature = "parachain")]
-        let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
-            allow_as_base_asset: true,
-            ..Default::default()
-        };
+            let custom_metadata = zeitgeist_primitives::types::CustomMetadata {
+                allow_as_base_asset: true,
+                ..Default::default()
+            };
 
-        #[cfg(feature = "parachain")]
-        orml_asset_registry_mock::GenesisConfig {
-            metadata: vec![
-                (
-                    XcmAsset::ForeignAsset(100),
-                    AssetMetadata {
-                        decimals: 18,
-                        name: "ACALA USD".as_bytes().to_vec(),
-                        symbol: "AUSD".as_bytes().to_vec(),
-                        existential_deposit: 0,
-                        location: None,
-                        additional: custom_metadata,
-                    },
-                ),
-                (
-                    XcmAsset::ForeignAsset(420),
-                    AssetMetadata {
-                        decimals: 18,
-                        name: "FANCY_TOKEN".as_bytes().to_vec(),
-                        symbol: "FTK".as_bytes().to_vec(),
-                        existential_deposit: 0,
-                        location: None,
-                        additional: zeitgeist_primitives::types::CustomMetadata::default(),
-                    },
-                ),
-            ],
+            orml_asset_registry::GenesisConfig::<Runtime> {
+                assets: vec![
+                    (
+                        Asset::ForeignAsset(100),
+                        AssetMetadata {
+                            decimals: 18,
+                            name: "ACALA USD".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "AUSD".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: 0,
+                            location: None,
+                            additional: custom_metadata,
+                        }
+                        .encode(),
+                    ),
+                    (
+                        Asset::ForeignAsset(420),
+                        AssetMetadata {
+                            decimals: 18,
+                            name: "FANCY_TOKEN".as_bytes().to_vec().try_into().unwrap(),
+                            symbol: "FTK".as_bytes().to_vec().try_into().unwrap(),
+                            existential_deposit: 0,
+                            location: None,
+                            additional: zeitgeist_primitives::types::CustomMetadata::default(),
+                        }
+                        .encode(),
+                    ),
+                ],
+                last_asset_id: Asset::ForeignAsset(420),
+            }
+            .assimilate_storage(&mut t)
+            .unwrap();
         }
-        .assimilate_storage(&mut t)
-        .unwrap();
 
         let mut test_ext: sp_io::TestExternalities = t.into();
         test_ext.execute_with(|| System::set_block_number(1));
@@ -674,7 +520,6 @@ pub fn run_to_block(n: BlockNumber) {
         PredictionMarkets::on_initialize(System::block_number());
         Court::on_initialize(System::block_number());
         Balances::on_initialize(System::block_number());
-        AssetRouter::on_idle(System::block_number(), Weight::MAX);
     }
 }
 
@@ -689,10 +534,12 @@ pub fn set_timestamp_for_on_initialize(time: Moment) {
     Timestamp::set_timestamp(time - MILLISECS_PER_BLOCK as u64);
 }
 
+type Block = MockBlock<Runtime>;
+
 sp_api::mock_impl_runtime_apis! {
     impl zrml_prediction_markets_runtime_api::PredictionMarketsApi<BlockTest<Runtime>, MarketId, Hash> for Runtime {
-        fn market_outcome_share_id(_: MarketId, _: u16) -> Assets {
-            Assets::PoolShare(1)
+        fn market_outcome_share_id(_: MarketId, _: u16) -> Asset<MarketId> {
+            Asset::PoolShare(1)
         }
     }
 }

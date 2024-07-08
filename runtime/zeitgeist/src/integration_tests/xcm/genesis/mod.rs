@@ -15,23 +15,5 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::pallet::*;
-
-impl<T: Config> Create<T::AccountId> for Pallet<T> {
-    fn create(
-        id: Self::AssetId,
-        admin: T::AccountId,
-        is_sufficient: bool,
-        min_balance: Self::Balance,
-    ) -> DispatchResult {
-        only_asset!(
-            id,
-            Err(Error::<T>::Unsupported.into()),
-            Create,
-            create,
-            admin,
-            is_sufficient,
-            min_balance
-        )
-    }
-}
+pub(super) mod polkadot;
+pub(super) mod zeitgeist;

@@ -9,13 +9,12 @@ sp-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 zrml-market-commons = { workspace = true }
 
-
+cfg-if = { workspace = true, optional = true }
 orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
-pallet-assets = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
-pallet-randomness-collective-flip = { workspace = true, optional = true }
+pallet-insecure-randomness-collective-flip = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
 pallet-treasury = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
@@ -23,7 +22,6 @@ serde = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
-zrml-asset-router = { workspace = true, optional = true }
 zrml-authorized = { workspace = true, optional = true }
 zrml-court = { workspace = true, optional = true }
 zrml-global-disputes = { workspace = true, optional = true }
@@ -39,12 +37,12 @@ zrml-hybrid-router = { workspace = true, features = ["mock"] }
 [features]
 default = ["std"]
 mock = [
+    "cfg-if",
     "orml-asset-registry/default",
     "orml-currencies/default",
     "orml-tokens/default",
-    "pallet-assets/default",
     "pallet-balances/default",
-    "pallet-randomness-collective-flip/default",
+    "pallet-insecure-randomness-collective-flip/default",
     "pallet-timestamp/default",
     "pallet-treasury/default",
     "pallet-xcm/default",
@@ -52,7 +50,6 @@ mock = [
     "sp-io/default",
     "xcm/default",
     "zeitgeist-primitives/mock",
-    "zrml-asset-router/default",
     "zrml-market-commons/default",
     "zrml-neo-swaps/default",
     "zrml-orderbook/default",
@@ -70,7 +67,6 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
-    "pallet-assets?/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
     "zrml-prediction-markets/runtime-benchmarks",
 ]
@@ -92,6 +88,6 @@ try-runtime = [
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2021"
+edition.workspace = true
 name = "zrml-hybrid-router"
 version = "0.5.2"

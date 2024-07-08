@@ -23,6 +23,7 @@
 pub(crate) mod pallet {
     use core::marker::PhantomData;
     use frame_support::pallet_prelude::*;
+    use frame_system::pallet_prelude::BlockNumberFor;
     use zrml_market_commons::MarketCommonsPalletApi;
 
     pub(crate) type MarketIdOf<T> =
@@ -32,7 +33,7 @@ pub(crate) mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = BlockNumberFor<Self>>;
     }
 
     #[pallet::pallet]
@@ -43,7 +44,7 @@ pub(crate) mod pallet {
     pub(crate) type MarketIdsPerDisputeBlock<T: Config> = StorageMap<
         _,
         Twox64Concat,
-        T::BlockNumber,
+        BlockNumberFor<T>,
         BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;

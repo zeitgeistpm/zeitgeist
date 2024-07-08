@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022, 2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -29,7 +29,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use std::sync::Arc;
-use zeitgeist_primitives::types::{AccountId, Balance, Block, Index as Nonce, MarketId, PoolId};
+use zeitgeist_primitives::types::{AccountId, Balance, Block, MarketId, Nonce, PoolId};
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {

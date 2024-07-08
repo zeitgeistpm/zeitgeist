@@ -15,12 +15,5 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::pallet::*;
-
-impl<T: Config> TransferAll<T::AccountId> for Pallet<T> {
-    #[require_transactional]
-    fn transfer_all(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
-        // Only transfers assets maintained in orml-tokens, not implementable for pallet-assets
-        <T::Currencies as TransferAll<T::AccountId>>::transfer_all(source, dest)
-    }
-}
+pub(super) mod battery_station;
+pub(super) mod rococo;

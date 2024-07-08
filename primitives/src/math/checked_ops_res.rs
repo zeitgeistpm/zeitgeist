@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::dispatch::DispatchError;
 use num_traits::{checked_pow, One};
 use sp_arithmetic::{
     traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedRem, CheckedSub},
     ArithmeticError,
 };
+use sp_runtime::DispatchError;
 
 pub trait CheckedAddRes
 where

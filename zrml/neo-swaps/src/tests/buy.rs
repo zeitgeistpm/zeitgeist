@@ -16,6 +16,8 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+#[cfg(not(feature = "parachain"))]
+use sp_runtime::{DispatchError, TokenError};
 use test_case::test_case;
 
 // Example taken from
@@ -299,7 +301,7 @@ fn buy_fails_on_insufficient_funds() {
         );
         let amount_in = _10;
         #[cfg(not(feature = "parachain"))]
-        let expected_error = pallet_balances::Error::<Runtime>::InsufficientBalance;
+        let expected_error = DispatchError::Token(TokenError::FundsUnavailable);
         #[cfg(feature = "parachain")]
         let expected_error = orml_tokens::Error::<Runtime>::BalanceTooLow;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in - 1));

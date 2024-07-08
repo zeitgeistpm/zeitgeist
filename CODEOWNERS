@@ -8,7 +8,6 @@
 # Ignore everything but mod.rs in /runtime/common/src/weights/
 /runtime/common/src/weights/*
 /runtime/common/src/weights/mod.rs @sea212
-/zrml/asset-router/ @sea212
 /zrml/authorized/ @Chralt98
 /zrml/court/ @Chralt98
 /zrml/global-disputes/ @Chralt98

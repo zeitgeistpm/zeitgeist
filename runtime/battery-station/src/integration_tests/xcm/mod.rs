@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -17,6 +17,7 @@
 
 #![cfg(all(feature = "parachain", test))]
 
+mod genesis;
 mod setup;
 mod test_net;
 mod tests;
