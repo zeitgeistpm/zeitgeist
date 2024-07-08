@@ -26,7 +26,7 @@
 use super::*;
 use crate::{utils::market_mock, Pallet as Orderbook};
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
-use frame_support::dispatch::UnfilteredDispatchable;
+use frame_support::traits::UnfilteredDispatchable;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
@@ -37,7 +37,7 @@ fn generate_funded_account<T: Config>(
     asset: AssetOf<T>,
 ) -> Result<T::AccountId, &'static str> {
     let acc = if let Some(s) = seed { account("AssetHolder", 0, s) } else { whitelisted_caller() };
-    T::AssetManager::deposit(asset, &acc, BASE.saturating_mul(1_000).saturated_into())?;
+    T::AssetManager::deposit(asset, &acc, BASE.saturating_mul(1_100).saturated_into())?;
     Ok(acc)
 }
 

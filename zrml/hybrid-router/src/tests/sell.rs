@@ -805,7 +805,7 @@ fn sell_emits_event() {
             let order_creator = i as AccountIdTest;
             let surplus = ((i + 1) as u128) * _1_2;
             let taker_amount = taker_amount + surplus.saturated_into::<BalanceOf<Runtime>>();
-            assert_ok!(AssetManager::deposit(maker_asset, &order_creator, maker_amount));
+            assert_ok!(AssetManager::deposit(maker_asset, &order_creator, maker_amount + _100));
             assert_ok!(Orderbook::place_order(
                 RuntimeOrigin::signed(order_creator),
                 market_id,

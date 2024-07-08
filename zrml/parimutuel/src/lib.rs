@@ -18,6 +18,8 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 mod benchmarking;
 mod mock;
 mod tests;
@@ -31,11 +33,11 @@ mod pallet {
     use crate::weights::WeightInfoZeitgeist;
     use core::marker::PhantomData;
     use frame_support::{
-        ensure, log,
-        pallet_prelude::{Decode, DispatchError, Encode, TypeInfo},
+        ensure,
+        pallet_prelude::{Decode, Encode, TypeInfo},
         require_transactional,
         traits::{Get, IsType, StorageVersion},
-        PalletId, RuntimeDebug,
+        PalletId,
     };
     use frame_system::{
         ensure_signed,
@@ -44,7 +46,7 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Zero},
-        DispatchResult,
+        DispatchError, DispatchResult, RuntimeDebug,
     };
     use zeitgeist_primitives::{
         math::fixed::FixedMulDiv,
@@ -68,7 +70,7 @@ mod pallet {
 
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 Balance = BalanceOf<Self>,
             >;
 

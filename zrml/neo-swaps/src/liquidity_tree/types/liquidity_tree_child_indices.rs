@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use sp_runtime::DispatchError;
-
 /// Structure for managing children in a liquidity tree.
 pub(crate) struct LiquidityTreeChildIndices {
     /// Left-hand side child; `None` if there's no left-hand side child (the node is either empty or
@@ -25,22 +23,6 @@ pub(crate) struct LiquidityTreeChildIndices {
     /// Right-hand side child; `None` if there's no right-hand side child (the node is either empty
     /// of the parent is a leaf).
     pub(crate) rhs: Option<u32>,
-}
-
-impl LiquidityTreeChildIndices {
-    /// Applies a `mutator` function to each child if it exists.
-    pub fn apply<F>(&self, mut mutator: F) -> Result<(), DispatchError>
-    where
-        F: FnMut(u32) -> Result<(), DispatchError>,
-    {
-        if let Some(lhs) = self.lhs {
-            mutator(lhs)?;
-        }
-        if let Some(rhs) = self.rhs {
-            mutator(rhs)?;
-        }
-        Ok(())
-    }
 }
 
 // Implement `From` for destructuring

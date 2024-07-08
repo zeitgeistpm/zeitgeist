@@ -18,6 +18,7 @@
 #![cfg(any(feature = "runtime-benchmarks", test))]
 
 use crate::*;
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::types::{
     Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
@@ -27,7 +28,7 @@ use zeitgeist_primitives::types::{
 type MarketOf<T> = Market<
     <T as frame_system::Config>::AccountId,
     BalanceOf<T>,
-    <T as frame_system::Config>::BlockNumber,
+    BlockNumberFor<T>,
     MomentOf<T>,
     MarketIdOf<T>,
 >;

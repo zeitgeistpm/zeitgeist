@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -22,6 +22,7 @@ use crate::{
 };
 use alloc::{collections::BTreeSet, vec::Vec};
 use core::marker::PhantomData;
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::traits::{CheckedDiv, Saturating};
 use zeitgeist_primitives::types::MarketPeriod;
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -37,7 +38,7 @@ impl<T> TrackIncentivesBasedOnBoughtShares<T>
 where
     T: crate::Config,
 {
-    pub(crate) fn exec(curr_block: T::BlockNumber) -> Option<usize> {
+    pub(crate) fn exec(curr_block: BlockNumberFor<T>) -> Option<usize> {
         let per_block_incentives = <PerBlockIncentive<T>>::get();
         let market_incentives = Self::markets_incentives(per_block_incentives, curr_block)?;
         let market_incentives_len = market_incentives.len();
@@ -59,7 +60,7 @@ where
                 let perpetual_incentives = calculate_perthousand_value(ppb, raw_incentives);
                 let incentives = raw_incentives.saturating_sub(perpetual_incentives);
                 <OwnedValues<T>>::mutate(market_id, account_id, |values| {
-                    let one = T::BlockNumber::from(1u8);
+                    let one = BlockNumberFor::<T>::from(1u8);
 
                     values.perpetual_incentives =
                         values.perpetual_incentives.saturating_add(perpetual_incentives);
@@ -70,7 +71,7 @@ where
             }
         }
 
-        let _ = <BlockBoughtShares<T>>::clear(u32::max_value(), None);
+        let _ = <BlockBoughtShares<T>>::clear(u32::MAX, None);
         Some(market_incentives_len)
     }
 
@@ -94,7 +95,7 @@ where
     )]
     fn markets_incentives(
         per_block_incentives: BalanceOf<T>,
-        curr_block: T::BlockNumber,
+        curr_block: BlockNumberFor<T>,
     ) -> Option<Vec<(T::MarketId, BalanceOf<T>)>> {
         let mut normalized_total = BalanceOf::<T>::from(0u8);
         let markets_periods: BTreeSet<_> = <BlockBoughtShares<T>>::iter().map(|el| el.0).collect();
@@ -141,9 +142,9 @@ where
     //
     // The greater the output, the more incentives the market will receive
     fn normalize_market(
-        curr_block: T::BlockNumber,
+        curr_block: BlockNumberFor<T>,
         now: MomentOf<T>,
-        period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
+        period: &MarketPeriod<BlockNumberFor<T>, MomentOf<T>>,
     ) -> BalanceOf<T> {
         let opt = match period {
             MarketPeriod::Block(range) => {

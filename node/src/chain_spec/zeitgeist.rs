@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -36,19 +36,19 @@ use {
     zeitgeist_primitives::constants::ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
     zeitgeist_runtime::{
         CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
-        DefaultParachainBondReservePercent, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
+        DefaultParachainBondReservePercent, EligibilityValue, MinCandidateStk, PolkadotXcmConfig,
     },
 };
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
-        const DEFAULT_STAKING_AMOUNT_ZEITGEIST: u128 = MinCollatorStk::get();
+        const DEFAULT_STAKING_AMOUNT_ZEITGEIST: u128 = MinCandidateStk::get();
         const DEFAULT_COLLATOR_BALANCE_ZEITGEIST: Option<u128> =
             DEFAULT_STAKING_AMOUNT_ZEITGEIST.checked_add(CollatorDeposit::get());
         const NUM_SELECTED_CANDIDATES: u32 = 8;
-        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig, Extensions>;
+        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::RuntimeGenesisConfig, Extensions>;
     } else {
-        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig>;
+        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::RuntimeGenesisConfig>;
     }
 }
 

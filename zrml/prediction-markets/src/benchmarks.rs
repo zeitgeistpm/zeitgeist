@@ -26,13 +26,13 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
-use alloc::vec::Vec;
-use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller};
+use alloc::{vec, vec::Vec};
+use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{
-    dispatch::UnfilteredDispatchable,
-    traits::{EnsureOrigin, Get},
+    traits::{EnsureOrigin, Get, Hooks, UnfilteredDispatchable},
+    BoundedVec,
 };
-use frame_system::RawOrigin;
+use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use orml_traits::MultiCurrency;
 use sp_runtime::{
     traits::{SaturatedConversion, Saturating, Zero},
@@ -54,8 +54,6 @@ use zrml_authorized::Pallet as AuthorizedPallet;
 use zrml_global_disputes::GlobalDisputesPalletApi;
 use zrml_market_commons::MarketCommonsPalletApi;
 
-use frame_support::{traits::Hooks, BoundedVec};
-
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
@@ -66,11 +64,11 @@ const LIQUIDITY: u128 = 100 * BASE;
 // amount of native currency
 fn create_market_common_parameters<T: Config>(
     is_disputable: bool,
-) -> Result<(T::AccountId, T::AccountId, Deadlines<T::BlockNumber>, MultiHash), &'static str> {
+) -> Result<(T::AccountId, T::AccountId, Deadlines<BlockNumberFor<T>>, MultiHash), &'static str> {
     let caller: T::AccountId = whitelisted_caller();
     T::AssetManager::deposit(Asset::Ztg, &caller, (100u128 * LIQUIDITY).saturated_into()).unwrap();
     let oracle = caller.clone();
-    let deadlines = Deadlines::<T::BlockNumber> {
+    let deadlines = Deadlines::<BlockNumberFor<T>> {
         grace_period: 1_u32.into(),
         oracle_duration: T::MinOracleDuration::get(),
         dispute_duration: if is_disputable { T::MinDisputeDuration::get() } else { Zero::zero() },
@@ -86,7 +84,7 @@ fn create_market_common<T: Config + pallet_timestamp::Config>(
     creation: MarketCreation,
     options: MarketType,
     scoring_rule: ScoringRule,
-    period: Option<MarketPeriod<T::BlockNumber, MomentOf<T>>>,
+    period: Option<MarketPeriod<BlockNumberFor<T>, MomentOf<T>>>,
     dispute_mechanism: Option<MarketDisputeMechanism>,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     pallet_timestamp::Pallet::<T>::set_timestamp(0u32.into());
@@ -540,7 +538,7 @@ benchmarks! {
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
-        let new_deadlines = Deadlines::<T::BlockNumber> {
+        let new_deadlines = Deadlines::<BlockNumberFor<T>> {
             grace_period: 2_u32.into(),
             oracle_duration: T::MinOracleDuration::get(),
             dispute_duration: T::MinDisputeDuration::get(),
@@ -620,7 +618,7 @@ benchmarks! {
         }
         MarketIdsPerDisputeBlock::<T>::insert(appeal_end, market_ids_2);
 
-        frame_system::Pallet::<T>::set_block_number(appeal_end - 1u64.saturated_into::<T::BlockNumber>());
+        frame_system::Pallet::<T>::set_block_number(appeal_end - 1u64.saturated_into::<BlockNumberFor<T>>());
 
         let now = frame_system::Pallet::<T>::block_number();
 
@@ -760,7 +758,7 @@ benchmarks! {
 
     on_initialize_resolve_overhead {
         // wait for timestamp to get initialized (that's why block 2)
-        let now = 2u64.saturated_into::<T::BlockNumber>();
+        let now = 2u64.saturated_into::<BlockNumberFor<T>>();
     }: { Pallet::<T>::on_initialize(now) }
 
     redeem_shares_categorical {
@@ -860,7 +858,7 @@ benchmarks! {
             creator_fee: Perbill::zero(),
             oracle: caller.clone(),
             period: MarketPeriod::Timestamp(start..end),
-            deadlines: Deadlines::<T::BlockNumber> {
+            deadlines: Deadlines::<BlockNumberFor<T>> {
                 grace_period: 0u8.into(),
                 oracle_duration: T::MinOracleDuration::get(),
                 dispute_duration: 0u8.into(),
@@ -906,8 +904,8 @@ benchmarks! {
         let f in 1..31;
 
         // ensure markets exist
-        let start_block: T::BlockNumber = 100_000u64.saturated_into();
-        let end_block: T::BlockNumber = 1_000_000u64.saturated_into();
+        let start_block: BlockNumberFor<T> = 100_000u64.saturated_into();
+        let end_block: BlockNumberFor<T> = 1_000_000u64.saturated_into();
         for _ in 0..31 {
             create_market_common::<T>(
                 MarketCreation::Permissionless,
@@ -930,7 +928,7 @@ benchmarks! {
             ).unwrap();
         }
 
-        let block_number: T::BlockNumber = Zero::zero();
+        let block_number: BlockNumberFor<T> = Zero::zero();
         for i in 1..=b {
             MarketIdsPerCloseBlock::<T>::try_mutate(block_number, |ids| {
                 ids.try_push(i.into())
@@ -986,7 +984,7 @@ benchmarks! {
             })?;
         }
 
-        let block_number: T::BlockNumber = Zero::zero();
+        let block_number: BlockNumberFor<T> = Zero::zero();
 
         let mut r_ids_vec = Vec::new();
         for i in 1..=r {

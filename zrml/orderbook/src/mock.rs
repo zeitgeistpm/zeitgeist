@@ -18,15 +18,15 @@
 
 #![cfg(feature = "mock")]
 
-use crate as orderbook_v1;
+use crate as zrml_orderbook;
 use crate::{AssetOf, BalanceOf, MarketIdOf};
 use core::marker::PhantomData;
 use frame_support::{construct_runtime, pallet_prelude::Get, parameter_types, traits::Everything};
+use frame_system::mocking::MockBlock;
 use orml_traits::MultiCurrency;
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, IdentityLookup, Zero},
-    Perbill, SaturatedConversion,
+    BuildStorage, Perbill, SaturatedConversion,
 };
 use zeitgeist_primitives::{
     constants::mock::{
@@ -35,18 +35,14 @@ use zeitgeist_primitives::{
     },
     traits::DistributeFees,
     types::{
-        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
-        Hash, Index, MarketId, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CurrencyId, Hash, MarketId, Moment,
     },
 };
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
-
 pub const MARKET_CREATOR: AccountIdTest = 42;
-
 pub const INITIAL_BALANCE: Balance = 100 * BASE;
-
 pub const EXTERNAL_FEES: Balance = CENT;
 
 parameter_types! {
@@ -91,19 +87,14 @@ where
 }
 
 construct_runtime!(
-    pub enum Runtime
-    where
-        Block = BlockTest<Runtime>,
-        NodeBlock = BlockTest<Runtime>,
-        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
-    {
-        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        MarketCommons: zrml_market_commons::{Pallet, Storage},
-        Orderbook: orderbook_v1::{Call, Event<T>, Pallet},
-        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
-        AssetManager: orml_currencies::{Call, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet},
+    pub enum Runtime {
+        Balances: pallet_balances,
+        MarketCommons: zrml_market_commons,
+        Orderbook: zrml_orderbook,
+        System: frame_system,
+        Tokens: orml_tokens,
+        AssetManager: orml_currencies,
+        Timestamp: pallet_timestamp,
     }
 );
 
@@ -113,25 +104,24 @@ impl crate::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type MarketCommons = MarketCommons;
     type PalletId = OrderbookPalletId;
-    type WeightInfo = orderbook_v1::weights::WeightInfo<Runtime>;
+    type WeightInfo = zrml_orderbook::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountIdTest;
     type BaseCallFilter = Everything;
+    type Block = MockBlock<Runtime>;
     type BlockHashCount = BlockHashCount;
     type BlockLength = ();
-    type BlockNumber = BlockNumber;
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
     type DbWeight = ();
     type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
-    type Header = Header;
-    type Index = Index;
     type Lookup = IdentityLookup<Self::AccountId>;
+    type Nonce = u64;
     type MaxConsumers = frame_support::traits::ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
@@ -168,8 +158,12 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
+    type FreezeIdentifier = ();
+    type RuntimeHoldReason = ();
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
+    type MaxHolds = ();
+    type MaxFreezes = ();
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
@@ -200,7 +194,7 @@ impl Default for ExtBuilder {
 }
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
         // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
         let _ = env_logger::builder().is_test(true).try_init();

@@ -51,21 +51,22 @@ mod pallet {
     };
     use alloc::vec::Vec;
     use core::marker::PhantomData;
-    #[cfg(feature = "std")]
-    use frame_support::traits::GenesisBuild;
     use frame_support::{
         dispatch::DispatchResult,
-        log,
         storage::{
             types::{StorageDoubleMap, StorageValue, ValueQuery},
             with_transaction,
         },
         traits::{
-            Currency, ExistenceRequirement, Get, Hooks, IsType, StorageVersion, WithdrawReasons,
+            BuildGenesisConfig, Currency, ExistenceRequirement, Get, Hooks, IsType, StorageVersion,
+            WithdrawReasons,
         },
         Blake2_128Concat, PalletId, Twox64Concat,
     };
-    use frame_system::{ensure_root, pallet_prelude::OriginFor};
+    use frame_system::{
+        ensure_root,
+        pallet_prelude::{BlockNumberFor, OriginFor},
+    };
     use sp_runtime::{
         traits::{AccountIdConversion, Saturating},
         TransactionOutcome,
@@ -107,7 +108,7 @@ mod pallet {
 
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 MarketId = Self::MarketId,
                 Balance = BalanceOf<Self>,
             >;
@@ -141,9 +142,8 @@ mod pallet {
         FundDoesNotHaveEnoughBalance,
     }
 
-    #[cfg(feature = "std")]
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
             let _ = T::Currency::deposit_creating(
                 &Pallet::<T>::pallet_account_id(),
@@ -153,7 +153,6 @@ mod pallet {
         }
     }
 
-    #[cfg(feature = "std")]
     #[derive(scale_info::TypeInfo, Debug)]
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -161,7 +160,6 @@ mod pallet {
         pub per_block_distribution: BalanceOf<T>,
     }
 
-    #[cfg(feature = "std")]
     impl<T> Default for GenesisConfig<T>
     where
         T: Config,
@@ -176,9 +174,9 @@ mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         // Manages incentives on each block finalization.
-        fn on_finalize(block: T::BlockNumber) {
+        fn on_finalize(block: BlockNumberFor<T>) {
             let fun = || {
                 let added_len = TrackIncentivesBasedOnBoughtShares::<T>::exec(block)?;
                 if added_len > 0 {
@@ -221,7 +219,7 @@ mod pallet {
     {
         type AccountId = T::AccountId;
         type Balance = BalanceOf<T>;
-        type BlockNumber = T::BlockNumber;
+        type BlockNumber = BlockNumberFor<T>;
         type MarketId = T::MarketId;
 
         fn add_shares(
@@ -339,7 +337,7 @@ mod pallet {
         T::MarketId,
         Twox64Concat,
         T::AccountId,
-        OwnedValuesParams<BalanceOf<T>, T::BlockNumber>,
+        OwnedValuesParams<BalanceOf<T>, BlockNumberFor<T>>,
         ValueQuery,
     >;
 

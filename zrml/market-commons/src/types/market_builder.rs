@@ -16,10 +16,11 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    AccountIdOf, AssetOf, BalanceOf, BlockNumberOf, Config, DeadlinesOf, EarlyCloseOf, Error,
-    MarketBondsOf, MarketIdOf, MarketOf, MarketPeriodOf, MomentOf, ReportOf,
+    AccountIdOf, AssetOf, BalanceOf, Config, DeadlinesOf, EarlyCloseOf, Error, MarketBondsOf,
+    MarketIdOf, MarketOf, MarketPeriodOf, MomentOf, ReportOf,
 };
 use alloc::vec::Vec;
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{DispatchError, Perbill};
 use zeitgeist_primitives::{
     traits::MarketBuilderTrait,
@@ -112,7 +113,7 @@ where
 }
 
 impl<T>
-    MarketBuilderTrait<AccountIdOf<T>, BalanceOf<T>, BlockNumberOf<T>, MomentOf<T>, MarketIdOf<T>>
+    MarketBuilderTrait<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, MarketIdOf<T>>
     for MarketBuilder<T>
 where
     T: Config,

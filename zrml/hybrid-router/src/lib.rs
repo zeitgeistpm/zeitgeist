@@ -40,17 +40,18 @@ mod pallet {
     use alloc::{vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
-        ensure,
-        pallet_prelude::DispatchError,
-        require_transactional,
+        ensure, require_transactional,
         traits::{IsType, StorageVersion},
         PalletId,
     };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{
+        ensure_signed,
+        pallet_prelude::{BlockNumberFor, OriginFor},
+    };
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{Get, Zero},
-        DispatchResult, SaturatedConversion, Saturating,
+        DispatchError, DispatchResult, SaturatedConversion, Saturating,
     };
     #[cfg(feature = "runtime-benchmarks")]
     use zeitgeist_primitives::traits::{CompleteSetOperationsApi, DeployPoolApi};
@@ -90,7 +91,7 @@ mod pallet {
         /// The identifier of individual markets.
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 Balance = BalanceOf<Self>,
             >;
 

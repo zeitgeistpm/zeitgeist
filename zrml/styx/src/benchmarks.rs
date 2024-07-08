@@ -28,10 +28,7 @@ use crate::Config;
 #[cfg(test)]
 use crate::Pallet as Styx;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
-use frame_support::{
-    dispatch::UnfilteredDispatchable,
-    traits::{Currency, EnsureOrigin},
-};
+use frame_support::traits::{Currency, EnsureOrigin, UnfilteredDispatchable};
 use frame_system::RawOrigin;
 use sp_runtime::SaturatedConversion;
 use zeitgeist_primitives::constants::BASE;

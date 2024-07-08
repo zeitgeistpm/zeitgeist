@@ -32,7 +32,10 @@ use frame_support::{
     traits::{IsType, StorageVersion},
     transactional, PalletId, Twox64Concat,
 };
-use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+use frame_system::{
+    ensure_signed,
+    pallet_prelude::{BlockNumberFor, OriginFor},
+};
 use orml_traits::{BalanceStatus, MultiCurrency, NamedMultiReservableCurrency};
 pub use pallet::*;
 use sp_runtime::traits::{Get, Zero};
@@ -84,7 +87,7 @@ mod pallet {
 
         type MarketCommons: MarketCommonsPalletApi<
                 AccountId = Self::AccountId,
-                BlockNumber = Self::BlockNumber,
+                BlockNumber = BlockNumberFor<Self>,
                 Balance = BalanceOf<Self>,
             >;
 
@@ -105,13 +108,8 @@ mod pallet {
     pub(crate) type ExternalFeeOf<T> = ExternalFee<AccountIdOf<T>, BalanceOf<T>>;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type MarketOf<T> = Market<
-        AccountIdOf<T>,
-        BalanceOf<T>,
-        <T as frame_system::Config>::BlockNumber,
-        MomentOf<T>,
-        MarketIdOf<T>,
-    >;
+    pub(crate) type MarketOf<T> =
+        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, MarketIdOf<T>>;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub(crate) type OrderOf<T> = Order<AccountIdOf<T>, BalanceOf<T>, MarketIdOf<T>>;
     pub(crate) type OrderbookTradeOf<T> = OrderbookTrade<AccountIdOf<T>, BalanceOf<T>>;
