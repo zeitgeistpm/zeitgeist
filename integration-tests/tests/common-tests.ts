@@ -205,3 +205,92 @@ export async function canSendXcmTransfer(
     "Unexpected xcm transfer balance diff"
   ).toBe(amount - xcmFee);
 }
+
+export async function canSendDotToZeitgeist(
+  context: ChopsticksContext,
+  log: Debugger,
+  relayApi: ApiPromise,
+  relayProviderName: string,
+  zeitgeistProviderName: string,
+  zeitgeistApi: ApiPromise,
+  zeitgeistParaId: number
+) {
+  const keyring = new Keyring({ type: "sr25519" });
+  const alice = keyring.addFromUri("//Alice", { name: "Alice default" });
+  const bob = keyring.addFromUri("//Bob", { name: "Bob default" });
+
+  const destination = {
+    V3: {
+      parents: 0,
+      interior: {
+        X1: { Parachain: zeitgeistParaId },
+      },
+    },
+  };
+
+  const receiverAccountId32 = relayApi.createType("AccountId32", bob.address);
+
+  const beneficiary = {
+    V3: {
+      parents: 0,
+      interior: {
+        X1: { AccountId32: { id: receiverAccountId32.toHex(), network: null } },
+      },
+    },
+  };
+
+  const amount: bigint = BigInt("100000000000");
+
+  const assets = {
+    V3: [
+      {
+        id: { Concrete: { parents: 0, interior: { Here: "" } } },
+        fun: { Fungible: amount },
+      },
+    ],
+  };
+
+  const feeAssetItem = "0";
+
+  const dotAsset = { ForeignAsset: "0" };
+
+  const dotBalanceBefore = (
+    (await zeitgeistApi.query.tokens.accounts(
+      bob.address,
+      dotAsset
+    )) as AccountData
+  ).free.toBigInt();
+
+  const xcmTransfer = relayApi.tx.xcmPallet.reserveTransferAssets(
+    destination,
+    beneficiary,
+    assets,
+    feeAssetItem
+  );
+
+  await xcmTransfer.signAndSend(alice, { nonce: -1 });
+
+  await context.createBlock({
+    providerName: relayProviderName,
+    count: 1,
+    allowFailures: false,
+  });
+
+  await context.createBlock({
+    providerName: zeitgeistProviderName,
+    count: 1,
+    allowFailures: false,
+  });
+
+  const dotBalanceAfter = (
+    (await zeitgeistApi.query.tokens.accounts(
+      bob.address,
+      dotAsset
+    )) as AccountData
+  ).free.toBigInt();
+
+  expect(
+    dotBalanceAfter > dotBalanceBefore,
+    "Balance did not increase"
+  ).toBeTruthy();
+}

@@ -28,11 +28,13 @@ import {
   canCreateBlocks,
   canSendBalanceTransfer,
   canSendXcmTransfer,
+  canSendDotToZeitgeist,
 } from "tests/common-tests";
 import { RuntimeVersion } from "@polkadot/types/interfaces";
 
 const ZEITGEIST_TOKENS_INDEX = 12;
 const HYDRADX_PARA_ID = 2034;
+const ZEITGEIST_PARA_ID = 2092;
 describeSuite({
   id: "CAN",
   title: "Chopsticks Zeitgeist Post-Upgrade Tests",
@@ -119,6 +121,23 @@ describeSuite({
           hydradxParaApi,
           HYDRADX_PARA_ID,
           ZEITGEIST_TOKENS_INDEX
+        );
+      },
+    });
+
+    it({
+      id: "T4",
+      timeout: 60000,
+      title: "Can send DOT to Zeitgeist",
+      test: async () => {
+        await canSendDotToZeitgeist(
+          context,
+          log,
+          relayApi,
+          "PolkadotRelay",
+          "ZeitgeistPara",
+          zeitgeistParaApi,
+          ZEITGEIST_PARA_ID,
         );
       },
     });
