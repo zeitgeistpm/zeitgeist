@@ -40,7 +40,7 @@ mod pallet {
     use crate::{
         consts::LN_NUMERICAL_LIMIT,
         liquidity_tree::types::{BenchmarkInfo, LiquidityTree, LiquidityTreeError},
-        math::{Math, MathOps},
+        math::{traits::MathOps, types::Math},
         traits::{pool_operations::PoolOperations, LiquiditySharesManager},
         types::{FeeDistribution, MaxAssets, Pool},
         weights::*,

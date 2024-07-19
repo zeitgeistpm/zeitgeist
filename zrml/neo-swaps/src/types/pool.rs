@@ -17,7 +17,7 @@
 
 use crate::{
     consts::EXP_NUMERICAL_LIMIT,
-    math::{Math, MathOps},
+    math::{traits::MathOps, types::Math},
     pallet::{AssetOf, BalanceOf, Config},
     traits::{LiquiditySharesManager, PoolOperations},
     Error,
