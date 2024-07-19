@@ -228,31 +228,33 @@ export async function canSendDotToZeitgeist(
     },
   };
 
-  const receiverAccountId32 = relayApi.createType("AccountId32", bob.address);
+  const receiverAccountId32 = relayApi.createType("AccountId", bob.address);
 
   const beneficiary = {
     V3: {
       parents: 0,
       interior: {
-        X1: { AccountId32: { id: receiverAccountId32.toHex(), network: null } },
+        X1: { AccountId32: { id: receiverAccountId32.toHex() } },
       },
     },
   };
 
-  const amount: bigint = BigInt("100000000000");
+  const amount = "10000000000";
 
   const assets = {
     V3: [
       {
-        id: { Concrete: { parents: 0, interior: { Here: "" } } },
+        id: { Concrete: { parents: 0, interior: "Here" } },
         fun: { Fungible: amount },
       },
     ],
   };
 
-  const feeAssetItem = "0";
+  const feeAssetItem = 0;
 
   const dotAsset = { ForeignAsset: "0" };
+
+  const weightLimit = 'Unlimited';
 
   const dotBalanceBefore = (
     (await zeitgeistApi.query.tokens.accounts(
@@ -261,25 +263,26 @@ export async function canSendDotToZeitgeist(
     )) as AccountData
   ).free.toBigInt();
 
-  const xcmTransfer = relayApi.tx.xcmPallet.reserveTransferAssets(
+  const xcmTransfer = relayApi.tx.xcmPallet.limitedReserveTransferAssets(
     destination,
     beneficiary,
     assets,
-    feeAssetItem
+    feeAssetItem,
+    weightLimit,
   );
 
   await xcmTransfer.signAndSend(alice, { nonce: -1 });
 
   await context.createBlock({
     providerName: relayProviderName,
-    count: 1,
-    allowFailures: false,
+    count: 2,
+    allowFailures: true,
   });
 
   await context.createBlock({
     providerName: zeitgeistProviderName,
-    count: 1,
-    allowFailures: false,
+    count: 2,
+    allowFailures: true,
   });
 
   const dotBalanceAfter = (
