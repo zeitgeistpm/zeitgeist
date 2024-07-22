@@ -3,8 +3,8 @@ provider = "native"
 timeout = 1000
 
 [relaychain]
-chain = "rococo-dev"
-default_args = ["--no-hardware-benchmarks", "-lparachain=debug", "--database=paritydb"]
+chain = "rococo-local"
+default_args = ["--no-hardware-benchmarks", "-lxcm=trace", "--database=paritydb"]
 default_command = "./tmp/polkadot"
 
 [[relaychain.nodes]]
@@ -17,7 +17,6 @@ name = "bob"
 id = 2101
 
 [parachains.collator]
-args = ["-lparachain=debug"]
+args = ["-lxcm=trace"]
 command = "../target/release/zeitgeist"
 name = "alice"
-ws_port = 9966

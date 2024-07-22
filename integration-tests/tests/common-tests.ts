@@ -205,3 +205,98 @@ export async function canSendXcmTransfer(
     "Unexpected xcm transfer balance diff"
   ).toBe(amount - xcmFee);
 }
+
+export async function canSendDotToZeitgeist(
+  context: ChopsticksContext,
+  log: Debugger,
+  relayApi: ApiPromise,
+  relayProviderName: string,
+  zeitgeistProviderName: string,
+  zeitgeistApi: ApiPromise,
+  zeitgeistParaId: number
+) {
+  const keyring = new Keyring({ type: "sr25519" });
+  const alice = keyring.addFromUri("//Alice", { name: "Alice default" });
+  const bob = keyring.addFromUri("//Bob", { name: "Bob default" });
+
+  // ZTG: 0x630203000100b120030001010028e4f9b2fb73dbfd41fb01a9bc318138f79d268c04d01c7facecc6f8a626fa140304000000000b5f064a4ce90400000000
+
+  // BS: 0x630203000100d520030001010028e4f9b2fb73dbfd41fb01a9bc318138f79d268c04d01c7facecc6f8a626fa140304000000000b5f064a4ce90400000000
+  const destination = relayApi.createType("XcmVersionedLocation", {
+    V3: {
+      parents: 0,
+      interior: {
+        X1: { Parachain: zeitgeistParaId },
+      },
+    },
+  });
+
+  const receiverAccountId32 = relayApi
+    .createType("AccountId32", bob.address)
+    .toHex();
+
+  const beneficiary = relayApi.createType("XcmVersionedLocation", {
+    V3: {
+      parents: 0,
+      interior: {
+        X1: { AccountId32: { id: receiverAccountId32 } },
+      },
+    },
+  });
+
+  const amount = "10000000000";
+
+  const assets = relayApi.createType("XcmVersionedAssets", {
+    V3: [
+      {
+        id: { Concrete: { parents: 0, interior: "Here" } },
+        fun: { Fungible: amount },
+      },
+    ],
+  });
+
+  const feeAssetItem = 0;
+
+  const dotAsset = { ForeignAsset: "0" };
+
+  const weightLimit = relayApi.createType("XcmV3WeightLimit", { Unlimited: '' });
+
+  const dotBalanceBefore = (
+    (await zeitgeistApi.query.tokens.accounts(
+      bob.address,
+      dotAsset
+    )) as AccountData
+  ).free.toBigInt();
+
+  const xcmTransfer = relayApi.tx.xcmPallet.limitedReserveTransferAssets(
+    destination,
+    beneficiary,
+    assets,
+    feeAssetItem,
+    weightLimit
+  );
+
+  await xcmTransfer.signAndSend(alice, { nonce: -1 });
+
+  await context.createBlock({
+    providerName: relayProviderName,
+    count: 1,
+  });
+
+  await context.createBlock({
+    providerName: zeitgeistProviderName,
+    count: 1,
+  });
+
+  const dotBalanceAfter = (
+    (await zeitgeistApi.query.tokens.accounts(
+      bob.address,
+      dotAsset
+    )) as AccountData
+  ).free.toBigInt();
+
+  expect(
+    dotBalanceAfter > dotBalanceBefore,
+    "Balance did not increase"
+  ).toBeTruthy();
+}
