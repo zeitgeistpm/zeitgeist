@@ -18,7 +18,10 @@
 use crate::{BalanceOf, Config};
 use sp_runtime::DispatchError;
 
-pub(crate) trait MathOps<T: Config> {
+pub(crate) trait MathOps<T>
+where
+    T: Config,
+{
     fn calculate_swap_amount_out_for_buy(
         reserve: BalanceOf<T>,
         amount_in: BalanceOf<T>,

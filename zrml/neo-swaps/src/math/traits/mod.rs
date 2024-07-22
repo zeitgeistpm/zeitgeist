@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-mod math_ops;
 mod combo_math_ops;
+mod math_ops;
 
-pub(crate) use math_ops::MathOps;
 pub(crate) use combo_math_ops::ComboMathOps;
+pub(crate) use math_ops::MathOps;

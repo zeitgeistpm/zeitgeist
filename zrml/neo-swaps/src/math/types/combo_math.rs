@@ -71,7 +71,14 @@ where
         amount_in: BalanceOf<T>,
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError> {
-        Ok(Zero::zero())
+        detail::calculate_swap_amount_out_for_buy(
+            buy.into_iter().map(|x| x.saturated_into()).collect(),
+            sell.into_iter().map(|x| x.saturated_into()).collect(),
+            amount_in.saturated_into(),
+            liquidity.saturated_into(),
+        )
+        .map(|result| result.saturated_into())
+        .ok_or_else(|| Error::<T>::MathError.into())
     }
 
     fn calculate_swap_amount_out_for_sell(
@@ -80,6 +87,121 @@ where
         amount_in: BalanceOf<T>,
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError> {
-        Ok(Zero::zero())
+        detail::calculate_swap_amount_out_for_sell(
+            buy.into_iter().map(|x| x.saturated_into()).collect(),
+            sell.into_iter().map(|x| x.saturated_into()).collect(),
+            amount_in.saturated_into(),
+            liquidity.saturated_into(),
+        )
+        .map(|result| result.saturated_into())
+        .ok_or_else(|| Error::<T>::MathError.into())
+    }
+
+    fn calculate_spot_price(
+        buy: Vec<BalanceOf<T>>,
+        sell: Vec<BalanceOf<T>>,
+        liquidity: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        detail::calculate_spot_price(
+            buy.into_iter().map(|x| x.saturated_into()).collect(),
+            sell.into_iter().map(|x| x.saturated_into()).collect(),
+            liquidity.saturated_into(),
+        )
+        .map(|result| result.saturated_into())
+        .ok_or_else(|| Error::<T>::MathError.into())
+    }
+}
+
+mod detail {
+    use super::*;
+    use zeitgeist_primitives::{
+        constants::DECIMALS,
+        math::fixed::{IntoFixedDecimal, IntoFixedFromDecimal},
+    };
+
+    fn to_fixed(value: u128) -> Option<FixedType> {
+        value.to_fixed_from_fixed_decimal(DECIMALS).ok()
+    }
+
+    /// Converts `Vec<u128>` of fixed decimal numbers to a `Vec<FixedType>` of fixed point numbers;
+    /// returns `None` if any of them fail.
+    fn vec_to_fixed(vec: Vec<u128>) -> Option<Vec<FixedType>> {
+        vec.into_iter().map(to_fixed).collect()
+    }
+
+    fn from_fixed<B>(value: FixedType) -> Option<B>
+    where
+        B: Into<u128> + From<u128>,
+    {
+        value.to_fixed_decimal(DECIMALS).ok()
+    }
+
+    pub(super) fn calculate_swap_amount_out_for_buy(
+        buy: Vec<u128>,
+        sell: Vec<u128>,
+        amount_in: u128,
+        liquidity: u128,
+    ) -> Option<u128> {
+        let result_fixed = calculate_swap_amount_out_for_buy_fixed(
+            vec_to_fixed(buy)?,
+            vec_to_fixed(sell)?,
+            to_fixed(amount_in)?,
+            to_fixed(liquidity)?,
+        )?;
+        from_fixed(result_fixed)
+    }
+
+    pub(super) fn calculate_swap_amount_out_for_sell(
+        buy: Vec<u128>,
+        sell: Vec<u128>,
+        amount_in: u128,
+        liquidity: u128,
+    ) -> Option<u128> {
+        let result_fixed = calculate_swap_amount_out_for_sell_fixed(
+            vec_to_fixed(buy)?,
+            vec_to_fixed(sell)?,
+            to_fixed(amount_in)?,
+            to_fixed(liquidity)?,
+        )?;
+        from_fixed(result_fixed)
+    }
+
+    pub(super) fn calculate_spot_price(
+        buy: Vec<u128>,
+        sell: Vec<u128>,
+        liquidity: u128,
+    ) -> Option<u128> {
+        let result_fixed = calculate_spot_price_fixed(
+            vec_to_fixed(buy)?,
+            vec_to_fixed(sell)?,
+            to_fixed(liquidity)?,
+        )?;
+        from_fixed(result_fixed)
+    }
+
+    fn calculate_swap_amount_out_for_buy_fixed(
+        _buy: Vec<FixedType>,
+        _sell: Vec<FixedType>,
+        _amount_in: FixedType,
+        _liquidity: FixedType,
+    ) -> Option<FixedType> {
+        None
+    }
+
+    fn calculate_swap_amount_out_for_sell_fixed(
+        _buy: Vec<FixedType>,
+        _sell: Vec<FixedType>,
+        _amount_in: FixedType,
+        _liquidity: FixedType,
+    ) -> Option<FixedType> {
+        None
+    }
+
+    fn calculate_spot_price_fixed(
+        _buy: Vec<FixedType>,
+        _sell: Vec<FixedType>,
+        _liquidity: FixedType,
+    ) -> Option<FixedType> {
+        None
     }
 }

@@ -16,5 +16,5 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 pub(crate) mod traits;
-pub(crate) mod types;
 mod transcendental;
+pub(crate) mod types;

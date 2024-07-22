@@ -23,16 +23,22 @@ where
     T: Config,
 {
     fn calculate_swap_amount_out_for_buy(
-        _buy: Vec<BalanceOf<T>>,
-        _sell: Vec<BalanceOf<T>>,
-        _amount_in: BalanceOf<T>,
-        _liquidity: BalanceOf<T>,
+        buy: Vec<BalanceOf<T>>,
+        sell: Vec<BalanceOf<T>>,
+        amount_in: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
     fn calculate_swap_amount_out_for_sell(
-        _buy: Vec<BalanceOf<T>>,
-        _sell: Vec<BalanceOf<T>>,
-        _amount_in: BalanceOf<T>,
-        _liquidity: BalanceOf<T>,
+        buy: Vec<BalanceOf<T>>,
+        sell: Vec<BalanceOf<T>>,
+        amount_in: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError>;
+
+    fn calculate_spot_price(
+        buy: Vec<BalanceOf<T>>,
+        sell: Vec<BalanceOf<T>>,
+        liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 }
