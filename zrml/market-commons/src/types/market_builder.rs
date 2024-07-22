@@ -16,8 +16,8 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    AccountIdOf, BalanceOf, Config, DeadlinesOf, EarlyCloseOf, Error, MarketBondsOf, MarketIdOf,
-    MarketOf, MarketPeriodOf, MomentOf, ReportOf,
+    AccountIdOf, AssetOf, BalanceOf, Config, DeadlinesOf, EarlyCloseOf, Error, MarketBondsOf,
+    MarketIdOf, MarketOf, MarketPeriodOf, MomentOf, ReportOf,
 };
 use alloc::vec::Vec;
 use frame_system::pallet_prelude::BlockNumberFor;
@@ -25,8 +25,8 @@ use sp_runtime::{DispatchError, Perbill};
 use zeitgeist_primitives::{
     traits::MarketBuilderTrait,
     types::{
-        BaseAsset, Market, MarketCreation, MarketDisputeMechanism, MarketStatus, MarketType,
-        OutcomeReport, ScoringRule,
+        Market, MarketCreation, MarketDisputeMechanism, MarketStatus, MarketType, OutcomeReport,
+        ScoringRule,
     },
 };
 
@@ -37,7 +37,7 @@ where
     T: Config,
 {
     market_id: Option<MarketIdOf<T>>,
-    base_asset: Option<BaseAsset>,
+    base_asset: Option<AssetOf<T>>,
     creator: Option<AccountIdOf<T>>,
     creation: Option<MarketCreation>,
     creator_fee: Option<Perbill>,
@@ -113,14 +113,8 @@ where
 }
 
 impl<T>
-    MarketBuilderTrait<
-        AccountIdOf<T>,
-        BalanceOf<T>,
-        BlockNumberFor<T>,
-        MomentOf<T>,
-        BaseAsset,
-        MarketIdOf<T>,
-    > for MarketBuilder<T>
+    MarketBuilderTrait<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, MarketIdOf<T>>
+    for MarketBuilder<T>
 where
     T: Config,
 {
@@ -148,7 +142,7 @@ where
 
     impl_builder_methods! {
         market_id: MarketIdOf<T>,
-        base_asset: BaseAsset,
+        base_asset: AssetOf<T>,
         creator: AccountIdOf<T>,
         creation: MarketCreation,
         creator_fee: Perbill,

@@ -90,7 +90,6 @@ fn deploy_pool_works_with_scalar_marktes() {
     ExtBuilder::default().build().execute_with(|| {
         let alice_before = AssetManager::free_balance(BASE_ASSET, &ALICE);
         let amount = _100;
-        let expected_amounts = [amount, 101755598229];
         let spot_prices = vec![_1_6, _5_6 + 1];
         let swap_fee = CENT;
         let market_id: MarketId = 0;
@@ -98,6 +97,14 @@ fn deploy_pool_works_with_scalar_marktes() {
             Asset::ScalarOutcome(market_id, ScalarPosition::Long),
             Asset::ScalarOutcome(market_id, ScalarPosition::Short),
         ];
+        // Deploy some funds in the pool account to ensure that rogue funds don't screw up price
+        // calculatings.
+        let rogue_funds = _100;
+        assert_ok!(AssetManager::deposit(
+            assets[0],
+            &Pallet::<Runtime>::pool_account_id(&market_id),
+            rogue_funds
+        ));
         let _ = create_market_and_deploy_pool(
             ALICE,
             BASE_ASSET,
@@ -107,31 +114,8 @@ fn deploy_pool_works_with_scalar_marktes() {
             swap_fee,
         );
         let pool = Pools::<Runtime>::get(market_id).unwrap();
-        let mut reserves = BTreeMap::new();
-        reserves.insert(assets[0], expected_amounts[0]);
-        reserves.insert(assets[1], expected_amounts[1]);
-        System::assert_last_event(
-            Event::PoolDeployed {
-                who: ALICE,
-                market_id,
-                account_id: pool.account_id,
-                reserves,
-                collateral: pool.collateral,
-                liquidity_parameter: pool.liquidity_parameter,
-                pool_shares_amount: amount,
-                swap_fee,
-            }
-            .into(),
-        );
-        // Deploy some funds in the pool account to ensure that rogue funds don't screw up price
-        // calculatings.
-        let rogue_funds = _100;
-        assert_ok!(AssetManager::deposit(
-            assets[0],
-            &Pallet::<Runtime>::pool_account_id(&market_id),
-            rogue_funds
-        ));
         let expected_liquidity = 558110626551;
+        let expected_amounts = [amount, 101755598229];
         let buffer = AssetManager::minimum_balance(pool.collateral);
         assert_eq!(pool.assets(), assets);
         assert_approx!(pool.liquidity_parameter, expected_liquidity, 1_000);
@@ -161,6 +145,22 @@ fn deploy_pool_works_with_scalar_marktes() {
         let price_sum =
             pool.assets().iter().map(|&a| pool.calculate_spot_price(a).unwrap()).sum::<u128>();
         assert_eq!(price_sum, _1);
+        let mut reserves = BTreeMap::new();
+        reserves.insert(assets[0], expected_amounts[0]);
+        reserves.insert(assets[1], expected_amounts[1]);
+        System::assert_last_event(
+            Event::PoolDeployed {
+                who: ALICE,
+                market_id,
+                account_id: pool.account_id,
+                reserves,
+                collateral: pool.collateral,
+                liquidity_parameter: pool.liquidity_parameter,
+                pool_shares_amount: amount,
+                swap_fee,
+            }
+            .into(),
+        );
     });
 }
 
@@ -429,7 +429,7 @@ fn deploy_pool_fails_on_insufficient_funds() {
                 vec![_3_4, _1_4],
                 CENT
             ),
-            DispatchError::Arithmetic(ArithmeticError::Underflow)
+            orml_tokens::Error::<Runtime>::BalanceTooLow
         );
     });
 }

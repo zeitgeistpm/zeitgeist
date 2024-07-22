@@ -90,9 +90,9 @@ mod pallet {
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type AssetOf<T> =
-        <<T as Config>::AssetManager as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
+        <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
     pub(crate) type BalanceOf<T> =
-        <<T as Config>::AssetManager as MultiCurrency<AccountIdOf<T>>>::Balance;
+        <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     pub(crate) type PoolOf<T> = Pool<AssetOf<T>, BalanceOf<T>>;
 
     const MIN_BALANCE: u128 = CENT;
@@ -360,8 +360,6 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type AssetManager: MultiCurrency<Self::AccountId, CurrencyId = Self::Asset>;
-
         type Asset: Parameter
             + Member
             + Copy
@@ -370,6 +368,8 @@ mod pallet {
             + Ord
             + TypeInfo
             + PoolSharesId<PoolId>;
+
+        type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = Self::Asset>;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -602,13 +602,13 @@ mod pallet {
                     // If transferring to `who` triggers the existential deposit, burn the tokens
                     // instead.
                     let new_balance =
-                        T::AssetManager::free_balance(asset, &who).checked_add_res(&amount)?;
-                    if new_balance >= T::AssetManager::minimum_balance(asset) {
+                        T::MultiCurrency::free_balance(asset, &who).checked_add_res(&amount)?;
+                    if new_balance >= T::MultiCurrency::minimum_balance(asset) {
                         ensure!(amount >= amount_bound, Error::<T>::LimitOut);
-                        T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
+                        T::MultiCurrency::transfer(asset, &pool_account_id, &who, amount)?;
                     } else {
                         ensure!(amount_bound.is_zero(), Error::<T>::LimitOut);
-                        T::AssetManager::withdraw(asset, &pool_account_id, amount)?;
+                        T::MultiCurrency::withdraw(asset, &pool_account_id, amount)?;
                     }
                     Ok(())
                 },
@@ -696,7 +696,7 @@ mod pallet {
                 pool: &pool,
                 transfer_asset: |amount, amount_bound, asset| {
                     ensure!(amount <= amount_bound, Error::<T>::LimitIn);
-                    T::AssetManager::transfer(asset, &who, &pool_account_id, amount)?;
+                    T::MultiCurrency::transfer(asset, &who, &pool_account_id, amount)?;
                     Ok(())
                 },
                 transfer_pool: || Self::mint_pool_shares(pool_id, &who, pool_amount),
@@ -860,15 +860,15 @@ mod pallet {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
             ensure!(
-                T::AssetManager::free_balance(asset_in, &who) >= asset_amount_in,
+                T::MultiCurrency::free_balance(asset_in, &who) >= asset_amount_in,
                 Error::<T>::InsufficientBalance
             );
 
             let params = SwapExactAmountParams {
                 // TODO(#1215): This probably doesn't need to be a closure.
                 asset_amounts: || {
-                    let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
-                    let balance_in = T::AssetManager::free_balance(asset_in, &pool_account_id);
+                    let balance_out = T::MultiCurrency::free_balance(asset_out, &pool_account_id);
+                    let balance_in = T::MultiCurrency::free_balance(asset_in, &pool_account_id);
                     ensure!(
                         asset_amount_in <= balance_in.bmul(MAX_IN_RATIO.saturated_into())?,
                         Error::<T>::MaxInRatio
@@ -922,13 +922,13 @@ mod pallet {
 
             let params = SwapExactAmountParams {
                 asset_amounts: || {
-                    let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
+                    let balance_out = T::MultiCurrency::free_balance(asset_out, &pool_account_id);
                     ensure!(
                         asset_amount_out <= balance_out.bmul(MAX_OUT_RATIO.saturated_into())?,
                         Error::<T>::MaxOutRatio,
                     );
 
-                    let balance_in = T::AssetManager::free_balance(asset_in, &pool_account_id);
+                    let balance_in = T::MultiCurrency::free_balance(asset_in, &pool_account_id);
                     let asset_amount_in: BalanceOf<T> = crate::math::calc_in_given_out(
                         balance_in.saturated_into(),
                         Self::pool_weight_rslt(&pool, &asset_in)?.saturated_into(),
@@ -969,8 +969,8 @@ mod pallet {
             ensure!(pool.assets.binary_search(asset_in).is_ok(), Error::<T>::AssetNotInPool);
             ensure!(pool.assets.binary_search(asset_out).is_ok(), Error::<T>::AssetNotInPool);
             let pool_account = Self::pool_account_id(pool_id);
-            let balance_in = T::AssetManager::free_balance(*asset_in, &pool_account);
-            let balance_out = T::AssetManager::free_balance(*asset_out, &pool_account);
+            let balance_in = T::MultiCurrency::free_balance(*asset_in, &pool_account);
+            let balance_out = T::MultiCurrency::free_balance(*asset_out, &pool_account);
             let in_weight = Self::pool_weight_rslt(&pool, asset_in)?;
             let out_weight = Self::pool_weight_rslt(&pool, asset_out)?;
 
@@ -993,7 +993,7 @@ mod pallet {
 
         /// The minimum allowed balance of `asset` in a liquidity pool.
         pub(crate) fn min_balance(asset: AssetOf<T>) -> BalanceOf<T> {
-            T::AssetManager::minimum_balance(asset).max(MIN_BALANCE.saturated_into())
+            T::MultiCurrency::minimum_balance(asset).max(MIN_BALANCE.saturated_into())
         }
 
         /// Returns the minimum allowed balance allowed for a pool with id `pool_id` containing
@@ -1023,7 +1023,7 @@ mod pallet {
                 return Ok(());
             }
             let pool_shares_id = Self::pool_shares_id(pool_id);
-            let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
+            let total_issuance = T::MultiCurrency::total_issuance(pool_shares_id);
             let max_withdraw =
                 total_issuance.saturating_sub(Self::min_balance(pool_shares_id).saturated_into());
             ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
@@ -1041,7 +1041,7 @@ mod pallet {
                 return Ok(());
             }
             let pool_account = Self::pool_account_id(&pool_id);
-            let balance = T::AssetManager::free_balance(asset, &pool_account);
+            let balance = T::MultiCurrency::free_balance(asset, &pool_account);
             let max_withdraw = balance.saturating_sub(Self::min_balance(asset).saturated_into());
             ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
             Ok(())
@@ -1054,9 +1054,9 @@ mod pallet {
         ) -> DispatchResult {
             let shares_id = Self::pool_shares_id(pool_id);
             // Check that the account has at least as many free shares as we wish to burn!
-            T::AssetManager::ensure_can_withdraw(shares_id, from, amount)
+            T::MultiCurrency::ensure_can_withdraw(shares_id, from, amount)
                 .map_err(|_| Error::<T>::InsufficientBalance)?;
-            T::AssetManager::withdraw(shares_id, from, amount)?;
+            T::MultiCurrency::withdraw(shares_id, from, amount)?;
             Ok(())
         }
 
@@ -1088,7 +1088,7 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             let shares_id = Self::pool_shares_id(pool_id);
-            T::AssetManager::deposit(shares_id, to, amount)
+            T::MultiCurrency::deposit(shares_id, to, amount)
         }
 
         pub(crate) fn pool_shares_id(pool_id: PoolId) -> AssetOf<T> {
@@ -1186,17 +1186,17 @@ mod pallet {
             Self::check_provided_values_len_must_equal_assets_len(&assets, &weights)?;
 
             for (asset, weight) in assets.iter().copied().zip(weights) {
-                let free_balance = T::AssetManager::free_balance(asset, &who);
+                let free_balance = T::MultiCurrency::free_balance(asset, &who);
                 ensure!(free_balance >= amount, Error::<T>::InsufficientBalance);
                 ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
                 ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
                 map.insert(asset, weight);
                 total_weight = total_weight.checked_add_res(&weight)?;
-                T::AssetManager::transfer(asset, &who, &pool_account, amount)?;
+                T::MultiCurrency::transfer(asset, &who, &pool_account, amount)?;
             }
 
             ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
-            T::AssetManager::deposit(pool_shares_id, &who, amount)?;
+            T::MultiCurrency::deposit(pool_shares_id, &who, amount)?;
 
             let pool = Pool {
                 assets: sorted_assets
@@ -1239,8 +1239,8 @@ mod pallet {
             let pool_account = Self::pool_account_id(&pool_id);
             let asset_len = pool.assets.len() as u32;
             for asset in pool.assets.into_iter() {
-                let amount = T::AssetManager::free_balance(asset, &pool_account);
-                T::AssetManager::withdraw(asset, &pool_account, amount)?;
+                let amount = T::MultiCurrency::free_balance(asset, &pool_account);
+                T::MultiCurrency::withdraw(asset, &pool_account, amount)?;
             }
             // NOTE: Currently we don't clean up accounts with pool_share_id.
             // TODO(#792): Remove pool_share_id asset for accounts! It may require storage migration.

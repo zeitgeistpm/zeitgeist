@@ -4,7 +4,6 @@ frame-support = { workspace = true }
 frame-system = { workspace = true }
 log = { workspace = true }
 orml-traits = { workspace = true }
-pallet-assets = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
 serde = { workspace = true, optional = true }
@@ -32,7 +31,6 @@ pallet-treasury = { workspace = true, optional = true }
 sp-api = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
-zrml-asset-router = { workspace = true, optional = true }
 zrml-prediction-markets-runtime-api = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -48,7 +46,6 @@ mock = [
     "orml-asset-registry/default",
     "orml-currencies/default",
     "orml-tokens/default",
-    "pallet-assets/default",
     "pallet-balances/default",
     "pallet-insecure-randomness-collective-flip/default",
     "pallet-timestamp/default",
@@ -57,9 +54,10 @@ mock = [
     "sp-api/default",
     "sp-io/default",
     "zeitgeist-primitives/mock",
-    "zrml-asset-router/default",
     "zrml-prediction-markets-runtime-api/default",
     "xcm/default",
+    "orml-asset-registry/default",
+    "env_logger/default",
 ]
 parachain = []
 runtime-benchmarks = [
@@ -67,7 +65,6 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "orml-asset-registry?/runtime-benchmarks",
-    "pallet-assets/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
     "zeitgeist-primitives/mock",
 ]
@@ -77,7 +74,6 @@ std = [
     "frame-system/std",
     "orml-asset-registry?/std",
     "orml-traits/std",
-    "pallet-assets/std",
     "parity-scale-codec/std",
     'scale-info/std',
     "serde?/std",

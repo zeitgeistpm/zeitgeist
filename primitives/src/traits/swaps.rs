@@ -18,13 +18,12 @@
 
 use crate::types::PoolId;
 use alloc::vec::Vec;
-use frame_support::{dispatch::DispatchResult, weights::Weight};
-use parity_scale_codec::{HasCompact, MaxEncodedLen};
-use sp_runtime::DispatchError;
+use frame_support::weights::Weight;
+use sp_runtime::{DispatchError, DispatchResult};
 
 pub trait Swaps<AccountId> {
-    type Asset: MaxEncodedLen;
-    type Balance: HasCompact + MaxEncodedLen;
+    type Asset;
+    type Balance;
 
     /// Creates a new pool.
     ///

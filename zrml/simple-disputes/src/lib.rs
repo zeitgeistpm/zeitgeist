@@ -33,7 +33,7 @@ pub use simple_disputes_pallet_api::SimpleDisputesPalletApi;
 use zeitgeist_primitives::{
     traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
     types::{
-        BaseAsset, GlobalDisputeItem, Market, MarketDispute, MarketDisputeMechanism, MarketStatus,
+        GlobalDisputeItem, Market, MarketDispute, MarketDisputeMechanism, MarketStatus,
         OutcomeReport, Report, ResultWithWeightInfo,
     },
 };
@@ -114,7 +114,6 @@ mod pallet {
         BalanceOf<T>,
         BlockNumberFor<T>,
         MomentOf<T>,
-        BaseAsset,
         MarketIdOf<T>,
     >;
     pub(crate) type DisputesOf<T> = BoundedVec<
@@ -549,11 +548,11 @@ where
 {
     use frame_support::traits::Get;
     use sp_runtime::{traits::AccountIdConversion, SaturatedConversion};
-    use zeitgeist_primitives::types::{MarketBonds, ScoringRule};
+    use zeitgeist_primitives::types::{Asset, MarketBonds, ScoringRule};
 
     zeitgeist_primitives::types::Market {
         market_id: Default::default(),
-        base_asset: BaseAsset::Ztg,
+        base_asset: Asset::Ztg,
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),
         creator: T::PalletId::get().into_account_truncating(),

@@ -22,18 +22,13 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{utils::*, Pallet as Parimutuel, *};
+use alloc::vec;
 use frame_benchmarking::v2::*;
-use frame_support::{
-    assert_ok,
-    traits::{fungibles::Inspect, Get},
-};
+use frame_support::{assert_ok, traits::Get};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::Zero, SaturatedConversion, Saturating};
-use zeitgeist_primitives::{
-    traits::MarketTransitionApi,
-    types::{MarketStatus, MarketType, OutcomeReport},
-};
+use zeitgeist_primitives::types::{Asset, MarketStatus, MarketType, OutcomeReport};
 use zrml_market_commons::MarketCommonsPalletApi;
 
 fn setup_market<T: Config>(market_type: MarketType) -> MarketIdOf<T> {
@@ -48,19 +43,19 @@ fn setup_market<T: Config>(market_type: MarketType) -> MarketIdOf<T> {
 
 fn buy_asset<T: Config>(
     market_id: MarketIdOf<T>,
-    asset: ParimutuelShareOf<T>,
+    asset: AssetOf<T>,
     buyer: &T::AccountId,
     amount: BalanceOf<T>,
 ) {
     let market = T::MarketCommons::market(&market_id).unwrap();
-    T::AssetManager::deposit(market.base_asset.into(), buyer, amount).unwrap();
+    T::AssetManager::deposit(market.base_asset, buyer, amount).unwrap();
     Parimutuel::<T>::buy(RawOrigin::Signed(buyer.clone()).into(), asset, amount).unwrap();
 }
 
 #[benchmarks]
 mod benchmarks {
     use super::*;
-    use alloc::vec;
+    // use alloc::vec;
 
     #[benchmark]
     fn buy() {
@@ -69,10 +64,10 @@ mod benchmarks {
         let market_id = setup_market::<T>(MarketType::Categorical(64u16));
 
         let amount = T::MinBetSize::get().saturating_mul(10u128.saturated_into::<BalanceOf<T>>());
-        let asset = ParimutuelShareOf::<T>::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
 
         let market = T::MarketCommons::market(&market_id).unwrap();
-        T::AssetManager::deposit(market.base_asset.into(), &buyer, amount).unwrap();
+        T::AssetManager::deposit(market.base_asset, &buyer, amount).unwrap();
 
         #[extrinsic_call]
         buy(RawOrigin::Signed(buyer), asset, amount);
@@ -82,16 +77,15 @@ mod benchmarks {
     fn claim_rewards() {
         // max category index is worst case
         let market_id = setup_market::<T>(MarketType::Categorical(64u16));
-        assert_ok!(Parimutuel::<T>::on_activation(&market_id).result);
 
         let winner = whitelisted_caller();
-        let winner_asset = ParimutuelShareOf::<T>::Share(market_id, 0u16);
+        let winner_asset = Asset::ParimutuelShare(market_id, 0u16);
         let winner_amount =
             T::MinBetSize::get().saturating_mul(20u128.saturated_into::<BalanceOf<T>>());
         buy_asset::<T>(market_id, winner_asset, &winner, winner_amount);
 
         let loser = whitelisted_caller();
-        let loser_asset = ParimutuelShareOf::<T>::Share(market_id, 1u16);
+        let loser_asset = Asset::ParimutuelShare(market_id, 1u16);
         let loser_amount =
             T::MinBetSize::get().saturating_mul(10u128.saturated_into::<BalanceOf<T>>());
         buy_asset::<T>(market_id, loser_asset, &loser, loser_amount);
@@ -110,18 +104,17 @@ mod benchmarks {
     fn claim_refunds() {
         // max category index is worst case
         let market_id = setup_market::<T>(MarketType::Categorical(64u16));
-        assert_ok!(Parimutuel::<T>::on_activation(&market_id).result);
 
         let loser_0 = whitelisted_caller();
         let loser_0_index = 0u16;
-        let loser_0_asset = ParimutuelShareOf::<T>::Share(market_id, loser_0_index);
+        let loser_0_asset = Asset::ParimutuelShare(market_id, loser_0_index);
         let loser_0_amount =
             T::MinBetSize::get().saturating_mul(20u128.saturated_into::<BalanceOf<T>>());
         buy_asset::<T>(market_id, loser_0_asset, &loser_0, loser_0_amount);
 
         let loser_1 = whitelisted_caller();
         let loser_1_index = 1u16;
-        let loser_1_asset = ParimutuelShareOf::<T>::Share(market_id, loser_1_index);
+        let loser_1_asset = Asset::ParimutuelShare(market_id, loser_1_index);
         let loser_1_amount =
             T::MinBetSize::get().saturating_mul(10u128.saturated_into::<BalanceOf<T>>());
         buy_asset::<T>(market_id, loser_1_asset, &loser_1, loser_1_amount);
@@ -132,8 +125,8 @@ mod benchmarks {
             let resolved_outcome = OutcomeReport::Categorical(resolved_index);
             assert_ne!(resolved_index, loser_0_index);
             assert_ne!(resolved_index, loser_1_index);
-            let resolved_asset = ParimutuelShareOf::<T>::Share(market_id, resolved_index);
-            let resolved_issuance_asset = T::AssetManager::total_issuance(resolved_asset.into());
+            let resolved_asset = Asset::ParimutuelShare(market_id, resolved_index);
+            let resolved_issuance_asset = T::AssetManager::total_issuance(resolved_asset);
             assert!(resolved_issuance_asset.is_zero());
             market.resolved_outcome = Some(resolved_outcome);
             Ok(())
@@ -141,55 +134,6 @@ mod benchmarks {
 
         #[extrinsic_call]
         claim_refunds(RawOrigin::Signed(loser_0), loser_0_asset);
-    }
-
-    #[benchmark]
-    fn on_activation() {
-        let market_id = setup_market::<T>(MarketType::Categorical(64u16));
-
-        #[block]
-        {
-            Parimutuel::<T>::on_activation(&market_id);
-        }
-
-        for asset_idx in 0..64 {
-            let asset = ParimutuelShareOf::<T>::Share(Zero::zero(), asset_idx).into();
-            assert!(T::AssetCreator::asset_exists(asset));
-        }
-    }
-
-    #[benchmark]
-    fn on_resolution() {
-        let market_id = setup_market::<T>(MarketType::Categorical(64u16));
-        assert_ok!(Parimutuel::<T>::on_activation(&market_id).result);
-
-        for asset_idx in 0..64 {
-            let asset = ParimutuelShareOf::<T>::Share(Zero::zero(), asset_idx).into();
-            assert!(T::AssetCreator::asset_exists(asset));
-        }
-
-        assert_ok!(T::MarketCommons::mutate_market(&market_id, |market| {
-            market.status = MarketStatus::Resolved;
-            let resolved_outcome = OutcomeReport::Categorical(0u16);
-            market.resolved_outcome = Some(resolved_outcome);
-            Ok(())
-        }));
-
-        #[block]
-        {
-            Parimutuel::<T>::on_resolution(&market_id);
-        }
-
-        #[cfg(test)]
-        {
-            use frame_support::{pallet_prelude::Weight, traits::OnIdle};
-
-            crate::mock::AssetRouter::on_idle(Zero::zero(), Weight::MAX);
-            for asset_idx in 0..64 {
-                let asset = ParimutuelShareOf::<T>::Share(Zero::zero(), asset_idx).into();
-                assert!(!T::AssetCreator::asset_exists(asset));
-            }
-        }
     }
 
     impl_benchmark_test_suite!(
