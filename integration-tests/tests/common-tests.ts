@@ -219,42 +219,47 @@ export async function canSendDotToZeitgeist(
   const alice = keyring.addFromUri("//Alice", { name: "Alice default" });
   const bob = keyring.addFromUri("//Bob", { name: "Bob default" });
 
-  const destination = {
+  // ZTG: 0x630203000100b120030001010028e4f9b2fb73dbfd41fb01a9bc318138f79d268c04d01c7facecc6f8a626fa140304000000000b5f064a4ce90400000000
+
+  // BS: 0x630203000100d520030001010028e4f9b2fb73dbfd41fb01a9bc318138f79d268c04d01c7facecc6f8a626fa140304000000000b5f064a4ce90400000000
+  const destination = relayApi.createType("XcmVersionedLocation", {
     V3: {
       parents: 0,
       interior: {
         X1: { Parachain: zeitgeistParaId },
       },
     },
-  };
+  });
 
-  const receiverAccountId32 = relayApi.createType("AccountId", bob.address);
+  const receiverAccountId32 = relayApi
+    .createType("AccountId32", bob.address)
+    .toHex();
 
-  const beneficiary = {
+  const beneficiary = relayApi.createType("XcmVersionedLocation", {
     V3: {
       parents: 0,
       interior: {
-        X1: { AccountId32: { id: receiverAccountId32.toHex() } },
+        X1: { AccountId32: { id: receiverAccountId32 } },
       },
     },
-  };
+  });
 
   const amount = "10000000000";
 
-  const assets = {
+  const assets = relayApi.createType("XcmVersionedAssets", {
     V3: [
       {
         id: { Concrete: { parents: 0, interior: "Here" } },
         fun: { Fungible: amount },
       },
     ],
-  };
+  });
 
   const feeAssetItem = 0;
 
   const dotAsset = { ForeignAsset: "0" };
 
-  const weightLimit = 'Unlimited';
+  const weightLimit = relayApi.createType("XcmV3WeightLimit", { Unlimited: '' });
 
   const dotBalanceBefore = (
     (await zeitgeistApi.query.tokens.accounts(
@@ -268,21 +273,19 @@ export async function canSendDotToZeitgeist(
     beneficiary,
     assets,
     feeAssetItem,
-    weightLimit,
+    weightLimit
   );
 
   await xcmTransfer.signAndSend(alice, { nonce: -1 });
 
   await context.createBlock({
     providerName: relayProviderName,
-    count: 2,
-    allowFailures: true,
+    count: 1,
   });
 
   await context.createBlock({
     providerName: zeitgeistProviderName,
-    count: 2,
-    allowFailures: true,
+    count: 1,
   });
 
   const dotBalanceAfter = (
