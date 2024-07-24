@@ -87,10 +87,10 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Authorized AuthorizedOutcomeReports (max_values: None, max_size: Some(49), added: 2524, mode: MaxEncodedLen)
     fn authorize_market_outcome_existing_report() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `626`
-        //  Estimated: `5691`
-        // Minimum execution time: 35_520 nanoseconds.
-        Weight::from_parts(43_000_000, 5691)
+        //  Measured:  `577`
+        //  Estimated: `5677`
+        // Minimum execution time: 35_410 nanoseconds.
+        Weight::from_parts(36_251_000, 5677)
             .saturating_add(T::DbWeight::get().reads(2))
             .saturating_add(T::DbWeight::get().writes(1))
     }
@@ -105,7 +105,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Authorized AuthorizedOutcomeReports (max_values: None, max_size: Some(49), added: 2524, mode: MaxEncodedLen)
     fn on_resolution_weight() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `250`
+        //  Measured:  `217`
         //  Estimated: `2524`
         // Minimum execution time: 10_190 nanoseconds.
         Weight::from_parts(12_490_000, 2524)
@@ -123,7 +123,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Authorized AuthorizedOutcomeReports (max_values: None, max_size: Some(49), added: 2524, mode: MaxEncodedLen)
     fn get_auto_resolve_weight() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `250`
+        //  Measured:  `217`
         //  Estimated: `2524`
         // Minimum execution time: 9_550 nanoseconds.
         Weight::from_parts(11_820_000, 2524).saturating_add(T::DbWeight::get().reads(1))

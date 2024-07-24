@@ -2,4 +2,4 @@
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "zeitgeist-macros"
-version = "0.5.2"
+version = "0.5.3"

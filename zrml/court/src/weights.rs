@@ -137,7 +137,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
     fn exit_court_remove() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `340`
+        //  Measured:  `307`
         //  Estimated: `6500`
         // Minimum execution time: 43_340 nanoseconds.
         Weight::from_parts(52_540_000, 6500)
@@ -150,7 +150,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
     fn exit_court_set() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `340`
+        //  Measured:  `307`
         //  Estimated: `6500`
         // Minimum execution time: 40_611 nanoseconds.
         Weight::from_parts(50_010_000, 6500)
@@ -301,12 +301,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// The range of component `j` is `[1, 1000]`.
     fn handle_inflation(j: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `0 + j * (267 ±0)`
-        //  Estimated: `96996 + j * (2607 ±0)`
-        // Minimum execution time: 40_780 nanoseconds.
-        Weight::from_parts(41_230_000, 96996)
-            // Standard Error: 31_831
-            .saturating_add(Weight::from_parts(21_157_879, 0).saturating_mul(j.into()))
+        //  Measured:  `0 + j * (243 ±0)`
+        //  Estimated: `72996 + j * (2607 ±0)`
+        // Minimum execution time: 33_280 nanoseconds.
+        Weight::from_parts(34_480_000, 72996)
+            // Standard Error: 9_174
+            .saturating_add(Weight::from_parts(19_968_654, 0).saturating_mul(j.into()))
             .saturating_add(T::DbWeight::get().reads(2))
             .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(j.into())))
             .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(j.into())))
@@ -429,7 +429,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: Court Courts (max_values: None, max_size: Some(349), added: 2824, mode: MaxEncodedLen)
     fn get_auto_resolve() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `456`
+        //  Measured:  `423`
         //  Estimated: `5339`
         // Minimum execution time: 12_640 nanoseconds.
         Weight::from_parts(15_900_000, 5339).saturating_add(T::DbWeight::get().reads(2))
