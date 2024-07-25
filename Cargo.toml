@@ -14,7 +14,6 @@ default-members = [
     "runtime/battery-station",
     "runtime/zeitgeist",
     "zrml/authorized",
-    "zrml/asset-router",
     "zrml/court",
     "zrml/hybrid-router",
     "zrml/global-disputes",
@@ -40,7 +39,6 @@ members = [
     "runtime/battery-station",
     "runtime/zeitgeist",
     "zrml/authorized",
-    "zrml/asset-router",
     "zrml/court",
     "zrml/hybrid-router",
     "zrml/global-disputes",
@@ -254,7 +252,6 @@ zrml-swaps-rpc = { path = "zrml/swaps/rpc" }
 common-runtime = { path = "runtime/common", default-features = false }
 zeitgeist-macros = { path = "macros", default-features = false }
 zeitgeist-primitives = { path = "primitives", default-features = false }
-zrml-asset-router = { path = "zrml/asset-router", default-features = false }
 zrml-authorized = { path = "zrml/authorized", default-features = false }
 zrml-court = { path = "zrml/court", default-features = false }
 zrml-global-disputes = { path = "zrml/global-disputes", default-features = false }
@@ -287,7 +284,6 @@ arbitrary = { version = "1.3.2", default-features = false }
 arrayvec = { version = "0.7.4", default-features = false }
 cfg-if = { version = "1.0.0" }
 fixed = { version = "=1.15.0", default-features = false, features = ["num-traits"] }
-impl-trait-for-tuples = { version = "0.2.2" }
 # Hashbrown works in no_std by default and default features are used in Rikiddo
 hashbrown = { version = "0.14.3", default-features = true }
 hex-literal = { version = "0.4.1", default-features = false }
@@ -354,14 +350,11 @@ opt-level = 3
 # Zeitgeist runtime requires unwinding.
 panic = "unwind"
 
-[patch."https://github.com/paritytech/polkadot-sdk"]
-# pallet-asset adjustments (managed asset destruction)
-# Commits:
-#  - cb803be8cdc52d020890308a2076d752a8c4ce5c
-pallet-assets = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "zeitgeist-polkadot-v1.1.0" }
+
 # xcm-emulator incompatible block number type fixed
 # Commits:
 # - 
+[patch."https://github.com/paritytech/polkadot-sdk"]
 xcm-emulator = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "release-polkadot-v1.1.0-xcm-emulator-type-fix" }
 
 [patch."https://github.com/galacticcouncil/HydraDX-node"]

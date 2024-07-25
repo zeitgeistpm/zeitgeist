@@ -50,7 +50,7 @@ macro_rules! create_b_tree_map {
 #[macro_export]
 macro_rules! unreachable_non_terminating {
     ($condition: expr, $message: literal, $($message_args: tt)*) => {
-        let message = alloc::format!($message, $($message_args)*);
+        let message = format!($message, $($message_args)*);
 
         #[cfg(test)]
         assert!($condition, "{}", message);
@@ -60,7 +60,7 @@ macro_rules! unreachable_non_terminating {
         }
     };
     ($condition: expr, $log_target: ident, $message: literal, $($message_args: tt)*) => {
-        let message = alloc::format!($message, $($message_args)*);
+        let message = format!($message, $($message_args)*);
 
         #[cfg(test)]
         assert!($condition, "{}", message);
@@ -70,7 +70,7 @@ macro_rules! unreachable_non_terminating {
         }
     };
     ($condition: expr, $extra_code: expr, $message: literal, $($message_args: tt)*) => {
-        let message = alloc::format!($message, $($message_args)*);
+        let message = format!($message, $($message_args)*);
 
         #[cfg(test)]
         assert!($condition, "{}", message);
@@ -81,7 +81,7 @@ macro_rules! unreachable_non_terminating {
         }
     };
     ($condition: expr, $log_target: ident, $extra_code: expr, $message: literal, $($message_args: tt)*) => {
-        let message = alloc::format!($message, $($message_args)*);
+        let message = format!($message, $($message_args)*);
 
         #[cfg(test)]
         assert!($condition, "{}", message);

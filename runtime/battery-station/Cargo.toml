@@ -11,7 +11,6 @@ orml-currencies = { workspace = true }
 orml-tokens = { workspace = true }
 orml-traits = { workspace = true }
 pallet-asset-tx-payment = { workspace = true }
-pallet-assets = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-bounties = { workspace = true }
 pallet-collective = { workspace = true }
@@ -110,7 +109,6 @@ xcm-executor = { workspace = true, optional = true }
 
 common-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
-zrml-asset-router = { workspace = true }
 zrml-authorized = { workspace = true }
 zrml-court = { workspace = true }
 zrml-global-disputes = { workspace = true, optional = true }
@@ -193,7 +191,6 @@ runtime-benchmarks = [
     "orml-benchmarking",
     "orml-tokens/runtime-benchmarks",
     "orml-xtokens?/runtime-benchmarks",
-    "pallet-assets/runtime-benchmarks",
     "pallet-author-inherent?/runtime-benchmarks",
     "pallet-author-mapping?/runtime-benchmarks",
     "pallet-author-slot-filter?/runtime-benchmarks",
@@ -244,7 +241,6 @@ std = [
     "orml-currencies/std",
     "orml-tokens/std",
     "orml-traits/std",
-    "pallet-assets/std",
     "pallet-asset-tx-payment/std",
     "pallet-balances/std",
     "pallet-bounties/std",
@@ -337,7 +333,6 @@ std = [
     # Zeitgeist
 
     "zeitgeist-primitives/std",
-    "zrml-asset-router/std",
     "zrml-authorized/std",
     "zrml-court/std",
     "zrml-hybrid-router/std",
@@ -369,7 +364,6 @@ try-runtime = [
     "pallet-preimage/try-runtime",
 
     # Money runtime pallets
-    "pallet-assets/try-runtime",
     "pallet-asset-tx-payment/try-runtime",
     "pallet-balances/try-runtime",
     "pallet-bounties/try-runtime",
@@ -396,7 +390,6 @@ try-runtime = [
     "orml-xtokens?/try-runtime",
 
     # Zeitgeist runtime pallets
-    "zrml-asset-router/try-runtime",
     "zrml-authorized/try-runtime",
     "zrml-court/try-runtime",
     "zrml-hybrid-router/try-runtime",

@@ -46,8 +46,8 @@ use zeitgeist_primitives::{
         BASE,
     },
     types::{
-        AccountIdTest, Amount, Asset, Assets, Balance, BasicCurrencyAdapter, Hash, MarketId,
-        Moment, PoolId, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, CurrencyId, Hash, MarketId,
+        Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
 
@@ -88,10 +88,9 @@ construct_runtime!(
     }
 );
 
-pub type AssetManager = Currencies;
-
 impl crate::Config for Runtime {
     type Asset = Asset<MarketId>;
+    type MultiCurrency = Currencies;
     type RuntimeEvent = RuntimeEvent;
     type ExitFee = ExitFeeMock;
     type MaxAssets = MaxAssets;
@@ -101,7 +100,6 @@ impl crate::Config for Runtime {
     type MinAssets = MinAssets;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
-    type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
@@ -139,7 +137,7 @@ impl orml_currencies::Config for Runtime {
 }
 
 parameter_type_with_key! {
-    pub ExistentialDeposits: |currency_id: Assets| -> Balance {
+    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
         match currency_id {
             &BASE_ASSET => ExistentialDeposit::get(),
             Asset::Ztg => ExistentialDeposit::get(),
@@ -176,7 +174,7 @@ where
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
-    type CurrencyId = Assets;
+    type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = DustRemovalWhitelist;
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
@@ -255,15 +253,15 @@ sp_api::mock_impl_runtime_apis! {
             asset_in: &Asset<MarketId>,
             asset_out: &Asset<MarketId>,
             with_fees: bool,
-        ) -> Balance {
-            Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0)
+        ) -> SerdeWrapper<Balance> {
+            SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0))
         }
 
         fn pool_account_id(pool_id: &PoolId) -> AccountIdTest {
             Swaps::pool_account_id(pool_id)
         }
 
-        fn pool_shares_id(pool_id: PoolId) -> Asset<MarketId> {
+        fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
             Asset::PoolShare(pool_id)
         }
     }

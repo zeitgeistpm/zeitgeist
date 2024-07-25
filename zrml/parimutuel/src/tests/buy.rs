@@ -15,12 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#![cfg(test)]
+
 use crate::{mock::*, utils::*, *};
 use core::ops::RangeInclusive;
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
 use test_case::test_case;
-use zeitgeist_primitives::types::{MarketStatus, MarketType, ParimutuelAsset, ScoringRule};
+use zeitgeist_primitives::types::{Asset, MarketStatus, MarketType, ScoringRule};
 use zrml_market_commons::{Error as MError, Markets};
 
 #[test]
@@ -31,7 +33,7 @@ fn buy_emits_event() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
@@ -40,14 +42,7 @@ fn buy_emits_event() {
         assert_eq!(amount, amount_minus_fees + fees);
 
         System::assert_last_event(
-            Event::OutcomeBought {
-                market_id,
-                buyer: ALICE,
-                asset: asset.into(),
-                amount_minus_fees,
-                fees,
-            }
-            .into(),
+            Event::OutcomeBought { market_id, buyer: ALICE, asset, amount_minus_fees, fees }.into(),
         );
     });
 }
@@ -62,12 +57,12 @@ fn buy_balances_change_correctly() {
 
         let base_asset = market.base_asset;
 
-        let free_alice_before = AssetManager::free_balance(base_asset.into(), &ALICE);
-        let free_creator_before = AssetManager::free_balance(base_asset.into(), &market.creator);
+        let free_alice_before = AssetManager::free_balance(base_asset, &ALICE);
+        let free_creator_before = AssetManager::free_balance(base_asset, &market.creator);
         let free_pot_before =
-            AssetManager::free_balance(base_asset.into(), &Parimutuel::pot_account(market_id));
+            AssetManager::free_balance(base_asset, &Parimutuel::pot_account(market_id));
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
@@ -75,19 +70,33 @@ fn buy_balances_change_correctly() {
         let fees = 1000000000;
         assert_eq!(amount, amount_minus_fees + fees);
 
+        assert_eq!(AssetManager::free_balance(base_asset, &ALICE), free_alice_before - amount);
         assert_eq!(
-            AssetManager::free_balance(base_asset.into(), &ALICE),
-            free_alice_before - amount
-        );
-        assert_eq!(
-            AssetManager::free_balance(base_asset.into(), &Parimutuel::pot_account(market_id))
+            AssetManager::free_balance(base_asset, &Parimutuel::pot_account(market_id))
                 - free_pot_before,
             amount_minus_fees
         );
-        assert_eq!(AssetManager::free_balance(asset.into(), &ALICE), amount_minus_fees);
+        assert_eq!(AssetManager::free_balance(asset, &ALICE), amount_minus_fees);
         assert_eq!(
-            AssetManager::free_balance(base_asset.into(), &market.creator) - free_creator_before,
+            AssetManager::free_balance(base_asset, &market.creator) - free_creator_before,
             fees
+        );
+    });
+}
+
+#[test]
+fn buy_fails_if_asset_not_parimutuel_share() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0;
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
+        market.status = MarketStatus::Active;
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let asset = Asset::CategoricalOutcome(market_id, 0u16);
+        let amount = <Runtime as Config>::MinBetSize::get();
+        assert_noop!(
+            Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),
+            Error::<Runtime>::NotParimutuelOutcome
         );
     });
 }
@@ -102,7 +111,7 @@ fn buy_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
 
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),
@@ -124,7 +133,7 @@ fn buy_fails_if_market_status_is_not_active(status: MarketStatus) {
 
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),
@@ -143,7 +152,7 @@ fn buy_fails_if_market_type_is_scalar() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount =
             <Runtime as Config>::MinBetSize::get() + <Runtime as Config>::MinBetSize::get();
         assert_noop!(
@@ -161,10 +170,10 @@ fn buy_fails_if_insufficient_balance() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let free_alice = AssetManager::free_balance(market.base_asset.into(), &ALICE);
-        AssetManager::slash(market.base_asset.into(), &ALICE, free_alice);
+        let free_alice = AssetManager::free_balance(market.base_asset, &ALICE);
+        AssetManager::slash(market.base_asset, &ALICE, free_alice);
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),
@@ -181,7 +190,7 @@ fn buy_fails_if_below_minimum_bet_size() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get() - 1;
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),
@@ -195,7 +204,7 @@ fn buy_fails_if_market_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = <Runtime as Config>::MinBetSize::get();
         assert_noop!(
             Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount),

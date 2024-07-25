@@ -1,6 +1,4 @@
-# endpoint: wss://main.rpc.zeitgeist.pm/ws
-endpoint: wss://zeitgeist-rpc.dwellir.com
-# endpoint: wss://zeitgeist.api.onfinality.io/public-ws
+endpoint: wss://main.rpc.zeitgeist.pm/ws
 mock-signature-host: true
 db: ./tmp/ztg_db_mba.sqlite
 # wasm-override: zeitgeist-runtime.compact.compressed.wasm

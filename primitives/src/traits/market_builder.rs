@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::types::{
-    Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+    Asset, Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
 use alloc::vec::Vec;
@@ -36,26 +36,28 @@ macro_rules! builder_methods {
 /// builder.field1(value1).field2(value2);
 /// builder.clone().build()
 /// ```
-pub trait MarketBuilderTrait<AI, BA, BN, M, A, MI> {
-    fn build(self) -> Result<Market<AI, BA, BN, M, A, MI>, DispatchError>;
+pub trait MarketBuilderTrait<AccountId, Balance, BlockNumber, Moment, MarketId> {
+    fn build(
+        self,
+    ) -> Result<Market<AccountId, Balance, BlockNumber, Moment, MarketId>, DispatchError>;
 
     builder_methods! {
-        market_id: MI,
-        base_asset: A,
-        creator: AI,
+        market_id: MarketId,
+        base_asset: Asset<MarketId>,
+        creator: AccountId,
         creation: MarketCreation,
         creator_fee: Perbill,
-        oracle: AI,
+        oracle: AccountId,
         metadata: Vec<u8>,
         market_type: MarketType,
-        period: MarketPeriod<BN, M>,
-        deadlines: Deadlines<BN>,
+        period: MarketPeriod<BlockNumber, Moment>,
+        deadlines: Deadlines<BlockNumber>,
         scoring_rule: ScoringRule,
         status: MarketStatus,
-        report: Option<Report<AI, BN>>,
+        report: Option<Report<AccountId, BlockNumber>>,
         resolved_outcome: Option<OutcomeReport>,
         dispute_mechanism: Option<MarketDisputeMechanism>,
-        bonds: MarketBonds<AI, BA>,
-        early_close: Option<EarlyClose<BN, M>>,
+        bonds: MarketBonds<AccountId, Balance>,
+        early_close: Option<EarlyClose<BlockNumber, Moment>>,
     }
 }

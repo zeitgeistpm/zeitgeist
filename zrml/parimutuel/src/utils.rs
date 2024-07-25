@@ -23,13 +23,13 @@ where
     use frame_support::traits::Get;
     use sp_runtime::{traits::AccountIdConversion, Perbill};
     use zeitgeist_primitives::types::{
-        BaseAsset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+        Asset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
         MarketStatus, MarketType, ScoringRule,
     };
 
     zeitgeist_primitives::types::Market {
         market_id: Default::default(),
-        base_asset: BaseAsset::Ztg,
+        base_asset: Asset::Ztg,
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),
         creator,

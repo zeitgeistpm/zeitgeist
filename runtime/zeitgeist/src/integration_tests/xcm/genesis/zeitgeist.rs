@@ -21,7 +21,6 @@ use crate::{
     },
     parachain_params::MinCandidateStk,
     parameters::ZeitgeistTreasuryAccount,
-    Asset,
 };
 use nimbus_primitives::NimbusId;
 use sp_core::storage::Storage;
@@ -66,11 +65,11 @@ pub(crate) fn genesis(parachain_id: u32) -> Storage {
                 .chain([(ZeitgeistTreasuryAccount::get())].iter())
                 .flat_map(|k| {
                     vec![
-                        (k.clone(), Asset::from(FOREIGN_PARENT_ID).try_into().unwrap(), ENDOWMENT),
-                        (k.clone(), Asset::from(FOREIGN_SIBLING_ID).try_into().unwrap(), ENDOWMENT),
-                        (k.clone(), Asset::from(FOREIGN_ZTG_ID).try_into().unwrap(), ENDOWMENT),
-                        (k.clone(), Asset::from(BTC_ID).try_into().unwrap(), ENDOWMENT),
-                        (k.clone(), Asset::from(ETH_ID).try_into().unwrap(), ENDOWMENT),
+                        (k.clone(), FOREIGN_PARENT_ID, ENDOWMENT),
+                        (k.clone(), FOREIGN_SIBLING_ID, ENDOWMENT),
+                        (k.clone(), FOREIGN_ZTG_ID, ENDOWMENT),
+                        (k.clone(), BTC_ID, ENDOWMENT),
+                        (k.clone(), ETH_ID, ENDOWMENT),
                     ]
                 })
                 .collect::<Vec<_>>(),

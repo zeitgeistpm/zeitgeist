@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -18,22 +18,20 @@
 
 #![no_main]
 
-use libfuzzer_sys::fuzz_target;
-use zrml_swaps::mock::{ExtBuilder, RuntimeOrigin, Swaps};
-
 mod utils;
+
+use libfuzzer_sys::fuzz_target;
 use orml_traits::currency::MultiCurrency;
 use utils::{construct_asset, GeneralPoolData};
 use zeitgeist_primitives::types::Asset;
-use zrml_swaps::mock::AssetManager;
+use zrml_swaps::mock::{Currencies, ExtBuilder, RuntimeOrigin, Swaps};
 
 fuzz_target!(|data: GeneralPoolData| {
     let mut ext = ExtBuilder::default().build();
     ext.execute_with(|| {
         // ensure that the account origin has a sufficient balance
-        // use orml_traits::MultiCurrency; required for this
         for a in &data.pool_creation.assets {
-            let _ = AssetManager::deposit(
+            let _ = Currencies::deposit(
                 construct_asset(*a),
                 &data.pool_creation.origin,
                 data.pool_creation.amount,
@@ -42,7 +40,7 @@ fuzz_target!(|data: GeneralPoolData| {
         let pool_creator = data.pool_creation.origin;
         let pool_id = data.pool_creation.create_pool();
         // to exit a pool, origin also needs to have the pool tokens of the pool that they're exiting
-        let _ = AssetManager::deposit(Asset::PoolShare(pool_id), &pool_creator, data.pool_amount);
+        let _ = Currencies::deposit(Asset::PoolShare(pool_id), &pool_creator, data.pool_amount);
         let _ = Swaps::pool_exit(
             RuntimeOrigin::signed(data.origin),
             pool_id,

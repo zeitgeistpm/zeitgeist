@@ -24,7 +24,7 @@ use zeitgeist_primitives::types::OutcomeReport;
 #[test]
 fn admin_move_market_to_resolved_resolves_reported_market() {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
-    let test = |base_asset: BaseAsset| {
+    let test = |base_asset: AssetOf<Runtime>| {
         let end = 33;
         simple_create_categorical_market(
             base_asset,
@@ -83,21 +83,18 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
         );
     };
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::CampaignAsset(100));
-    });
-    ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::Ztg);
+        test(Asset::Ztg);
     });
     #[cfg(feature = "parachain")]
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::ForeignAsset(100));
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn admin_move_market_to_resolved_resolves_disputed_market() {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
-    let test = |base_asset: BaseAsset| {
+    let test = |base_asset: AssetOf<Runtime>| {
         let end = 33;
         simple_create_categorical_market(
             base_asset,
@@ -159,11 +156,11 @@ fn admin_move_market_to_resolved_resolves_disputed_market() {
         );
     };
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::Ztg);
+        test(Asset::Ztg);
     });
     #[cfg(feature = "parachain")]
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::ForeignAsset(100));
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -175,7 +172,7 @@ fn admin_move_market_to_resolved_fails_if_market_is_not_reported_or_disputed(
 ) {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            BaseAsset::Ztg,
+            Asset::Ztg,
             MarketCreation::Permissionless,
             0..33,
             ScoringRule::AmmCdaHybrid,

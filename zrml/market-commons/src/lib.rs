@@ -43,7 +43,7 @@ mod pallet {
         Blake2_128Concat, Parameter,
     };
     use frame_system::pallet_prelude::BlockNumberFor;
-    use parity_scale_codec::{FullCodec, HasCompact, MaxEncodedLen};
+    use parity_scale_codec::{FullCodec, MaxEncodedLen};
     use sp_runtime::{
         traits::{
             AtLeast32Bit, AtLeast32BitUnsigned, MaybeSerializeDeserialize, Member, Saturating,
@@ -53,25 +53,18 @@ mod pallet {
     use zeitgeist_primitives::{
         math::checked_ops_res::CheckedAddRes,
         traits::MarketBuilderTrait,
-        types::{
-            BaseAsset, Deadlines, EarlyClose, Market, MarketBonds, MarketPeriod, PoolId, Report,
-        },
+        types::{Asset, Deadlines, EarlyClose, Market, MarketBonds, MarketPeriod, PoolId, Report},
     };
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(11);
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> = <T as Config>::Balance;
     pub(crate) type MarketIdOf<T> = <T as Config>::MarketId;
-    pub(crate) type MarketOf<T> = Market<
-        AccountIdOf<T>,
-        BalanceOf<T>,
-        BlockNumberFor<T>,
-        MomentOf<T>,
-        BaseAsset,
-        MarketIdOf<T>,
-    >;
+    pub(crate) type MarketOf<T> =
+        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, MarketIdOf<T>>;
     pub(crate) type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
     pub(crate) type DeadlinesOf<T> = Deadlines<BlockNumberFor<T>>;
     pub(crate) type EarlyCloseOf<T> = EarlyClose<BlockNumberFor<T>, MomentOf<T>>;
@@ -97,7 +90,6 @@ mod pallet {
         type MarketId: AtLeast32Bit
             + Copy
             + Default
-            + HasCompact
             + MaxEncodedLen
             + MaybeSerializeDeserialize
             + Member
@@ -208,7 +200,6 @@ mod pallet {
                     Self::Balance,
                     Self::BlockNumber,
                     Self::Moment,
-                    BaseAsset,
                     Self::MarketId,
                 >,
         {

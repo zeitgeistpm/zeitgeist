@@ -53,17 +53,17 @@ where
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotInPool);
     let pool_account = Pallet::<T>::pool_account_id(&p.pool_id);
 
-    let asset_balance = T::AssetManager::free_balance(p.asset, &pool_account);
+    let asset_balance = T::MultiCurrency::free_balance(p.asset, &pool_account);
     (p.ensure_balance)(asset_balance)?;
 
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
-    let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
+    let total_issuance = T::MultiCurrency::total_issuance(pool_shares_id);
 
     let asset_amount = (p.asset_amount)(asset_balance, total_issuance)?;
     let pool_amount = (p.pool_amount)(asset_balance, total_issuance)?;
 
     Pallet::<T>::burn_pool_shares(p.pool_id, &p.who, pool_amount)?;
-    T::AssetManager::transfer(p.asset, &pool_account, &p.who, asset_amount)?;
+    T::MultiCurrency::transfer(p.asset, &pool_account, &p.who, asset_amount)?;
 
     (p.event)(PoolAssetEvent {
         asset: p.asset,
@@ -89,16 +89,16 @@ where
     Pallet::<T>::ensure_pool_is_active(p.pool)?;
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let pool_account_id = Pallet::<T>::pool_account_id(&p.pool_id);
-    let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
+    let total_issuance = T::MultiCurrency::total_issuance(pool_shares_id);
 
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotInPool);
-    let asset_balance = T::AssetManager::free_balance(p.asset, p.pool_account_id);
+    let asset_balance = T::MultiCurrency::free_balance(p.asset, p.pool_account_id);
 
     let asset_amount = (p.asset_amount)(asset_balance, total_issuance)?;
     let pool_amount = (p.pool_amount)(asset_balance, total_issuance)?;
 
     Pallet::<T>::mint_pool_shares(p.pool_id, &p.who, pool_amount)?;
-    T::AssetManager::transfer(p.asset, &p.who, &pool_account_id, asset_amount)?;
+    T::MultiCurrency::transfer(p.asset, &p.who, &pool_account_id, asset_amount)?;
 
     (p.event)(PoolAssetEvent {
         asset: p.asset,
@@ -121,7 +121,7 @@ where
     T: Config,
 {
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
-    let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
+    let total_issuance = T::MultiCurrency::total_issuance(pool_shares_id);
 
     let ratio = p.pool_amount.bdiv(total_issuance)?;
     Pallet::<T>::check_provided_values_len_must_equal_assets_len(&p.pool.assets, &p.asset_bounds)?;
@@ -130,7 +130,7 @@ where
     let mut transferred = Vec::with_capacity(p.asset_bounds.len());
 
     for (asset, amount_bound) in p.pool.assets.iter().cloned().zip(p.asset_bounds.iter().cloned()) {
-        let balance = T::AssetManager::free_balance(asset, p.pool_account_id);
+        let balance = T::MultiCurrency::free_balance(asset, p.pool_account_id);
         // Dusting may result in zero balances in the pool; just ignore these.
         if balance.is_zero() {
             continue;
@@ -183,8 +183,8 @@ where
 
     let [asset_amount_in, asset_amount_out] = (p.asset_amounts)()?;
 
-    T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
-    T::AssetManager::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
+    T::MultiCurrency::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
+    T::MultiCurrency::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
 
     let spot_price_after =
         Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out, true)?;

@@ -17,7 +17,8 @@
 
 use crate::{
     xcm_config::config::{general_key, zeitgeist},
-    AccountId, AssetRegistry, AssetRegistryStringLimit, Balance, ExistentialDeposit, RuntimeOrigin,
+    AccountId, AssetRegistry, AssetRegistryStringLimit, Balance, CurrencyId, ExistentialDeposit,
+    RuntimeOrigin,
 };
 use frame_support::assert_ok;
 use orml_traits::asset_registry::AssetMetadata;
@@ -27,7 +28,7 @@ use xcm::{
     VersionedMultiLocation,
 };
 use xcm_emulator::helpers::get_account_id_from_seed;
-use zeitgeist_primitives::types::{CustomMetadata, XcmAsset};
+use zeitgeist_primitives::types::{Asset, CustomMetadata};
 
 pub(super) mod accounts {
     use super::*;
@@ -83,11 +84,11 @@ pub const PARA_ID_SIBLING: u32 = 3000;
 pub const PARA_ID_ZEITGEIST: u32 = zeitgeist::ID;
 
 /// IDs that are used to represent tokens from other chains
-pub const FOREIGN_ZTG_ID: XcmAsset = XcmAsset::ForeignAsset(0);
-pub const FOREIGN_PARENT_ID: XcmAsset = XcmAsset::ForeignAsset(1);
-pub const FOREIGN_SIBLING_ID: XcmAsset = XcmAsset::ForeignAsset(2);
-pub const BTC_ID: XcmAsset = XcmAsset::ForeignAsset(3);
-pub const ETH_ID: XcmAsset = XcmAsset::ForeignAsset(4);
+pub const FOREIGN_ZTG_ID: Asset<u128> = CurrencyId::ForeignAsset(0);
+pub const FOREIGN_PARENT_ID: Asset<u128> = CurrencyId::ForeignAsset(1);
+pub const FOREIGN_SIBLING_ID: Asset<u128> = CurrencyId::ForeignAsset(2);
+pub const BTC_ID: Asset<u128> = CurrencyId::ForeignAsset(3);
+pub const ETH_ID: Asset<u128> = CurrencyId::ForeignAsset(4);
 
 #[inline]
 pub(super) const fn ztg(amount: Balance) -> Balance {

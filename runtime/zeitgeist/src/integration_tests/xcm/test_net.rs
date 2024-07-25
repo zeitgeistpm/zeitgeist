@@ -43,7 +43,6 @@ decl_test_relay_chains! {
         }
     },
 }
-
 decl_test_parachains! {
     pub struct Zeitgeist {
         genesis = zeitgeist::genesis(PARA_ID_ZEITGEIST),

@@ -18,13 +18,12 @@
 
 #![no_main]
 
-use libfuzzer_sys::fuzz_target;
-use zeitgeist_primitives::traits::Swaps as SwapsTrait;
-
-use zrml_swaps::mock::{ExtBuilder, Swaps};
-
 mod utils;
+
+use libfuzzer_sys::fuzz_target;
 use utils::{construct_asset, PoolCreationData};
+use zeitgeist_primitives::traits::Swaps as SwapsTrait;
+use zrml_swaps::mock::{ExtBuilder, Swaps};
 
 fuzz_target!(|data: PoolCreationData| {
     let mut ext = ExtBuilder::default().build();

@@ -128,28 +128,22 @@ if ztg_supply / campaign_asset_supply >= 100 {
 [#1197]: https://github.com/zeitgeistpm/zeitgeist/pull/1197
 [#1178]: https://github.com/zeitgeistpm/zeitgeist/pull/1178
 
-### Changed
+### Changes
 
-- ⚠️ Move the `zeitgeist_primitives::Pool` struct to `zrml_swaps::types::Pool`
-  and change the following fields ([#1197]):
-  - Remove `market_id`
-  - Make `swap_fee` non-optional
-  - Remove `total_subsidy`
-  - Make `total_weight` non-optional
-  - Make `weights` non-optional
-- ⚠️ Change the type of `liquidity_shares_manager` in
-  `zrml_neo_swaps::types::Pool` from `zrml_neo_swaps::types::SoloLp` to
-  `zrml_neo_swaps::types::LiquidityTree`. Details on the liquidity tree can be
-  found in the `README.md` of zrml-neo-swaps and the documentation of the
-  `LiquidityTree` object ([#1179]).
+- ⚠️ Move the `zeitgeist_primitives::Pool` struct to `zrml_swaps::types::Pool` and change the following fields ([#1197]):
+    - Remove `market_id`
+    - Make `swap_fee` non-optional
+    - Remove `total_subsidy`
+    - Make `total_weight` non-optional
+    - Make `weights` non-optional
+- ⚠️ Change the type of `liquidity_shares_manager` in `zrml_neo_swaps::types::Pool` from `zrml_neo_swaps::types::SoloLp` to `zrml_neo_swaps::types::LiquidityTree`. Details on the liquidity tree can be found in the `README.md` of zrml-neo-swaps and the documentation of the `LiquidityTree` object ([#1179]).
 
 ### Migrations
 
 - Closed all CPMM pools. Withdrawals are still allowed. Creating new pools will
   be impossible until further updates are deployed. ([#1197])
 - Remove all Rikiddo storage elements. ([#1197])
-- Migrate neo-swaps `Pools` storage. The market creator's liquidity position is
-  translated into a position in the liquidity tree of the same value ([#1178]).
+- Migrate neo-swaps `Pools` storage. The market creator's liquidity position is translated into a position in the liquidity tree of the same value ([#1178]).
 
 ### Removed
 

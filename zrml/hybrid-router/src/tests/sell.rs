@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use frame_support::traits::fungibles::Unbalanced;
+use zeitgeist_primitives::types::Asset;
 
 #[test]
 fn sell_to_amm_and_then_fill_specified_order() {
@@ -35,7 +35,7 @@ fn sell_to_amm_and_then_fill_specified_order() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
         let order_maker_amount = _6;
@@ -52,7 +52,7 @@ fn sell_to_amm_and_then_fill_specified_order() {
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount_in,));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let strategy = Strategy::LimitOrder;
@@ -92,7 +92,7 @@ fn sell_to_amm_and_then_fill_specified_order() {
                 maker: CHARLIE,
                 maker_asset: BASE_ASSET,
                 maker_amount: 52804047165,
-                taker_asset: Assets::CategoricalOutcome(market_id, 0),
+                taker_asset: Asset::CategoricalOutcome(market_id, 0),
                 taker_amount: unfilled_base_asset_amount,
             }
         );
@@ -118,7 +118,7 @@ fn sell_to_amm_if_specified_order_has_lower_prices_than_the_amm() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _1;
 
         let order_maker_amount = _1;
@@ -135,7 +135,7 @@ fn sell_to_amm_if_specified_order_has_lower_prices_than_the_amm() {
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount,));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let strategy = Strategy::LimitOrder;
@@ -162,7 +162,7 @@ fn sell_to_amm_if_specified_order_has_lower_prices_than_the_amm() {
                 maker: CHARLIE,
                 maker_asset: BASE_ASSET,
                 maker_amount: _1,
-                taker_asset: Assets::CategoricalOutcome(market_id, 0),
+                taker_asset: Asset::CategoricalOutcome(market_id, 0),
                 taker_amount: _2,
             }
         );
@@ -185,7 +185,7 @@ fn sell_fill_multiple_orders_if_amm_spot_price_lower_than_order_prices() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
         let order_maker_amount = _1_2;
@@ -210,7 +210,7 @@ fn sell_fill_multiple_orders_if_amm_spot_price_lower_than_order_prices() {
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount_in,));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let strategy = Strategy::LimitOrder;
@@ -246,7 +246,7 @@ fn sell_fill_specified_order_partially_if_amm_spot_price_lower() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
         let order_maker_amount = _4;
@@ -265,7 +265,7 @@ fn sell_fill_specified_order_partially_if_amm_spot_price_lower() {
         assert_eq!(order_ids.len(), 1);
         let order_id = order_ids[0];
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount,));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![order_id];
@@ -289,7 +289,7 @@ fn sell_fill_specified_order_partially_if_amm_spot_price_lower() {
                 maker: CHARLIE,
                 maker_asset: BASE_ASSET,
                 maker_amount: _3,
-                taker_asset: Assets::CategoricalOutcome(market_id, 0),
+                taker_asset: Asset::CategoricalOutcome(market_id, 0),
                 taker_amount: _6,
             }
         );
@@ -312,11 +312,11 @@ fn sell_fails_if_asset_not_equal_to_order_book_taker_asset() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
         let maker_amount = _1;
-        assert_ok!(AssetRouter::increase_balance(asset, &CHARLIE, maker_amount, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &CHARLIE, maker_amount,));
 
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
@@ -331,7 +331,7 @@ fn sell_fails_if_asset_not_equal_to_order_book_taker_asset() {
         assert_eq!(order_ids.len(), 1);
         let order_id = order_ids[0];
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount_in,));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![order_id];
@@ -368,7 +368,7 @@ fn sell_fails_if_order_price_below_min_price() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
         let order_maker_amount = _1;
@@ -378,7 +378,7 @@ fn sell_fails_if_order_price_below_min_price() {
             market_id,
             BASE_ASSET,
             order_maker_amount,
-            Assets::CategoricalOutcome(market_id, 0),
+            Asset::CategoricalOutcome(market_id, 0),
             amount,
         ));
 
@@ -386,7 +386,7 @@ fn sell_fails_if_order_price_below_min_price() {
         assert_eq!(order_ids.len(), 1);
         let order_id = order_ids[0];
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, 5 * amount, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, 5 * amount,));
 
         let min_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![order_id];
@@ -423,10 +423,10 @@ fn sell_to_amm() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount,));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -475,10 +475,10 @@ fn sell_min_price_higher_than_amm_spot_price_results_in_place_order() {
         let market = Markets::<Runtime>::get(market_id).unwrap();
         let base_asset = market.base_asset;
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount,));
 
         //*  spot price of the AMM is 1 smaller than the min_price
         //*  this results in no sell on the AMM, but places an order on the order book
@@ -507,7 +507,7 @@ fn sell_min_price_higher_than_amm_spot_price_results_in_place_order() {
                 maker: ALICE,
                 maker_asset: asset,
                 maker_amount: _2,
-                taker_asset: base_asset.into(),
+                taker_asset: base_asset,
                 taker_amount: _1,
             }
         );
@@ -532,10 +532,10 @@ fn sell_to_amm_but_low_amount() {
         let market = Markets::<Runtime>::get(market_id).unwrap();
         let base_asset = market.base_asset;
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount_in,));
 
         //*  min_price is just 1 smaller than the spot price of the AMM
         //*  this results in a low sell amount_in on the AMM
@@ -577,7 +577,7 @@ fn sell_to_amm_but_low_amount() {
                 maker: ALICE,
                 maker_asset: asset,
                 maker_amount: 19999999942,
-                taker_asset: base_asset.into(),
+                taker_asset: base_asset,
                 taker_amount: 9999999969,
             }
         );
@@ -600,12 +600,10 @@ fn sell_succeeds_for_numerical_soft_failure() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _1000 * 100;
 
-        // increase_balance does not set total issuance
-        AssetRouter::set_total_issuance(asset, amount_in);
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount_in,));
 
         let min_price = (_1_100 / 1000).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -627,7 +625,7 @@ fn sell_succeeds_for_numerical_soft_failure() {
             Order {
                 market_id,
                 maker: ALICE,
-                maker_asset: Assets::CategoricalOutcome(market_id, 0),
+                maker_asset: Asset::CategoricalOutcome(market_id, 0),
                 maker_amount: _1000 * 100,
                 taker_asset: BASE_ASSET,
                 taker_amount: _1,
@@ -652,10 +650,10 @@ fn sell_to_amm_only() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount,));
 
         let min_price = _1_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -703,10 +701,10 @@ fn sell_places_limit_order_no_pool() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount,));
 
         let min_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -733,7 +731,7 @@ fn sell_places_limit_order_no_pool() {
                 maker: ALICE,
                 maker_asset: asset,
                 maker_amount: 10 * BASE,
-                taker_asset: base_asset.into(),
+                taker_asset: base_asset,
                 taker_amount: 5 * BASE,
             }
         );
@@ -753,10 +751,10 @@ fn sell_fails_if_balance_too_low() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
 
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount - 1, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount - 1,));
 
         let min_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -794,7 +792,7 @@ fn sell_emits_event() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _1000 * 100;
 
         let min_price = _1_100.saturated_into::<BalanceOf<Runtime>>();
@@ -807,7 +805,7 @@ fn sell_emits_event() {
             let order_creator = i as AccountIdTest;
             let surplus = ((i + 1) as u128) * _1_2;
             let taker_amount = taker_amount + surplus.saturated_into::<BalanceOf<Runtime>>();
-            assert_ok!(AssetManager::deposit(maker_asset, &order_creator, maker_amount));
+            assert_ok!(AssetManager::deposit(maker_asset, &order_creator, maker_amount + _100));
             assert_ok!(Orderbook::place_order(
                 RuntimeOrigin::signed(order_creator),
                 market_id,
@@ -820,9 +818,7 @@ fn sell_emits_event() {
 
         let order_ids = Orders::<Runtime>::iter().map(|(k, _)| k).collect::<Vec<_>>();
 
-        // increase_balance does not set total issuance
-        AssetRouter::set_total_issuance(asset, amount_in);
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount_in,));
 
         let strategy = Strategy::LimitOrder;
         assert_ok!(HybridRouter::sell(
@@ -868,10 +864,10 @@ fn sell_fails_if_asset_count_mismatch() {
 
         let asset_count = 2;
         assert_ne!(required_asset_count, asset_count);
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
 
         let amount_in = 2 * BASE;
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount_in,));
 
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -905,7 +901,7 @@ fn sell_fails_if_amount_is_zero() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = 0;
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -939,9 +935,9 @@ fn sell_fails_if_cancel_strategy_applied() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = 10 * BASE;
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount_in,));
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::ImmediateOrCancel;
@@ -966,9 +962,9 @@ fn sell_fails_if_market_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let asset_count = 2;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = 10 * BASE;
-        assert_ok!(AssetRouter::increase_balance(asset, &ALICE, amount_in, Precision::Exact));
+        assert_ok!(AssetManager::deposit(asset, &ALICE, amount_in,));
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
         let strategy = Strategy::ImmediateOrCancel;

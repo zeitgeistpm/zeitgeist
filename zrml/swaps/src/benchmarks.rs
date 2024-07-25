@@ -62,7 +62,7 @@ where
     for i in 0..asset_count {
         let asset = T::Asset::create_asset_id(i as u128);
         assets.push(asset);
-        T::AssetManager::deposit(asset, owner, asset_amount).unwrap()
+        T::MultiCurrency::deposit(asset, owner, asset_amount).unwrap()
     }
     (assets, asset_amount)
 }
@@ -182,7 +182,7 @@ benchmarks! {
             true,
         );
         let asset_in = assets[0];
-        T::AssetManager::deposit(asset_in, &caller, u64::MAX.saturated_into()).unwrap();
+        T::MultiCurrency::deposit(asset_in, &caller, u64::MAX.saturated_into()).unwrap();
         let asset_out = assets[asset_count as usize - 1];
         let min_asset_amount_out: Option<BalanceOf<T>> = Some(0u128.saturated_into());
         let max_price = Some(u128::MAX.saturated_into());
@@ -218,7 +218,7 @@ benchmarks! {
             true,
         );
         let asset_in = assets[0];
-        T::AssetManager::deposit(asset_in, &caller, u64::MAX.saturated_into()).unwrap();
+        T::MultiCurrency::deposit(asset_in, &caller, u64::MAX.saturated_into()).unwrap();
         let asset_out = assets[asset_count as usize - 1];
         let max_asset_amount_in: Option<BalanceOf<T>> = Some(u128::MAX.saturated_into());
         let max_price = Some(u128::MAX.saturated_into());

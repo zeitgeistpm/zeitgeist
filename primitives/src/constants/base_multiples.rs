@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "mock")]
-
 use crate::constants::BASE;
 
 pub const _1: u128 = BASE;

@@ -39,10 +39,7 @@ use zeitgeist_primitives::{
     constants::{base_multiples::*, CENT},
     math::fixed::{BaseProvider, FixedDiv, ZeitgeistBase},
     traits::{CompleteSetOperationsApi, DeployPoolApi, HybridRouterOrderbookApi},
-    types::{
-        Asset, BaseAssetClass, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType,
-        ScoringRule,
-    },
+    types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -69,11 +66,10 @@ fn create_spot_prices<T: Config>(asset_count: u16) -> Vec<BalanceOf<T>> {
     amounts
 }
 
-fn create_market<T: Config>(
-    caller: T::AccountId,
-    base_asset: BaseAssetClass,
-    asset_count: u16,
-) -> MarketIdOf<T> {
+fn create_market<T>(caller: T::AccountId, base_asset: AssetOf<T>, asset_count: u16) -> MarketIdOf<T>
+where
+    T: Config,
+{
     let market = Market {
         market_id: 0u8.into(),
         base_asset,
@@ -99,13 +95,13 @@ fn create_market<T: Config>(
 
 fn create_market_and_deploy_pool<T: Config>(
     caller: T::AccountId,
-    base_asset: BaseAssetClass,
+    base_asset: AssetOf<T>,
     asset_count: u16,
     amount: BalanceOf<T>,
 ) -> MarketIdOf<T> {
     let market_id = create_market::<T>(caller.clone(), base_asset, asset_count);
-    let total_cost = amount + T::AssetManager::minimum_balance(base_asset.into());
-    assert_ok!(T::AssetManager::deposit(base_asset.into(), &caller, total_cost));
+    let total_cost = amount + T::AssetManager::minimum_balance(base_asset);
+    assert_ok!(T::AssetManager::deposit(base_asset, &caller, total_cost));
     assert_ok_with_transaction!(T::CompleteSetOperations::buy_complete_set(
         caller.clone(),
         market_id,
@@ -128,7 +124,7 @@ mod benchmarks {
     #[benchmark]
     fn buy(n: Linear<2, 16>, o: Linear<0, 10>) {
         let buyer: T::AccountId = whitelisted_caller();
-        let base_asset = BaseAssetClass::Ztg;
+        let base_asset = Asset::Ztg;
         let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             buyer.clone(),
@@ -139,7 +135,7 @@ mod benchmarks {
 
         let asset = Asset::CategoricalOutcome(market_id, 0u16);
         let amount_in = _1000.saturated_into();
-        assert_ok!(T::AssetManager::deposit(base_asset.into(), &buyer, amount_in));
+        assert_ok!(T::AssetManager::deposit(base_asset, &buyer, amount_in));
 
         let spot_prices = create_spot_prices::<T>(asset_count);
         let first_spot_price = spot_prices[0];
@@ -148,7 +144,7 @@ mod benchmarks {
         let orders = (0u128..o as u128).collect::<Vec<_>>();
         let maker_asset = asset;
         let maker_amount = _20.saturated_into();
-        let taker_asset: AssetOf<T> = base_asset.into();
+        let taker_asset = base_asset;
         let taker_amount: BalanceOf<T> = _11.saturated_into();
         assert!(taker_amount.bdiv_floor(maker_amount).unwrap() > first_spot_price);
         for (i, order_id) in orders.iter().enumerate() {
@@ -182,14 +178,14 @@ mod benchmarks {
         let buyer_limit_order = T::Orderbook::order(o as u128).unwrap();
         assert_eq!(buyer_limit_order.market_id, market_id);
         assert_eq!(buyer_limit_order.maker, buyer);
-        assert_eq!(buyer_limit_order.maker_asset, base_asset.into());
+        assert_eq!(buyer_limit_order.maker_asset, base_asset);
         assert_eq!(buyer_limit_order.taker_asset, asset);
     }
 
     #[benchmark]
     fn sell(n: Linear<2, 10>, o: Linear<0, 10>) {
         let seller: T::AccountId = whitelisted_caller();
-        let base_asset = BaseAssetClass::Ztg;
+        let base_asset = Asset::Ztg;
         let asset_count = n.try_into().unwrap();
         let market_id = create_market_and_deploy_pool::<T>(
             seller.clone(),
@@ -204,15 +200,15 @@ mod benchmarks {
         // seller base asset amount needs to exist,
         // otherwise repatriate_reserved_named from order book fails
         // with DeadAccount for base asset repatriate to seller beneficiary
-        let min_balance = T::AssetManager::minimum_balance(base_asset.into());
-        assert_ok!(T::AssetManager::deposit(base_asset.into(), &seller, min_balance));
+        let min_balance = T::AssetManager::minimum_balance(base_asset);
+        assert_ok!(T::AssetManager::deposit(base_asset, &seller, min_balance));
 
         let spot_prices = create_spot_prices::<T>(asset_count);
         let first_spot_price = spot_prices[0];
 
         let min_price = _1_100.saturated_into();
         let orders = (0u128..o as u128).collect::<Vec<_>>();
-        let maker_asset: AssetOf<T> = base_asset.into();
+        let maker_asset: AssetOf<T> = base_asset;
         let maker_amount: BalanceOf<T> = _9.saturated_into();
         let taker_asset = asset;
         let taker_amount = _100.saturated_into();
@@ -221,7 +217,11 @@ mod benchmarks {
             let order_creator: T::AccountId = account("order_creator", *order_id as u32, 0);
             let surplus = ((i + 1) as u128) * _1_2;
             let taker_amount = taker_amount + surplus.saturated_into::<BalanceOf<T>>();
-            assert_ok!(T::AssetManager::deposit(maker_asset, &order_creator, maker_amount));
+            assert_ok!(T::AssetManager::deposit(
+                maker_asset,
+                &order_creator,
+                maker_amount + _100.saturated_into()
+            ));
             T::Orderbook::place_order(
                 order_creator,
                 market_id,
@@ -250,7 +250,7 @@ mod benchmarks {
         assert_eq!(seller_limit_order.market_id, market_id);
         assert_eq!(seller_limit_order.maker, seller);
         assert_eq!(seller_limit_order.maker_asset, asset);
-        assert_eq!(seller_limit_order.taker_asset, base_asset.into());
+        assert_eq!(seller_limit_order.taker_asset, base_asset);
     }
 
     impl_benchmark_test_suite!(

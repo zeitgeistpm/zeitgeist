@@ -30,7 +30,7 @@ use common_runtime::{
 };
 pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
-    CheckTxVersion, CheckWeight, EnsureNever,
+    CheckTxVersion, CheckWeight,
 };
 #[cfg(feature = "parachain")]
 pub use pallet_author_slot_filter::EligibilityValue;
@@ -42,17 +42,12 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{
-        AsEnsureOriginWithArg, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly,
-        InstanceFilter,
-    },
+    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
-use frame_system::{EnsureRoot, EnsureSigned, EnsureWithSuccess};
+use frame_system::{EnsureRoot, EnsureWithSuccess};
 use orml_currencies::Call::transfer;
-use pallet_assets::Call::{destroy_accounts, destroy_approvals, finish_destroy};
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
-use parity_scale_codec::Compact;
 use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -69,7 +64,7 @@ use zrml_swaps::Call::{
 };
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{Everything, Nothing},
+    frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
@@ -172,26 +167,6 @@ impl Contains<RuntimeCall> for IsCallable {
     fn contains(call: &RuntimeCall) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match call {
-            // Asset destruction is managed. Instead of deleting those dispatchable calls, they are
-            // filtered here instead to allow root to interact in case of emergency.
-            RuntimeCall::CampaignAssets(inner_call) => match inner_call {
-                destroy_accounts { .. } => false,
-                destroy_approvals { .. } => false,
-                finish_destroy { .. } => false,
-                _ => true,
-            },
-            RuntimeCall::CustomAssets(inner_call) => match inner_call {
-                destroy_accounts { .. } => false,
-                destroy_approvals { .. } => false,
-                finish_destroy { .. } => false,
-                _ => true,
-            },
-            RuntimeCall::MarketAssets(inner_call) => match inner_call {
-                destroy_accounts { .. } => false,
-                destroy_approvals { .. } => false,
-                finish_destroy { .. } => false,
-                _ => true,
-            },
             RuntimeCall::SimpleDisputes(_) => false,
             RuntimeCall::LiquidityMining(_) => false,
             RuntimeCall::PredictionMarkets(inner_call) => match inner_call {

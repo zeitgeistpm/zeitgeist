@@ -36,7 +36,7 @@ fn manually_close_market_after_long_stall() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),
@@ -49,7 +49,7 @@ fn manually_close_market_after_long_stall() {
         ));
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),
@@ -105,7 +105,7 @@ fn manually_close_market_fails_if_market_not_in_close_time_frame_list() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),
@@ -146,7 +146,7 @@ fn manually_close_market_fails_if_not_allowed_for_block_based_markets() {
         let end = 5;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Block(0..end),

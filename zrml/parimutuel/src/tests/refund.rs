@@ -15,15 +15,34 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#![cfg(test)]
+
 use crate::{mock::*, utils::*, *};
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::Percent;
 use test_case::test_case;
-use zeitgeist_primitives::{
-    traits::MarketTransitionApi,
-    types::{MarketStatus, MarketType, OutcomeReport, ParimutuelAsset, ScoringRule},
-};
+use zeitgeist_primitives::types::{Asset, MarketStatus, MarketType, OutcomeReport, ScoringRule};
 use zrml_market_commons::Markets;
+
+#[test]
+fn refund_fails_if_not_parimutuel_outcome() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0;
+        let mut market = market_mock::<Runtime>(MARKET_CREATOR);
+        market.market_type = MarketType::Categorical(10u16);
+        market.resolved_outcome = Some(OutcomeReport::Categorical(0u16));
+        market.status = MarketStatus::Resolved;
+        Markets::<Runtime>::insert(market_id, market);
+
+        assert_noop!(
+            Parimutuel::claim_refunds(
+                RuntimeOrigin::signed(ALICE),
+                Asset::CategoricalOutcome(market_id, 0u16)
+            ),
+            Error::<Runtime>::NotParimutuelOutcome
+        );
+    });
+}
 
 #[test_case(MarketStatus::Active; "active")]
 #[test_case(MarketStatus::Proposed; "proposed")]
@@ -38,7 +57,7 @@ fn refund_fails_if_market_not_resolved(status: MarketStatus) {
         market.status = status;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_noop!(
             Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::MarketIsNotResolvedYet
@@ -58,7 +77,7 @@ fn refund_fails_if_invalid_scoring_rule(scoring_rule: ScoringRule) {
         market.scoring_rule = scoring_rule;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_noop!(
             Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::InvalidScoringRule
@@ -76,7 +95,7 @@ fn refund_fails_if_invalid_outcome_asset() {
         market.status = MarketStatus::Resolved;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = ParimutuelAsset::Share(market_id, 20u16);
+        let asset = Asset::ParimutuelShare(market_id, 20u16);
         assert_noop!(
             Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::InvalidOutcomeAsset
@@ -94,7 +113,7 @@ fn refund_fails_if_no_resolved_outcome() {
         market.resolved_outcome = None;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_noop!(
             Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::NoResolvedOutcome
@@ -111,7 +130,7 @@ fn refund_fails_if_refund_not_allowed() {
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
@@ -120,7 +139,7 @@ fn refund_fails_if_refund_not_allowed() {
         market.status = MarketStatus::Resolved;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_noop!(
             Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset),
             Error::<Runtime>::RefundNotAllowed
@@ -136,9 +155,8 @@ fn refund_fails_if_refundable_balance_is_zero() {
         market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
-        assert_ok!(Parimutuel::on_activation(&market_id).result);
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = 2 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
@@ -147,7 +165,7 @@ fn refund_fails_if_refundable_balance_is_zero() {
         market.status = MarketStatus::Resolved;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_ok!(Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset));
 
         // already refunded above
@@ -166,9 +184,8 @@ fn refund_emits_event() {
         market.market_type = MarketType::Categorical(10u16);
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(market_id, market);
-        assert_ok!(Parimutuel::on_activation(&market_id).result);
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         let amount = 10 * <Runtime as Config>::MinBetSize::get();
         assert_ok!(Parimutuel::buy(RuntimeOrigin::signed(ALICE), asset, amount));
 
@@ -177,7 +194,7 @@ fn refund_emits_event() {
         market.status = MarketStatus::Resolved;
         Markets::<Runtime>::insert(market_id, market);
 
-        let asset = ParimutuelAsset::Share(market_id, 0u16);
+        let asset = Asset::ParimutuelShare(market_id, 0u16);
         assert_ok!(Parimutuel::claim_refunds(RuntimeOrigin::signed(ALICE), asset));
 
         let amount_minus_fees = amount - (Percent::from_percent(1) * amount);
@@ -185,7 +202,7 @@ fn refund_emits_event() {
         System::assert_last_event(
             Event::BalanceRefunded {
                 market_id,
-                asset: asset.into(),
+                asset,
                 refunded_balance: amount_minus_fees,
                 sender: ALICE,
             }

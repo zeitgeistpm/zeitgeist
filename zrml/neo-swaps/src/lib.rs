@@ -890,14 +890,14 @@ mod pallet {
             let pool_account_id = Self::pool_account_id(&market_id);
             let mut reserves = BTreeMap::new();
             for (&amount_in, &asset) in amounts_in.iter().zip(market.outcome_assets().iter()) {
-                T::MultiCurrency::transfer(asset.into(), &who, &pool_account_id, amount_in)?;
-                let _ = reserves.insert(asset.into(), amount_in);
+                T::MultiCurrency::transfer(asset, &who, &pool_account_id, amount_in)?;
+                let _ = reserves.insert(asset, amount_in);
             }
             let collateral = market.base_asset;
             let pool = Pool {
                 account_id: pool_account_id.clone(),
                 reserves: reserves.clone().try_into().map_err(|_| Error::<T>::Unexpected)?,
-                collateral: collateral.into(),
+                collateral,
                 liquidity_parameter,
                 liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
                 swap_fee,
@@ -908,7 +908,7 @@ mod pallet {
                 pool.collateral,
                 &who,
                 &pool.account_id,
-                T::MultiCurrency::minimum_balance(collateral.into()),
+                T::MultiCurrency::minimum_balance(collateral),
             )?;
             Pools::<T>::insert(market_id, pool);
             Self::deposit_event(Event::<T>::PoolDeployed {
@@ -916,7 +916,7 @@ mod pallet {
                 market_id,
                 account_id: pool_account_id,
                 reserves,
-                collateral: collateral.into(),
+                collateral,
                 liquidity_parameter,
                 pool_shares_amount: amount,
                 swap_fee,

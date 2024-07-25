@@ -29,6 +29,7 @@ use crate::{
 };
 use alloc::{
     collections::{BTreeMap, BTreeSet},
+    format,
     vec::Vec,
 };
 use core::marker::PhantomData;
@@ -67,7 +68,7 @@ use zeitgeist_primitives::{
     math::checked_ops_res::{CheckedAddRes, CheckedRemRes, CheckedSubRes},
     traits::{DisputeApi, DisputeMaxWeightApi, DisputeResolutionApi},
     types::{
-        BaseAsset, GlobalDisputeItem, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
+        GlobalDisputeItem, Market, MarketDisputeMechanism, MarketStatus, OutcomeReport,
         ResultWithWeightInfo,
     },
 };
@@ -221,14 +222,8 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
-    pub(crate) type MarketOf<T> = Market<
-        AccountIdOf<T>,
-        BalanceOf<T>,
-        BlockNumberFor<T>,
-        MomentOf<T>,
-        BaseAsset,
-        MarketIdOf<T>,
-    >;
+    pub(crate) type MarketOf<T> =
+        Market<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, MarketIdOf<T>>;
     pub(crate) type HashOf<T> = <T as frame_system::Config>::Hash;
     pub(crate) type AccountIdLookupOf<T> =
         <<T as frame_system::Config>::Lookup as StaticLookup>::Source;

@@ -30,7 +30,7 @@ use common_runtime::{
 };
 pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
-    CheckTxVersion, CheckWeight, EnsureNever, EnsureSigned,
+    CheckTxVersion, CheckWeight,
 };
 #[cfg(feature = "parachain")]
 pub use pallet_author_slot_filter::EligibilityValue;
@@ -41,15 +41,11 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{
-        AsEnsureOriginWithArg, ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly,
-        InstanceFilter, Nothing,
-    },
+    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter, Nothing},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
 use frame_system::{EnsureRoot, EnsureWithSuccess};
 use pallet_collective::{EnsureProportionAtLeast, EnsureProportionMoreThan, PrimeDefaultVote};
-use parity_scale_codec::Compact;
 use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -58,7 +54,7 @@ use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::Everything,
+    frame_support::traits::{AsEnsureOriginWithArg, Everything},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
@@ -115,7 +111,6 @@ impl Contains<RuntimeCall> for IsCallable {
             kill_prefix, kill_storage, set_code, set_code_without_checks, set_storage,
         };
         use orml_currencies::Call::update_balance;
-        use pallet_assets::Call::{destroy_accounts, destroy_approvals, finish_destroy};
         use pallet_balances::Call::{force_set_balance, force_transfer};
         use pallet_collective::Call::set_members;
         use pallet_contracts::Call::{
@@ -133,7 +128,7 @@ impl Contains<RuntimeCall> for IsCallable {
         match runtime_call {
             // Membership is managed by the respective Membership instance
             RuntimeCall::AdvisoryCommittee(set_members { .. }) => false,
-            // See "balance.set_balance"
+            // See "balance.force_set_balance"
             RuntimeCall::AssetManager(update_balance { .. }) => false,
             RuntimeCall::Balances(inner_call) => {
                 match inner_call {
@@ -149,26 +144,6 @@ impl Contains<RuntimeCall> for IsCallable {
                     _ => true,
                 }
             }
-            // Asset destruction is managed. Instead of deleting those dispatchable calls, they are
-            // filtered here instead to allow root to interact in case of emergency.
-            RuntimeCall::CampaignAssets(inner_call) => match inner_call {
-                destroy_accounts { .. } => false,
-                destroy_approvals { .. } => false,
-                finish_destroy { .. } => false,
-                _ => true,
-            },
-            RuntimeCall::CustomAssets(inner_call) => match inner_call {
-                destroy_accounts { .. } => false,
-                destroy_approvals { .. } => false,
-                finish_destroy { .. } => false,
-                _ => true,
-            },
-            RuntimeCall::MarketAssets(inner_call) => match inner_call {
-                destroy_accounts { .. } => false,
-                destroy_approvals { .. } => false,
-                finish_destroy { .. } => false,
-                _ => true,
-            },
             // Permissioned contracts: Only deployable via utility.dispatch_as(...)
             RuntimeCall::Contracts(inner_call) => match inner_call {
                 call { .. } => true,

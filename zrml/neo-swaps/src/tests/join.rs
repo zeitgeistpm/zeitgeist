@@ -208,7 +208,6 @@ fn join_fails_on_insufficient_funds() {
             vec![_1_2, _1_2],
             CENT,
         );
-
         assert_noop!(
             NeoSwaps::join(
                 RuntimeOrigin::signed(ALICE),
@@ -216,7 +215,7 @@ fn join_fails_on_insufficient_funds() {
                 _100,
                 vec![u128::MAX, u128::MAX]
             ),
-            DispatchError::Arithmetic(ArithmeticError::Underflow)
+            orml_tokens::Error::<Runtime>::BalanceTooLow
         );
     });
 }

@@ -32,8 +32,8 @@ use frame_support::{
 use frame_system::RawOrigin;
 use sp_runtime::DispatchError;
 use zeitgeist_primitives::types::{
-    BaseAsset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
-    MarketPeriod, MarketStatus, MarketType, ScoringRule,
+    Asset, Deadlines, Market, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+    MarketStatus, MarketType, ScoringRule,
 };
 use zrml_market_commons::Markets;
 
@@ -204,7 +204,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
         market_id,
         Market {
             market_id: Default::default(),
-            base_asset: BaseAsset::Ztg,
+            base_asset: Asset::Ztg,
             creation: MarketCreation::Permissionless,
             creator_fee: sp_runtime::Perbill::zero(),
             creator: 0,

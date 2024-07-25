@@ -50,7 +50,6 @@ macro_rules! create_b_tree_map {
 ///   their expected stake.
 /// - `total_fees`: The sum of all fees (both lazy and distributed) in the pool's liquidity tree.
 #[macro_export]
-#[cfg(test)]
 macro_rules! assert_pool_state {
     (
         $market_id:expr,
@@ -107,7 +106,6 @@ macro_rules! assert_pool_state {
 
 /// Asserts that `account` has the specified `balances` of `assets`.
 #[macro_export]
-#[cfg(test)]
 macro_rules! assert_balances {
     ($account:expr, $assets:expr, $balances:expr $(,)?) => {
         assert_eq!(
@@ -116,7 +114,7 @@ macro_rules! assert_balances {
             "assert_balances: Assets and balances length mismatch"
         );
         for (&asset, &expected_balance) in $assets.iter().zip($balances.iter()) {
-            let actual_balance = AssetManager::free_balance(asset.try_into().unwrap(), &$account);
+            let actual_balance = AssetManager::free_balance(asset, &$account);
             assert_eq!(
                 actual_balance, expected_balance,
                 "assert_balances: Balance mismatch for asset {:?}",
@@ -128,7 +126,6 @@ macro_rules! assert_balances {
 
 /// Asserts that `account` has the specified `balance` of `asset`.
 #[macro_export]
-#[cfg(test)]
 macro_rules! assert_balance {
     ($account:expr, $asset:expr, $balance:expr $(,)?) => {
         assert_balances!($account, [$asset], [$balance]);
@@ -137,7 +134,6 @@ macro_rules! assert_balance {
 
 /// Asserts that `abs(left - right) < precision`.
 #[macro_export]
-#[cfg(test)]
 macro_rules! assert_approx {
     ($left:expr, $right:expr, $precision:expr $(,)?) => {
         match (&$left, &$right, &$precision) {

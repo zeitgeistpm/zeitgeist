@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Balance, XcmAsset};
+use crate::{Balance, CurrencyId};
 use core::marker::PhantomData;
 use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND};
 use xcm::latest::MultiLocation;
@@ -56,7 +56,7 @@ pub struct FixedConversionRateProvider<AssetRegistry>(PhantomData<AssetRegistry>
 
 impl<
     AssetRegistry: orml_traits::asset_registry::Inspect<
-            AssetId = XcmAsset,
+            AssetId = CurrencyId,
             Balance = Balance,
             CustomMetadata = CustomMetadata,
         >,

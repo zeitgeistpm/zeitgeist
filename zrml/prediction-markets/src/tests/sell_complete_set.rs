@@ -23,7 +23,7 @@ use test_case::test_case;
 
 #[test_case(ScoringRule::AmmCdaHybrid)]
 fn sell_complete_set_works(scoring_rule: ScoringRule) {
-    let test = |base_asset: BaseAsset| {
+    let test = |base_asset: AssetOf<Runtime>| {
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,
@@ -51,24 +51,21 @@ fn sell_complete_set_works(scoring_rule: ScoringRule) {
         let market = MarketCommons::market(&market_id).unwrap();
         let assets = market.outcome_assets();
         for asset in assets.iter() {
-            let bal = AssetManager::free_balance((*asset).into(), &who);
+            let bal = AssetManager::free_balance(*asset, &who);
             assert_eq!(bal, expected_amount);
         }
 
-        let bal = AssetManager::free_balance(base_asset.into(), &who);
+        let bal = AssetManager::free_balance(base_asset, &who);
         assert_eq!(bal, 1_000 * BASE - expected_amount);
 
         System::assert_last_event(Event::SoldCompleteSet(market_id, sell_amount, who).into());
     };
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::CampaignAsset(100));
-    });
-    ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::Ztg);
+        test(Asset::Ztg);
     });
     #[cfg(feature = "parachain")]
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::ForeignAsset(100));
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -76,7 +73,7 @@ fn sell_complete_set_works(scoring_rule: ScoringRule) {
 fn sell_complete_set_fails_on_zero_amount() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            BaseAsset::Ztg,
+            Asset::Ztg,
             MarketCreation::Permissionless,
             0..2,
             ScoringRule::AmmCdaHybrid,
@@ -90,7 +87,7 @@ fn sell_complete_set_fails_on_zero_amount() {
 
 #[test]
 fn sell_complete_set_fails_on_insufficient_share_balance() {
-    let test = |base_asset: BaseAsset| {
+    let test = |base_asset: AssetOf<Runtime>| {
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,
@@ -112,20 +109,17 @@ fn sell_complete_set_fails_on_insufficient_share_balance() {
         );
     };
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::CampaignAsset(100));
-    });
-    ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::Ztg);
+        test(Asset::Ztg);
     });
     #[cfg(feature = "parachain")]
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::ForeignAsset(100));
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test_case(ScoringRule::Parimutuel; "parimutuel")]
 fn sell_complete_set_fails_if_market_has_wrong_scoring_rule(scoring_rule: ScoringRule) {
-    let test = |base_asset: BaseAsset| {
+    let test = |base_asset: AssetOf<Runtime>| {
         simple_create_categorical_market(
             base_asset,
             MarketCreation::Permissionless,
@@ -138,13 +132,10 @@ fn sell_complete_set_fails_if_market_has_wrong_scoring_rule(scoring_rule: Scorin
         );
     };
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::CampaignAsset(100));
-    });
-    ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::Ztg);
+        test(Asset::Ztg);
     });
     #[cfg(feature = "parachain")]
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::ForeignAsset(100));
+        test(Asset::ForeignAsset(100));
     });
 }

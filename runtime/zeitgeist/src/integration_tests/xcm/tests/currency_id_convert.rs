@@ -26,13 +26,14 @@ use crate::{
         test_net::Zeitgeist,
     },
     xcm_config::config::{general_key, zeitgeist, AssetConvert},
-    Assets, CustomMetadata, ScalarPosition, XcmAsset,
+    CurrencyId, CustomMetadata, ScalarPosition,
 };
 use core::fmt::Debug;
 use sp_runtime::traits::{Convert, MaybeEquivalence};
 use test_case::test_case;
 use xcm::latest::{Junction::*, Junctions::*, MultiLocation};
 use xcm_emulator::TestExt;
+use zeitgeist_primitives::types::Asset;
 
 fn convert_common_native<T>(expected: T)
 where
@@ -81,18 +82,13 @@ fn convert_common_non_native<T>(
 
 #[test]
 fn convert_native_assets() {
-    convert_common_native(Assets::Ztg);
-}
-
-#[test]
-fn convert_native_xcm_assets() {
-    convert_common_native(XcmAsset::Ztg);
+    convert_common_native(Asset::Ztg);
 }
 
 #[test]
 fn convert_any_registered_parent_multilocation_assets() {
     convert_common_non_native(
-        Assets::from(FOREIGN_PARENT_ID),
+        FOREIGN_PARENT_ID,
         foreign_parent_multilocation(),
         register_foreign_parent,
     );
@@ -101,7 +97,7 @@ fn convert_any_registered_parent_multilocation_assets() {
 #[test]
 fn convert_any_registered_parent_multilocation_xcm_assets() {
     convert_common_non_native(
-        XcmAsset::try_from(Assets::from(FOREIGN_PARENT_ID)).unwrap(),
+        FOREIGN_PARENT_ID,
         foreign_parent_multilocation(),
         register_foreign_parent,
     );
@@ -110,7 +106,7 @@ fn convert_any_registered_parent_multilocation_xcm_assets() {
 #[test]
 fn convert_any_registered_sibling_multilocation_assets() {
     convert_common_non_native(
-        Assets::from(FOREIGN_SIBLING_ID),
+        FOREIGN_SIBLING_ID,
         foreign_sibling_multilocation(),
         register_foreign_sibling,
     );
@@ -119,7 +115,7 @@ fn convert_any_registered_sibling_multilocation_assets() {
 #[test]
 fn convert_any_registered_sibling_multilocation_xcm_assets() {
     convert_common_non_native(
-        XcmAsset::try_from(Assets::from(FOREIGN_SIBLING_ID)).unwrap(),
+        FOREIGN_SIBLING_ID,
         foreign_sibling_multilocation(),
         register_foreign_sibling,
     );
@@ -132,43 +128,16 @@ fn convert_unkown_multilocation() {
 
     Zeitgeist::execute_with(|| {
         assert!(
-            <AssetConvert as MaybeEquivalence<_, Assets>>::convert(&unknown_location).is_none()
+            <AssetConvert as MaybeEquivalence<_, CurrencyId>>::convert(&unknown_location).is_none()
         );
     });
 }
 
-#[test_case(
-    Assets::CategoricalOutcome(7, 8);
-    "assets_categorical"
-)]
-#[test_case(
-    Assets::ScalarOutcome(7, ScalarPosition::Long);
-    "assets_scalar"
-)]
-#[test_case(
-    Assets::PoolShare(7);
-    "assets_pool_share"
-)]
-#[test_case(
-    Assets::ForeignAsset(7);
-    "assets_foreign"
-)]
-#[test_case(
-    Assets::ParimutuelShare(7, 8);
-    "assets_parimutuel_share"
-)]
-#[test_case(
-    Assets::CampaignAsset(7);
-    "assets_campaign_asset"
-)]
-#[test_case(
-    Assets::CustomAsset(7);
-    "assets_custom_asset"
-)]
-#[test_case(
-    XcmAsset::ForeignAsset(7);
-    "xcm_assets_foreign"
-)]
+#[test_case(Asset::CategoricalOutcome(7, 8))]
+#[test_case(Asset::ScalarOutcome(7, ScalarPosition::Long))]
+#[test_case(Asset::PoolShare(7))]
+#[test_case(Asset::ForeignAsset(7))]
+#[test_case(Asset::ParimutuelShare(7, 8))]
 fn convert_unsupported_asset<T>(asset: T)
 where
     T: Copy + Debug + PartialEq,
