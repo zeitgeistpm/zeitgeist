@@ -22,7 +22,7 @@
 // balancer-core repository
 // <https://github.com/balancer-labs/balancer-core>.
 
-use frame_support::dispatch::DispatchError;
+use sp_runtime::DispatchError;
 use zeitgeist_primitives::{
     constants::BASE,
     math::{
@@ -175,8 +175,9 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use frame_support::{assert_err, dispatch::DispatchError};
+    use frame_support::assert_err;
     use more_asserts::assert_le;
+    use sp_runtime::DispatchError;
 
     #[test]
     fn bpow_has_minimum_set_of_correct_values() {

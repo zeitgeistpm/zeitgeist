@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -38,6 +38,9 @@ use zeitgeist_primitives::{
 };
 
 parameter_types! {
+    // Asset registry
+    pub const AssetRegistryStringLimit: u32 = 1024;
+
     // Author-Mapping
     /// The amount that should be taken as a security deposit when registering a NimbusId.
     pub const CollatorDeposit: Balance = 2 * BASE;
@@ -66,16 +69,20 @@ parameter_types! {
     pub const LeaveDelegatorsDelay: u32 = 2;
     /// Maximum bottom delegations per candidate
     pub const MaxBottomDelegationsPerCandidate: u32 = 50;
+    /// Maximum number of collator candidates
+    pub const MaxCandidates: u32 = 200;
     /// Maximum delegations per delegator
     pub const MaxDelegationsPerDelegator: u32 = 100;
     /// Maximum top delegations per candidate
     pub const MaxTopDelegationsPerCandidate: u32 = 300;
+    /// Number of rounds until a collator not producing blocks is marked as inactive.
+    pub const MaxOfflineRounds: u32 = 1;
     /// Minimum round length is 2 minutes
     pub const MinBlocksPerRound: u32 = 2 * BLOCKS_PER_MINUTE as u32;
     /// Minimum stake required to become a collator
-    pub const MinCollatorStk: u128 = 64 * BASE;
+    pub const MinCandidateStk: u128 = 64 * BASE;
     /// Minimum stake required to be reserved to be a delegator
-    pub const MinDelegatorStk: u128 = BASE / 2;
+    pub const MinDelegation: u128 = BASE / 2;
     /// Minimum collators selected per round, default at genesis and minimum forever after
     pub const MinSelectedCandidates: u32 = 8;
     /// Rounds before the delegator revocation can be executed
@@ -93,6 +100,10 @@ parameter_types! {
     pub const MaxAssetsIntoHolding: u32 = 64;
     /// Max instructions per XCM
     pub const MaxInstructions: u32 = 100;
+    /// The maximum number of local XCM locks that a single account may have.
+    pub const MaxLockers: u32 = 8;
+    /// The maximum number of consumers a single remote lock may have.
+    pub const MaxRemoteLockConsumers: u32 = 0;
 
     /// Relative self location
     pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));

@@ -18,13 +18,13 @@
 #![cfg(any(feature = "runtime-benchmarks", test))]
 
 use crate::*;
+use frame_system::pallet_prelude::BlockNumberFor;
 
 type MarketOf<T> = zeitgeist_primitives::types::Market<
     <T as frame_system::Config>::AccountId,
     BalanceOf<T>,
-    <T as frame_system::Config>::BlockNumber,
+    BlockNumberFor<T>,
     MomentOf<T>,
-    zeitgeist_primitives::types::BaseAsset,
     MarketIdOf<T>,
 >;
 
@@ -38,7 +38,7 @@ where
 
     zeitgeist_primitives::types::Market {
         market_id: Default::default(),
-        base_asset: zeitgeist_primitives::types::BaseAsset::Ztg,
+        base_asset: zeitgeist_primitives::types::Asset::Ztg,
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: sp_runtime::Perbill::zero(),
         creator: T::GlobalDisputesPalletId::get().into_account_truncating(),

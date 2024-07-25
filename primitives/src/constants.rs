@@ -22,7 +22,7 @@
     clippy::arithmetic_side_effects
 )]
 
-#[cfg(feature = "mock")]
+// #[cfg(any(feature = "mock", feature = "runtime-benchmarks"))]
 pub mod base_multiples;
 #[cfg(feature = "mock")]
 pub mod mock;

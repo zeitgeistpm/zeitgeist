@@ -28,7 +28,7 @@ use sp_runtime::{DispatchError, Perbill};
 use zeitgeist_primitives::{
     traits::{MarketBuilderTrait, MarketCommonsPalletApi},
     types::{
-        BaseAsset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+        Asset, Deadlines, MarketBonds, MarketCreation, MarketDisputeMechanism, MarketPeriod,
         MarketStatus, MarketType, ScoringRule,
     },
 };
@@ -37,7 +37,7 @@ use zeitgeist_primitives::{
 fn create_market_builder(oracle: AccountIdOf<Runtime>) -> MarketBuilder<Runtime> {
     let mut market_builder = MarketBuilder::new();
     market_builder
-        .base_asset(BaseAsset::Ztg)
+        .base_asset(Asset::Ztg)
         .creation(MarketCreation::Permissionless)
         .creator_fee(Perbill::zero())
         .creator(0)

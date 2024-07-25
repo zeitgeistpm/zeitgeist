@@ -33,10 +33,11 @@ use frame_support::{
     construct_runtime, parameter_types,
     traits::{Contains, Everything},
 };
+use frame_system::mocking::MockBlock;
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{
-    testing::Header,
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
+    BuildStorage,
 };
 use zeitgeist_primitives::{
     constants::mock::{
@@ -45,8 +46,8 @@ use zeitgeist_primitives::{
         BASE,
     },
     types::{
-        AccountIdTest, Amount, Asset, Assets, Balance, BasicCurrencyAdapter, BlockNumber,
-        BlockTest, Hash, Index, MarketId, Moment, PoolId, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, CurrencyId, Hash, MarketId,
+        Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
 
@@ -77,25 +78,19 @@ parameter_types! {
 }
 
 construct_runtime!(
-    pub enum Runtime
-    where
-        Block = BlockTest<Runtime>,
-        NodeBlock = BlockTest<Runtime>,
-        UncheckedExtrinsic = UncheckedExtrinsic,
-    {
-        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Currencies: orml_currencies::{Pallet},
-        Swaps: zrml_swaps::{Call, Event<T>, Pallet},
-        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+    pub enum Runtime {
+        Balances: pallet_balances,
+        Currencies: orml_currencies,
+        Swaps: zrml_swaps,
+        System: frame_system,
+        Timestamp: pallet_timestamp,
+        Tokens: orml_tokens,
     }
 );
 
-pub type AssetManager = Currencies;
-
 impl crate::Config for Runtime {
     type Asset = Asset<MarketId>;
+    type MultiCurrency = Currencies;
     type RuntimeEvent = RuntimeEvent;
     type ExitFee = ExitFeeMock;
     type MaxAssets = MaxAssets;
@@ -105,7 +100,6 @@ impl crate::Config for Runtime {
     type MinAssets = MinAssets;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
-    type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
@@ -113,27 +107,26 @@ impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountIdTest;
     type BaseCallFilter = Everything;
+    type Block = MockBlock<Runtime>;
     type BlockHashCount = BlockHashCount;
     type BlockLength = ();
-    type BlockNumber = BlockNumber;
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
     type DbWeight = ();
     type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
-    type Header = Header;
-    type Index = Index;
     type Lookup = IdentityLookup<Self::AccountId>;
+    type Nonce = u64;
     type MaxConsumers = frame_support::traits::ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
-    type OnSetCode = ();
     type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = ();
     type SystemWeightInfo = ();
     type Version = ();
+    type OnSetCode = ();
 }
 
 impl orml_currencies::Config for Runtime {
@@ -144,7 +137,7 @@ impl orml_currencies::Config for Runtime {
 }
 
 parameter_type_with_key! {
-    pub ExistentialDeposits: |currency_id: Assets| -> Balance {
+    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
         match currency_id {
             &BASE_ASSET => ExistentialDeposit::get(),
             Asset::Ztg => ExistentialDeposit::get(),
@@ -181,7 +174,7 @@ where
 impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
-    type CurrencyId = Assets;
+    type CurrencyId = CurrencyId;
     type DustRemovalWhitelist = DustRemovalWhitelist;
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposits = ExistentialDeposits;
@@ -196,8 +189,12 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
+    type FreezeIdentifier = ();
+    type RuntimeHoldReason = ();
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
+    type MaxHolds = ();
+    type MaxFreezes = ();
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
@@ -232,7 +229,7 @@ impl Default for ExtBuilder {
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut storage =
-            frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+            frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
         // see the logs in tests when using `RUST_LOG=debug cargo test -- --nocapture`
         let _ = env_logger::builder().is_test(true).try_init();
@@ -245,8 +242,10 @@ impl ExtBuilder {
     }
 }
 
+type Block = MockBlock<Runtime>;
+
 sp_api::mock_impl_runtime_apis! {
-    impl zrml_swaps_runtime_api::SwapsApi<BlockTest<Runtime>, PoolId, AccountIdTest, Balance, MarketId>
+    impl zrml_swaps_runtime_api::SwapsApi<MockBlock<Runtime>, PoolId, AccountIdTest, Balance, MarketId>
       for Runtime
     {
         fn get_spot_price(
@@ -254,15 +253,15 @@ sp_api::mock_impl_runtime_apis! {
             asset_in: &Asset<MarketId>,
             asset_out: &Asset<MarketId>,
             with_fees: bool,
-        ) -> Balance {
-            Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0)
+        ) -> SerdeWrapper<Balance> {
+            SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out, with_fees).ok().unwrap_or(0))
         }
 
         fn pool_account_id(pool_id: &PoolId) -> AccountIdTest {
             Swaps::pool_account_id(pool_id)
         }
 
-        fn pool_shares_id(pool_id: PoolId) -> Asset<MarketId> {
+        fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
             Asset::PoolShare(pool_id)
         }
     }

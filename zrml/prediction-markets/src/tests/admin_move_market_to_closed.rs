@@ -28,7 +28,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_blocknumb
         let now = frame_system::Pallet::<Runtime>::block_number();
         let end = 42;
         simple_create_categorical_market(
-            BaseAsset::Ztg,
+            Asset::Ztg,
             MarketCreation::Permissionless,
             now..end,
             ScoringRule::AmmCdaHybrid,
@@ -59,7 +59,7 @@ fn admin_move_market_to_closed_successfully_closes_market_and_sets_end_timestamp
         let end = start + 42u64 * (MILLISECS_PER_BLOCK as u64);
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Timestamp(start..end),
@@ -114,7 +114,7 @@ fn admin_move_market_to_closed_fails_if_market_does_not_exist() {
 fn admin_move_market_to_closed_fails_if_market_is_not_active(market_status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            BaseAsset::Ztg,
+            Asset::Ztg,
             MarketCreation::Permissionless,
             0..2,
             ScoringRule::AmmCdaHybrid,
@@ -140,7 +140,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Block(22..66),
@@ -153,7 +153,7 @@ fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
         ));
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Block(33..66),

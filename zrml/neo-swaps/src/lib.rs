@@ -53,15 +53,18 @@ mod pallet {
         pallet_prelude::StorageMap,
         require_transactional,
         traits::{Get, IsType, StorageVersion},
-        transactional, PalletError, PalletId, RuntimeDebug, Twox64Concat,
+        transactional, PalletError, PalletId, Twox64Concat,
     };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{
+        ensure_signed,
+        pallet_prelude::{BlockNumberFor, OriginFor},
+    };
     use orml_traits::MultiCurrency;
     use parity_scale_codec::{Decode, Encode};
     use scale_info::TypeInfo;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
-        DispatchError, DispatchResult, Perbill, SaturatedConversion,
+        DispatchError, DispatchResult, Perbill, RuntimeDebug, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::{BASE, CENT},
@@ -120,7 +123,7 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
             >;
 
-        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = Self::BlockNumber>;
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = BlockNumberFor<Self>>;
 
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 
@@ -142,7 +145,6 @@ mod pallet {
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
-    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
@@ -888,14 +890,14 @@ mod pallet {
             let pool_account_id = Self::pool_account_id(&market_id);
             let mut reserves = BTreeMap::new();
             for (&amount_in, &asset) in amounts_in.iter().zip(market.outcome_assets().iter()) {
-                T::MultiCurrency::transfer(asset.into(), &who, &pool_account_id, amount_in)?;
-                let _ = reserves.insert(asset.into(), amount_in);
+                T::MultiCurrency::transfer(asset, &who, &pool_account_id, amount_in)?;
+                let _ = reserves.insert(asset, amount_in);
             }
             let collateral = market.base_asset;
             let pool = Pool {
                 account_id: pool_account_id.clone(),
                 reserves: reserves.clone().try_into().map_err(|_| Error::<T>::Unexpected)?,
-                collateral: collateral.into(),
+                collateral,
                 liquidity_parameter,
                 liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
                 swap_fee,
@@ -906,7 +908,7 @@ mod pallet {
                 pool.collateral,
                 &who,
                 &pool.account_id,
-                T::MultiCurrency::minimum_balance(collateral.into()),
+                T::MultiCurrency::minimum_balance(collateral),
             )?;
             Pools::<T>::insert(market_id, pool);
             Self::deposit_event(Event::<T>::PoolDeployed {
@@ -914,7 +916,7 @@ mod pallet {
                 market_id,
                 account_id: pool_account_id,
                 reserves,
-                collateral: collateral.into(),
+                collateral,
                 liquidity_parameter,
                 pool_shares_amount: amount,
                 swap_fee,

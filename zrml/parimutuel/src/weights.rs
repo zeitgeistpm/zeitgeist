@@ -52,8 +52,6 @@ pub trait WeightInfoZeitgeist {
     fn buy() -> Weight;
     fn claim_rewards() -> Weight;
     fn claim_refunds() -> Weight;
-    fn on_activation() -> Weight;
-    fn on_resolution() -> Weight;
 }
 
 /// Weight functions for zrml_parimutuel (automatically generated)
@@ -63,97 +61,51 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Proof: MarketCommons Markets (max_values: None, max_size: Some(692), added: 3167, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Asset (r:1 w:0)
-    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
     /// Storage: Tokens Accounts (r:1 w:1)
     /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: Tokens TotalIssuance (r:1 w:1)
     /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
     fn buy() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `1940`
-        //  Estimated: `13590`
-        // Minimum execution time: 132_371 nanoseconds.
-        Weight::from_parts(162_240_000, 13590)
-            .saturating_add(T::DbWeight::get().reads(5))
+        //  Measured:  `1815`
+        //  Estimated: `10876`
+        // Minimum execution time: 134_190 nanoseconds.
+        Weight::from_parts(155_681_000, 10876)
+            .saturating_add(T::DbWeight::get().reads(4))
             .saturating_add(T::DbWeight::get().writes(3))
     }
     /// Storage: MarketCommons Markets (r:1 w:0)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(692), added: 3167, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Asset (r:1 w:1)
-    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Account (r:1 w:1)
-    /// Proof: MarketAssets Account (max_values: None, max_size: Some(117), added: 2592, mode: MaxEncodedLen)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
+    /// Storage: Tokens TotalIssuance (r:1 w:1)
+    /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
+    /// Storage: Tokens Accounts (r:1 w:1)
+    /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    /// Storage: AssetRouter DestroyAssets (r:1 w:1)
-    /// Proof: AssetRouter DestroyAssets (max_values: Some(1), max_size: Some(40962), added: 41457, mode: MaxEncodedLen)
-    /// Storage: Tokens TotalIssuance (r:1 w:0)
-    /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
-    /// Storage: AssetRouter IndestructibleAssets (r:1 w:0)
-    /// Proof: AssetRouter IndestructibleAssets (max_values: Some(1), max_size: Some(38914), added: 39409, mode: MaxEncodedLen)
     fn claim_rewards() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `3241`
-        //  Estimated: `94450`
-        // Minimum execution time: 159_601 nanoseconds.
-        Weight::from_parts(222_111_000, 94450)
-            .saturating_add(T::DbWeight::get().reads(7))
-            .saturating_add(T::DbWeight::get().writes(4))
+        //  Measured:  `2312`
+        //  Estimated: `10876`
+        // Minimum execution time: 127_580 nanoseconds.
+        Weight::from_parts(180_511_000, 10876)
+            .saturating_add(T::DbWeight::get().reads(4))
+            .saturating_add(T::DbWeight::get().writes(3))
     }
     /// Storage: MarketCommons Markets (r:1 w:0)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(692), added: 3167, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Asset (r:2 w:1)
-    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Account (r:1 w:1)
-    /// Proof: MarketAssets Account (max_values: None, max_size: Some(117), added: 2592, mode: MaxEncodedLen)
+    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(678), added: 3153, mode: MaxEncodedLen)
+    /// Storage: Tokens TotalIssuance (r:2 w:1)
+    /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
+    /// Storage: Tokens Accounts (r:1 w:1)
+    /// Proof: Tokens Accounts (max_values: None, max_size: Some(123), added: 2598, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
     /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    /// Storage: AssetRouter DestroyAssets (r:1 w:1)
-    /// Proof: AssetRouter DestroyAssets (max_values: Some(1), max_size: Some(40962), added: 41457, mode: MaxEncodedLen)
-    /// Storage: Tokens TotalIssuance (r:1 w:0)
-    /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
-    /// Storage: AssetRouter IndestructibleAssets (r:1 w:0)
-    /// Proof: AssetRouter IndestructibleAssets (max_values: Some(1), max_size: Some(38914), added: 39409, mode: MaxEncodedLen)
     fn claim_refunds() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `3544`
-        //  Estimated: `97150`
-        // Minimum execution time: 193_471 nanoseconds.
-        Weight::from_parts(222_400_000, 97150)
-            .saturating_add(T::DbWeight::get().reads(8))
-            .saturating_add(T::DbWeight::get().writes(4))
-    }
-    /// Storage: MarketCommons Markets (r:1 w:0)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(692), added: 3167, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Asset (r:64 w:64)
-    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
-    fn on_activation() -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `1203`
-        //  Estimated: `175967`
-        // Minimum execution time: 592_941 nanoseconds.
-        Weight::from_parts(720_612_000, 175967)
-            .saturating_add(T::DbWeight::get().reads(65))
-            .saturating_add(T::DbWeight::get().writes(64))
-    }
-    /// Storage: MarketCommons Markets (r:1 w:0)
-    /// Proof: MarketCommons Markets (max_values: None, max_size: Some(692), added: 3167, mode: MaxEncodedLen)
-    /// Storage: MarketAssets Asset (r:64 w:64)
-    /// Proof: MarketAssets Asset (max_values: None, max_size: Some(225), added: 2700, mode: MaxEncodedLen)
-    /// Storage: AssetRouter DestroyAssets (r:1 w:1)
-    /// Proof: AssetRouter DestroyAssets (max_values: Some(1), max_size: Some(40962), added: 41457, mode: MaxEncodedLen)
-    /// Storage: Tokens TotalIssuance (r:64 w:0)
-    /// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(43), added: 2518, mode: MaxEncodedLen)
-    /// Storage: AssetRouter IndestructibleAssets (r:1 w:0)
-    /// Proof: AssetRouter IndestructibleAssets (max_values: Some(1), max_size: Some(38914), added: 39409, mode: MaxEncodedLen)
-    fn on_resolution() -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `18393`
-        //  Estimated: `417985`
-        // Minimum execution time: 1_162_074 nanoseconds.
-        Weight::from_parts(1_508_734_000, 417985)
-            .saturating_add(T::DbWeight::get().reads(131))
-            .saturating_add(T::DbWeight::get().writes(65))
+        //  Measured:  `2312`
+        //  Estimated: `13394`
+        // Minimum execution time: 119_110 nanoseconds.
+        Weight::from_parts(132_660_000, 13394)
+            .saturating_add(T::DbWeight::get().reads(5))
+            .saturating_add(T::DbWeight::get().writes(3))
     }
 }

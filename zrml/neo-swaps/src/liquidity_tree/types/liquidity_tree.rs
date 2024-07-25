@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -374,18 +374,6 @@ where
                 }
             }
         }
-        Ok(())
-    }
-
-    fn mutate_each_child<F>(&mut self, index: u32, mut mutator: F) -> DispatchResult
-    where
-        F: FnMut(&mut Self::Node) -> DispatchResult,
-    {
-        let child_indices = self.children(index)?;
-        child_indices.apply(|index| {
-            self.mutate_node(index, |node| mutator(node))?;
-            Ok(())
-        })?;
         Ok(())
     }
 

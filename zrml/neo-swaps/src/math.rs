@@ -423,6 +423,7 @@ mod transcendental {
 
     #[cfg(test)]
     mod tests {
+
         use super::*;
         use alloc::str::FromStr;
         use fixed::types::U64F64;
@@ -504,6 +505,9 @@ mod transcendental {
 
 #[cfg(test)]
 mod tests {
+    // TODO(#1328): Remove after rustc nightly-2024-04-22
+    #![allow(clippy::duplicated_attributes)]
+
     use super::*;
     use crate::{mock::Runtime as MockRuntime, MAX_SPOT_PRICE, MIN_SPOT_PRICE};
     use alloc::str::FromStr;

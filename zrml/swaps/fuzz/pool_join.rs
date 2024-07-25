@@ -1,3 +1,4 @@
+// Copyright 2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,22 +18,19 @@
 
 #![no_main]
 
+mod utils;
+
 use libfuzzer_sys::fuzz_target;
 use orml_traits::currency::MultiCurrency;
-
-use utils::GeneralPoolData;
-use zrml_swaps::mock::{ExtBuilder, RuntimeOrigin, Swaps};
-mod utils;
-use utils::construct_asset;
-use zrml_swaps::mock::AssetManager;
+use utils::{construct_asset, GeneralPoolData};
+use zrml_swaps::mock::{Currencies, ExtBuilder, RuntimeOrigin, Swaps};
 
 fuzz_target!(|data: GeneralPoolData| {
     let mut ext = ExtBuilder::default().build();
     ext.execute_with(|| {
         // ensure that the account origin has a sufficient balance
-        // use orml_traits::MultiCurrency; required for this
         for a in &data.pool_creation.assets {
-            let _ = AssetManager::deposit(
+            let _ = Currencies::deposit(
                 construct_asset(*a),
                 &data.pool_creation.origin,
                 data.pool_creation.amount,

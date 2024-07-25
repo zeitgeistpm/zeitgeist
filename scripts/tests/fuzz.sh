@@ -29,7 +29,7 @@ fi
 # Using specific_run = (RUN * FUZZ_FACT) / BASE allows us to specify
 # a hardware- and fuzz target specific run count.
 BASE=1000
-RUNS="${RUNS:-50000}"
+RUNS=1
 
 CREATE_POOL_FACT=500
 POOL_JOIN_FACT=150

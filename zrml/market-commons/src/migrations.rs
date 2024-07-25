@@ -16,21 +16,19 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
-    AccountIdOf, BalanceOf, BlockNumberOf, Config, MarketIdOf, MomentOf, Pallet as MarketCommons,
-};
+use crate::{AccountIdOf, BalanceOf, Config, MarketIdOf, MomentOf, Pallet as MarketCommons};
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use frame_support::{
-    dispatch::Weight,
-    log,
+    pallet_prelude::Weight,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
 };
+use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{Perbill, RuntimeDebug, Saturating};
 use zeitgeist_primitives::types::{
-    BaseAsset, Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
+    Asset, Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
 };
 
@@ -38,6 +36,7 @@ use zeitgeist_primitives::types::{
 use {
     alloc::{collections::BTreeMap, format},
     frame_support::migration::storage_key_iter,
+    sp_runtime::DispatchError,
 };
 
 #[cfg(any(feature = "try-runtime", feature = "test"))]
@@ -49,10 +48,10 @@ const MARKET_COMMONS: &[u8] = b"MarketCommons";
 const MARKETS: &[u8] = b"Markets";
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct OldMarket<AccountId, Balance, BlockNumber, Moment, Asset, MarketId> {
+pub struct OldMarket<AccountId, Balance, BlockNumber, Moment, MarketId> {
     pub market_id: MarketId,
     /// Base asset of the market.
-    pub base_asset: Asset,
+    pub base_asset: Asset<MarketId>,
     /// Creator of this market.
     pub creator: AccountId,
     /// Creation type.
@@ -86,14 +85,8 @@ pub struct OldMarket<AccountId, Balance, BlockNumber, Moment, Asset, MarketId> {
     pub early_close: Option<EarlyClose<BlockNumber, Moment>>,
 }
 
-type OldMarketOf<T> = OldMarket<
-    AccountIdOf<T>,
-    BalanceOf<T>,
-    BlockNumberOf<T>,
-    MomentOf<T>,
-    BaseAsset,
-    MarketIdOf<T>,
->;
+type OldMarketOf<T> =
+    OldMarket<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, MomentOf<T>, MarketIdOf<T>>;
 
 #[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
 pub enum OldMarketDisputeMechanism {
@@ -172,7 +165,7 @@ where
     }
 
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
         let old_markets = storage_key_iter::<MarketIdOf<T>, OldMarketOf<T>, Blake2_128Concat>(
             MARKET_COMMONS,
             MARKETS,
@@ -194,7 +187,7 @@ where
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(previous_state: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(previous_state: Vec<u8>) -> Result<(), DispatchError> {
         let old_markets: BTreeMap<MarketIdOf<T>, OldMarketOf<T>> =
             Decode::decode(&mut &previous_state[..]).unwrap();
         let old_market_count = old_markets.len();
@@ -233,13 +226,12 @@ mod tests {
         MarketOf,
     };
     use alloc::fmt::Debug;
-    use frame_support::{
-        migration::put_storage_value, storage_root, Blake2_128Concat, StorageHasher,
-    };
+    use frame_support::{migration::put_storage_value, Blake2_128Concat, StorageHasher};
     use parity_scale_codec::Encode;
+    use sp_io::storage::root as storage_root;
     use sp_runtime::{Perbill, StateVersion};
     use test_case::test_case;
-    use zeitgeist_primitives::types::{BaseAssetClass, Bond, EarlyCloseState, MarketId};
+    use zeitgeist_primitives::types::{Bond, EarlyCloseState, MarketId};
 
     #[test]
     fn on_runtime_upgrade_increments_the_storage_version() {
@@ -253,7 +245,7 @@ mod tests {
         });
     }
 
-    #[test_case(None, None)]
+    #[test_case(None, None; "none")]
     #[test_case(
         Some(OldMarketDisputeMechanism::Authorized),
         Some(MarketDisputeMechanism::Authorized)
@@ -288,14 +280,14 @@ mod tests {
                 .put::<MarketCommons<Runtime>>();
             let market = Market {
                 market_id: 7,
-                base_asset: BaseAssetClass::Ztg,
+                base_asset: Asset::Ztg,
                 creator: 1,
                 creation: MarketCreation::Permissionless,
                 creator_fee: Perbill::from_rational(2u32, 3u32),
                 oracle: 4,
                 metadata: vec![0x05; 50],
                 market_type: MarketType::Categorical(999),
-                period: MarketPeriod::<BlockNumberOf<Runtime>, MomentOf<Runtime>>::Block(6..7),
+                period: MarketPeriod::<BlockNumberFor<Runtime>, MomentOf<Runtime>>::Block(6..7),
                 deadlines: Deadlines { grace_period: 7, oracle_duration: 8, dispute_duration: 9 },
                 scoring_rule: ScoringRule::AmmCdaHybrid,
                 status: MarketStatus::Active,
@@ -329,7 +321,7 @@ mod tests {
         new_dispute_mechanism: Option<MarketDisputeMechanism>,
     ) -> (OldMarketOf<Runtime>, MarketOf<Runtime>) {
         let market_id = 0;
-        let base_asset = BaseAsset::Ztg;
+        let base_asset = Asset::Ztg;
         let creator = 1;
         let creation = MarketCreation::Advised;
         let creator_fee = Perbill::from_rational(2u32, 3u32);

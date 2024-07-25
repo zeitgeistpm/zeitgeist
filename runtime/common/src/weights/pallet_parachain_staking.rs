@@ -56,67 +56,67 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Proof Skipped: ParachainStaking InflationConfig (max_values: Some(1), max_size: None, mode: Measured)
     fn set_staking_expectations() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `119`
-        //  Estimated: `614`
-        // Minimum execution time: 21_650 nanoseconds.
-        Weight::from_parts(22_480_000, 614)
-            .saturating_add(T::DbWeight::get().reads(1))
-            .saturating_add(T::DbWeight::get().writes(1))
+        //  Measured:  `88`
+        //  Estimated: `1573`
+        // Minimum execution time: 15_889_000 picoseconds.
+        Weight::from_parts(16_404_000, 1573)
+            .saturating_add(T::DbWeight::get().reads(1_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
     }
     /// Storage: ParachainStaking InflationConfig (r:1 w:1)
     /// Proof Skipped: ParachainStaking InflationConfig (max_values: Some(1), max_size: None, mode: Measured)
     fn set_inflation() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `119`
-        //  Estimated: `614`
-        // Minimum execution time: 76_630 nanoseconds.
-        Weight::from_parts(77_480_000, 614)
-            .saturating_add(T::DbWeight::get().reads(1))
-            .saturating_add(T::DbWeight::get().writes(1))
+        //  Measured:  `88`
+        //  Estimated: `1573`
+        // Minimum execution time: 44_509_000 picoseconds.
+        Weight::from_parts(45_011_000, 1573)
+            .saturating_add(T::DbWeight::get().reads(1_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
     }
     /// Storage: ParachainStaking ParachainBondInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking ParachainBondInfo (max_values: Some(1), max_size: None, mode: Measured)
     fn set_parachain_bond_account() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `52`
-        //  Estimated: `547`
-        // Minimum execution time: 19_300 nanoseconds.
-        Weight::from_parts(19_930_000, 547)
-            .saturating_add(T::DbWeight::get().reads(1))
-            .saturating_add(T::DbWeight::get().writes(1))
+        //  Measured:  `6`
+        //  Estimated: `1491`
+        // Minimum execution time: 14_675_000 picoseconds.
+        Weight::from_parts(15_094_000, 1491)
+            .saturating_add(T::DbWeight::get().reads(1_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
     }
     /// Storage: ParachainStaking ParachainBondInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking ParachainBondInfo (max_values: Some(1), max_size: None, mode: Measured)
     fn set_parachain_bond_reserve_percent() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `52`
-        //  Estimated: `547`
-        // Minimum execution time: 18_880 nanoseconds.
-        Weight::from_parts(19_530_000, 547)
-            .saturating_add(T::DbWeight::get().reads(1))
-            .saturating_add(T::DbWeight::get().writes(1))
+        //  Measured:  `6`
+        //  Estimated: `1491`
+        // Minimum execution time: 13_898_000 picoseconds.
+        Weight::from_parts(14_492_000, 1491)
+            .saturating_add(T::DbWeight::get().reads(1_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
     }
     /// Storage: ParachainStaking TotalSelected (r:1 w:1)
     /// Proof Skipped: ParachainStaking TotalSelected (max_values: Some(1), max_size: None, mode: Measured)
     fn set_total_selected() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `28`
-        //  Estimated: `523`
-        // Minimum execution time: 20_290 nanoseconds.
-        Weight::from_parts(20_680_000, 523)
-            .saturating_add(T::DbWeight::get().reads(1))
-            .saturating_add(T::DbWeight::get().writes(1))
+        //  Estimated: `1513`
+        // Minimum execution time: 15_666_000 picoseconds.
+        Weight::from_parts(15_939_000, 1513)
+            .saturating_add(T::DbWeight::get().reads(1_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
     }
     /// Storage: ParachainStaking CollatorCommission (r:1 w:1)
     /// Proof Skipped: ParachainStaking CollatorCommission (max_values: Some(1), max_size: None, mode: Measured)
     fn set_collator_commission() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `27`
-        //  Estimated: `522`
-        // Minimum execution time: 17_990 nanoseconds.
-        Weight::from_parts(19_230_000, 522)
-            .saturating_add(T::DbWeight::get().reads(1))
-            .saturating_add(T::DbWeight::get().writes(1))
+        //  Estimated: `1512`
+        // Minimum execution time: 13_997_000 picoseconds.
+        Weight::from_parts(14_320_000, 1512)
+            .saturating_add(T::DbWeight::get().reads(1_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
     }
     /// Storage: ParachainStaking TotalSelected (r:1 w:0)
     /// Proof Skipped: ParachainStaking TotalSelected (max_values: Some(1), max_size: None, mode: Measured)
@@ -124,12 +124,12 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Proof Skipped: ParachainStaking InflationConfig (max_values: Some(1), max_size: None, mode: Measured)
     fn set_blocks_per_round() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `147`
-        //  Estimated: `1284`
-        // Minimum execution time: 81_350 nanoseconds.
-        Weight::from_parts(82_360_000, 1284)
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().writes(1))
+        //  Measured:  `116`
+        //  Estimated: `1601`
+        // Minimum execution time: 48_389_000 picoseconds.
+        Weight::from_parts(49_554_000, 1601)
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
     }
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
@@ -138,183 +138,255 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking CandidatePool (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
     /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     /// Storage: Balances Locks (r:1 w:1)
-    /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:1 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
     /// Storage: ParachainStaking Total (r:1 w:1)
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
     /// Storage: ParachainStaking TopDelegations (r:0 w:1)
     /// Proof Skipped: ParachainStaking TopDelegations (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking BottomDelegations (r:0 w:1)
     /// Proof Skipped: ParachainStaking BottomDelegations (max_values: None, max_size: None, mode: Measured)
-    /// The range of component `x` is `[3, 1000]`.
+    /// The range of component `x` is `[3, 200]`.
     fn join_candidates(x: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `1898 + x * (49 ±0)`
-        //  Estimated: `22371 + x * (300 ±0)`
-        // Minimum execution time: 66_890 nanoseconds.
-        Weight::from_parts(96_425_237, 22371)
-            // Standard Error: 2_143
-            .saturating_add(Weight::from_parts(185_610, 0).saturating_mul(x.into()))
-            .saturating_add(T::DbWeight::get().reads(6))
-            .saturating_add(T::DbWeight::get().writes(7))
-            .saturating_add(Weight::from_parts(0, 300).saturating_mul(x.into()))
+        //  Measured:  `1421 + x * (38 ±0)`
+        //  Estimated: `4752 + x * (41 ±0)`
+        // Minimum execution time: 76_742_000 picoseconds.
+        Weight::from_parts(88_864_511, 4752)
+            // Standard Error: 2_004
+            .saturating_add(Weight::from_parts(88_538, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(7_u64))
+            .saturating_add(T::DbWeight::get().writes(7_u64))
+            .saturating_add(Weight::from_parts(0, 41).saturating_mul(x.into()))
     }
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking CandidatePool (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
-    /// The range of component `x` is `[3, 1000]`.
+    /// The range of component `x` is `[3, 200]`.
     fn schedule_leave_candidates(x: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `990 + x * (48 ±0)`
-        //  Estimated: `4794 + x * (98 ±0)`
-        // Minimum execution time: 31_150 nanoseconds.
-        Weight::from_parts(45_204_630, 4794)
-            // Standard Error: 1_892
-            .saturating_add(Weight::from_parts(159_930, 0).saturating_mul(x.into()))
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().writes(2))
-            .saturating_add(Weight::from_parts(0, 98).saturating_mul(x.into()))
+        //  Measured:  `702 + x * (37 ±0)`
+        //  Estimated: `4060 + x * (38 ±0)`
+        // Minimum execution time: 27_238_000 picoseconds.
+        Weight::from_parts(34_109_750, 4060)
+            // Standard Error: 1_116
+            .saturating_add(Weight::from_parts(62_292, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+            .saturating_add(Weight::from_parts(0, 38).saturating_mul(x.into()))
     }
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking AutoCompoundingDelegations (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking TopDelegations (r:1 w:1)
     /// Proof Skipped: ParachainStaking TopDelegations (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking DelegatorState (r:349 w:349)
     /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
     /// Storage: Balances Locks (r:350 w:350)
-    /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:350 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
     /// Storage: System Account (r:350 w:350)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
-    /// Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:1)
-    /// Proof Skipped: ParachainStaking AutoCompoundingDelegations (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking BottomDelegations (r:1 w:1)
     /// Proof Skipped: ParachainStaking BottomDelegations (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking Total (r:1 w:1)
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
     /// The range of component `x` is `[2, 350]`.
-    fn execute_leave_candidates(x: u32) -> Weight {
+    fn execute_leave_candidates_worst_case(x: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `238 + x * (595 ±0)`
-        //  Estimated: `18229 + x * (12995 ±0)`
-        // Minimum execution time: 121_740 nanoseconds.
-        Weight::from_parts(137_141_000, 18229)
-            // Standard Error: 158_049
-            .saturating_add(Weight::from_parts(46_465_017, 0).saturating_mul(x.into()))
-            .saturating_add(T::DbWeight::get().reads(5))
-            .saturating_add(T::DbWeight::get().reads((3_u64).saturating_mul(x.into())))
-            .saturating_add(T::DbWeight::get().writes(5))
+        //  Measured:  `1157 + x * (431 ±0)`
+        //  Estimated: `4696 + x * (3762 ±0)`
+        // Minimum execution time: 141_946_000 picoseconds.
+        Weight::from_parts(144_961_000, 4696)
+            // Standard Error: 79_832
+            .saturating_add(Weight::from_parts(49_060_154, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(5_u64))
+            .saturating_add(T::DbWeight::get().reads((4_u64).saturating_mul(x.into())))
+            .saturating_add(T::DbWeight::get().writes(5_u64))
             .saturating_add(T::DbWeight::get().writes((3_u64).saturating_mul(x.into())))
-            .saturating_add(Weight::from_parts(0, 12995).saturating_mul(x.into()))
+            .saturating_add(Weight::from_parts(0, 3762).saturating_mul(x.into()))
+    }
+    /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
+    /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking AutoCompoundingDelegations (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking TopDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking TopDelegations (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking DelegatorState (r:349 w:349)
+    /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
+    /// Storage: Balances Locks (r:350 w:350)
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:350 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
+    /// Storage: System Account (r:350 w:350)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
+    /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
+    /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking BottomDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking BottomDelegations (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking Total (r:1 w:1)
+    /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
+    /// The range of component `x` is `[2, 350]`.
+    /// The range of component `y` is `[2, 350]`.
+    fn execute_leave_candidates_ideal(x: u32, _y: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `1149 + x * (431 ±0)`
+        //  Estimated: `4696 + x * (3762 ±0)`
+        // Minimum execution time: 133_121_000 picoseconds.
+        Weight::from_parts(134_388_000, 4696)
+            // Standard Error: 34_256
+            .saturating_add(Weight::from_parts(50_828_386, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(5_u64))
+            .saturating_add(T::DbWeight::get().reads((4_u64).saturating_mul(x.into())))
+            .saturating_add(T::DbWeight::get().writes(5_u64))
+            .saturating_add(T::DbWeight::get().writes((3_u64).saturating_mul(x.into())))
+            .saturating_add(Weight::from_parts(0, 3762).saturating_mul(x.into()))
     }
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking CandidatePool (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
-    /// The range of component `x` is `[3, 1000]`.
+    /// The range of component `x` is `[3, 200]`.
     fn cancel_leave_candidates(x: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `946 + x * (48 ±0)`
-        //  Estimated: `4704 + x * (98 ±0)`
-        // Minimum execution time: 31_720 nanoseconds.
-        Weight::from_parts(41_148_720, 4704)
-            // Standard Error: 1_807
-            .saturating_add(Weight::from_parts(174_213, 0).saturating_mul(x.into()))
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().writes(2))
-            .saturating_add(Weight::from_parts(0, 98).saturating_mul(x.into()))
+        //  Measured:  `670 + x * (37 ±0)`
+        //  Estimated: `4028 + x * (38 ±0)`
+        // Minimum execution time: 25_910_000 picoseconds.
+        Weight::from_parts(32_465_127, 4028)
+            // Standard Error: 1_064
+            .saturating_add(Weight::from_parts(60_655, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+            .saturating_add(Weight::from_parts(0, 38).saturating_mul(x.into()))
     }
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking CandidatePool (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
-    fn go_offline() -> Weight {
+    /// The range of component `x` is `[1, 200]`.
+    fn go_offline(x: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `371`
-        //  Estimated: `3712`
-        // Minimum execution time: 34_840 nanoseconds.
-        Weight::from_parts(35_820_000, 3712)
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().writes(2))
+        //  Measured:  `567 + x * (38 ±0)`
+        //  Estimated: `3968 + x * (39 ±0)`
+        // Minimum execution time: 24_471_000 picoseconds.
+        Weight::from_parts(30_875_133, 3968)
+            // Standard Error: 1_124
+            .saturating_add(Weight::from_parts(66_032, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+            .saturating_add(Weight::from_parts(0, 39).saturating_mul(x.into()))
     }
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking CandidatePool (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
-    fn go_online() -> Weight {
+    /// The range of component `x` is `[1, 200]`.
+    fn go_online(x: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `322`
-        //  Estimated: `3614`
-        // Minimum execution time: 34_860 nanoseconds.
-        Weight::from_parts(36_040_000, 3614)
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().writes(2))
+        //  Measured:  `531 + x * (38 ±0)`
+        //  Estimated: `3932 + x * (39 ±0)`
+        // Minimum execution time: 24_249_000 picoseconds.
+        Weight::from_parts(30_765_292, 3932)
+            // Standard Error: 1_181
+            .saturating_add(Weight::from_parts(65_935, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+            .saturating_add(Weight::from_parts(0, 39).saturating_mul(x.into()))
     }
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking CandidatePool (r:1 w:1)
+    /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
     /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     /// Storage: ParachainStaking Total (r:1 w:1)
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
     /// Storage: Balances Locks (r:1 w:1)
-    /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
-    /// Storage: ParachainStaking CandidatePool (r:1 w:1)
-    /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
-    fn candidate_bond_more() -> Weight {
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:1 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
+    /// The range of component `x` is `[1, 200]`.
+    fn candidate_bond_more(x: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `650`
-        //  Estimated: `11796`
-        // Minimum execution time: 61_311 nanoseconds.
-        Weight::from_parts(75_650_000, 11796)
-            .saturating_add(T::DbWeight::get().reads(5))
-            .saturating_add(T::DbWeight::get().writes(5))
+        //  Measured:  `1270 + x * (42 ±0)`
+        //  Estimated: `4752 + x * (44 ±0)`
+        // Minimum execution time: 68_720_000 picoseconds.
+        Weight::from_parts(79_722_709, 4752)
+            // Standard Error: 2_059
+            .saturating_add(Weight::from_parts(113_832, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(6_u64))
+            .saturating_add(T::DbWeight::get().writes(5_u64))
+            .saturating_add(Weight::from_parts(0, 44).saturating_mul(x.into()))
     }
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
     fn schedule_candidate_bond_less() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `216`
-        //  Estimated: `2691`
-        // Minimum execution time: 29_000 nanoseconds.
-        Weight::from_parts(29_870_000, 2691)
-            .saturating_add(T::DbWeight::get().reads(1))
-            .saturating_add(T::DbWeight::get().writes(1))
+        //  Measured:  `171`
+        //  Estimated: `3636`
+        // Minimum execution time: 21_049_000 picoseconds.
+        Weight::from_parts(21_735_000, 3636)
+            .saturating_add(T::DbWeight::get().reads(1_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
     }
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking CandidatePool (r:1 w:1)
+    /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
     /// Storage: ParachainStaking Total (r:1 w:1)
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
     /// Storage: Balances Locks (r:1 w:1)
-    /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:1 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    /// Storage: ParachainStaking CandidatePool (r:1 w:1)
-    /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
-    fn execute_candidate_bond_less() -> Weight {
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
+    /// The range of component `x` is `[1, 200]`.
+    fn execute_candidate_bond_less(x: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `670`
-        //  Estimated: `11856`
-        // Minimum execution time: 65_100 nanoseconds.
-        Weight::from_parts(66_880_000, 11856)
-            .saturating_add(T::DbWeight::get().reads(5))
-            .saturating_add(T::DbWeight::get().writes(5))
+        //  Measured:  `1322 + x * (42 ±0)`
+        //  Estimated: `4752 + x * (43 ±0)`
+        // Minimum execution time: 71_996_000 picoseconds.
+        Weight::from_parts(80_620_929, 4752)
+            // Standard Error: 1_363
+            .saturating_add(Weight::from_parts(94_580, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(6_u64))
+            .saturating_add(T::DbWeight::get().writes(5_u64))
+            .saturating_add(Weight::from_parts(0, 43).saturating_mul(x.into()))
     }
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
     fn cancel_candidate_bond_less() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `236`
-        //  Estimated: `2711`
-        // Minimum execution time: 22_170 nanoseconds.
-        Weight::from_parts(27_290_000, 2711)
-            .saturating_add(T::DbWeight::get().reads(1))
-            .saturating_add(T::DbWeight::get().writes(1))
+        //  Measured:  `191`
+        //  Estimated: `3656`
+        // Minimum execution time: 18_991_000 picoseconds.
+        Weight::from_parts(19_491_000, 3656)
+            .saturating_add(T::DbWeight::get().reads(1_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
+    }
+    fn set_candidate_bond_to_zero(x: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `1322 + x * (42 ±0)`
+        //  Estimated: `4752 + x * (43 ±0)`
+        // Minimum execution time: 71_996_000 picoseconds.
+        Weight::from_parts(80_620_929, 4752)
+            // Standard Error: 1_363
+            .saturating_add(Weight::from_parts(94_580, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(6_u64))
+            .saturating_add(T::DbWeight::get().writes(5_u64))
+            .saturating_add(Weight::from_parts(0, 43).saturating_mul(x.into()))
     }
     /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     /// Storage: ParachainStaking DelegatorState (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
@@ -324,106 +396,55 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking CandidatePool (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
     /// Storage: Balances Locks (r:1 w:1)
-    /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:1 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
     /// Storage: ParachainStaking Total (r:1 w:1)
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
     /// The range of component `x` is `[3, 100]`.
     /// The range of component `y` is `[2, 300]`.
     fn delegate(x: u32, y: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `2374 + x * (103 ±0) + y * (52 ±0)`
-        //  Estimated: `25391 + x * (530 ±0) + y * (265 ±0)`
-        // Minimum execution time: 125_490 nanoseconds.
-        Weight::from_parts(135_398_832, 25391)
-            // Standard Error: 6_396
-            .saturating_add(Weight::from_parts(265_077, 0).saturating_mul(x.into()))
-            // Standard Error: 2_098
-            .saturating_add(Weight::from_parts(138_672, 0).saturating_mul(y.into()))
-            .saturating_add(T::DbWeight::get().reads(7))
-            .saturating_add(T::DbWeight::get().writes(7))
-            .saturating_add(Weight::from_parts(0, 530).saturating_mul(x.into()))
-            .saturating_add(Weight::from_parts(0, 265).saturating_mul(y.into()))
+        //  Measured:  `2479 + x * (79 ±0) + y * (38 ±0)`
+        //  Estimated: `5723 + x * (81 ±0) + y * (39 ±0)`
+        // Minimum execution time: 120_061_000 picoseconds.
+        Weight::from_parts(111_894_468, 5723)
+            // Standard Error: 1_320
+            .saturating_add(Weight::from_parts(135_446, 0).saturating_mul(x.into()))
+            // Standard Error: 433
+            .saturating_add(Weight::from_parts(41_110, 0).saturating_mul(y.into()))
+            .saturating_add(T::DbWeight::get().reads(8_u64))
+            .saturating_add(T::DbWeight::get().writes(7_u64))
+            .saturating_add(Weight::from_parts(0, 81).saturating_mul(x.into()))
+            .saturating_add(Weight::from_parts(0, 39).saturating_mul(y.into()))
     }
     /// Storage: ParachainStaking DelegatorState (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
-    fn schedule_leave_delegators() -> Weight {
+    /// The range of component `x` is `[0, 349]`.
+    fn schedule_revoke_delegation(x: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `176`
-        //  Estimated: `5302`
-        // Minimum execution time: 32_930 nanoseconds.
-        Weight::from_parts(33_951_000, 5302)
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().writes(2))
+        //  Measured:  `566 + x * (42 ±0)`
+        //  Estimated: `4012 + x * (43 ±0)`
+        // Minimum execution time: 25_479_000 picoseconds.
+        Weight::from_parts(35_344_986, 4012)
+            // Standard Error: 803
+            .saturating_add(Weight::from_parts(60_212, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+            .saturating_add(Weight::from_parts(0, 43).saturating_mul(x.into()))
     }
     /// Storage: ParachainStaking DelegatorState (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
-    /// Storage: ParachainStaking DelegationScheduledRequests (r:99 w:99)
-    /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
-    /// Storage: ParachainStaking CandidateInfo (r:99 w:99)
-    /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
-    /// Storage: ParachainStaking TopDelegations (r:99 w:99)
-    /// Proof Skipped: ParachainStaking TopDelegations (max_values: None, max_size: None, mode: Measured)
-    /// Storage: ParachainStaking CandidatePool (r:1 w:1)
-    /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
-    /// Storage: ParachainStaking Total (r:1 w:1)
-    /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
-    /// Storage: ParachainStaking AutoCompoundingDelegations (r:99 w:0)
-    /// Proof Skipped: ParachainStaking AutoCompoundingDelegations (max_values: None, max_size: None, mode: Measured)
-    /// Storage: Balances Locks (r:1 w:1)
-    /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
-    /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
-    /// The range of component `x` is `[2, 100]`.
-    fn execute_leave_delegators(x: u32) -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `755 + x * (558 ±0)`
-        //  Estimated: `26542 + x * (13492 ±2)`
-        // Minimum execution time: 105_910 nanoseconds.
-        Weight::from_parts(108_141_000, 26542)
-            // Standard Error: 76_935
-            .saturating_add(Weight::from_parts(37_566_563, 0).saturating_mul(x.into()))
-            .saturating_add(T::DbWeight::get().reads(1))
-            .saturating_add(T::DbWeight::get().reads((4_u64).saturating_mul(x.into())))
-            .saturating_add(T::DbWeight::get().writes(2))
-            .saturating_add(T::DbWeight::get().writes((3_u64).saturating_mul(x.into())))
-            .saturating_add(Weight::from_parts(0, 13492).saturating_mul(x.into()))
-    }
-    /// Storage: ParachainStaking DelegatorState (r:1 w:1)
-    /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
-    /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
-    /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
-    fn cancel_leave_delegators() -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `298`
-        //  Estimated: `5546`
-        // Minimum execution time: 36_750 nanoseconds.
-        Weight::from_parts(38_090_000, 5546)
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().writes(2))
-    }
-    /// Storage: ParachainStaking DelegatorState (r:1 w:1)
-    /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
-    /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
-    /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
-    fn schedule_revoke_delegation() -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `176`
-        //  Estimated: `5302`
-        // Minimum execution time: 27_410 nanoseconds.
-        Weight::from_parts(33_560_000, 5302)
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().writes(2))
-    }
     /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:0)
     /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
-    /// Storage: ParachainStaking DelegatorState (r:1 w:1)
-    /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
     /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     /// Storage: Balances Locks (r:1 w:1)
-    /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:1 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking TopDelegations (r:1 w:1)
@@ -432,36 +453,46 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
     /// Storage: ParachainStaking Total (r:1 w:1)
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
-    fn delegator_bond_more() -> Weight {
+    /// The range of component `x` is `[0, 349]`.
+    fn delegator_bond_more(x: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `1066`
-        //  Estimated: `23667`
-        // Minimum execution time: 103_840 nanoseconds.
-        Weight::from_parts(105_370_000, 23667)
-            .saturating_add(T::DbWeight::get().reads(8))
-            .saturating_add(T::DbWeight::get().writes(7))
+        //  Measured:  `1996 + x * (79 ±0)`
+        //  Estimated: `5428 + x * (79 ±0)`
+        // Minimum execution time: 90_985_000 picoseconds.
+        Weight::from_parts(111_258_553, 5428)
+            // Standard Error: 1_580
+            .saturating_add(Weight::from_parts(109_354, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(9_u64))
+            .saturating_add(T::DbWeight::get().writes(7_u64))
+            .saturating_add(Weight::from_parts(0, 79).saturating_mul(x.into()))
     }
     /// Storage: ParachainStaking DelegatorState (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
-    fn schedule_delegator_bond_less() -> Weight {
+    /// The range of component `x` is `[0, 349]`.
+    fn schedule_delegator_bond_less(x: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `176`
-        //  Estimated: `5302`
-        // Minimum execution time: 28_110 nanoseconds.
-        Weight::from_parts(34_080_000, 5302)
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().writes(2))
+        //  Measured:  `566 + x * (42 ±0)`
+        //  Estimated: `4012 + x * (43 ±0)`
+        // Minimum execution time: 25_784_000 picoseconds.
+        Weight::from_parts(35_792_924, 4012)
+            // Standard Error: 793
+            .saturating_add(Weight::from_parts(60_874, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+            .saturating_add(Weight::from_parts(0, 43).saturating_mul(x.into()))
     }
     /// Storage: ParachainStaking DelegatorState (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
     /// Storage: Balances Locks (r:1 w:1)
-    /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:1 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     /// Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:0)
     /// Proof Skipped: ParachainStaking AutoCompoundingDelegations (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
@@ -474,12 +505,43 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
     fn execute_revoke_delegation() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `1243`
-        //  Estimated: `28447`
-        // Minimum execution time: 103_180 nanoseconds.
-        Weight::from_parts(126_781_000, 28447)
-            .saturating_add(T::DbWeight::get().reads(9))
-            .saturating_add(T::DbWeight::get().writes(8))
+        //  Measured:  `964`
+        //  Estimated: `4752`
+        // Minimum execution time: 113_086_000 picoseconds.
+        Weight::from_parts(115_421_000, 4752)
+            .saturating_add(T::DbWeight::get().reads(10_u64))
+            .saturating_add(T::DbWeight::get().writes(8_u64))
+    }
+    /// Storage: ParachainStaking DelegatorState (r:1 w:1)
+    /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
+    /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
+    /// Storage: Balances Locks (r:1 w:1)
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:1 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
+    /// Storage: System Account (r:1 w:1)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
+    /// Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking AutoCompoundingDelegations (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
+    /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking TopDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking TopDelegations (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking BottomDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking BottomDelegations (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking CandidatePool (r:1 w:1)
+    /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
+    /// Storage: ParachainStaking Total (r:1 w:1)
+    /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
+    fn execute_delegator_revoke_delegation_worst() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `37308`
+        //  Estimated: `40773`
+        // Minimum execution time: 179_325_000 picoseconds.
+        Weight::from_parts(182_100_000, 40773)
+            .saturating_add(T::DbWeight::get().reads(11_u64))
+            .saturating_add(T::DbWeight::get().writes(10_u64))
     }
     /// Storage: ParachainStaking DelegatorState (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
@@ -488,49 +550,44 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
     /// Storage: Balances Locks (r:1 w:1)
-    /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:1 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
     /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     /// Storage: ParachainStaking TopDelegations (r:1 w:1)
     /// Proof Skipped: ParachainStaking TopDelegations (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking BottomDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking BottomDelegations (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking CandidatePool (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
     /// Storage: ParachainStaking Total (r:1 w:1)
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
-    fn execute_delegator_bond_less() -> Weight {
+    fn execute_delegator_bond_less_worst() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `1188`
-        //  Estimated: `24399`
-        // Minimum execution time: 80_960 nanoseconds.
-        Weight::from_parts(95_831_000, 24399)
-            .saturating_add(T::DbWeight::get().reads(8))
-            .saturating_add(T::DbWeight::get().writes(8))
+        //  Measured:  `29930`
+        //  Estimated: `33395`
+        // Minimum execution time: 150_818_000 picoseconds.
+        Weight::from_parts(152_294_000, 33395)
+            .saturating_add(T::DbWeight::get().reads(10_u64))
+            .saturating_add(T::DbWeight::get().writes(9_u64))
     }
     /// Storage: ParachainStaking DelegatorState (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
-    fn cancel_revoke_delegation() -> Weight {
+    /// The range of component `x` is `[0, 349]`.
+    fn cancel_delegation_request(x: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `298`
-        //  Estimated: `5546`
-        // Minimum execution time: 27_681 nanoseconds.
-        Weight::from_parts(34_100_000, 5546)
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().writes(2))
-    }
-    /// Storage: ParachainStaking DelegatorState (r:1 w:1)
-    /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
-    /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
-    /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
-    fn cancel_delegator_bond_less() -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `298`
-        //  Estimated: `5546`
-        // Minimum execution time: 34_470 nanoseconds.
-        Weight::from_parts(35_990_000, 5546)
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().writes(2))
+        //  Measured:  `663 + x * (42 ±0)`
+        //  Estimated: `4092 + x * (43 ±0)`
+        // Minimum execution time: 30_062_000 picoseconds.
+        Weight::from_parts(37_242_991, 4092)
+            // Standard Error: 767
+            .saturating_add(Weight::from_parts(62_995, 0).saturating_mul(x.into()))
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
+            .saturating_add(Weight::from_parts(0, 43).saturating_mul(x.into()))
     }
     /// Storage: ParachainStaking Points (r:1 w:0)
     /// Proof Skipped: ParachainStaking Points (max_values: None, max_size: None, mode: Measured)
@@ -541,19 +598,19 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking ParachainBondInfo (r:1 w:0)
     /// Proof Skipped: ParachainStaking ParachainBondInfo (max_values: Some(1), max_size: None, mode: Measured)
     /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     /// Storage: ParachainStaking CollatorCommission (r:1 w:0)
     /// Proof Skipped: ParachainStaking CollatorCommission (max_values: Some(1), max_size: None, mode: Measured)
     /// Storage: ParachainStaking DelayedPayouts (r:0 w:1)
     /// Proof Skipped: ParachainStaking DelayedPayouts (max_values: None, max_size: None, mode: Measured)
     fn prepare_staking_payouts() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `438`
-        //  Estimated: `11670`
-        // Minimum execution time: 57_220 nanoseconds.
-        Weight::from_parts(58_131_000, 11670)
-            .saturating_add(T::DbWeight::get().reads(6))
-            .saturating_add(T::DbWeight::get().writes(3))
+        //  Measured:  `380`
+        //  Estimated: `3845`
+        // Minimum execution time: 48_260_000 picoseconds.
+        Weight::from_parts(49_856_000, 3845)
+            .saturating_add(T::DbWeight::get().reads(6_u64))
+            .saturating_add(T::DbWeight::get().writes(3_u64))
     }
     /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:0)
     /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
@@ -562,14 +619,14 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// The range of component `y` is `[0, 100]`.
     fn get_rewardable_delegators(y: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `118 + y * (48 ±0)`
-        //  Estimated: `5180 + y * (96 ±0)`
-        // Minimum execution time: 9_370 nanoseconds.
-        Weight::from_parts(11_359_043, 5180)
-            // Standard Error: 1_783
-            .saturating_add(Weight::from_parts(143_685, 0).saturating_mul(y.into()))
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(Weight::from_parts(0, 96).saturating_mul(y.into()))
+        //  Measured:  `73 + y * (36 ±0)`
+        //  Estimated: `3537 + y * (36 ±0)`
+        // Minimum execution time: 8_183_000 picoseconds.
+        Weight::from_parts(10_416_160, 3537)
+            // Standard Error: 780
+            .saturating_add(Weight::from_parts(44_865, 0).saturating_mul(y.into()))
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(Weight::from_parts(0, 36).saturating_mul(y.into()))
     }
     /// Storage: ParachainStaking TotalSelected (r:1 w:0)
     /// Proof Skipped: ParachainStaking TotalSelected (max_values: Some(1), max_size: None, mode: Measured)
@@ -591,20 +648,61 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// The range of component `y` is `[0, 100]`.
     fn select_top_candidates(x: u32, y: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `0 + x * (5122 ±0) + y * (2400 ±0)`
-        //  Estimated: `13898 + x * (26124 ±53) + y * (6816 ±26)`
-        // Minimum execution time: 37_410 nanoseconds.
-        Weight::from_parts(37_950_000, 13898)
-            // Standard Error: 177_349
-            .saturating_add(Weight::from_parts(30_156_055, 0).saturating_mul(x.into()))
-            // Standard Error: 88_439
-            .saturating_add(Weight::from_parts(2_943_699, 0).saturating_mul(y.into()))
-            .saturating_add(T::DbWeight::get().reads(6))
+        //  Measured:  `0 + x * (3816 ±0) + y * (1800 ±0)`
+        //  Estimated: `3730 + x * (3975 ±39) + y * (639 ±19)`
+        // Minimum execution time: 31_870_000 picoseconds.
+        Weight::from_parts(32_158_000, 3730)
+            // Standard Error: 51_554
+            .saturating_add(Weight::from_parts(22_540_635, 0).saturating_mul(x.into()))
+            // Standard Error: 25_709
+            .saturating_add(Weight::from_parts(957_745, 0).saturating_mul(y.into()))
+            .saturating_add(T::DbWeight::get().reads(6_u64))
             .saturating_add(T::DbWeight::get().reads((4_u64).saturating_mul(x.into())))
-            .saturating_add(T::DbWeight::get().writes(2))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
             .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(x.into())))
-            .saturating_add(Weight::from_parts(0, 26124).saturating_mul(x.into()))
-            .saturating_add(Weight::from_parts(0, 6816).saturating_mul(y.into()))
+            .saturating_add(Weight::from_parts(0, 3975).saturating_mul(x.into()))
+            .saturating_add(Weight::from_parts(0, 639).saturating_mul(y.into()))
+    }
+    /// Storage: System Account (r:349 w:349)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
+    /// Storage: ParachainStaking DelegatorState (r:349 w:349)
+    /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:0)
+    /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
+    /// Storage: Balances Locks (r:349 w:349)
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:349 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
+    /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
+    /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking TopDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking TopDelegations (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking CandidatePool (r:1 w:1)
+    /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
+    /// Storage: ParachainStaking Total (r:1 w:1)
+    /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
+    /// Storage: ParachainStaking BottomDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking BottomDelegations (max_values: None, max_size: None, mode: Measured)
+    /// The range of component `x` is `[0, 349]`.
+    /// The range of component `y` is `[0, 349]`.
+    /// The range of component `z` is `[0, 349]`.
+    fn pay_one_collator_reward_best(x: u32, y: u32, z: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `0 + x * (395 ±0) + y * (156 ±0) + z * (41 ±0)`
+        //  Estimated: `125757 + x * (2591 ±19) + y * (2234 ±19) + z * (28 ±0)`
+        // Minimum execution time: 459_000 picoseconds.
+        Weight::from_parts(472_000, 125757)
+            // Standard Error: 685_607
+            .saturating_add(Weight::from_parts(74_007_162, 0).saturating_mul(x.into()))
+            // Standard Error: 685_607
+            .saturating_add(Weight::from_parts(43_825_857, 0).saturating_mul(y.into()))
+            .saturating_add(T::DbWeight::get().reads((3_u64).saturating_mul(x.into())))
+            .saturating_add(T::DbWeight::get().reads((2_u64).saturating_mul(y.into())))
+            .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(x.into())))
+            .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(y.into())))
+            .saturating_add(Weight::from_parts(0, 2591).saturating_mul(x.into()))
+            .saturating_add(Weight::from_parts(0, 2234).saturating_mul(y.into()))
+            .saturating_add(Weight::from_parts(0, 28).saturating_mul(z.into()))
     }
     /// Storage: ParachainStaking DelayedPayouts (r:1 w:0)
     /// Proof Skipped: ParachainStaking DelayedPayouts (max_values: None, max_size: None, mode: Measured)
@@ -614,29 +712,33 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Proof Skipped: ParachainStaking AtStake (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking AwardedPts (r:1 w:1)
     /// Proof Skipped: ParachainStaking AwardedPts (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:0)
+    /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
+    /// Storage: MoonbeamOrbiters OrbiterPerRound (r:1 w:0)
+    /// Proof Skipped: MoonbeamOrbiters OrbiterPerRound (max_values: None, max_size: None, mode: Measured)
     /// Storage: System Account (r:301 w:301)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     /// The range of component `y` is `[0, 300]`.
     fn pay_one_collator_reward(y: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `485 + y * (219 ±0)`
-        //  Estimated: `16898 + y * (3483 ±0)`
-        // Minimum execution time: 67_041 nanoseconds.
-        Weight::from_parts(50_795_146, 16898)
-            // Standard Error: 39_567
-            .saturating_add(Weight::from_parts(21_634_242, 0).saturating_mul(y.into()))
-            .saturating_add(T::DbWeight::get().reads(6))
+        //  Measured:  `1208 + y * (160 ±0)`
+        //  Estimated: `6978 + y * (2591 ±0)`
+        // Minimum execution time: 65_428_000 picoseconds.
+        Weight::from_parts(68_535_135, 6978)
+            // Standard Error: 6_093
+            .saturating_add(Weight::from_parts(25_186_464, 0).saturating_mul(y.into()))
+            .saturating_add(T::DbWeight::get().reads(8_u64))
             .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(y.into())))
-            .saturating_add(T::DbWeight::get().writes(3))
+            .saturating_add(T::DbWeight::get().writes(3_u64))
             .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(y.into())))
-            .saturating_add(Weight::from_parts(0, 3483).saturating_mul(y.into()))
+            .saturating_add(Weight::from_parts(0, 2591).saturating_mul(y.into()))
     }
     fn base_on_initialize() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `0`
         //  Estimated: `0`
-        // Minimum execution time: 1_940 nanoseconds.
-        Weight::from_parts(2_240_000, 0)
+        // Minimum execution time: 2_024_000 picoseconds.
+        Weight::from_parts(2_168_000, 0)
     }
     /// Storage: ParachainStaking DelegatorState (r:1 w:0)
     /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
@@ -646,21 +748,21 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// The range of component `y` is `[0, 100]`.
     fn set_auto_compound(x: u32, y: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `718 + x * (34 ±0) + y * (48 ±0)`
-        //  Estimated: `6134 + x * (70 ±0) + y * (98 ±0)`
-        // Minimum execution time: 45_920 nanoseconds.
-        Weight::from_parts(57_096_271, 6134)
-            // Standard Error: 899
-            .saturating_add(Weight::from_parts(84_579, 0).saturating_mul(x.into()))
-            // Standard Error: 2_691
-            .saturating_add(Weight::from_parts(64_670, 0).saturating_mul(y.into()))
-            .saturating_add(T::DbWeight::get().reads(2))
-            .saturating_add(T::DbWeight::get().writes(1))
-            .saturating_add(Weight::from_parts(0, 70).saturating_mul(x.into()))
-            .saturating_add(Weight::from_parts(0, 98).saturating_mul(y.into()))
+        //  Measured:  `671 + x * (22 ±0) + y * (36 ±0)`
+        //  Estimated: `4027 + x * (23 ±0) + y * (36 ±0)`
+        // Minimum execution time: 34_494_000 picoseconds.
+        Weight::from_parts(33_677_881, 4027)
+            // Standard Error: 278
+            .saturating_add(Weight::from_parts(45_734, 0).saturating_mul(x.into()))
+            // Standard Error: 833
+            .saturating_add(Weight::from_parts(39_753, 0).saturating_mul(y.into()))
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
+            .saturating_add(Weight::from_parts(0, 23).saturating_mul(x.into()))
+            .saturating_add(Weight::from_parts(0, 36).saturating_mul(y.into()))
     }
     /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     /// Storage: ParachainStaking DelegatorState (r:1 w:1)
     /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
     /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
@@ -674,7 +776,9 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// Storage: ParachainStaking CandidatePool (r:1 w:1)
     /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
     /// Storage: Balances Locks (r:1 w:1)
-    /// Proof: Balances Locks (max_values: None, max_size: Some(1299), added: 3774, mode: MaxEncodedLen)
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:1 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
     /// Storage: ParachainStaking Total (r:1 w:1)
     /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
     /// The range of component `x` is `[0, 350]`.
@@ -682,31 +786,86 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
     /// The range of component `z` is `[0, 99]`.
     fn delegate_with_auto_compound(x: u32, y: u32, z: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `0 + x * (84 ±0) + y * (33 ±0) + z * (114 ±0)`
-        //  Estimated: `127262 + x * (367 ±0) + y * (73 ±0) + z * (230 ±1)`
-        // Minimum execution time: 120_201 nanoseconds.
-        Weight::from_parts(118_425_126, 127262)
-            // Standard Error: 2_407
-            .saturating_add(Weight::from_parts(242_420, 0).saturating_mul(x.into()))
-            // Standard Error: 2_413
-            .saturating_add(Weight::from_parts(48_797, 0).saturating_mul(y.into()))
-            // Standard Error: 8_501
-            .saturating_add(Weight::from_parts(281_230, 0).saturating_mul(z.into()))
-            .saturating_add(T::DbWeight::get().reads(8))
-            .saturating_add(T::DbWeight::get().writes(8))
-            .saturating_add(Weight::from_parts(0, 367).saturating_mul(x.into()))
-            .saturating_add(Weight::from_parts(0, 73).saturating_mul(y.into()))
-            .saturating_add(Weight::from_parts(0, 230).saturating_mul(z.into()))
+        //  Measured:  `0 + x * (60 ±0) + y * (21 ±0) + z * (78 ±0)`
+        //  Estimated: `26253 + x * (44 ±0) + y * (19 ±0) + z * (76 ±1)`
+        // Minimum execution time: 130_103_000 picoseconds.
+        Weight::from_parts(116_616_415, 26253)
+            // Standard Error: 1_141
+            .saturating_add(Weight::from_parts(117_041, 0).saturating_mul(x.into()))
+            // Standard Error: 4_030
+            .saturating_add(Weight::from_parts(178_483, 0).saturating_mul(z.into()))
+            .saturating_add(T::DbWeight::get().reads(9_u64))
+            .saturating_add(T::DbWeight::get().writes(8_u64))
+            .saturating_add(Weight::from_parts(0, 44).saturating_mul(x.into()))
+            .saturating_add(Weight::from_parts(0, 19).saturating_mul(y.into()))
+            .saturating_add(Weight::from_parts(0, 76).saturating_mul(z.into()))
+    }
+    /// Storage: System Account (r:2 w:2)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
+    /// Storage: ParachainStaking DelegatorState (r:2 w:2)
+    /// Proof Skipped: ParachainStaking DelegatorState (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
+    /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking AutoCompoundingDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking AutoCompoundingDelegations (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking TopDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking TopDelegations (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking BottomDelegations (r:1 w:1)
+    /// Proof Skipped: ParachainStaking BottomDelegations (max_values: None, max_size: None, mode: Measured)
+    /// Storage: Balances Locks (r:2 w:2)
+    /// Proof: Balances Locks (max_values: None, max_size: Some(1287), added: 3762, mode: MaxEncodedLen)
+    /// Storage: Balances Freezes (r:2 w:0)
+    /// Proof: Balances Freezes (max_values: None, max_size: Some(37), added: 2512, mode: MaxEncodedLen)
+    /// Storage: ParachainStaking DelegationScheduledRequests (r:1 w:1)
+    /// Proof Skipped: ParachainStaking DelegationScheduledRequests (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking CandidatePool (r:1 w:1)
+    /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
+    /// Storage: ParachainStaking Total (r:1 w:1)
+    /// Proof Skipped: ParachainStaking Total (max_values: Some(1), max_size: None, mode: Measured)
+    fn delegate_with_auto_compound_worst() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `48167`
+        //  Estimated: `54107`
+        // Minimum execution time: 276_584_000 picoseconds.
+        Weight::from_parts(279_594_000, 54107)
+            .saturating_add(T::DbWeight::get().reads(15_u64))
+            .saturating_add(T::DbWeight::get().writes(13_u64))
     }
     /// Storage: System Account (r:1 w:1)
-    /// Proof: System Account (max_values: None, max_size: Some(132), added: 2607, mode: MaxEncodedLen)
+    /// Proof: System Account (max_values: None, max_size: Some(116), added: 2591, mode: MaxEncodedLen)
     fn mint_collator_reward() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `139`
-        //  Estimated: `2607`
-        // Minimum execution time: 23_320 nanoseconds.
-        Weight::from_parts(28_710_000, 2607)
-            .saturating_add(T::DbWeight::get().reads(1))
-            .saturating_add(T::DbWeight::get().writes(1))
+        //  Measured:  `128`
+        //  Estimated: `3581`
+        // Minimum execution time: 28_741_000 picoseconds.
+        Weight::from_parts(29_344_000, 3581)
+            .saturating_add(T::DbWeight::get().reads(1_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
+    }
+    /// Storage: ParachainStaking EnableMarkingOffline (r:1 w:0)
+    /// Proof Skipped: ParachainStaking EnableMarkingOffline (max_values: Some(1), max_size: None, mode: Measured)
+    /// Storage: ParachainStaking TotalSelected (r:1 w:0)
+    /// Proof Skipped: ParachainStaking TotalSelected (max_values: Some(1), max_size: None, mode: Measured)
+    /// Storage: ParachainStaking SelectedCandidates (r:1 w:0)
+    /// Proof Skipped: ParachainStaking SelectedCandidates (max_values: Some(1), max_size: None, mode: Measured)
+    /// Storage: ParachainStaking AtStake (r:2 w:0)
+    /// Proof Skipped: ParachainStaking AtStake (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking AwardedPts (r:2 w:0)
+    /// Proof Skipped: ParachainStaking AwardedPts (max_values: None, max_size: None, mode: Measured)
+    /// Storage: MoonbeamOrbiters OrbiterPerRound (r:1 w:0)
+    /// Proof Skipped: MoonbeamOrbiters OrbiterPerRound (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking CandidateInfo (r:1 w:1)
+    /// Proof Skipped: ParachainStaking CandidateInfo (max_values: None, max_size: None, mode: Measured)
+    /// Storage: ParachainStaking CandidatePool (r:1 w:1)
+    /// Proof Skipped: ParachainStaking CandidatePool (max_values: Some(1), max_size: None, mode: Measured)
+    fn notify_inactive_collator() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `11494`
+        //  Estimated: `17434`
+        // Minimum execution time: 41_130_000 picoseconds.
+        Weight::from_parts(41_130_000, 0)
+            .saturating_add(Weight::from_parts(0, 17434))
+            .saturating_add(T::DbWeight::get().reads(10_u64))
+            .saturating_add(T::DbWeight::get().writes(2_u64))
     }
 }
