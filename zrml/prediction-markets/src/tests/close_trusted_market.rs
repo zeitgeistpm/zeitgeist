@@ -30,7 +30,7 @@ fn close_trusted_market_works() {
         let market_creator = ALICE;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(market_creator),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -80,7 +80,7 @@ fn fails_if_caller_is_not_market_creator() {
         let market_creator = ALICE;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(market_creator),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -110,7 +110,7 @@ fn close_trusted_market_fails_if_not_trusted() {
         let market_creator = ALICE;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(market_creator),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -156,7 +156,7 @@ fn close_trusted_market_fails_if_invalid_market_state(status: MarketStatus) {
         let market_creator = ALICE;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(market_creator),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..end),
@@ -195,20 +195,5 @@ fn fails_if_market_is_not_found() {
             PredictionMarkets::close_trusted_market(RuntimeOrigin::signed(ALICE), 3),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
         );
-    });
-}
-
-#[test]
-fn does_trigger_market_transition_api_permissionless() {
-    ExtBuilder::default().build().execute_with(|| {
-        StateTransitionMock::ensure_empty_state();
-        simple_create_categorical_market(
-            BaseAsset::Ztg,
-            MarketCreation::Permissionless,
-            1..2,
-            ScoringRule::AmmCdaHybrid,
-        );
-        assert_ok!(PredictionMarkets::close_market(&0));
-        assert!(StateTransitionMock::on_closure_triggered());
     });
 }

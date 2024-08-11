@@ -24,7 +24,7 @@ use zeitgeist_primitives::constants::MILLISECS_PER_BLOCK;
 #[test]
 fn on_market_close_auto_rejects_expired_advised_market() {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
-    let test = |base_asset: BaseAsset| {
+    let test = |base_asset: AssetOf<Runtime>| {
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the AdvisoryBond and the OracleBond gets unreserved, when the advised market expires.
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
@@ -60,20 +60,17 @@ fn on_market_close_auto_rejects_expired_advised_market() {
         System::assert_has_event(Event::MarketExpired(market_id).into());
     };
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::CampaignAsset(100));
-    });
-    ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::Ztg);
+        test(Asset::Ztg);
     });
     #[cfg(feature = "parachain")]
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::ForeignAsset(100));
+        test(Asset::ForeignAsset(100));
     });
 }
 
 #[test]
 fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
-    let test = |base_asset: BaseAsset| {
+    let test = |base_asset: AssetOf<Runtime>| {
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the AdvisoryBond and the OracleBond gets unreserved, when the advised market expires.
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
@@ -122,14 +119,11 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
         System::assert_has_event(Event::MarketExpired(market_id).into());
     };
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::CampaignAsset(100));
-    });
-    ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::Ztg);
+        test(Asset::Ztg);
     });
     #[cfg(feature = "parachain")]
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::ForeignAsset(100));
+        test(Asset::ForeignAsset(100));
     });
 }
 
@@ -140,7 +134,7 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Block(0..end),
@@ -172,7 +166,7 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),
@@ -212,7 +206,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),
@@ -225,7 +219,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
         ));
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),
@@ -263,7 +257,7 @@ fn on_market_close_market_status_manager_exceeds_max_recovery_time_frames_after_
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),
@@ -276,7 +270,7 @@ fn on_market_close_market_status_manager_exceeds_max_recovery_time_frames_after_
         ));
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             ALICE,
             MarketPeriod::Timestamp(0..end),

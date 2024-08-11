@@ -819,7 +819,6 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-tx-payment",
- "pallet-assets",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -882,7 +881,6 @@ dependencies = [
  "test-case",
  "xcm-emulator",
  "zeitgeist-primitives",
- "zrml-asset-router",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
@@ -1460,7 +1458,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "pallet-asset-tx-payment",
- "pallet-assets",
  "pallet-author-inherent",
  "pallet-author-mapping",
  "pallet-author-slot-filter",
@@ -6137,7 +6134,7 @@ dependencies = [
 [[package]]
 name = "pallet-assets"
 version = "4.0.0-dev"
-source = "git+https://github.com/zeitgeistpm/polkadot-sdk?branch=zeitgeist-polkadot-v1.1.0#6dd8bed6e375b6310fb990b7baa5a30f5f7ccada"
+source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#39482e78cc1580c9f16a8f8d8261baf914ab5559"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -14940,7 +14937,6 @@ dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
- "impl-trait-for-tuples",
  "more-asserts",
  "num-traits",
  "orml-currencies",
@@ -14989,7 +14985,6 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-tx-payment",
- "pallet-assets",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -15050,7 +15045,6 @@ dependencies = [
  "test-case",
  "xcm-emulator",
  "zeitgeist-primitives",
- "zrml-asset-router",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
@@ -15106,26 +15100,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.60",
-]
-
-[[package]]
-name = "zrml-asset-router"
-version = "0.5.3"
-dependencies = [
- "frame-support",
- "frame-system",
- "log",
- "orml-tokens",
- "orml-traits",
- "pallet-assets",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
- "test-case",
- "zeitgeist-macros",
- "zeitgeist-primitives",
 ]
 
 [[package]]
@@ -15208,7 +15182,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
- "pallet-assets",
  "pallet-balances",
  "pallet-insecure-randomness-collective-flip",
  "pallet-timestamp",
@@ -15223,7 +15196,6 @@ dependencies = [
  "staging-xcm-builder",
  "test-case",
  "zeitgeist-primitives",
- "zrml-asset-router",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
@@ -15292,7 +15264,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
- "pallet-assets",
  "pallet-balances",
  "pallet-insecure-randomness-collective-flip",
  "pallet-timestamp",
@@ -15309,7 +15280,6 @@ dependencies = [
  "test-case",
  "typenum",
  "zeitgeist-primitives",
- "zrml-asset-router",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
@@ -15333,7 +15303,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
- "pallet-assets",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -15341,9 +15310,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "test-case",
- "zeitgeist-macros",
  "zeitgeist-primitives",
- "zrml-asset-router",
  "zrml-market-commons",
  "zrml-orderbook",
 ]
@@ -15371,7 +15338,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
- "pallet-assets",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -15379,9 +15345,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "test-case",
- "zeitgeist-macros",
  "zeitgeist-primitives",
- "zrml-asset-router",
  "zrml-market-commons",
 ]
 
@@ -15400,7 +15364,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
- "pallet-assets",
  "pallet-balances",
  "pallet-insecure-randomness-collective-flip",
  "pallet-timestamp",
@@ -15415,7 +15378,6 @@ dependencies = [
  "staging-xcm",
  "test-case",
  "zeitgeist-primitives",
- "zrml-asset-router",
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",

@@ -176,7 +176,7 @@ fn create_market<T: Config>(
 ) -> MarketIdOf<T> {
     let market = Market {
         market_id: 0u8.into(),
-        base_asset: base_asset.try_into().unwrap(),
+        base_asset,
         creation: MarketCreation::Permissionless,
         creator_fee: Perbill::zero(),
         creator: caller.clone(),

@@ -30,7 +30,7 @@ use sp_runtime::DispatchError;
 fn fails_if_market_status_is_not_proposed(market_status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            BaseAsset::Ztg,
+            Asset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::AmmCdaHybrid,
@@ -54,7 +54,7 @@ fn fails_if_market_status_is_not_proposed(market_status: MarketStatus) {
 fn it_allows_advisory_origin_to_approve_markets() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(
-            BaseAsset::Ztg,
+            Asset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::AmmCdaHybrid,
@@ -84,7 +84,7 @@ fn market_with_edit_request_cannot_be_approved() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(
-            BaseAsset::Ztg,
+            Asset::Ztg,
             MarketCreation::Advised,
             0..2,
             ScoringRule::AmmCdaHybrid,
@@ -113,7 +113,7 @@ fn market_with_edit_request_cannot_be_approved() {
 #[test]
 fn approve_market_correctly_unreserves_advisory_bond() {
     // NOTE: Bonds are always in ZTG, irrespective of base_asset.
-    let test = |base_asset: BaseAsset| {
+    let test = |base_asset: AssetOf<Runtime>| {
         reserve_sentinel_amounts();
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
@@ -141,31 +141,10 @@ fn approve_market_correctly_unreserves_advisory_bond() {
         assert!(market.bonds.creation.unwrap().is_settled);
     };
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::CampaignAsset(100));
-    });
-    ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::Ztg);
+        test(Asset::Ztg);
     });
     #[cfg(feature = "parachain")]
     ExtBuilder::default().build().execute_with(|| {
-        test(BaseAsset::ForeignAsset(100));
-    });
-}
-
-#[test]
-fn does_trigger_market_transition_api() {
-    ExtBuilder::default().build().execute_with(|| {
-        StateTransitionMock::ensure_empty_state();
-        simple_create_categorical_market(
-            BaseAsset::Ztg,
-            MarketCreation::Advised,
-            1..2,
-            ScoringRule::AmmCdaHybrid,
-        );
-        assert_ok!(PredictionMarkets::approve_market(
-            RuntimeOrigin::signed(ApproveOrigin::get()),
-            0
-        ));
-        assert!(StateTransitionMock::on_activation_triggered());
+        test(Asset::ForeignAsset(100));
     });
 }

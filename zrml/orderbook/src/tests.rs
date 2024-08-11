@@ -17,15 +17,16 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{mock::*, utils::market_mock, Error, Event, Order, Orders};
-use frame_support::{assert_noop, assert_ok, traits::fungibles::Create};
+use frame_support::{assert_noop, assert_ok};
 use orml_tokens::Error as AError;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_runtime::{DispatchError, Perbill, Perquintill, TokenError};
+use pallet_balances::Error as BError;
+use sp_runtime::{Perbill, Perquintill};
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
     hybrid_router_api_types::ExternalFee,
-    types::{Asset, BaseAsset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
+    types::{Asset, MarketStatus, MarketType, ScalarPosition, ScoringRule},
 };
 use zrml_market_commons::{Error as MError, MarketCommonsPalletApi, Markets};
 
@@ -44,7 +45,7 @@ fn place_order_fails_with_wrong_scoring_rule(scoring_rule: ScoringRule) {
             Orderbook::place_order(
                 RuntimeOrigin::signed(ALICE),
                 market_id,
-                market.base_asset.into(),
+                market.base_asset,
                 10 * BASE,
                 Asset::CategoricalOutcome(market_id, 2),
                 25 * BASE,
@@ -73,7 +74,7 @@ fn place_order_fails_if_market_status_not_active(status: MarketStatus) {
             Orderbook::place_order(
                 RuntimeOrigin::signed(ALICE),
                 market_id,
-                market.base_asset.into(),
+                market.base_asset,
                 10 * BASE,
                 Asset::CategoricalOutcome(0, 2),
                 25 * BASE,
@@ -94,7 +95,7 @@ fn fill_order_fails_if_market_status_not_active(status: MarketStatus) {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -127,7 +128,7 @@ fn fill_order_fails_if_amount_too_high_for_order() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -156,7 +157,7 @@ fn fill_order_fails_if_amount_is_below_minimum_balance() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -189,7 +190,7 @@ fn place_order_fails_if_amount_is_below_minimum_balance() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         assert_noop!(
@@ -225,7 +226,7 @@ fn fill_order_fails_if_balance_too_low() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -258,7 +259,7 @@ fn fill_order_fails_if_partial_fill_near_full_fill_not_allowed() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -273,7 +274,7 @@ fn fill_order_fails_if_partial_fill_near_full_fill_not_allowed() {
             taker_amount,
         ));
 
-        assert_ok!(AssetManager::deposit(taker_asset, &BOB, taker_amount));
+        AssetManager::deposit(taker_asset, &BOB, taker_amount).unwrap();
 
         assert_noop!(
             Orderbook::fill_order(
@@ -293,7 +294,7 @@ fn fill_order_removes_order() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -323,7 +324,7 @@ fn fill_order_partially_fills_order() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let order_id = 0u128;
@@ -370,37 +371,6 @@ fn fill_order_partially_fills_order() {
 }
 
 #[test]
-fn fill_order_does_work_with_reserves_after_funding_order_account() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0u128;
-        let mut market = market_mock::<Runtime>();
-        market.base_asset = BaseAsset::Ztg;
-        Markets::<Runtime>::insert(market_id, market.clone());
-
-        let maker_asset = market.base_asset.into();
-        let taker_asset = Asset::CategoricalOutcome(0, 2);
-        let taker_amount = 10 * BASE;
-        let maker_amount = 250 * BASE;
-
-        assert_ok!(AssetManager::deposit(maker_asset, &ALICE, maker_amount));
-        assert_ok!(AssetManager::deposit(taker_asset, &BOB, taker_amount));
-        assert_ok!(Orderbook::place_order(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            maker_asset,
-            maker_amount,
-            taker_asset,
-            taker_amount,
-        ));
-
-        let reserved_funds = AssetManager::reserved_balance(maker_asset, &ALICE);
-        assert_eq!(reserved_funds, maker_amount);
-        assert_ok!(AssetManager::deposit(maker_asset, &Orderbook::order_account(0), BASE));
-        assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(BOB), 0, None));
-    });
-}
-
-#[test]
 fn place_order_fails_if_market_base_asset_not_present() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
@@ -433,7 +403,7 @@ fn place_order_fails_if_invalid_outcome_asset() {
 
         assert_eq!(market.market_type, MarketType::Categorical(64u16));
         let maker_asset = Asset::ScalarOutcome(0, ScalarPosition::Long);
-        let taker_asset = market.base_asset.into();
+        let taker_asset = market.base_asset;
 
         assert_noop!(
             Orderbook::place_order(
@@ -479,7 +449,7 @@ fn place_order_fails_if_maker_has_insufficient_funds() {
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let maker = ALICE;
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 2);
         let alice_free_maker_amount = AssetManager::free_balance(maker_asset, &maker);
 
@@ -494,7 +464,7 @@ fn place_order_fails_if_maker_has_insufficient_funds() {
                 taker_asset,
                 25 * BASE,
             ),
-            DispatchError::Token(TokenError::FundsUnavailable)
+            BError::<Runtime>::InsufficientBalance,
         );
     });
 }
@@ -515,16 +485,11 @@ fn it_fails_order_does_not_exist() {
     });
 }
 
-#[test_case(true; "with_reservable_asset")]
-#[test_case(false; "with_non_reservable_asset")]
-fn it_places_orders(reservable_maker_asset: bool) {
+#[test]
+fn it_places_orders() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        let mut market = market_mock::<Runtime>();
-        if !reservable_maker_asset {
-            market.base_asset = BaseAsset::CampaignAsset(0);
-            assert_ok!(AssetRouter::create(market.base_asset.into(), ALICE, true, 1));
-        }
+        let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let taker_asset_0 = Asset::CategoricalOutcome(0, 2);
@@ -532,24 +497,18 @@ fn it_places_orders(reservable_maker_asset: bool) {
         let taker_amount = 10 * BASE;
         let maker_amount = 250 * BASE;
 
-        assert_ok!(AssetManager::deposit(market.base_asset.into(), &ALICE, maker_amount));
+        assert_ok!(AssetManager::deposit(market.base_asset, &ALICE, maker_amount));
 
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(ALICE),
             market_id,
-            market.base_asset.into(),
+            market.base_asset,
             maker_amount,
             taker_asset_0,
             taker_amount,
         ));
 
-        let reserved_funds = if reservable_maker_asset {
-            AssetManager::reserved_balance(market.base_asset.into(), &ALICE)
-        } else {
-            let order_account = Orderbook::order_account(0);
-            assert_eq!(AssetManager::free_balance(market.base_asset.into(), &BOB), 0);
-            AssetManager::free_balance(market.base_asset.into(), &order_account)
-        };
+        let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
         assert_eq!(reserved_funds, maker_amount);
 
         let maker_asset = Asset::CategoricalOutcome(0, 1);
@@ -563,7 +522,7 @@ fn it_places_orders(reservable_maker_asset: bool) {
             market_id,
             maker_asset,
             maker_amount,
-            market.base_asset.into(),
+            market.base_asset,
             taker_amount,
         ));
 
@@ -580,7 +539,7 @@ fn it_fills_order_fully_maker_outcome_asset() {
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let maker_asset = Asset::CategoricalOutcome(0, 1);
-        let taker_asset = market.base_asset.into();
+        let taker_asset = market.base_asset;
 
         let maker_amount = 100 * BASE;
         let taker_amount = 500 * BASE;
@@ -633,32 +592,25 @@ fn it_fills_order_fully_maker_outcome_asset() {
         assert_eq!(alice_maker_asset_free, INITIAL_BALANCE);
         assert_eq!(alice_taker_asset_free, maker_amount);
 
-        let bob_taker_asset_free = AssetManager::free_balance(market.base_asset.into(), &BOB);
+        let bob_taker_asset_free = AssetManager::free_balance(market.base_asset, &BOB);
         let bob_maker_asset_free = AssetManager::free_balance(maker_asset, &BOB);
         assert_eq!(bob_taker_asset_free, INITIAL_BALANCE + taker_amount - taker_fees);
         assert_eq!(bob_maker_asset_free, 0);
     });
 }
 
-#[test_case(true; "with_reservable_asset")]
-#[test_case(false; "with_non_reservable_asset")]
-fn it_fills_order_fully_maker_base_asset(reservable_maker_asset: bool) {
+#[test]
+fn it_fills_order_fully_maker_base_asset() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        let mut market = market_mock::<Runtime>();
-        let taker_amount = 10 * BASE;
-        let maker_amount = 50 * BASE;
-
-        if !reservable_maker_asset {
-            market.base_asset = BaseAsset::CampaignAsset(0);
-            assert_ok!(AssetRouter::create(market.base_asset.into(), BOB, true, 1));
-            assert_ok!(AssetManager::deposit(market.base_asset.into(), &BOB, maker_amount));
-        }
-
+        let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 1);
+
+        let taker_amount = 10 * BASE;
+        let maker_amount = 50 * BASE;
 
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(BOB),
@@ -669,14 +621,8 @@ fn it_fills_order_fully_maker_base_asset(reservable_maker_asset: bool) {
             taker_amount,
         ));
 
-        let reserved_funds = if reservable_maker_asset {
-            AssetManager::reserved_balance(market.base_asset.into(), &BOB)
-        } else {
-            let order_account = Orderbook::order_account(0);
-            assert_eq!(AssetManager::free_balance(market.base_asset.into(), &BOB), 0);
-            AssetManager::free_balance(market.base_asset.into(), &order_account)
-        };
-        assert_eq!(reserved_funds, maker_amount);
+        let reserved_bob = AssetManager::reserved_balance(maker_asset, &BOB);
+        assert_eq!(reserved_bob, maker_amount);
 
         let order_id = 0u128;
         assert_ok!(AssetManager::deposit(taker_asset, &ALICE, taker_amount));
@@ -706,48 +652,31 @@ fn it_fills_order_fully_maker_base_asset(reservable_maker_asset: bool) {
         let alice_taker_asset_free = AssetManager::free_balance(taker_asset, &ALICE);
         let maker_fees = calculate_fee::<Runtime>(maker_amount);
         let maker_amount_minus_fees = maker_amount - maker_fees;
-
-        if reservable_maker_asset {
-            assert_eq!(alice_maker_asset_free, INITIAL_BALANCE + maker_amount_minus_fees);
-        } else {
-            assert_eq!(alice_maker_asset_free, maker_amount_minus_fees);
-        }
-
+        assert_eq!(alice_maker_asset_free, INITIAL_BALANCE + maker_amount_minus_fees);
         assert_eq!(alice_taker_asset_free, 0);
 
         let bob_bal = AssetManager::free_balance(maker_asset, &BOB);
         let bob_shares = AssetManager::free_balance(taker_asset, &BOB);
-
-        if reservable_maker_asset {
-            assert_eq!(bob_bal, INITIAL_BALANCE - maker_amount);
-        } else {
-            assert_eq!(bob_bal, 0);
-        }
-
+        assert_eq!(bob_bal, INITIAL_BALANCE - maker_amount);
         assert_eq!(bob_shares, taker_amount);
     });
 }
 
-#[test_case(true; "with_reservable_asset")]
-#[test_case(false; "with_non_reservable_asset")]
-fn it_fills_order_partially_maker_base_asset(reservable_maker_asset: bool) {
+#[test]
+fn it_fills_order_partially_maker_base_asset() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        let mut market = market_mock::<Runtime>();
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 1);
+
         let maker_amount = 500 * BASE;
         let taker_amount = 100 * BASE;
 
-        if !reservable_maker_asset {
-            market.base_asset = BaseAsset::CampaignAsset(0);
-            assert_ok!(AssetRouter::create(market.base_asset.into(), BOB, true, 1));
-        }
-
-        Markets::<Runtime>::insert(market_id, market.clone());
-
-        let maker_asset = market.base_asset.into();
-        let taker_asset = Asset::CategoricalOutcome(0, 1);
-
         assert_ok!(AssetManager::deposit(maker_asset, &BOB, maker_amount));
+
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(BOB),
             market_id,
@@ -757,14 +686,8 @@ fn it_fills_order_partially_maker_base_asset(reservable_maker_asset: bool) {
             taker_amount,
         ));
 
-        let reserved_funds = if reservable_maker_asset {
-            AssetManager::reserved_balance(market.base_asset.into(), &BOB)
-        } else {
-            let order_account = Orderbook::order_account(0);
-            assert_eq!(AssetManager::free_balance(market.base_asset.into(), &BOB), 0);
-            AssetManager::free_balance(market.base_asset.into(), &order_account)
-        };
-        assert_eq!(reserved_funds, maker_amount);
+        let reserved_bob = AssetManager::reserved_balance(maker_asset, &BOB);
+        assert_eq!(reserved_bob, maker_amount);
 
         let order_id = 0u128;
         assert_ok!(AssetManager::deposit(taker_asset, &ALICE, taker_amount));
@@ -824,34 +747,16 @@ fn it_fills_order_partially_maker_base_asset(reservable_maker_asset: bool) {
             Perquintill::from_rational(alice_portion, taker_amount).mul_floor(maker_amount);
         let filled_maker_amount_minus_fees =
             filled_maker_amount - calculate_fee::<Runtime>(filled_maker_amount);
-
-        if reservable_maker_asset {
-            assert_eq!(alice_maker_asset_free, INITIAL_BALANCE + filled_maker_amount_minus_fees);
-        } else {
-            assert_eq!(alice_maker_asset_free, filled_maker_amount_minus_fees);
-        }
-
+        assert_eq!(alice_maker_asset_free, INITIAL_BALANCE + filled_maker_amount_minus_fees);
         assert_eq!(alice_taker_asset_free, alice_taker_asset_free_left);
 
         let bob_maker_asset_free = AssetManager::free_balance(maker_asset, &BOB);
         let bob_taker_asset_free = AssetManager::free_balance(taker_asset, &BOB);
-
-        if reservable_maker_asset {
-            assert_eq!(bob_maker_asset_free, INITIAL_BALANCE);
-        } else {
-            assert_eq!(bob_maker_asset_free, 0);
-        }
-
+        assert_eq!(bob_maker_asset_free, INITIAL_BALANCE);
         assert_eq!(bob_taker_asset_free, alice_portion);
 
-        if reservable_maker_asset {
-            let reserved_bob = AssetManager::reserved_balance(maker_asset, &BOB);
-            assert_eq!(reserved_bob, unfilled_maker_amount);
-        } else {
-            let order_account = Orderbook::order_account(0);
-            let remaining = AssetManager::free_balance(maker_asset, &order_account);
-            assert_eq!(remaining, unfilled_maker_amount);
-        }
+        let reserved_bob = AssetManager::reserved_balance(maker_asset, &BOB);
+        assert_eq!(reserved_bob, unfilled_maker_amount);
     });
 }
 
@@ -863,7 +768,7 @@ fn it_fills_order_partially_maker_outcome_asset() {
         Markets::<Runtime>::insert(market_id, market.clone());
 
         let maker_asset = Asset::CategoricalOutcome(0, 1);
-        let taker_asset = market.base_asset.into();
+        let taker_asset = market.base_asset;
 
         let maker_amount = 100 * BASE;
         let taker_amount = 500 * BASE;
@@ -885,7 +790,7 @@ fn it_fills_order_partially_maker_outcome_asset() {
 
         let order_id = 0u128;
         let market_creator_free_balance_before =
-            AssetManager::free_balance(market.base_asset.into(), &MARKET_CREATOR);
+            AssetManager::free_balance(market.base_asset, &MARKET_CREATOR);
 
         // instead of buying 500 of the base asset, Alice buys 70 shares
         let alice_portion = 70 * BASE;
@@ -893,7 +798,7 @@ fn it_fills_order_partially_maker_outcome_asset() {
         assert_ok!(Orderbook::fill_order(RuntimeOrigin::signed(ALICE), order_id, portion,));
 
         let market_creator_free_balance_after =
-            AssetManager::free_balance(market.base_asset.into(), &MARKET_CREATOR);
+            AssetManager::free_balance(market.base_asset, &MARKET_CREATOR);
         let external_fee_amount = calculate_fee::<Runtime>(70 * BASE);
         assert_eq!(
             market_creator_free_balance_after - market_creator_free_balance_before,
@@ -955,24 +860,18 @@ fn it_fills_order_partially_maker_outcome_asset() {
     });
 }
 
-#[test_case(true; "with_reservable_asset")]
-#[test_case(false; "with_non_reservable_asset")]
-fn it_removes_order(reservable_maker_asset: bool) {
+#[test]
+fn it_removes_order() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        let mut market = market_mock::<Runtime>();
+        let market = market_mock::<Runtime>();
+        Markets::<Runtime>::insert(market_id, market.clone());
+
+        let maker_asset = market.base_asset;
+        let taker_asset = Asset::CategoricalOutcome(0, 2);
+
         let taker_amount = 25 * BASE;
         let maker_amount = 10 * BASE;
-
-        if !reservable_maker_asset {
-            market.base_asset = BaseAsset::CampaignAsset(0);
-            assert_ok!(AssetRouter::create(market.base_asset.into(), ALICE, true, 1));
-            assert_ok!(AssetManager::deposit(market.base_asset.into(), &ALICE, maker_amount));
-        }
-
-        Markets::<Runtime>::insert(market_id, market.clone());
-        let maker_asset = market.base_asset.into();
-        let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(ALICE),
@@ -983,13 +882,7 @@ fn it_removes_order(reservable_maker_asset: bool) {
             taker_amount,
         ));
 
-        let reserved_funds = if reservable_maker_asset {
-            AssetManager::reserved_balance(market.base_asset.into(), &ALICE)
-        } else {
-            let order_account = Orderbook::order_account(0);
-            assert_eq!(AssetManager::free_balance(market.base_asset.into(), &BOB), 0);
-            AssetManager::free_balance(market.base_asset.into(), &order_account)
-        };
+        let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
         assert_eq!(reserved_funds, maker_amount);
 
         let order_id = 0u128;
@@ -999,16 +892,12 @@ fn it_removes_order(reservable_maker_asset: bool) {
             Order { market_id, maker: ALICE, maker_asset, maker_amount, taker_asset, taker_amount }
         );
 
+        let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
+        assert_eq!(reserved_funds, maker_amount);
+
         assert_ok!(Orderbook::remove_order(RuntimeOrigin::signed(ALICE), order_id));
 
-        let reserved_funds = if reservable_maker_asset {
-            AssetManager::reserved_balance(market.base_asset.into(), &ALICE)
-        } else {
-            let order_account = Orderbook::order_account(0);
-            let alice_balance = AssetManager::free_balance(market.base_asset.into(), &ALICE);
-            assert_eq!(alice_balance, maker_amount);
-            AssetManager::free_balance(market.base_asset.into(), &order_account)
-        };
+        let reserved_funds = AssetManager::reserved_balance(market.base_asset, &ALICE);
         assert_eq!(reserved_funds, 0);
 
         assert!(Orders::<Runtime>::get(order_id).is_none());
@@ -1022,7 +911,7 @@ fn remove_order_emits_event() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let taker_amount = 25 * BASE;
@@ -1052,7 +941,7 @@ fn remove_order_fails_if_not_order_creator() {
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let taker_amount = 25 * BASE;
@@ -1077,46 +966,13 @@ fn remove_order_fails_if_not_order_creator() {
 }
 
 #[test]
-fn remove_order_does_work_with_reserves_after_funding_order_account() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = 0u128;
-        let mut market = market_mock::<Runtime>();
-        market.base_asset = BaseAsset::Ztg;
-        Markets::<Runtime>::insert(market_id, market.clone());
-
-        let maker_asset = market.base_asset.into();
-        let taker_asset = Asset::CategoricalOutcome(0, 2);
-        let taker_amount = 10 * BASE;
-        let maker_amount = 250 * BASE;
-
-        assert_ok!(AssetManager::deposit(maker_asset, &ALICE, maker_amount));
-        assert_ok!(AssetManager::deposit(taker_asset, &BOB, taker_amount));
-        assert_ok!(Orderbook::place_order(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            maker_asset,
-            maker_amount,
-            taker_asset,
-            taker_amount,
-        ));
-
-        let mut reserved_funds = AssetManager::reserved_balance(maker_asset, &ALICE);
-        assert_eq!(reserved_funds, maker_amount);
-        assert_ok!(AssetManager::deposit(maker_asset, &Orderbook::order_account(0), BASE));
-        assert_ok!(Orderbook::remove_order(RuntimeOrigin::signed(ALICE), 0));
-        reserved_funds = AssetManager::reserved_balance(maker_asset, &ALICE);
-        assert_eq!(reserved_funds, 0);
-    });
-}
-
-#[test]
 fn place_order_emits_event() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(market_id, market.clone());
 
-        let maker_asset = market.base_asset.into();
+        let maker_asset = market.base_asset;
         let taker_asset = Asset::CategoricalOutcome(0, 2);
 
         let taker_amount = 25 * BASE;

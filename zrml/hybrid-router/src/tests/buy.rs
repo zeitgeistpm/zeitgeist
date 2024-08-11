@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
+use zeitgeist_primitives::types::Asset;
 
 #[test]
 fn buy_from_amm_and_then_fill_specified_order() {
@@ -34,7 +35,7 @@ fn buy_from_amm_and_then_fill_specified_order() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
         let order_maker_amount = _12;
@@ -87,7 +88,7 @@ fn buy_from_amm_and_then_fill_specified_order() {
             Order {
                 market_id,
                 maker: CHARLIE,
-                maker_asset: Assets::CategoricalOutcome(market_id, 0),
+                maker_asset: Asset::CategoricalOutcome(market_id, 0),
                 maker_amount: 85665315968,
                 taker_asset: BASE_ASSET,
                 taker_amount: unfilled_base_asset_amount,
@@ -115,7 +116,7 @@ fn buy_from_amm_if_specified_order_has_higher_prices_than_the_amm() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
         let order_maker_amount = _4;
@@ -153,7 +154,7 @@ fn buy_from_amm_if_specified_order_has_higher_prices_than_the_amm() {
             Order {
                 market_id,
                 maker: CHARLIE,
-                maker_asset: Assets::CategoricalOutcome(market_id, 0),
+                maker_asset: Asset::CategoricalOutcome(market_id, 0),
                 maker_amount: _4,
                 taker_asset: BASE_ASSET,
                 taker_amount: _2,
@@ -178,7 +179,7 @@ fn buy_fill_multiple_orders_if_amm_spot_price_higher_than_order_prices() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
 
         let order_maker_amount = _1;
@@ -237,7 +238,7 @@ fn buy_fill_specified_order_partially_if_amm_spot_price_higher() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
         let order_maker_amount = _8;
@@ -276,7 +277,7 @@ fn buy_fill_specified_order_partially_if_amm_spot_price_higher() {
             Order {
                 market_id,
                 maker: CHARLIE,
-                maker_asset: Assets::CategoricalOutcome(market_id, 0),
+                maker_asset: Asset::CategoricalOutcome(market_id, 0),
                 maker_amount: _4,
                 taker_asset: BASE_ASSET,
                 taker_amount: _2,
@@ -301,7 +302,7 @@ fn buy_fails_if_asset_not_equal_to_order_book_maker_asset() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
         let order_maker_amount = _1;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &CHARLIE, order_maker_amount));
@@ -311,7 +312,7 @@ fn buy_fails_if_asset_not_equal_to_order_book_maker_asset() {
             market_id,
             BASE_ASSET,
             order_maker_amount,
-            Assets::CategoricalOutcome(market_id, 0),
+            Asset::CategoricalOutcome(market_id, 0),
             _2,
         ));
 
@@ -354,7 +355,7 @@ fn buy_fails_if_order_price_above_max_price() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
 
         let order_maker_amount = _1;
@@ -362,7 +363,7 @@ fn buy_fails_if_order_price_above_max_price() {
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
-            Assets::CategoricalOutcome(market_id, 0),
+            Asset::CategoricalOutcome(market_id, 0),
             order_maker_amount,
             BASE_ASSET,
             _2,
@@ -407,7 +408,7 @@ fn buy_from_amm() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
         let max_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -456,7 +457,7 @@ fn buy_max_price_lower_than_amm_spot_price_results_in_place_order() {
         let market = Markets::<Runtime>::get(market_id).unwrap();
         let base_asset = market.base_asset;
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
         //*  max_price is just 1 smaller than the spot price of the AMM
         //*  this results in no buy on the AMM, but places an order on the order book
@@ -483,7 +484,7 @@ fn buy_max_price_lower_than_amm_spot_price_results_in_place_order() {
             Order {
                 market_id,
                 maker: ALICE,
-                maker_asset: base_asset.into(),
+                maker_asset: base_asset,
                 maker_amount: _2,
                 taker_asset: asset,
                 taker_amount: _4,
@@ -510,7 +511,7 @@ fn buy_from_amm_but_low_amount() {
         let market = Markets::<Runtime>::get(market_id).unwrap();
         let base_asset = market.base_asset;
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _2;
         //*  max_price is just 1 larger than the spot price of the AMM
         //*  this results in a low buy amount_in on the AMM
@@ -550,7 +551,7 @@ fn buy_from_amm_but_low_amount() {
             Order {
                 market_id,
                 maker: ALICE,
-                maker_asset: base_asset.into(),
+                maker_asset: base_asset,
                 maker_amount: 19999999970,
                 taker_asset: asset,
                 taker_amount: 39999999933,
@@ -575,7 +576,7 @@ fn buy_from_amm_only() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _2;
         let max_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -623,7 +624,7 @@ fn buy_places_limit_order_no_pool() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -648,7 +649,7 @@ fn buy_places_limit_order_no_pool() {
             Order {
                 market_id,
                 maker: ALICE,
-                maker_asset: base_asset.into(),
+                maker_asset: base_asset,
                 maker_amount: 10 * BASE,
                 taker_asset: asset,
                 taker_amount: 20 * BASE,
@@ -670,7 +671,7 @@ fn buy_fails_if_balance_too_low() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
 
         assert_eq!(Balances::set_balance(&ALICE, amount - 1), amount - 1);
@@ -710,7 +711,7 @@ fn buy_emits_event() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount_in = _1000 * 100;
 
         assert_ok!(AssetManager::deposit(BASE_ASSET, &ALICE, amount_in));
@@ -780,7 +781,7 @@ fn buy_fails_if_asset_count_mismatch() {
 
         let asset_count = 2;
         assert_ne!(required_asset_count, asset_count);
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 2 * BASE;
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -814,7 +815,7 @@ fn buy_fails_if_price_limit_too_high() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
         let max_price = (BASE + 1).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -848,7 +849,7 @@ fn buy_succeeds_for_place_order_below_minimum_balance_soft_failure() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 1;
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -887,7 +888,7 @@ fn buy_succeeds_for_numerical_soft_failure() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _1_100;
 
         let max_price = (_3_4).saturated_into::<BalanceOf<Runtime>>();
@@ -912,7 +913,7 @@ fn buy_succeeds_for_numerical_soft_failure() {
                 maker: ALICE,
                 maker_asset: BASE_ASSET,
                 maker_amount: _1_100,
-                taker_asset: Assets::CategoricalOutcome(market_id, 0),
+                taker_asset: Asset::CategoricalOutcome(market_id, 0),
                 taker_amount: 133333334,
             }
         );
@@ -935,7 +936,7 @@ fn buy_just_one_unit_from_amm() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 1;
 
         let order_maker_amount = _2;
@@ -943,7 +944,7 @@ fn buy_just_one_unit_from_amm() {
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
-            Assets::CategoricalOutcome(market_id, 0),
+            Asset::CategoricalOutcome(market_id, 0),
             order_maker_amount,
             BASE_ASSET,
             _1,
@@ -956,6 +957,8 @@ fn buy_just_one_unit_from_amm() {
         let max_price = (_1_2 + 1).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![order_id];
         let strategy = Strategy::LimitOrder;
+        // Prevent ED error by giving Alice some extra tokens.
+        assert_ok!(AssetManager::deposit(asset, &ALICE, _1));
         assert_ok!(HybridRouter::buy(
             RuntimeOrigin::signed(ALICE),
             market_id,
@@ -973,7 +976,7 @@ fn buy_just_one_unit_from_amm() {
             Order {
                 market_id,
                 maker: CHARLIE,
-                maker_asset: Assets::CategoricalOutcome(market_id, 0),
+                maker_asset: Asset::CategoricalOutcome(market_id, 0),
                 maker_amount: _2,
                 taker_asset: BASE_ASSET,
                 taker_amount: _1,
@@ -998,7 +1001,7 @@ fn buy_succeeds_for_fill_order_below_minimum_balance_soft_failure() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 1;
 
         let order_maker_amount = _2;
@@ -1006,7 +1009,7 @@ fn buy_succeeds_for_fill_order_below_minimum_balance_soft_failure() {
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
-            Assets::CategoricalOutcome(market_id, 0),
+            Asset::CategoricalOutcome(market_id, 0),
             order_maker_amount,
             BASE_ASSET,
             _1,
@@ -1019,6 +1022,8 @@ fn buy_succeeds_for_fill_order_below_minimum_balance_soft_failure() {
         let max_price = _3_4.saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![order_id];
         let strategy = Strategy::LimitOrder;
+        // Prevent ED error by giving Alice some extra tokens.
+        assert_ok!(AssetManager::deposit(asset, &ALICE, _1));
         assert_ok!(HybridRouter::buy(
             RuntimeOrigin::signed(ALICE),
             market_id,
@@ -1036,7 +1041,7 @@ fn buy_succeeds_for_fill_order_below_minimum_balance_soft_failure() {
             Order {
                 market_id,
                 maker: CHARLIE,
-                maker_asset: Assets::CategoricalOutcome(market_id, 0),
+                maker_asset: Asset::CategoricalOutcome(market_id, 0),
                 maker_amount: _2,
                 taker_asset: BASE_ASSET,
                 taker_amount: _1,
@@ -1061,7 +1066,7 @@ fn buy_succeeds_for_place_order_partial_fill_near_full_fill_not_allowed() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _1 - 1;
 
         let order_maker_amount = _2;
@@ -1069,7 +1074,7 @@ fn buy_succeeds_for_place_order_partial_fill_near_full_fill_not_allowed() {
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
-            Assets::CategoricalOutcome(market_id, 0),
+            Asset::CategoricalOutcome(market_id, 0),
             order_maker_amount,
             BASE_ASSET,
             _1,
@@ -1099,7 +1104,7 @@ fn buy_succeeds_for_place_order_partial_fill_near_full_fill_not_allowed() {
             Order {
                 market_id,
                 maker: CHARLIE,
-                maker_asset: Assets::CategoricalOutcome(market_id, 0),
+                maker_asset: Asset::CategoricalOutcome(market_id, 0),
                 maker_amount: _2,
                 taker_asset: BASE_ASSET,
                 taker_amount: _1,
@@ -1124,7 +1129,7 @@ fn buy_only_executes_first_order_from_orders_vector() {
             swap_fee,
         );
 
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = _1;
 
         let order_maker_amount = _2;
@@ -1132,7 +1137,7 @@ fn buy_only_executes_first_order_from_orders_vector() {
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(CHARLIE),
             market_id,
-            Assets::CategoricalOutcome(market_id, 0),
+            Asset::CategoricalOutcome(market_id, 0),
             order_maker_amount,
             BASE_ASSET,
             _1,
@@ -1143,7 +1148,7 @@ fn buy_only_executes_first_order_from_orders_vector() {
         assert_ok!(Orderbook::place_order(
             RuntimeOrigin::signed(DAVE),
             market_id,
-            Assets::CategoricalOutcome(market_id, 0),
+            Asset::CategoricalOutcome(market_id, 0),
             order_maker_amount,
             BASE_ASSET,
             _1,
@@ -1176,7 +1181,7 @@ fn buy_only_executes_first_order_from_orders_vector() {
             Order {
                 market_id,
                 maker: CHARLIE,
-                maker_asset: Assets::CategoricalOutcome(market_id, 0),
+                maker_asset: Asset::CategoricalOutcome(market_id, 0),
                 maker_amount: _2,
                 taker_asset: BASE_ASSET,
                 taker_amount: _1,
@@ -1190,7 +1195,7 @@ fn buy_skips_fill_order_if_order_not_present_and_places_new_order() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let mut market = market_mock::<Runtime>(MARKET_CREATOR);
-        market.base_asset = BASE_ASSET.try_into().unwrap();
+        market.base_asset = BASE_ASSET;
         let required_asset_count = match &market.market_type {
             MarketType::Scalar(_) => panic!("Categorical market type is expected!"),
             MarketType::Categorical(categories) => *categories,
@@ -1199,7 +1204,7 @@ fn buy_skips_fill_order_if_order_not_present_and_places_new_order() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![42];
@@ -1223,7 +1228,7 @@ fn buy_skips_fill_order_if_order_not_present_and_places_new_order() {
                 maker: ALICE,
                 maker_asset: BASE_ASSET,
                 maker_amount: 10 * BASE,
-                taker_asset: Assets::CategoricalOutcome(market_id, 0),
+                taker_asset: Asset::CategoricalOutcome(market_id, 0),
                 taker_amount: 20 * BASE,
             }
         );
@@ -1243,7 +1248,7 @@ fn buy_fails_if_max_orders_exceeded() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = (0u128..100u128 + 1u128).collect::<Vec<_>>();
@@ -1277,7 +1282,7 @@ fn buy_fails_if_amount_is_zero() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 0;
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -1311,7 +1316,7 @@ fn buy_fails_if_cancel_strategy_applied() {
         Markets::<Runtime>::insert(market_id, market);
 
         let asset_count = required_asset_count;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];
@@ -1337,7 +1342,7 @@ fn buy_fails_if_market_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0;
         let asset_count = 2;
-        let asset = Assets::CategoricalOutcome(market_id, 0);
+        let asset = Asset::CategoricalOutcome(market_id, 0);
         let amount = 10 * BASE;
         let max_price = (BASE / 2).saturated_into::<BalanceOf<Runtime>>();
         let orders = vec![];

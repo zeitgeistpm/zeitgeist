@@ -65,7 +65,7 @@ mod pallet {
         },
         orderbook::{Order, OrderId},
         traits::{HybridRouterAmmApi, HybridRouterOrderbookApi},
-        types::{Asset, BaseAsset},
+        types::Asset,
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -425,7 +425,7 @@ mod pallet {
             mut remaining: BalanceOf<T>,
             who: &AccountIdOf<T>,
             market_id: MarketIdOf<T>,
-            base_asset: BaseAsset,
+            base_asset: AssetOf<T>,
             asset: AssetOf<T>,
             price_limit: BalanceOf<T>,
         ) -> Result<OrderAmmTradesInfo<T>, DispatchError> {
@@ -441,7 +441,7 @@ mod pallet {
                     Err(_) => continue,
                 };
 
-                let order_price = order.price(base_asset.into())?;
+                let order_price = order.price(base_asset)?;
 
                 match tx_type {
                     TxType::Buy => {
@@ -596,8 +596,8 @@ mod pallet {
             ensure!(asset_count as usize == assets.len(), Error::<T>::AssetCountMismatch);
 
             let (asset_in, asset_out) = match tx_type {
-                TxType::Buy => (market.base_asset.into(), asset),
-                TxType::Sell => (asset, market.base_asset.into()),
+                TxType::Buy => (market.base_asset, asset),
+                TxType::Sell => (asset, market.base_asset),
             };
             T::AssetManager::ensure_can_withdraw(asset_in, &who, amount_in)?;
 
@@ -638,7 +638,7 @@ mod pallet {
             if !remaining.is_zero() {
                 let (maker_asset, maker_amount, taker_asset, taker_amount) = match tx_type {
                     TxType::Buy => {
-                        let maker_asset = market.base_asset.into();
+                        let maker_asset = market.base_asset;
                         let maker_amount = remaining;
                         let taker_asset = asset;
                         let taker_amount = remaining.bdiv_ceil(price_limit)?;
@@ -647,7 +647,7 @@ mod pallet {
                     TxType::Sell => {
                         let maker_asset = asset;
                         let maker_amount = remaining;
-                        let taker_asset = market.base_asset.into();
+                        let taker_asset = market.base_asset;
                         let taker_amount = price_limit.bmul_floor(remaining)?;
                         (maker_asset, maker_amount, taker_asset, taker_amount)
                     }

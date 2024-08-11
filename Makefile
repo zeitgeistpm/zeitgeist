@@ -36,7 +36,7 @@ try-runtime-upgrade-zeitgeist:
 	@$(MAKE) TRYRUNTIME_URL="wss://zeitgeist-rpc.dwellir.com:443" \
 	RUNTIME_PATH="./target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm" \
 	-- \
-	-execute--try-runtime
+	--execute-try-runtime
 
 build:
 	SKIP_WASM_BUILD= cargo build

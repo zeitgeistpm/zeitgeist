@@ -22,7 +22,7 @@ mod admin_move_market_to_closed;
 mod admin_move_market_to_resolved;
 mod approve_market;
 mod buy_complete_set;
-mod close_market;
+mod close_trusted_market;
 mod create_market;
 mod create_market_and_deploy_pool;
 mod dispute;
@@ -42,20 +42,20 @@ mod schedule_early_close;
 mod sell_complete_set;
 mod start_global_dispute;
 
-use crate::{mock::*, AccountIdOf, BalanceOf, Config, Error, Event, MarketIdsPerDisputeBlock};
-use core::ops::Range;
-use frame_support::{
-    assert_noop, assert_ok, storage::unhashed::get_or, traits::NamedReservableCurrency,
+use crate::{
+    mock::*, AccountIdOf, AssetOf, BalanceOf, Config, DeadlinesOf, Error, Event,
+    MarketIdsPerDisputeBlock,
 };
-use frame_system::pallet_prelude::BlockNumberFor;
+use core::ops::Range;
+use frame_support::{assert_noop, assert_ok, traits::NamedReservableCurrency};
 use orml_traits::MultiCurrency;
 use sp_arithmetic::Perbill;
 use sp_runtime::traits::{BlakeTwo256, Hash, Zero};
 use zeitgeist_primitives::{
     constants::mock::{BASE, CENT},
     types::{
-        Asset, BaseAsset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketId,
-        MarketPeriod, MarketStatus, MarketType, MultiHash, OutcomeReport, ScoringRule,
+        Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketId, MarketPeriod,
+        MarketStatus, MarketType, MultiHash, OutcomeReport, ScoringRule,
     },
 };
 use zrml_court::types::VoteItem;
@@ -63,36 +63,7 @@ use zrml_market_commons::MarketCommonsPalletApi;
 
 const SENTINEL_AMOUNT: u128 = BASE;
 
-impl StateTransitionMock {
-    pub(super) fn on_proposal_triggered() -> bool {
-        get_or(&ON_PROPOSAL_STORAGE, false)
-    }
-    pub(super) fn on_activation_triggered() -> bool {
-        get_or(&ON_ACTIVATION_STORAGE, false)
-    }
-    pub(super) fn on_closure_triggered() -> bool {
-        get_or(&ON_CLOSURE_STORAGE, false)
-    }
-    pub(super) fn on_report_triggered() -> bool {
-        get_or(&ON_REPORT_STORAGE, false)
-    }
-    pub(super) fn on_dispute_triggered() -> bool {
-        get_or(&ON_DISPUTE_STORAGE, false)
-    }
-    pub(super) fn on_resolution_triggered() -> bool {
-        get_or(&ON_RESOLUTION_STORAGE, false)
-    }
-    pub(super) fn ensure_empty_state() {
-        assert!(!StateTransitionMock::on_proposal_triggered());
-        assert!(!StateTransitionMock::on_activation_triggered());
-        assert!(!StateTransitionMock::on_closure_triggered());
-        assert!(!StateTransitionMock::on_report_triggered());
-        assert!(!StateTransitionMock::on_dispute_triggered());
-        assert!(!StateTransitionMock::on_resolution_triggered());
-    }
-}
-
-fn get_deadlines() -> Deadlines<BlockNumberFor<Runtime>> {
+fn get_deadlines() -> DeadlinesOf<Runtime> {
     Deadlines {
         grace_period: 1_u32.into(),
         oracle_duration: <Runtime as Config>::MinOracleDuration::get(),
@@ -108,7 +79,7 @@ fn gen_metadata(byte: u8) -> MultiHash {
 }
 
 fn simple_create_categorical_market(
-    base_asset: BaseAsset,
+    base_asset: AssetOf<Runtime>,
     creation: MarketCreation,
     period: Range<u64>,
     scoring_rule: ScoringRule,
@@ -129,7 +100,7 @@ fn simple_create_categorical_market(
 }
 
 fn simple_create_scalar_market(
-    base_asset: BaseAsset,
+    base_asset: AssetOf<Runtime>,
     creation: MarketCreation,
     period: Range<u64>,
     scoring_rule: ScoringRule,

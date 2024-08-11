@@ -33,7 +33,7 @@ fn start_global_dispute_fails_on_wrong_mdm() {
         let end = 2;
         assert_ok!(PredictionMarkets::create_market(
             RuntimeOrigin::signed(ALICE),
-            BaseAsset::Ztg,
+            Asset::Ztg,
             Perbill::zero(),
             BOB,
             MarketPeriod::Block(0..2),

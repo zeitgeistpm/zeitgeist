@@ -20,26 +20,54 @@
 use crate::traits::ZeitgeistAssetEnumerator;
 use crate::{
     traits::PoolSharesId,
-    types::{CampaignAssetId, CategoryIndex, CustomAssetId, PoolId},
+    types::{CategoryIndex, PoolId},
 };
-use parity_scale_codec::{Compact, CompactAs, Decode, Encode, HasCompact, MaxEncodedLen};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use serde::{Deserialize, Serialize};
 
-pub use all_assets::Asset;
-pub use campaign_assets::CampaignAssetClass;
-pub use currencies::CurrencyClass;
-pub use custom_assets::CustomAssetClass;
-pub use market_assets::MarketAssetClass;
-pub use subsets::{BaseAssetClass, ParimutuelAssetClass, XcmAssetClass};
+/// The `Asset` enum represents all types of assets available in the Zeitgeist
+/// system.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Decode,
+    Default,
+    Deserialize,
+    Eq,
+    Encode,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    TypeInfo,
+)]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub enum Asset<MarketId> {
+    CategoricalOutcome(MarketId, CategoryIndex),
+    ScalarOutcome(MarketId, ScalarPosition),
+    CombinatorialOutcome,
+    PoolShare(PoolId),
+    #[default]
+    Ztg,
+    ForeignAsset(u32),
+    ParimutuelShare(MarketId, CategoryIndex),
+}
 
-mod all_assets;
-mod campaign_assets;
-mod currencies;
-mod custom_assets;
-mod market_assets;
-mod subsets;
-#[cfg(test)]
-mod tests;
+#[cfg(feature = "runtime-benchmarks")]
+impl<MarketId: MaxEncodedLen> ZeitgeistAssetEnumerator<MarketId> for Asset<MarketId> {
+    fn create_asset_id(t: MarketId) -> Self {
+        Asset::CategoricalOutcome(t, 0)
+    }
+}
+
+impl<MarketId: MaxEncodedLen> PoolSharesId<PoolId> for Asset<MarketId> {
+    fn pool_shares_id(pool_id: PoolId) -> Self {
+        Self::PoolShare(pool_id)
+    }
+}
 
 /// In a scalar market, users can either choose a `Long` position,
 /// meaning that they think the outcome will be closer to the upper bound
@@ -50,15 +78,15 @@ mod tests;
     Copy,
     Debug,
     Decode,
+    Deserialize,
     Eq,
     Encode,
     MaxEncodedLen,
     Ord,
     PartialEq,
     PartialOrd,
+    Serialize,
     TypeInfo,
-    serde::Deserialize,
-    serde::Serialize,
 )]
 #[serde(rename_all = "camelCase")]
 pub enum ScalarPosition {

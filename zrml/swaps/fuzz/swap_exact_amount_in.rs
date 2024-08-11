@@ -1,3 +1,4 @@
+// Copyright 2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -17,32 +18,27 @@
 
 #![no_main]
 
-use libfuzzer_sys::fuzz_target;
-use zrml_swaps::mock::{AssetManager, ExtBuilder, RuntimeOrigin, Swaps};
-
-use utils::SwapExactAmountInData;
 mod utils;
+
+use libfuzzer_sys::fuzz_target;
 use orml_traits::currency::MultiCurrency;
-use utils::construct_asset;
+use utils::{construct_asset, SwapExactAmountInData};
+use zrml_swaps::mock::{Currencies, ExtBuilder, RuntimeOrigin, Swaps};
 
 fuzz_target!(|data: SwapExactAmountInData| {
     let mut ext = ExtBuilder::default().build();
     ext.execute_with(|| {
         // ensure that the account origin has a sufficient balance
-        // use orml_traits::MultiCurrency; required for this
         for a in &data.pool_creation.assets {
-            let _ = AssetManager::deposit(
+            let _ = Currencies::deposit(
                 construct_asset(*a),
                 &data.pool_creation.origin,
                 data.pool_creation.amount,
             );
         }
         let pool_id = data.pool_creation.create_pool();
-        let _ = AssetManager::deposit(
-            construct_asset(data.asset_in),
-            &data.origin,
-            data.asset_amount_in,
-        );
+        let _ =
+            Currencies::deposit(construct_asset(data.asset_in), &data.origin, data.asset_amount_in);
         let _ = Swaps::swap_exact_amount_in(
             RuntimeOrigin::signed(data.origin),
             pool_id,

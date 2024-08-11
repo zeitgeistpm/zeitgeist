@@ -18,9 +18,9 @@
 
 use super::fees::{native_per_second, FixedConversionRateProvider};
 use crate::{
-    AccountId, AssetManager, AssetRegistry, Assets, Balance, MaxAssetsIntoHolding, MaxInstructions,
-    ParachainInfo, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork, RuntimeCall,
-    RuntimeOrigin, UnitWeightCost, UniversalLocation, UnknownTokens, XcmpQueue,
+    AccountId, AssetManager, AssetRegistry, Balance, CurrencyId, MaxAssetsIntoHolding,
+    MaxInstructions, ParachainInfo, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork,
+    RuntimeCall, RuntimeOrigin, UnitWeightCost, UniversalLocation, UnknownTokens, XcmpQueue,
     ZeitgeistTreasuryAccount,
 };
 
@@ -52,8 +52,8 @@ use xcm_builder::{
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
     TakeWeightCredit, WithComputedOrigin,
 };
-use xcm_executor::{traits::TransactAsset, Assets as ExecutorAssets};
-use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::XcmAsset};
+use xcm_executor::{traits::TransactAsset, Assets};
+use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::Asset};
 
 pub mod zeitgeist {
     #[cfg(any(test, feature = "runtime-benchmarks"))]
@@ -165,7 +165,7 @@ impl TakeRevenue for ToTreasury {
 
         if let MultiAsset { id: Concrete(location), fun: Fungible(_amount) } = revenue {
             if let Some(asset_id) =
-                <AssetConvert as MaybeEquivalence<MultiLocation, Assets>>::convert(&location)
+                <AssetConvert as MaybeEquivalence<MultiLocation, CurrencyId>>::convert(&location)
             {
                 let adj_am =
                     AlignedFractionalMultiAssetTransactor::adjust_fractional_places(&revenue).fun;
@@ -221,9 +221,9 @@ pub struct AlignedFractionalTransactAsset<
 }
 
 impl<
-    AssetRegistry: Inspect<AssetId = XcmAsset>,
+    AssetRegistry: Inspect<AssetId = CurrencyId>,
     FracDecPlaces: Get<u8>,
-    CurrencyIdConvert: Convert<MultiAsset, Option<Assets>>,
+    CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
     TransactAssetDelegate: TransactAsset,
 >
     AlignedFractionalTransactAsset<
@@ -234,41 +234,29 @@ impl<
     >
 {
     fn adjust_fractional_places(asset: &MultiAsset) -> MultiAsset {
-        let (asset_id, amount) =
-            if let Some(ref asset_id) = CurrencyIdConvert::convert(asset.clone()) {
-                if let Fungible(amount) = asset.fun {
-                    (*asset_id, amount)
-                } else {
-                    return asset.clone();
+        if let Some(ref asset_id) = CurrencyIdConvert::convert(asset.clone()) {
+            if let Fungible(amount) = asset.fun {
+                let mut asset_updated = asset.clone();
+                let native_decimals = u32::from(FracDecPlaces::get());
+                let metadata = AssetRegistry::metadata(asset_id);
+
+                if let Some(metadata) = metadata {
+                    let decimals = metadata.decimals;
+
+                    asset_updated.fun = if decimals > native_decimals {
+                        let power = decimals.saturating_sub(native_decimals);
+                        let adjust_factor = 10u128.saturating_pow(power);
+                        // Floors the adjusted token amount, thus no tokens are generated
+                        Fungible(amount.saturating_div(adjust_factor))
+                    } else {
+                        let power = native_decimals.saturating_sub(decimals);
+                        let adjust_factor = 10u128.saturating_pow(power);
+                        Fungible(amount.saturating_mul(adjust_factor))
+                    };
+
+                    return asset_updated;
                 }
-            } else {
-                return asset.clone();
-            };
-
-        let currency = if let Ok(currency) = XcmAsset::try_from(asset_id) {
-            currency
-        } else {
-            return asset.clone();
-        };
-
-        let metadata = AssetRegistry::metadata(&currency);
-        if let Some(metadata) = metadata {
-            let mut asset_adjusted = asset.clone();
-            let decimals = metadata.decimals;
-            let native_decimals = u32::from(FracDecPlaces::get());
-
-            asset_adjusted.fun = if decimals > native_decimals {
-                let power = decimals.saturating_sub(native_decimals);
-                let adjust_factor = 10u128.saturating_pow(power);
-                // Floors the adjusted token amount, thus no tokens are generated
-                Fungible(amount.saturating_div(adjust_factor))
-            } else {
-                let power = native_decimals.saturating_sub(decimals);
-                let adjust_factor = 10u128.saturating_pow(power);
-                Fungible(amount.saturating_mul(adjust_factor))
-            };
-
-            return asset_adjusted;
+            }
         }
 
         asset.clone()
@@ -276,8 +264,8 @@ impl<
 }
 
 impl<
-    AssetRegistry: Inspect<AssetId = XcmAsset>,
-    CurrencyIdConvert: Convert<MultiAsset, Option<Assets>>,
+    AssetRegistry: Inspect<AssetId = CurrencyId>,
+    CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
     FracDecPlaces: Get<u8>,
     TransactAssetDelegate: TransactAsset,
 > TransactAsset
@@ -301,7 +289,7 @@ impl<
         asset: &MultiAsset,
         location: &MultiLocation,
         maybe_context: Option<&XcmContext>,
-    ) -> Result<ExecutorAssets, XcmError> {
+    ) -> Result<Assets, XcmError> {
         let asset_adjusted = Self::adjust_fractional_places(asset);
         TransactAssetDelegate::withdraw_asset(&asset_adjusted, location, maybe_context)
     }
@@ -311,7 +299,7 @@ impl<
         from: &MultiLocation,
         to: &MultiLocation,
         context: &XcmContext,
-    ) -> Result<ExecutorAssets, XcmError> {
+    ) -> Result<Assets, XcmError> {
         let asset_adjusted = Self::adjust_fractional_places(asset);
         TransactAssetDelegate::transfer_asset(&asset_adjusted, from, to, context)
     }
@@ -332,17 +320,17 @@ pub type MultiAssetTransactor = MultiCurrencyAdapter<
     UnknownTokens,
     // This means that this adapter should handle any token that `AssetConvert` can convert
     // using AssetManager and UnknownTokens in all other cases.
-    IsNativeConcrete<Assets, AssetConvert>,
+    IsNativeConcrete<CurrencyId, AssetConvert>,
     // Our chain's account ID type (we can't get away without mentioning it explicitly).
     AccountId,
     // Convert an XCM `MultiLocation` into a local account id.
     LocationToAccountId,
     // The AssetId that corresponds to the native currency.
-    Assets,
+    CurrencyId,
     // Struct that provides functions to convert `Asset` <=> `MultiLocation`.
     AssetConvert,
     // In case of deposit failure, known assets will be placed in treasury.
-    DepositToAlternative<ZeitgeistTreasuryAccount, AssetManager, Assets, AccountId, Balance>,
+    DepositToAlternative<ZeitgeistTreasuryAccount, AssetManager, CurrencyId, AccountId, Balance>,
 >;
 
 /// AssetConvert
@@ -354,35 +342,33 @@ pub struct AssetConvert;
 /// Convert our `Asset` type into its `MultiLocation` representation.
 /// Other chains need to know how this conversion takes place in order to
 /// handle it on their side.
-impl Convert<Assets, Option<MultiLocation>> for AssetConvert {
-    fn convert(id: Assets) -> Option<MultiLocation> {
-        <Self as MaybeEquivalence<_, _>>::convert_back(&id)
-    }
-}
-
-impl Convert<MultiLocation, Option<Assets>> for AssetConvert {
-    fn convert(location: MultiLocation) -> Option<Assets> {
-        <Self as MaybeEquivalence<_, _>>::convert(&location)
-    }
-}
-
-impl Convert<XcmAsset, Option<MultiLocation>> for AssetConvert {
-    fn convert(id: XcmAsset) -> Option<MultiLocation> {
-        <Self as MaybeEquivalence<_, _>>::convert_back(&id)
+impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
+    fn convert(id: CurrencyId) -> Option<MultiLocation> {
+        match id {
+            Asset::Ztg => Some(MultiLocation::new(
+                1,
+                X2(
+                    Junction::Parachain(ParachainInfo::parachain_id().into()),
+                    general_key(zeitgeist::KEY),
+                ),
+            )),
+            Asset::ForeignAsset(_) => AssetRegistry::multilocation(&id).ok()?,
+            _ => None,
+        }
     }
 }
 
 /// Convert an incoming `MultiLocation` into a `Asset` if possible.
 /// Here we need to know the canonical representation of all the tokens we handle in order to
 /// correctly convert their `MultiLocation` representation into our internal `Asset` type.
-impl MaybeEquivalence<MultiLocation, Assets> for AssetConvert {
-    fn convert(location: &MultiLocation) -> Option<Assets> {
+impl MaybeEquivalence<MultiLocation, CurrencyId> for AssetConvert {
+    fn convert(location: &MultiLocation) -> Option<CurrencyId> {
         match location {
             MultiLocation { parents: 0, interior: X1(GeneralKey { data, length }) } => {
                 let key = &data[..data.len().min(*length as usize)];
 
                 if key == zeitgeist::KEY {
-                    return Some(Assets::Ztg);
+                    return Some(CurrencyId::Ztg);
                 }
 
                 None
@@ -394,55 +380,43 @@ impl MaybeEquivalence<MultiLocation, Assets> for AssetConvert {
                 let key = &data[..data.len().min(*length as usize)];
 
                 if *para_id == u32::from(ParachainInfo::parachain_id()) {
-                    if key == zeitgeist::KEY {
-                        return Some(Assets::Ztg);
-                    }
-
-                    return None;
+                    if key == zeitgeist::KEY { Some(CurrencyId::Ztg) } else { None }
+                } else {
+                    AssetRegistry::location_to_asset_id(location)
                 }
-
-                AssetRegistry::location_to_asset_id(location).map(|a| a.into())
             }
-            _ => AssetRegistry::location_to_asset_id(location).map(|a| a.into()),
+            _ => AssetRegistry::location_to_asset_id(location),
         }
     }
 
-    fn convert_back(id: &Assets) -> Option<MultiLocation> {
+    fn convert_back(id: &CurrencyId) -> Option<MultiLocation> {
         match id {
-            Assets::Ztg => Some(MultiLocation::new(
+            Asset::Ztg => Some(MultiLocation::new(
                 1,
                 X2(
                     Junction::Parachain(ParachainInfo::parachain_id().into()),
                     general_key(zeitgeist::KEY),
                 ),
             )),
-            Assets::ForeignAsset(_) => {
-                let asset = XcmAsset::try_from(*id).ok()?;
-                AssetRegistry::multilocation(&asset).ok()?
-            }
+            Asset::ForeignAsset(_) => AssetRegistry::multilocation(id).ok()?,
             _ => None,
         }
     }
 }
 
-impl MaybeEquivalence<MultiLocation, XcmAsset> for AssetConvert {
-    fn convert(location: &MultiLocation) -> Option<XcmAsset> {
-        <Self as MaybeEquivalence<MultiLocation, Assets>>::convert(location)
-            .and_then(|asset| asset.try_into().ok())
-    }
-
-    fn convert_back(id: &XcmAsset) -> Option<MultiLocation> {
-        <Self as MaybeEquivalence<MultiLocation, Assets>>::convert_back(&Assets::from(*id))
-    }
-}
-
-impl Convert<MultiAsset, Option<Assets>> for AssetConvert {
-    fn convert(asset: MultiAsset) -> Option<Assets> {
+impl Convert<MultiAsset, Option<CurrencyId>> for AssetConvert {
+    fn convert(asset: MultiAsset) -> Option<CurrencyId> {
         if let MultiAsset { id: Concrete(location), .. } = asset {
             <AssetConvert as MaybeEquivalence<_, _>>::convert(&location)
         } else {
             None
         }
+    }
+}
+
+impl Convert<MultiLocation, Option<CurrencyId>> for AssetConvert {
+    fn convert(location: MultiLocation) -> Option<CurrencyId> {
+        <AssetConvert as MaybeEquivalence<_, _>>::convert(&location)
     }
 }
 
