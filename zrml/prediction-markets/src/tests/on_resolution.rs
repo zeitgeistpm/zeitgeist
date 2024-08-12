@@ -98,7 +98,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
         assert_ok!(PredictionMarkets::approve_market(
@@ -147,7 +147,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
         assert_ok!(PredictionMarkets::approve_market(
@@ -197,7 +197,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::AmmCdaHybrid,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -211,12 +211,12 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             OutcomeReport::Categorical(0)
         ));
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), 0,));
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(CHARLIE),
+        assert_ok!(Authorized::authorize_market_outcome(
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Categorical(1)
         ));
-        run_blocks(market.deadlines.dispute_duration);
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get());
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
         assert_eq!(Balances::free_balance(ALICE), alice_balance_before + ValidityBond::get());
@@ -248,7 +248,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::AmmCdaHybrid,
         ));
         assert_ok!(PredictionMarkets::approve_market(
@@ -266,12 +266,12 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             OutcomeReport::Categorical(0)
         ));
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(CHARLIE), 0,));
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(CHARLIE),
+        assert_ok!(Authorized::authorize_market_outcome(
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Categorical(1)
         ));
-        run_blocks(market.deadlines.dispute_duration);
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get());
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
         assert_eq!(Balances::free_balance(ALICE), alice_balance_before);
@@ -303,7 +303,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::AmmCdaHybrid,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -317,18 +317,12 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             OutcomeReport::Categorical(0)
         ));
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(EVE), 0,));
-        // EVE disputes with wrong outcome
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(EVE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(CHARLIE),
+        assert_ok!(Authorized::authorize_market_outcome(
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Categorical(0)
         ));
-        run_blocks(market.deadlines.dispute_duration);
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get());
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is not slashed
         assert_eq!(
@@ -363,7 +357,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::AmmCdaHybrid,
         ));
         assert_ok!(PredictionMarkets::approve_market(
@@ -381,18 +375,12 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             OutcomeReport::Categorical(0)
         ));
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(EVE), 0,));
-        // EVE disputes with wrong outcome
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(EVE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(CHARLIE),
+        assert_ok!(Authorized::authorize_market_outcome(
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Categorical(0)
         ));
-        run_blocks(market.deadlines.dispute_duration);
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get());
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is not slashed
         assert_eq!(Balances::free_balance(ALICE), alice_balance_before + OracleBond::get());
@@ -424,7 +412,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::AmmCdaHybrid,
         ));
 
@@ -447,18 +435,12 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         check_reserve(&outsider, <Runtime as Config>::OutsiderBond::get());
 
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(EVE), 0,));
-        // EVE disputes with wrong outcome
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(EVE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(FRED),
+        assert_ok!(Authorized::authorize_market_outcome(
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Categorical(0)
         ));
-        run_blocks(market.deadlines.dispute_duration);
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get());
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
         assert_eq!(Balances::free_balance(ALICE), alice_balance_before + ValidityBond::get());
@@ -496,7 +478,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
             gen_metadata(2),
             MarketCreation::Advised,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::AmmCdaHybrid,
         ));
 
@@ -522,18 +504,12 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_advised_approved_ma
         check_reserve(&outsider, <Runtime as Config>::OutsiderBond::get());
 
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(EVE), 0,));
-        // EVE disputes with wrong outcome
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(EVE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(FRED),
+        assert_ok!(Authorized::authorize_market_outcome(
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Categorical(0)
         ));
-        run_blocks(market.deadlines.dispute_duration);
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get());
         check_reserve(&ALICE, 0);
         // ValidityBond bond is returned but OracleBond is slashed
         assert_eq!(Balances::free_balance(ALICE), alice_balance_before);
@@ -619,7 +595,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::AmmCdaHybrid,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);
@@ -665,7 +641,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
         let alice_balance_before = Balances::free_balance(ALICE);

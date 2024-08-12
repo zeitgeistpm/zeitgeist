@@ -8,7 +8,7 @@ export FRAME_PALLETS=(
     pallet_democracy pallet_identity pallet_membership pallet_multisig pallet_preimage \
     pallet_proxy pallet_scheduler pallet_timestamp pallet_treasury pallet_utility \
     pallet_vesting \
-) # pallet_grandpa )
+)
 export FRAME_PALLETS_RUNS="${FRAME_PALLETS_RUNS:-20}"
 export FRAME_PALLETS_STEPS="${FRAME_PALLETS_STEPS:-50}"
 
@@ -27,8 +27,8 @@ export ORML_PALLETS_STEPS="${ORML_PALLETS_STEPS:-50}"
 export ORML_WEIGHT_TEMPLATE="./misc/orml_weight_template.hbs"
 
 export ZEITGEIST_PALLETS=( 
-    zrml_authorized zrml_court zrml_global_disputes zrml_hybrid_router zrml_liquidity_mining \
-    zrml_neo_swaps zrml_orderbook zrml_parimutuel zrml_prediction_markets zrml_swaps zrml_styx \
+    zrml_authorized zrml_court zrml_global_disputes zrml_hybrid_router zrml_neo_swaps \ 
+    zrml_orderbook zrml_parimutuel zrml_prediction_markets zrml_swaps zrml_styx \
 )
 export ZEITGEIST_PALLETS_RUNS="${ZEITGEIST_PALLETS_RUNS:-20}"
 export ZEITGEIST_PALLETS_STEPS="${ZEITGEIST_PALLETS_STEPS:-50}"

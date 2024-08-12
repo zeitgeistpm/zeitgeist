@@ -142,7 +142,7 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
         let market_id = 0;
@@ -174,7 +174,7 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
         let market_id = 0;
@@ -214,7 +214,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
         assert_ok!(PredictionMarkets::create_market(
@@ -227,7 +227,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
 
@@ -265,7 +265,7 @@ fn on_market_close_market_status_manager_exceeds_max_recovery_time_frames_after_
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
         assert_ok!(PredictionMarkets::create_market(
@@ -278,7 +278,7 @@ fn on_market_close_market_status_manager_exceeds_max_recovery_time_frames_after_
             gen_metadata(50),
             MarketCreation::Permissionless,
             MarketType::Categorical(category_count),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid,
         ));
 

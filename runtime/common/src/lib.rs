@@ -86,102 +86,13 @@ macro_rules! decl_common_types {
             generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
         };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
+        use zrml_market_commons::migrations::MigrateDisputeMechanism;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        struct FixStorageVersions;
-
-        impl OnRuntimeUpgrade for FixStorageVersions {
-            fn on_runtime_upgrade() -> frame_support::weights::Weight {
-                log::info!("FixStorageVersions: Starting...");
-                StorageVersion::new(4).put::<AdvisoryCommittee>();
-                StorageVersion::new(4).put::<AdvisoryCommitteeMembership>();
-                StorageVersion::new(1).put::<Balances>();
-                StorageVersion::new(4).put::<Council>();
-                StorageVersion::new(4).put::<CouncilMembership>();
-                StorageVersion::new(4).put::<TechnicalCommittee>();
-                StorageVersion::new(4).put::<TechnicalCommitteeMembership>();
-                StorageVersion::new(4).put::<Bounties>();
-                StorageVersion::new(15).put::<Contracts>();
-                log::info!("FixStorageVersions: Done!");
-                <Runtime as frame_system::Config>::DbWeight::get().writes(9)
-            }
-
-            #[cfg(feature = "try-runtime")]
-            fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
-                Ok(vec![])
-            }
-
-            #[cfg(feature = "try-runtime")]
-            fn post_upgrade(_: Vec<u8>) -> Result<(), DispatchError> {
-                Ok(())
-            }
-        }
-
-        type TrieId = BoundedVec<u8, ConstU32<128>>;
-
-        // `ContractInfo` struct that we need for `ClearContractsChildTries` but pallet-contracts
-        // doesn't expose publicly.
-        #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-        pub struct ContractInfo {
-            pub trie_id: TrieId,
-            pub code_hash: <Runtime as frame_system::Config>::Hash,
-            pub storage_bytes: u32,
-            pub storage_items: u32,
-            pub storage_byte_deposit: Balance,
-            pub storage_item_deposit: Balance,
-            pub storage_base_deposit: Balance,
-        }
-
-        struct ClearContractsChildTries;
-
-        impl OnRuntimeUpgrade for ClearContractsChildTries {
-            fn on_runtime_upgrade() -> frame_support::weights::Weight {
-                log::info!("ClearContractsChildTries: Starting...");
-                let mut total_reads = 0u64;
-                let mut total_writes = 0u64;
-                for (_, contract_info) in storage_key_iter::<AccountId, ContractInfo, Twox64Concat>(
-                    b"Contracts",
-                    b"ContractInfoOf",
-                ) {
-                    let trie_id = contract_info.trie_id;
-                    let inner_trie_id = trie_id.into_inner();
-                    let child_info = ChildInfo::new_default(&inner_trie_id);
-                    let multi_removal_result = child::clear_storage(&child_info, None, None);
-                    let writes = multi_removal_result.loops as u64;
-                    log::info!(
-                        "ClearContractsChildTries: Cleared trie {:?} in {:?} loops",
-                        inner_trie_id,
-                        writes
-                    );
-                    total_reads = total_reads.saturating_add(1);
-                    total_writes = total_writes.saturating_add(writes);
-                }
-                log::info!("ClearContractsChildTries: Done!");
-                <Runtime as frame_system::Config>::DbWeight::get()
-                    .reads_writes(total_reads, total_writes)
-            }
-
-            #[cfg(feature = "try-runtime")]
-            fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
-                Ok(vec![])
-            }
-
-            #[cfg(feature = "try-runtime")]
-            fn post_upgrade(_: Vec<u8>) -> Result<(), DispatchError> {
-                Ok(())
-            }
-        }
-
-        parameter_types! {
-            pub const ContractsPalletStr: &'static str = "Contracts";
-        }
-
-        type ResetContracts = RemovePallet<ContractsPalletStr, RocksDbWeight>;
-
-        type Migrations = (ClearContractsChildTries, ResetContracts, FixStorageVersions);
+        type Migrations = (MigrateDisputeMechanism<Runtime>);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -194,7 +105,6 @@ macro_rules! decl_common_types {
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
         pub(crate) type NodeBlock = generic::Block<Header, sp_runtime::OpaqueExtrinsic>;
-        type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
         pub type SignedExtra = (
             CheckNonZeroSender<Runtime>,
             CheckSpecVersion<Runtime>,
@@ -311,11 +221,9 @@ macro_rules! decl_common_types {
                     CourtPalletId::get(),
                     GlobalDisputesPalletId::get(),
                     HybridRouterPalletId::get(),
-                    LiquidityMiningPalletId::get(),
                     OrderbookPalletId::get(),
                     ParimutuelPalletId::get(),
                     PmPalletId::get(),
-                    SimpleDisputesPalletId::get(),
                     SwapsPalletId::get(),
                     TreasuryPalletId::get(),
                 ];
@@ -376,8 +284,8 @@ macro_rules! create_runtime {
         use alloc::{boxed::Box, vec::Vec};
         // Pallets are enumerated based on the dependency graph.
         //
-        // For example, `PredictionMarkets` is pĺaced after `SimpleDisputes` because
-        // `PredictionMarkets` depends on `SimpleDisputes`.
+        // For example, `PredictionMarkets` is pĺaced after `MarketCommons` because
+        // `PredictionMarkets` depends on `MarketCommons`.
 
         construct_runtime!(
             pub enum Runtime {
@@ -420,9 +328,6 @@ macro_rules! create_runtime {
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 50,
                 Authorized: zrml_authorized::{Call, Event<T>, Pallet, Storage} = 51,
                 Court: zrml_court::{Call, Event<T>, Pallet, Storage} = 52,
-                LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 53,
-                RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 54,
-                SimpleDisputes: zrml_simple_disputes::{Call, Event<T>, Pallet, Storage} = 55,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
                 Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
@@ -1038,7 +943,9 @@ macro_rules! impl_config_traits {
                     ),
                     ProxyType::Trading => matches!(
                         c,
-                        RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
+                        RuntimeCall::HybridRouter(zrml_hybrid_router::Call::buy { .. })
+                            | RuntimeCall::HybridRouter(zrml_hybrid_router::Call::sell { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::sell { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::place_order { .. })
                             | RuntimeCall::Orderbook(zrml_orderbook::Call::fill_order { .. })
@@ -1046,7 +953,9 @@ macro_rules! impl_config_traits {
                     ),
                     ProxyType::HandleAssets => matches!(
                         c,
-                        RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::join { .. })
+                        RuntimeCall::HybridRouter(zrml_hybrid_router::Call::buy { .. })
+                            | RuntimeCall::HybridRouter(zrml_hybrid_router::Call::sell { .. })
+                            | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::join { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::exit { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::buy { .. })
                             | RuntimeCall::NeoSwaps(zrml_neo_swaps::Call::sell { .. })
@@ -1264,40 +1173,10 @@ macro_rules! impl_config_traits {
             type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
         }
 
-        impl zrml_liquidity_mining::Config for Runtime {
-            type RuntimeEvent = RuntimeEvent;
-            type Currency = Balances;
-            type MarketCommons = MarketCommons;
-            type MarketId = MarketId;
-            type PalletId = LiquidityMiningPalletId;
-            type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
-        }
-
         impl zrml_market_commons::Config for Runtime {
             type Balance = Balance;
             type MarketId = MarketId;
             type Timestamp = Timestamp;
-        }
-
-        // NoopLiquidityMining implements LiquidityMiningPalletApi with no-ops.
-        // Has to be public because it will be exposed by Runtime.
-        pub struct NoopLiquidityMining;
-
-        impl zrml_liquidity_mining::LiquidityMiningPalletApi for NoopLiquidityMining {
-            type AccountId = AccountId;
-            type Balance = Balance;
-            type BlockNumber = BlockNumber;
-            type MarketId = MarketId;
-
-            fn add_shares(_: Self::AccountId, _: Self::MarketId, _: Self::Balance) {}
-
-            fn distribute_market_incentives(
-                _: &Self::MarketId,
-            ) -> frame_support::pallet_prelude::DispatchResult {
-                Ok(())
-            }
-
-            fn remove_shares(_: &Self::AccountId, _: &Self::MarketId, _: Self::Balance) {}
         }
 
         impl zrml_prediction_markets::Config for Runtime {
@@ -1317,10 +1196,6 @@ macro_rules! impl_config_traits {
             type DisputeBond = DisputeBond;
             type RuntimeEvent = RuntimeEvent;
             type GlobalDisputes = GlobalDisputes;
-            // LiquidityMining is currently unstable.
-            // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
-            type LiquidityMining = NoopLiquidityMining;
-            // type LiquidityMining = LiquidityMining;
             type MaxCategories = MaxCategories;
             type MaxCreatorFee = MaxCreatorFee;
             type MaxDisputes = MaxDisputes;
@@ -1344,37 +1219,9 @@ macro_rules! impl_config_traits {
             type AssetManager = AssetManager;
             #[cfg(feature = "parachain")]
             type AssetRegistry = AssetRegistry;
-            type SimpleDisputes = SimpleDisputes;
             type Slash = Treasury;
             type ValidityBond = ValidityBond;
             type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
-        }
-
-        impl zrml_rikiddo::Config<RikiddoSigmoidFeeMarketVolumeEma> for Runtime {
-            type Timestamp = Timestamp;
-            type Balance = Balance;
-            type FixedTypeU = FixedU128<U33>;
-            type FixedTypeS = FixedI128<U33>;
-            type BalanceFractionalDecimals = BalanceFractionalDecimals;
-            type PoolId = PoolId;
-            type Rikiddo = RikiddoSigmoidMV<
-                Self::FixedTypeU,
-                Self::FixedTypeS,
-                FeeSigmoid<Self::FixedTypeS>,
-                EmaMarketVolume<Self::FixedTypeU>,
-            >;
-        }
-
-        impl zrml_simple_disputes::Config for Runtime {
-            type Currency = Balances;
-            type OutcomeBond = OutcomeBond;
-            type OutcomeFactor = OutcomeFactor;
-            type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
-            type RuntimeEvent = RuntimeEvent;
-            type MarketCommons = MarketCommons;
-            type MaxDisputes = MaxDisputes;
-            type PalletId = SimpleDisputesPalletId;
-            type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
         }
 
         impl zrml_global_disputes::Config for Runtime {
@@ -1579,14 +1426,12 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_swaps, Swaps);
                     list_benchmark!(list, extra, zrml_authorized, Authorized);
                     list_benchmark!(list, extra, zrml_court, Court);
-                    list_benchmark!(list, extra, zrml_simple_disputes, SimpleDisputes);
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
                     list_benchmark!(list, extra, zrml_orderbook, Orderbook);
                     list_benchmark!(list, extra, zrml_parimutuel, Parimutuel);
                     list_benchmark!(list, extra, zrml_hybrid_router, HybridRouter);
                     #[cfg(not(feature = "parachain"))]
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
-                    list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
                     list_benchmark!(list, extra, zrml_styx, Styx);
                     list_benchmark!(list, extra, zrml_neo_swaps, NeoSwaps);
 
@@ -1670,14 +1515,12 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_swaps, Swaps);
                     add_benchmark!(params, batches, zrml_authorized, Authorized);
                     add_benchmark!(params, batches, zrml_court, Court);
-                    add_benchmark!(params, batches, zrml_simple_disputes, SimpleDisputes);
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
                     add_benchmark!(params, batches, zrml_orderbook, Orderbook);
                     add_benchmark!(params, batches, zrml_parimutuel, Parimutuel);
                     add_benchmark!(params, batches, zrml_hybrid_router, HybridRouter);
                     #[cfg(not(feature = "parachain"))]
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
-                    add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
                     add_benchmark!(params, batches, zrml_styx, Styx);
                     add_benchmark!(params, batches, zrml_neo_swaps, NeoSwaps);
 
@@ -2321,9 +2164,7 @@ macro_rules! create_common_tests {
 
                 #[test_case(AuthorizedPalletId::get(); "authorized")]
                 #[test_case(CourtPalletId::get(); "court")]
-                #[test_case(LiquidityMiningPalletId::get(); "liquidity_mining")]
                 #[test_case(PmPalletId::get(); "prediction_markets")]
-                #[test_case(SimpleDisputesPalletId::get(); "simple_disputes")]
                 #[test_case(SwapsPalletId::get(); "swaps")]
                 #[test_case(TreasuryPalletId::get(); "treasury")]
                 fn whitelisted_pallet_accounts_dont_get_reaped(pallet_id: PalletId) {

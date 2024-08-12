@@ -39,10 +39,6 @@ decentralized court.
   user to create pools, provide liquidity or swap assets.
 - [primitives](./zrml/primitives) - Contains custom and common types, traits and
   constants.
-- [rikiddo](./zrml/rikiddo) - The module contains a completely modular
-  implementation of our novel market maker [Rikiddo][rikiddo]. It also offers a
-  pallet that other pallets can use to utilize the Rikiddo market maker. Rikiddo
-  can be used by the automated market maker to determine swap prices.
 
 ## How to Build and Run a Zeitgeist Node
 

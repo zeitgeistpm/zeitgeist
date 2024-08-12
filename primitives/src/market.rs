@@ -298,7 +298,6 @@ pub struct MarketDispute<AccountId, BlockNumber, Balance> {
 pub enum MarketDisputeMechanism {
     Authorized,
     Court,
-    SimpleDisputes,
 }
 
 /// Defines whether the period is represented as a blocknumber or a timestamp.

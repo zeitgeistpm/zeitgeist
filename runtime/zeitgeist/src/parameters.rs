@@ -187,10 +187,6 @@ parameter_types! {
     /// be another trie item whose value is the size of an account ID plus 32 bytes.
     pub const SubAccountDeposit: Balance = deposit(1, 53);
 
-    // Liquidity Mining parameters
-    /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
-    pub const LiquidityMiningPalletId: PalletId = LM_PALLET_ID;
-
     // Multisig
     // One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
     pub const DepositBase: Balance = deposit(1, 88);
@@ -245,9 +241,6 @@ parameter_types! {
     pub const MaxOracleDuration: BlockNumber = MAX_ORACLE_DURATION;
     /// Maximum string length allowed for reject reason.
     pub const MaxRejectReasonLen: u32 = 1024;
-    // 2_678_400_000 = 31 days.
-    /// Maximum number of milliseconds a Rikiddo market can be in subsidy gathering phase.
-    pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
     /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
     pub const MinCategories: u16 = 2;
     /// The dispute_duration is time where users can dispute the outcome.
@@ -255,9 +248,6 @@ parameter_types! {
     pub const MinDisputeDuration: BlockNumber = MIN_DISPUTE_DURATION;
     /// Minimum block period for an oracle_duration.
     pub const MinOracleDuration: BlockNumber = MIN_ORACLE_DURATION;
-    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
-    /// Minimum number of milliseconds a Rikiddo market must be in subsidy gathering phase.
-    pub const MinSubsidyPeriod: Moment = 60_000;
     /// (Slashable) The orcale bond. Slashed in case the final outcome does not match the
     /// outcome the oracle reported.
     pub const OracleBond: Balance = 200 * BASE;
@@ -296,16 +286,6 @@ parameter_types! {
     pub const MaxScheduledPerBlock: u32 = 50;
     pub const NoPreimagePostponement: Option<u64> = Some(5 * BLOCKS_PER_MINUTE);
 
-    // Simple disputes parameters
-    /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
-    pub const SimpleDisputesPalletId: PalletId = SD_PALLET_ID;
-    /// (Slashable) Bond that is provided for overriding the last outcome addition.
-    /// Slashed in case the final outcome does not match the dispute for which the `OutcomeBond`
-    /// was deposited.
-    pub const OutcomeBond: Balance = 2_000 * BASE;
-    /// `OutcomeBond` is increased by this factor after every new outcome addition.
-    pub const OutcomeFactor: Balance = 2 * BASE;
-
     // Swaps parameters
     /// A precentage from the withdrawal amount a liquidity provider wants to withdraw
     /// from a pool before the pool is closed.
@@ -320,10 +300,6 @@ parameter_types! {
     pub const MaxTotalWeight: Balance = MaxWeight::get() * 2;
     /// The maximum weight a single asset can have.
     pub const MaxWeight: Balance = 64 * BASE;
-    /// Minimum subsidy required to launch a Rikiddo pool.
-    pub const MinSubsidy: Balance = 100 * BASE;
-    /// Minimum subsidy a single account can provide.
-    pub const MinSubsidyPerAccount: Balance = MinSubsidy::get();
     /// Minimum weight a single asset can have.
     pub const MinWeight: Balance = BASE;
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.

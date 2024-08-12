@@ -49,9 +49,7 @@ use pallet_collective::{EnsureProportionAtLeast, EnsureProportionMoreThan, Prime
 use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
-use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
-use zeitgeist_primitives::{constants::*, types::*};
-use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
+use zeitgeist_primitives::types::*;
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{AsEnsureOriginWithArg, Everything},
@@ -101,8 +99,6 @@ pub type ContractsCallfilter = Nothing;
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-// Currently disables Rikiddo and creation of markets using SimpleDisputes
-// dispute mechanism.
 impl Contains<RuntimeCall> for IsCallable {
     fn contains(runtime_call: &RuntimeCall) -> bool {
         #[cfg(feature = "parachain")]
@@ -118,9 +114,8 @@ impl Contains<RuntimeCall> for IsCallable {
             set_code as set_code_contracts,
         };
         use pallet_vesting::Call::force_vested_transfer;
-        use zeitgeist_primitives::types::MarketDisputeMechanism::SimpleDisputes;
         use zrml_prediction_markets::Call::{
-            admin_move_market_to_closed, admin_move_market_to_resolved, create_market, edit_market,
+            admin_move_market_to_closed, admin_move_market_to_resolved,
         };
         use zrml_swaps::Call::force_pool_exit;
 
@@ -158,18 +153,11 @@ impl Contains<RuntimeCall> for IsCallable {
             RuntimeCall::Council(set_members { .. }) => false,
             #[cfg(feature = "parachain")]
             RuntimeCall::DmpQueue(service_overweight { .. }) => false,
-            RuntimeCall::LiquidityMining(_) => false,
-            RuntimeCall::PredictionMarkets(inner_call) => {
-                match inner_call {
-                    // Disable SimpleDisputes dispute resolution mechanism
-                    create_market { dispute_mechanism: Some(SimpleDisputes), .. } => false,
-                    edit_market { dispute_mechanism: Some(SimpleDisputes), .. } => false,
-                    admin_move_market_to_closed { .. } => false,
-                    admin_move_market_to_resolved { .. } => false,
-                    _ => true,
-                }
-            }
-            RuntimeCall::SimpleDisputes(_) => false,
+            RuntimeCall::PredictionMarkets(inner_call) => match inner_call {
+                admin_move_market_to_closed { .. } => false,
+                admin_move_market_to_resolved { .. } => false,
+                _ => true,
+            },
             RuntimeCall::Swaps(inner_call) => match inner_call {
                 force_pool_exit { .. } => true,
                 _ => false,

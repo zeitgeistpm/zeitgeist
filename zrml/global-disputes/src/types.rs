@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -91,35 +91,6 @@ pub enum GdStatus<BlockNumber> {
     Finished,
     /// The global dispute is destroyed.
     Destroyed,
-}
-
-// TODO(#986): to remove after the storage migration
-
-/// The information about a voting outcome of a global dispute.
-#[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-pub struct OldOutcomeInfo<Balance, OwnerInfo> {
-    /// The current sum of all locks on this outcome.
-    pub outcome_sum: Balance,
-    /// The vector of owners of the outcome.
-    pub owners: OwnerInfo,
-}
-
-/// The information about the current highest winning outcome.
-#[derive(TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-pub struct OldWinnerInfo<Balance, OwnerInfo> {
-    /// The outcome, which is in the lead.
-    pub outcome: OutcomeReport,
-    /// The information about the winning outcome.
-    pub outcome_info: OldOutcomeInfo<Balance, OwnerInfo>,
-    /// Check, if the global dispute is finished.
-    pub is_finished: bool,
-}
-
-impl<Balance: Saturating, OwnerInfo: Default> OldWinnerInfo<Balance, OwnerInfo> {
-    pub fn new(outcome: OutcomeReport, vote_sum: Balance) -> Self {
-        let outcome_info = OldOutcomeInfo { outcome_sum: vote_sum, owners: Default::default() };
-        OldWinnerInfo { outcome, is_finished: false, outcome_info }
-    }
 }
 
 /// An initial vote outcome item with the outcome owner and the initial vote amount.

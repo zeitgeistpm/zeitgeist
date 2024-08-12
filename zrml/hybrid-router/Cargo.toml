@@ -25,11 +25,9 @@ xcm-builder = { workspace = true, optional = true }
 zrml-authorized = { workspace = true, optional = true }
 zrml-court = { workspace = true, optional = true }
 zrml-global-disputes = { workspace = true, optional = true }
-zrml-liquidity-mining = { workspace = true, optional = true }
 zrml-neo-swaps = { workspace = true, optional = true }
 zrml-orderbook = { workspace = true, optional = true }
 zrml-prediction-markets = { workspace = true, optional = true }
-zrml-simple-disputes = { workspace = true, optional = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
@@ -57,11 +55,9 @@ mock = [
     "zrml-orderbook/default",
     "zrml-prediction-markets/default",
     "zrml-prediction-markets/mock",
-    "zrml-simple-disputes/default",
     "zrml-authorized/default",
     "zrml-court/default",
     "zrml-global-disputes/default",
-    "zrml-liquidity-mining/default",
 ]
 parachain = [
     "zrml-prediction-markets/parachain",
