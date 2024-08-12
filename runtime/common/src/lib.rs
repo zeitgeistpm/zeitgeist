@@ -773,7 +773,10 @@ macro_rules! impl_config_traits {
             type MaxDebugBufferLen = ContractsMaxDebugBufferLen;
             type MaxDelegateDependencies = ContractsMaxDelegateDependencies;
             type MaxStorageKeyLen = ContractsMaxStorageKeyLen;
+            #[cfg(not(feature = "runtime-benchmarks"))]
             type Migrations = ();
+            #[cfg(feature = "runtime-benchmarks")]
+            type Migrations = pallet_contracts::migration::codegen::BenchMigrations;
             type Randomness = RandomnessCollectiveFlip;
             type RuntimeCall = RuntimeCall;
             type RuntimeEvent = RuntimeEvent;
