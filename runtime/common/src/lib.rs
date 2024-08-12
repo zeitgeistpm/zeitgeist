@@ -86,13 +86,35 @@ macro_rules! decl_common_types {
             generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
         };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
-        use zrml_market_commons::migrations::MigrateDisputeMechanism;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (MigrateDisputeMechanism<Runtime>);
+        parameter_types! {
+            pub const CampaignAssetsPalletStr: &'static str = "CampaignAssets";
+            pub const CustomAssetsPalletStr: &'static str = "CustomAssets";
+            pub const MarketAssetsPalletStr: &'static str = "MarketAssets";
+            pub const LiquidityMiningPalletStr: &'static str = "LiquidityMining";
+            pub const RikiddoPalletStr: &'static str = "Rikiddo";
+            pub const SimpleDisputesPalletStr: &'static str = "SimpleDisputes";
+        }
+
+        type RemoveCustomAssets = RemovePallet<CustomAssetsPalletStr, RocksDbWeight>;
+        type RemoveCampaignAssets = RemovePallet<CampaignAssetsPalletStr, RocksDbWeight>;
+        type RemoveMarketAssets = RemovePallet<MarketAssetsPalletStr, RocksDbWeight>;
+        type RemoveLiquidityMining = RemovePallet<LiquidityMiningPalletStr, RocksDbWeight>;
+        type RemoveRikiddo = RemovePallet<RikiddoPalletStr, RocksDbWeight>;
+        type RemoveSimpleDisputes = RemovePallet<SimpleDisputesPalletStr, RocksDbWeight>;
+
+        type Migrations = (
+            RemoveCustomAssets,
+            RemoveCampaignAssets,
+            RemoveMarketAssets,
+            RemoveLiquidityMining,
+            RemoveRikiddo,
+            RemoveSimpleDisputes,
+        );
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -751,10 +773,7 @@ macro_rules! impl_config_traits {
             type MaxDebugBufferLen = ContractsMaxDebugBufferLen;
             type MaxDelegateDependencies = ContractsMaxDelegateDependencies;
             type MaxStorageKeyLen = ContractsMaxStorageKeyLen;
-            #[cfg(not(feature = "runtime-benchmarks"))]
             type Migrations = ();
-            #[cfg(feature = "runtime-benchmarks")]
-            type Migrations = pallet_contracts::migration::codegen::BenchMigrations;
             type Randomness = RandomnessCollectiveFlip;
             type RuntimeCall = RuntimeCall;
             type RuntimeEvent = RuntimeEvent;
