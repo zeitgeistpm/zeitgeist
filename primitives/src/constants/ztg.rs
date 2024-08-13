@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -25,9 +25,6 @@ pub const COMMUNITY_INCENTIVES: u128 = 2_000_000;
 
 /// Total ZTG amount for collators.
 pub const COLLATORS: u128 = 0;
-
-/// Total ZTG amount for liquidity mining.
-pub const LIQUIDITY_MINING: u128 = 0;
 
 /// Total ZTG amount for parachain lease.
 pub const PARACHAIN_LEASE: u128 = 40_000_000;
@@ -57,9 +54,6 @@ pub const TOTAL_INITIAL_ZTG: u128 = COMMUNITY_INCENTIVES
     + ZEITGEIST_FOUNDATION;
 
 // Inflation
-
-/// Perthousand liquidity mining inflation. 0%
-pub const LIQUIDITY_MINING_PTD: Perbill = Perbill::from_perthousand(0);
 
 /// Perthousand collator staking inflation. 5%
 pub const STAKING_PTD: Perbill = Perbill::from_perthousand(50);

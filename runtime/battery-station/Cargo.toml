@@ -45,7 +45,6 @@ sp-session = { workspace = true }
 sp-std = { workspace = true }
 sp-transaction-pool = { workspace = true }
 sp-version = { workspace = true }
-substrate-fixed = { workspace = true, features = ["serde"] }
 
 # Try-Runtime
 
@@ -113,14 +112,11 @@ zrml-authorized = { workspace = true }
 zrml-court = { workspace = true }
 zrml-global-disputes = { workspace = true, optional = true }
 zrml-hybrid-router = { workspace = true }
-zrml-liquidity-mining = { workspace = true }
 zrml-market-commons = { workspace = true }
 zrml-neo-swaps = { workspace = true }
 zrml-orderbook = { workspace = true }
 zrml-parimutuel = { workspace = true }
 zrml-prediction-markets = { workspace = true }
-zrml-rikiddo = { workspace = true }
-zrml-simple-disputes = { workspace = true }
 zrml-styx = { workspace = true }
 zrml-swaps = { workspace = true }
 zrml-swaps-runtime-api = { workspace = true }
@@ -220,11 +216,9 @@ runtime-benchmarks = [
     "zrml-authorized/runtime-benchmarks",
     "zrml-court/runtime-benchmarks",
     "zrml-hybrid-router/runtime-benchmarks",
-    "zrml-liquidity-mining/runtime-benchmarks",
     "zrml-neo-swaps/runtime-benchmarks",
     "zrml-parimutuel/runtime-benchmarks",
     "zrml-prediction-markets/runtime-benchmarks",
-    "zrml-simple-disputes/runtime-benchmarks",
     "zrml-global-disputes/runtime-benchmarks",
     "zrml-styx/runtime-benchmarks",
     "zrml-swaps/runtime-benchmarks",
@@ -274,7 +268,6 @@ std = [
     "sp-session/std",
     "sp-transaction-pool/std",
     "sp-version/std",
-    "substrate-fixed/std",
 
     # Try-Runtime
     "frame-try-runtime/std",
@@ -336,13 +329,10 @@ std = [
     "zrml-authorized/std",
     "zrml-court/std",
     "zrml-hybrid-router/std",
-    "zrml-liquidity-mining/std",
     "zrml-market-commons/std",
     "zrml-neo-swaps/std",
     "zrml-parimutuel/std",
     "zrml-prediction-markets/std",
-    "zrml-rikiddo/std",
-    "zrml-simple-disputes/std",
     "zrml-global-disputes/std",
     "zrml-styx/std",
     "zrml-swaps-runtime-api/std",
@@ -393,13 +383,10 @@ try-runtime = [
     "zrml-authorized/try-runtime",
     "zrml-court/try-runtime",
     "zrml-hybrid-router/try-runtime",
-    "zrml-liquidity-mining/try-runtime",
     "zrml-market-commons/try-runtime",
     "zrml-neo-swaps/try-runtime",
     "zrml-parimutuel/try-runtime",
     "zrml-prediction-markets/try-runtime",
-    "zrml-rikiddo/try-runtime",
-    "zrml-simple-disputes/try-runtime",
     "zrml-global-disputes/try-runtime",
     "zrml-styx/try-runtime",
     "zrml-swaps/try-runtime",

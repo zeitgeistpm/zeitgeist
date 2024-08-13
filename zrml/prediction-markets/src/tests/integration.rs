@@ -150,7 +150,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Court),
             ScoringRule::AmmCdaHybrid
         ));
 
@@ -190,7 +190,7 @@ fn full_scalar_market_lifecycle() {
             gen_metadata(3),
             MarketCreation::Permissionless,
             MarketType::Scalar(10..=30),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::AmmCdaHybrid
         ));
 
@@ -232,20 +232,15 @@ fn full_scalar_market_lifecycle() {
 
         // dispute
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(DAVE), 0));
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(DAVE),
+        assert_ok!(Authorized::authorize_market_outcome(
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Scalar(25)
         ));
-        let disputes = zrml_simple_disputes::Disputes::<Runtime>::get(0);
-        assert_eq!(disputes.len(), 1);
-
-        run_blocks(market.deadlines.dispute_duration);
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get());
 
         let market_after_resolve = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
-        let disputes = zrml_simple_disputes::Disputes::<Runtime>::get(0);
-        assert_eq!(disputes.len(), 0);
 
         // give EVE some shares
         assert_ok!(Tokens::transfer(
@@ -436,8 +431,6 @@ fn authorized_correctly_resolves_disputed_market() {
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
-        let disputes = zrml_simple_disputes::Disputes::<Runtime>::get(0);
-        assert_eq!(disputes.len(), 0);
 
         assert_ok!(PredictionMarkets::redeem_shares(RuntimeOrigin::signed(CHARLIE), 0));
 
@@ -727,7 +720,7 @@ fn outsider_reports_wrong_outcome() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(2),
-            Some(MarketDisputeMechanism::SimpleDisputes),
+            Some(MarketDisputeMechanism::Authorized),
             ScoringRule::AmmCdaHybrid,
         ));
 
@@ -751,21 +744,17 @@ fn outsider_reports_wrong_outcome() {
         assert_ok!(PredictionMarkets::dispute(RuntimeOrigin::signed(EVE), 0,));
         check_reserve(&EVE, <Runtime as Config>::DisputeBond::get());
 
-        assert_ok!(SimpleDisputes::suggest_outcome(
-            RuntimeOrigin::signed(DAVE),
+        assert_ok!(Authorized::authorize_market_outcome(
+            RuntimeOrigin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Categorical(0)
         ));
-
-        let outcome_bond = zrml_simple_disputes::default_outcome_bond::<Runtime>(0);
-
-        check_reserve(&DAVE, outcome_bond);
 
         let eve_balance_before = Balances::free_balance(EVE);
         let dave_balance_before = Balances::free_balance(DAVE);
 
         // on_resolution called
-        run_blocks(market.deadlines.dispute_duration);
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get());
 
         assert_eq!(
             Balances::free_balance(ALICE),
@@ -784,7 +773,7 @@ fn outsider_reports_wrong_outcome() {
                 + <Runtime as Config>::OracleBond::get()
         );
         // DAVE gets his outcome bond back
-        assert_eq!(Balances::free_balance(DAVE), dave_balance_before + outcome_bond);
+        assert_eq!(Balances::free_balance(DAVE), dave_balance_before);
     };
     ExtBuilder::default().build().execute_with(|| {
         test(Asset::Ztg);

@@ -229,7 +229,7 @@ fn create_spot_prices<T: Config>(asset_count: u16) -> Vec<BalanceOf<T>> {
 benchmarks! {
     where_clause {
         where
-            T: pallet_timestamp::Config + zrml_authorized::Config + zrml_simple_disputes::Config + zrml_court::Config,
+            T: pallet_timestamp::Config + zrml_authorized::Config + zrml_court::Config,
             <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId:
                 From<<T as zrml_market_commons::Config>::MarketId>,
     }

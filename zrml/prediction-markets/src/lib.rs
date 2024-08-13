@@ -77,7 +77,6 @@ mod pallet {
         },
     };
     use zrml_global_disputes::{types::InitialItem, GlobalDisputesPalletApi};
-    use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::{types::MarketBuilder, MarketCommonsPalletApi};
 
     /// The current storage version.
@@ -531,11 +530,7 @@ mod pallet {
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
         #[pallet::call_index(6)]
         #[pallet::weight(
-            T::WeightInfo::dispute_authorized().saturating_add(
-                T::Court::on_dispute_max_weight().saturating_add(
-                    T::SimpleDisputes::on_dispute_max_weight()
-                )
-            )
+            T::WeightInfo::dispute_authorized().saturating_add(T::Court::on_dispute_max_weight())
         )]
         #[transactional]
         pub fn dispute(
@@ -559,12 +554,6 @@ mod pallet {
                     T::WeightInfo::dispute_authorized()
                         .saturating_sub(T::Authorized::on_dispute_max_weight())
                         .saturating_add(court_weight)
-                }
-                MarketDisputeMechanism::SimpleDisputes => {
-                    let sd_weight = T::SimpleDisputes::on_dispute(&market_id, &market)?.weight;
-                    T::WeightInfo::dispute_authorized()
-                        .saturating_sub(T::Authorized::on_dispute_max_weight())
-                        .saturating_add(sd_weight)
                 }
             };
 
@@ -983,9 +972,6 @@ mod pallet {
                     T::Authorized::has_failed(&market_id, &market)?
                 }
                 MarketDisputeMechanism::Court => T::Court::has_failed(&market_id, &market)?,
-                MarketDisputeMechanism::SimpleDisputes => {
-                    T::SimpleDisputes::has_failed(&market_id, &market)?
-                }
             };
             let has_failed = res_0.result;
             ensure!(has_failed, Error::<T>::MarketDisputeMechanismNotFailed);
@@ -995,9 +981,6 @@ mod pallet {
                     T::Authorized::on_global_dispute(&market_id, &market)?
                 }
                 MarketDisputeMechanism::Court => T::Court::on_global_dispute(&market_id, &market)?,
-                MarketDisputeMechanism::SimpleDisputes => {
-                    T::SimpleDisputes::on_global_dispute(&market_id, &market)?
-                }
             };
 
             let mut initial_items: Vec<InitialItemOf<T>> = Vec::new();
@@ -1603,13 +1586,6 @@ mod pallet {
                 BlockNumberFor<Self>,
             >;
 
-        type LiquidityMining: LiquidityMiningPalletApi<
-                AccountId = Self::AccountId,
-                Balance = BalanceOf<Self>,
-                BlockNumber = BlockNumberFor<Self>,
-                MarketId = MarketIdOf<Self>,
-            >;
-
         /// The maximum number of categories available for categorical markets.
         #[pallet::constant]
         type MaxCategories: Get<u16>;
@@ -1693,17 +1669,6 @@ mod pallet {
 
         /// The origin that is allowed to resolve markets.
         type ResolveOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-
-        /// See [`DisputeApi`].
-        type SimpleDisputes: zrml_simple_disputes::SimpleDisputesPalletApi<
-                AccountId = Self::AccountId,
-                Balance = BalanceOf<Self>,
-                NegativeImbalance = NegativeImbalanceOf<Self>,
-                BlockNumber = BlockNumberFor<Self>,
-                MarketId = MarketIdOf<Self>,
-                Moment = MomentOf<Self>,
-                Origin = Self::RuntimeOrigin,
-            >;
 
         /// Handler for slashed funds.
         type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
@@ -2235,9 +2200,6 @@ mod pallet {
                             MarketDisputeMechanism::Court => {
                                 T::Court::get_auto_resolve(market_id, &market)
                             }
-                            MarketDisputeMechanism::SimpleDisputes => {
-                                T::SimpleDisputes::get_auto_resolve(market_id, &market)
-                            }
                         };
                     if let Some(auto_resolve_block) = auto_resolve_block_opt {
                         let ids_len = remove_auto_resolve::<T>(market_id, auto_resolve_block);
@@ -2597,17 +2559,6 @@ mod pallet {
                     weight = weight.saturating_add(res.weight);
                     remainder
                 }
-                MarketDisputeMechanism::SimpleDisputes => {
-                    let res = T::SimpleDisputes::exchange(
-                        market_id,
-                        market,
-                        &resolved_outcome,
-                        imbalance_left,
-                    )?;
-                    let remainder = res.result;
-                    weight = weight.saturating_add(res.weight);
-                    remainder
-                }
             };
 
             T::Slash::on_unbalanced(remainder);
@@ -2643,11 +2594,6 @@ mod pallet {
                     }
                     MarketDisputeMechanism::Court => {
                         let res = T::Court::on_resolution(market_id, market)?;
-                        weight = weight.saturating_add(res.weight);
-                        res.result
-                    }
-                    MarketDisputeMechanism::SimpleDisputes => {
-                        let res = T::SimpleDisputes::on_resolution(market_id, market)?;
                         weight = weight.saturating_add(res.weight);
                         res.result
                     }
@@ -2746,9 +2692,6 @@ mod pallet {
                 }
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
-            // TODO: https://github.com/zeitgeistpm/zeitgeist/issues/815
-            // Following call should return weight consumed by it.
-            T::LiquidityMining::distribute_market_incentives(market_id)?;
 
             // NOTE: Currently we don't clean up outcome assets.
             // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.

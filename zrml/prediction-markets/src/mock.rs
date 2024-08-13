@@ -41,15 +41,14 @@ use zeitgeist_primitives::{
         CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
         CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
         ExistentialDeposit, ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId,
-        GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LiquidityMiningPalletId,
-        LockId, MaxAppeals, MaxApprovals, MaxCategories, MaxCourtParticipants, MaxCreatorFee,
-        MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
-        MaxGracePeriod, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners,
-        MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinCategories,
-        MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod,
-        OutcomeBond, OutcomeFactor, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
-        SimpleDisputesPalletId, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
-        MILLISECS_PER_BLOCK,
+        GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LockId, MaxAppeals,
+        MaxApprovals, MaxCategories, MaxCourtParticipants, MaxCreatorFee, MaxDelegations,
+        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
+        MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners, MaxRejectReasonLen, MaxReserves,
+        MaxSelectedDraws, MaxYearlyInflation, MinCategories, MinDisputeDuration, MinJurorStake,
+        MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod, OutsiderBond, PmPalletId,
+        RemoveKeysLimit, RequestInterval, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE,
+        CENT, MILLISECS_PER_BLOCK,
     },
     traits::DeployPoolApi,
     types::{
@@ -174,11 +173,9 @@ construct_runtime!(
         Balances: pallet_balances,
         Court: zrml_court,
         AssetManager: orml_currencies,
-        LiquidityMining: zrml_liquidity_mining,
         MarketCommons: zrml_market_commons,
         PredictionMarkets: prediction_markets,
         RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip,
-        SimpleDisputes: zrml_simple_disputes,
         GlobalDisputes: zrml_global_disputes,
         System: frame_system,
         Timestamp: pallet_timestamp,
@@ -207,7 +204,6 @@ impl crate::Config for Runtime {
     type DisputeBond = DisputeBond;
     type RuntimeEvent = RuntimeEvent;
     type GlobalDisputes = GlobalDisputes;
-    type LiquidityMining = LiquidityMining;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type MinDisputeDuration = MinDisputeDuration;
@@ -228,7 +224,6 @@ impl crate::Config for Runtime {
     type RequestEditOrigin = EnsureSignedBy<RequestEditOrigin, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<ResolveOrigin, AccountIdTest>;
     type AssetManager = AssetManager;
-    type SimpleDisputes = SimpleDisputes;
     type Slash = Treasury;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
@@ -386,31 +381,10 @@ impl zrml_court::Config for Runtime {
     type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
 }
 
-impl zrml_liquidity_mining::Config for Runtime {
-    type Currency = Balances;
-    type RuntimeEvent = RuntimeEvent;
-    type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
-    type PalletId = LiquidityMiningPalletId;
-    type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
-}
-
 impl zrml_market_commons::Config for Runtime {
     type Balance = Balance;
     type MarketId = MarketId;
     type Timestamp = Timestamp;
-}
-
-impl zrml_simple_disputes::Config for Runtime {
-    type Currency = Balances;
-    type RuntimeEvent = RuntimeEvent;
-    type OutcomeBond = OutcomeBond;
-    type OutcomeFactor = OutcomeFactor;
-    type DisputeResolution = prediction_markets::Pallet<Runtime>;
-    type MarketCommons = MarketCommons;
-    type MaxDisputes = MaxDisputes;
-    type PalletId = SimpleDisputesPalletId;
-    type WeightInfo = zrml_simple_disputes::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_global_disputes::Config for Runtime {

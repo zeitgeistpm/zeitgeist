@@ -134,7 +134,6 @@ fn market_dispute_mechanism(seed: u8) -> Option<MarketDisputeMechanism> {
     match seed % 4 {
         0 => Some(MarketDisputeMechanism::Authorized),
         1 => Some(MarketDisputeMechanism::Court),
-        2 => Some(MarketDisputeMechanism::SimpleDisputes),
         _ => None,
     }
 }

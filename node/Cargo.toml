@@ -114,7 +114,6 @@ url = { workspace = true }
 battery-station-runtime = { workspace = true, optional = true }
 zeitgeist-primitives = { workspace = true, features = ["default"] }
 zeitgeist-runtime = { workspace = true, optional = true }
-zrml-liquidity-mining = { workspace = true, features = ["default"] }
 zrml-swaps-rpc = { workspace = true }
 
 [features]

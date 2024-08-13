@@ -72,11 +72,6 @@ parameter_types! {
     pub const MaxOrders: u32 = 100;
 }
 
-// Liquidity Mining parameters
-parameter_types! {
-    pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
-}
-
 // NeoSwaps
 parameter_types! {
     pub storage NeoExitFee: Balance = CENT;
@@ -112,13 +107,6 @@ parameter_types! {
     pub const CloseEarlyBlockPeriod: BlockNumber = 6;
     pub const CloseEarlyTimeFramePeriod: Moment = 6 * MILLISECS_PER_BLOCK as u64;
     pub const ValidityBond: Balance = 50 * CENT;
-}
-
-// Simple disputes parameters
-parameter_types! {
-    pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
-    pub const OutcomeBond: Balance = 5 * BASE;
-    pub const OutcomeFactor: Balance = 2 * BASE;
 }
 
 // Swaps parameters

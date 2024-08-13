@@ -51,8 +51,8 @@ pub const fn deposit(items: u32, bytes: u32) -> Balance {
     items as Balance * 150 * CENT + (bytes as Balance) * 75 * MICRO
 }
 
-// Rikiddo and TokensConfig
 parameter_types! {
+    // Returns the number of decimals used on chain.
     pub const BalanceFractionalDecimals: u8 = {
         let mut base = BASE;
         let mut counter: u8 = 0;
@@ -113,9 +113,6 @@ pub const MAX_ORACLE_DURATION: BlockNumber = 14 * BLOCKS_PER_DAY;
 
 /// Pallet identifier, mainly used for named balance reserves.
 pub const PM_PALLET_ID: PalletId = PalletId(*b"zge/pred");
-
-// Simple Disputes
-pub const SD_PALLET_ID: PalletId = PalletId(*b"zge/sedp");
 
 // Swaps
 /// Max. assets in a swap pool.

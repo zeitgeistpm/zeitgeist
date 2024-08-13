@@ -30,10 +30,7 @@ use battery_station_runtime::{
 };
 use sc_service::ChainType;
 use sp_core::sr25519;
-use zeitgeist_primitives::{
-    constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-    types::Balance,
-};
+use zeitgeist_primitives::types::Balance;
 #[cfg(feature = "parachain")]
 use {
     super::battery_station::inflation_config,

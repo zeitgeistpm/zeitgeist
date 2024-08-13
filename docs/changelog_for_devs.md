@@ -12,6 +12,11 @@ As of 0.3.9, the changelog's format is based on
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
+## v0.5.4
+
+- ⚠️  Remove zrml-liquidity-mining from code base.
+- ⚠️  Remove zrml-rikiddo from the code base.
+
 ## v0.5.2
 
 [#1310]: https://github.com/zeitgeistpm/zeitgeist/pull/1310

@@ -115,7 +115,7 @@ fn simple_create_scalar_market(
         gen_metadata(2),
         creation,
         MarketType::Scalar(100..=200),
-        Some(MarketDisputeMechanism::SimpleDisputes),
+        Some(MarketDisputeMechanism::Court),
         scoring_rule
     ));
 }

@@ -24,13 +24,7 @@ use battery_station_runtime::parameters::SS58Prefix;
 use hex_literal::hex;
 use sc_service::ChainType;
 use sp_core::crypto::UncheckedInto;
-use zeitgeist_primitives::{
-    constants::{
-        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-        BASE,
-    },
-    types::AccountId,
-};
+use zeitgeist_primitives::{constants::BASE, types::AccountId};
 
 #[cfg(feature = "parachain")]
 use {

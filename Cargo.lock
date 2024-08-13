@@ -876,7 +876,6 @@ dependencies = [
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
- "substrate-fixed",
  "substrate-wasm-builder",
  "test-case",
  "xcm-emulator",
@@ -885,14 +884,11 @@ dependencies = [
  "zrml-court",
  "zrml-global-disputes",
  "zrml-hybrid-router",
- "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-neo-swaps",
  "zrml-orderbook",
  "zrml-parimutuel",
  "zrml-prediction-markets",
- "zrml-rikiddo",
- "zrml-simple-disputes",
  "zrml-styx",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
@@ -12823,7 +12819,6 @@ source = "git+https://github.com/encointer/substrate-fixed#879c58bcc6fd676a74315
 dependencies = [
  "parity-scale-codec",
  "scale-info",
- "serde",
  "substrate-typenum",
 ]
 
@@ -14925,7 +14920,6 @@ dependencies = [
  "url",
  "zeitgeist-primitives",
  "zeitgeist-runtime",
- "zrml-liquidity-mining",
  "zrml-swaps-rpc",
 ]
 
@@ -15040,7 +15034,6 @@ dependencies = [
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
- "substrate-fixed",
  "substrate-wasm-builder",
  "test-case",
  "xcm-emulator",
@@ -15049,14 +15042,11 @@ dependencies = [
  "zrml-court",
  "zrml-global-disputes",
  "zrml-hybrid-router",
- "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-neo-swaps",
  "zrml-orderbook",
  "zrml-parimutuel",
  "zrml-prediction-markets",
- "zrml-rikiddo",
- "zrml-simple-disputes",
  "zrml-styx",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
@@ -15200,32 +15190,10 @@ dependencies = [
  "zrml-court",
  "zrml-global-disputes",
  "zrml-hybrid-router",
- "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-neo-swaps",
  "zrml-orderbook",
  "zrml-prediction-markets",
- "zrml-simple-disputes",
-]
-
-[[package]]
-name = "zrml-liquidity-mining"
-version = "0.5.3"
-dependencies = [
- "env_logger 0.10.2",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "pallet-balances",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-io",
- "sp-runtime",
- "zeitgeist-primitives",
- "zrml-market-commons",
 ]
 
 [[package]]
@@ -15283,12 +15251,10 @@ dependencies = [
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
- "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-neo-swaps",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
- "zrml-simple-disputes",
 ]
 
 [[package]]
@@ -15381,11 +15347,9 @@ dependencies = [
  "zrml-authorized",
  "zrml-court",
  "zrml-global-disputes",
- "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
- "zrml-simple-disputes",
 ]
 
 [[package]]
@@ -15398,7 +15362,6 @@ dependencies = [
  "sp-arithmetic 16.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0)",
  "zeitgeist-primitives",
  "zrml-prediction-markets",
- "zrml-simple-disputes",
 ]
 
 [[package]]
@@ -15408,61 +15371,6 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "zeitgeist-primitives",
-]
-
-[[package]]
-name = "zrml-rikiddo"
-version = "0.5.3"
-dependencies = [
- "arbitrary",
- "cfg-if",
- "env_logger 0.10.2",
- "frame-support",
- "frame-system",
- "hashbrown 0.14.5",
- "pallet-balances",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "substrate-fixed",
- "zeitgeist-primitives",
- "zrml-rikiddo",
-]
-
-[[package]]
-name = "zrml-rikiddo-fuzz"
-version = "0.0.0"
-dependencies = [
- "arbitrary",
- "frame-support",
- "frame-system",
- "libfuzzer-sys",
- "substrate-fixed",
- "zrml-rikiddo",
-]
-
-[[package]]
-name = "zrml-simple-disputes"
-version = "0.5.3"
-dependencies = [
- "env_logger 0.10.2",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
- "zeitgeist-primitives",
- "zrml-market-commons",
 ]
 
 [[package]]
