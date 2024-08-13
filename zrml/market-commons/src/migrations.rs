@@ -17,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{AccountIdOf, BalanceOf, Config, MarketIdOf, MomentOf, Pallet as MarketCommons};
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use frame_support::{
     pallet_prelude::Weight,
@@ -124,6 +124,18 @@ where
             return total_weight;
         }
         log::info!("MigrateDisputeMechanism: Starting...");
+
+        // 879, 877, 878, 880, 882 markets have each campaign asset as the base asset, which is invalid
+        let bs_corrupted_market_ids: Vec<MarketIdOf<T>> =
+            vec![879u32.into(), 877u32.into(), 878u32.into(), 880u32.into(), 882u32.into()];
+        for market_id in bs_corrupted_market_ids {
+            if crate::Markets::<T>::contains_key(market_id)
+                // this produces a decoding error for the corrupted markets
+                && crate::Markets::<T>::try_get(market_id).is_err()
+            {
+                crate::Markets::<T>::remove(market_id);
+            }
+        }
 
         let mut translated = 0u64;
         crate::Markets::<T>::translate::<OldMarketOf<T>, _>(|_, old_market| {
