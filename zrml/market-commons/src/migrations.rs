@@ -26,7 +26,7 @@ use frame_support::{
 use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::{Perbill, RuntimeDebug, Saturating};
+use sp_runtime::{Perbill, RuntimeDebug, SaturatedConversion, Saturating};
 use zeitgeist_primitives::types::{
     Asset, Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
@@ -98,6 +98,8 @@ pub enum OldMarketDisputeMechanism {
 const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 11;
 const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 12;
 
+const CORRUPTED_MARKET_IDS_BATTERY_STATION: [u32; 5] = [879u32, 877u32, 878u32, 880u32, 882u32];
+
 #[cfg(feature = "try-runtime")]
 #[frame_support::storage_alias]
 pub(crate) type Markets<T: Config> =
@@ -124,6 +126,18 @@ where
             return total_weight;
         }
         log::info!("MigrateDisputeMechanism: Starting...");
+
+        // 879, 877, 878, 880, 882 markets on Battery Station
+        // each have a campaign asset as the base asset, which is invalid
+        for market_id in CORRUPTED_MARKET_IDS_BATTERY_STATION {
+            let market_id = market_id.saturated_into::<MarketIdOf<T>>();
+            if crate::Markets::<T>::contains_key(market_id)
+                // this produces a decoding error for the corrupted markets
+                && crate::Markets::<T>::try_get(market_id).is_err()
+            {
+                crate::Markets::<T>::remove(market_id);
+            }
+        }
 
         let mut translated = 0u64;
         crate::Markets::<T>::translate::<OldMarketOf<T>, _>(|_, old_market| {
@@ -213,6 +227,13 @@ where
             assert_eq!(old_market.bonds, new_market.bonds);
             assert_eq!(old_market.early_close, new_market.early_close);
         }
+
+        for market_id in CORRUPTED_MARKET_IDS_BATTERY_STATION {
+            let market_id = market_id.saturated_into::<MarketIdOf<T>>();
+            assert!(!crate::Markets::<T>::contains_key(market_id));
+            assert!(crate::Markets::<T>::try_get(market_id).is_err());
+        }
+
         log::info!("MigrateDisputeMechanism: Post-upgrade market count is {}!", new_market_count);
         Ok(())
     }
