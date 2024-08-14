@@ -17,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{AccountIdOf, BalanceOf, Config, MarketIdOf, MomentOf, Pallet as MarketCommons};
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use frame_support::{
     pallet_prelude::Weight,
@@ -26,7 +26,7 @@ use frame_support::{
 use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::{Perbill, RuntimeDebug, Saturating};
+use sp_runtime::{Perbill, RuntimeDebug, SaturatedConversion, Saturating};
 use zeitgeist_primitives::types::{
     Asset, Deadlines, EarlyClose, Market, MarketBonds, MarketCreation, MarketDisputeMechanism,
     MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule,
@@ -98,6 +98,8 @@ pub enum OldMarketDisputeMechanism {
 const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 11;
 const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 12;
 
+const CORRUPTED_MARKET_IDS_BATTERY_STATION: [u32; 5] = [879u32, 877u32, 878u32, 880u32, 882u32];
+
 #[cfg(feature = "try-runtime")]
 #[frame_support::storage_alias]
 pub(crate) type Markets<T: Config> =
@@ -125,11 +127,10 @@ where
         }
         log::info!("MigrateDisputeMechanism: Starting...");
 
-        // 879, 877, 878, 880, 882 markets on Battery Station 
+        // 879, 877, 878, 880, 882 markets on Battery Station
         // each have a campaign asset as the base asset, which is invalid
-        let bs_corrupted_market_ids: Vec<MarketIdOf<T>> =
-            vec![879u32.into(), 877u32.into(), 878u32.into(), 880u32.into(), 882u32.into()];
-        for market_id in bs_corrupted_market_ids {
+        for market_id in CORRUPTED_MARKET_IDS_BATTERY_STATION {
+            let market_id = market_id.saturated_into::<MarketIdOf<T>>();
             if crate::Markets::<T>::contains_key(market_id)
                 // this produces a decoding error for the corrupted markets
                 && crate::Markets::<T>::try_get(market_id).is_err()
@@ -226,6 +227,13 @@ where
             assert_eq!(old_market.bonds, new_market.bonds);
             assert_eq!(old_market.early_close, new_market.early_close);
         }
+
+        for market_id in CORRUPTED_MARKET_IDS_BATTERY_STATION {
+            let market_id = market_id.saturated_into::<MarketIdOf<T>>();
+            assert!(!crate::Markets::<T>::contains_key(market_id));
+            assert!(crate::Markets::<T>::try_get(market_id).is_err());
+        }
+
         log::info!("MigrateDisputeMechanism: Post-upgrade market count is {}!", new_market_count);
         Ok(())
     }
