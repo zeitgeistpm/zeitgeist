@@ -125,7 +125,8 @@ where
         }
         log::info!("MigrateDisputeMechanism: Starting...");
 
-        // 879, 877, 878, 880, 882 markets have each campaign asset as the base asset, which is invalid
+        // 879, 877, 878, 880, 882 markets on Battery Station 
+        // each have a campaign asset as the base asset, which is invalid
         let bs_corrupted_market_ids: Vec<MarketIdOf<T>> =
             vec![879u32.into(), 877u32.into(), 878u32.into(), 880u32.into(), 882u32.into()];
         for market_id in bs_corrupted_market_ids {
