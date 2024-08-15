@@ -17,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{AccountIdOf, BalanceOf, Config, MarketIdOf, MomentOf, Pallet as MarketCommons};
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use frame_support::{
     pallet_prelude::Weight,
@@ -46,6 +46,78 @@ use frame_support::Blake2_128Concat;
 const MARKET_COMMONS: &[u8] = b"MarketCommons";
 #[cfg(any(feature = "try-runtime", test))]
 const MARKETS: &[u8] = b"Markets";
+
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION_0: u16 = 11;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION_0: u16 = 12;
+
+#[cfg(feature = "try-runtime")]
+#[frame_support::storage_alias]
+pub(crate) type Markets<T: Config> =
+    StorageMap<MarketCommons<T>, Blake2_128Concat, MarketIdOf<T>, OldMarketOf<T>>;
+
+pub struct RemoveMarkets<T, MarketIds>(PhantomData<T>, MarketIds);
+
+impl<T, MarketIds> OnRuntimeUpgrade for RemoveMarkets<T, MarketIds>
+where
+    T: Config,
+    MarketIds: Get<Vec<u32>>,
+{
+    fn on_runtime_upgrade() -> Weight {
+        let mut total_weight = T::DbWeight::get().reads(1);
+        let market_commons_version = StorageVersion::get::<MarketCommons<T>>();
+        if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION_0 {
+            log::info!(
+                "RemoveMarkets: market-commons version is {:?}, but {:?} is required",
+                market_commons_version,
+                MARKET_COMMONS_REQUIRED_STORAGE_VERSION_0,
+            );
+            return total_weight;
+        }
+        log::info!("RemoveMarkets: Starting...");
+
+        let mut corrupted_markets = vec![];
+
+        for &market_id in MarketIds::get().iter() {
+            let market_id = market_id.saturated_into::<MarketIdOf<T>>();
+            if crate::Markets::<T>::contains_key(market_id)
+                // this produces a decoding error for the corrupted markets
+                && crate::Markets::<T>::try_get(market_id).is_err()
+            {
+                crate::Markets::<T>::remove(market_id);
+                corrupted_markets.push(market_id);
+            }
+        }
+
+        log::info!("RemoveMarkets: Removed markets {:?}.", corrupted_markets);
+        let count = corrupted_markets.len() as u64;
+        total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(count, count));
+
+        StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION_0).put::<MarketCommons<T>>();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        log::info!("RemoveMarkets: Done!");
+        total_weight
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
+        Ok(vec![])
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade(_previous_state: Vec<u8>) -> Result<(), DispatchError> {
+        for &market_id in MarketIds::get().iter() {
+            let market_id = market_id.saturated_into::<MarketIdOf<T>>();
+            assert!(!crate::Markets::<T>::contains_key(market_id));
+            assert!(crate::Markets::<T>::try_get(market_id).is_err());
+        }
+
+        log::info!("RemoveMarkets: Post-upgrade done!");
+        Ok(())
+    }
+}
+
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION_1: u16 = 12;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION_1: u16 = 13;
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct OldMarket<AccountId, Balance, BlockNumber, Moment, MarketId> {
@@ -95,16 +167,6 @@ pub enum OldMarketDisputeMechanism {
     SimpleDisputes,
 }
 
-const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 11;
-const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 12;
-
-const CORRUPTED_MARKET_IDS_BATTERY_STATION: [u32; 5] = [879u32, 877u32, 878u32, 880u32, 882u32];
-
-#[cfg(feature = "try-runtime")]
-#[frame_support::storage_alias]
-pub(crate) type Markets<T: Config> =
-    StorageMap<MarketCommons<T>, Blake2_128Concat, MarketIdOf<T>, OldMarketOf<T>>;
-
 pub struct MigrateDisputeMechanism<T>(PhantomData<T>);
 
 /// Removes the `SimpleDisputes` MDM by switching markets that use `SimpleDisputes` to `Authorized`.
@@ -117,27 +179,15 @@ where
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
         let market_commons_version = StorageVersion::get::<MarketCommons<T>>();
-        if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
+        if market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION_1 {
             log::info!(
                 "MigrateDisputeMechanism: market-commons version is {:?}, but {:?} is required",
                 market_commons_version,
-                MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
+                MARKET_COMMONS_REQUIRED_STORAGE_VERSION_1,
             );
             return total_weight;
         }
         log::info!("MigrateDisputeMechanism: Starting...");
-
-        // 879, 877, 878, 880, 882 markets on Battery Station
-        // each have a campaign asset as the base asset, which is invalid
-        for market_id in CORRUPTED_MARKET_IDS_BATTERY_STATION {
-            let market_id = market_id.saturated_into::<MarketIdOf<T>>();
-            if crate::Markets::<T>::contains_key(market_id)
-                // this produces a decoding error for the corrupted markets
-                && crate::Markets::<T>::try_get(market_id).is_err()
-            {
-                crate::Markets::<T>::remove(market_id);
-            }
-        }
 
         let mut translated = 0u64;
         crate::Markets::<T>::translate::<OldMarketOf<T>, _>(|_, old_market| {
@@ -172,7 +222,7 @@ where
         total_weight =
             total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
 
-        StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommons<T>>();
+        StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION_1).put::<MarketCommons<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         log::info!("MigrateDisputeMechanism: Done!");
         total_weight
@@ -228,12 +278,6 @@ where
             assert_eq!(old_market.early_close, new_market.early_close);
         }
 
-        for market_id in CORRUPTED_MARKET_IDS_BATTERY_STATION {
-            let market_id = market_id.saturated_into::<MarketIdOf<T>>();
-            assert!(!crate::Markets::<T>::contains_key(market_id));
-            assert!(crate::Markets::<T>::try_get(market_id).is_err());
-        }
-
         log::info!("MigrateDisputeMechanism: Post-upgrade market count is {}!", new_market_count);
         Ok(())
     }
@@ -247,22 +291,68 @@ mod tests {
         MarketOf,
     };
     use alloc::fmt::Debug;
-    use frame_support::{migration::put_storage_value, Blake2_128Concat, StorageHasher};
+    use frame_support::{
+        migration::put_storage_value, parameter_types, Blake2_128Concat, StorageHasher,
+    };
     use parity_scale_codec::Encode;
     use sp_io::storage::root as storage_root;
     use sp_runtime::{Perbill, StateVersion};
     use test_case::test_case;
     use zeitgeist_primitives::types::{Bond, EarlyCloseState, MarketId};
 
+    parameter_types! {
+        pub RemovableMarketIds: Vec<u32> = vec![879u32, 877u32, 878u32, 880u32, 882u32];
+        pub NoRemovableMarketIds: Vec<u32> = vec![];
+    }
+
     #[test]
     fn on_runtime_upgrade_increments_the_storage_version() {
         ExtBuilder::default().build().execute_with(|| {
-            set_up_version();
+            set_up_version_remove_markets();
+            RemoveMarkets::<Runtime, NoRemovableMarketIds>::on_runtime_upgrade();
+            assert_eq!(
+                StorageVersion::get::<MarketCommons<Runtime>>(),
+                MARKET_COMMONS_NEXT_STORAGE_VERSION_0
+            );
             MigrateDisputeMechanism::<Runtime>::on_runtime_upgrade();
             assert_eq!(
                 StorageVersion::get::<MarketCommons<Runtime>>(),
-                MARKET_COMMONS_NEXT_STORAGE_VERSION
+                MARKET_COMMONS_NEXT_STORAGE_VERSION_1
             );
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_remove_corrupted_markets_works_as_expected() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version_remove_markets();
+            let pallet = MARKET_COMMONS;
+            let prefix = MARKETS;
+            let (old_market, _) = construct_old_new_tuple(
+                Some(OldMarketDisputeMechanism::SimpleDisputes),
+                Some(MarketDisputeMechanism::Authorized),
+            );
+            for market_id in RemovableMarketIds::get().iter() {
+                let storage_hash = MarketId::from(*market_id).using_encoded(Blake2_128Concat::hash);
+                put_storage_value::<OldMarketOf<Runtime>>(
+                    pallet,
+                    prefix,
+                    &storage_hash,
+                    old_market.clone(),
+                );
+            }
+
+            for market_id in RemovableMarketIds::get().iter() {
+                let market_id = MarketId::from(*market_id);
+                assert!(crate::Markets::<Runtime>::contains_key(market_id));
+            }
+
+            RemoveMarkets::<Runtime, RemovableMarketIds>::on_runtime_upgrade();
+
+            for market_id in RemovableMarketIds::get().iter() {
+                let market_id = MarketId::from(*market_id);
+                assert!(!crate::Markets::<Runtime>::contains_key(market_id));
+            }
         });
     }
 
@@ -276,12 +366,12 @@ mod tests {
         Some(OldMarketDisputeMechanism::SimpleDisputes),
         Some(MarketDisputeMechanism::Authorized)
     )]
-    fn on_runtime_upgrade_works_as_expected(
+    fn on_runtime_upgrade_mdm_works_as_expected(
         old_scoring_rule: Option<OldMarketDisputeMechanism>,
         new_scoring_rule: Option<MarketDisputeMechanism>,
     ) {
         ExtBuilder::default().build().execute_with(|| {
-            set_up_version();
+            set_up_version_mdm();
             let (old_market, new_market) =
                 construct_old_new_tuple(old_scoring_rule, new_scoring_rule);
             populate_test_data::<Blake2_128Concat, MarketId, OldMarketOf<Runtime>>(
@@ -297,7 +387,7 @@ mod tests {
     #[test]
     fn on_runtime_upgrade_is_noop_if_versions_are_not_correct() {
         ExtBuilder::default().build().execute_with(|| {
-            StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION)
+            StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION_1)
                 .put::<MarketCommons<Runtime>>();
             let market = Market {
                 market_id: 7,
@@ -332,8 +422,13 @@ mod tests {
         });
     }
 
-    fn set_up_version() {
-        StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION)
+    fn set_up_version_remove_markets() {
+        StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION_0)
+            .put::<MarketCommons<Runtime>>();
+    }
+
+    fn set_up_version_mdm() {
+        StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION_1)
             .put::<MarketCommons<Runtime>>();
     }
 
