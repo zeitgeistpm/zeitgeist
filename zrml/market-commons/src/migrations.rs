@@ -21,7 +21,9 @@ use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use frame_support::{
     pallet_prelude::Weight,
+    storage::migration::get_storage_value,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
+    Blake2_128Concat, StorageHasher,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -39,9 +41,6 @@ use {
     sp_runtime::DispatchError,
 };
 
-#[cfg(any(feature = "try-runtime", feature = "test"))]
-use frame_support::Blake2_128Concat;
-
 #[cfg(any(feature = "try-runtime", test))]
 const MARKET_COMMONS: &[u8] = b"MarketCommons";
 #[cfg(any(feature = "try-runtime", test))]
@@ -54,6 +53,76 @@ const MARKET_COMMONS_NEXT_STORAGE_VERSION_0: u16 = 12;
 #[frame_support::storage_alias]
 pub(crate) type Markets<T: Config> =
     StorageMap<MarketCommons<T>, Blake2_128Concat, MarketIdOf<T>, OldMarketOf<T>>;
+
+// ID type of the campaign asset class.
+pub type CampaignAssetId = u128;
+
+#[derive(Clone, Copy, Debug, Decode, Default, Eq, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
+pub enum BaseAssetClass {
+    #[codec(index = 4)]
+    #[default]
+    Ztg,
+
+    #[codec(index = 5)]
+    ForeignAsset(u32),
+
+    #[codec(index = 7)]
+    CampaignAsset(#[codec(compact)] CampaignAssetId),
+}
+
+#[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct OldMarketWithCampaignBaseAsset<
+    AccountId,
+    Balance,
+    BlockNumber,
+    Moment,
+    BaseAssetClass,
+    MarketId,
+> {
+    pub market_id: MarketId,
+    /// Base asset of the market.
+    pub base_asset: BaseAssetClass,
+    /// Creator of this market.
+    pub creator: AccountId,
+    /// Creation type.
+    pub creation: MarketCreation,
+    /// A fee that is charged each trade and given to the market creator.
+    pub creator_fee: Perbill,
+    /// Oracle that reports the outcome of this market.
+    pub oracle: AccountId,
+    /// Metadata for the market, usually a content address of IPFS
+    /// hosted JSON. Currently limited to 66 bytes (see `MaxEncodedLen` implementation)
+    pub metadata: Vec<u8>,
+    /// The type of the market.
+    pub market_type: MarketType,
+    /// Market start and end
+    pub period: MarketPeriod<BlockNumber, Moment>,
+    /// Market deadlines.
+    pub deadlines: Deadlines<BlockNumber>,
+    /// The scoring rule used for the market.
+    pub scoring_rule: ScoringRule,
+    /// The current status of the market.
+    pub status: MarketStatus,
+    /// The report of the market. Only `Some` if it has been reported.
+    pub report: Option<Report<AccountId, BlockNumber>>,
+    /// The resolved outcome.
+    pub resolved_outcome: Option<OutcomeReport>,
+    /// See [`MarketDisputeMechanism`].
+    pub dispute_mechanism: Option<OldMarketDisputeMechanism>,
+    /// The bonds reserved for this market.
+    pub bonds: MarketBonds<AccountId, Balance>,
+    /// The time at which the market was closed early.
+    pub early_close: Option<EarlyClose<BlockNumber, Moment>>,
+}
+
+type CorruptedMarketOf<T> = OldMarketWithCampaignBaseAsset<
+    AccountIdOf<T>,
+    BalanceOf<T>,
+    BlockNumberFor<T>,
+    MomentOf<T>,
+    BaseAssetClass,
+    MarketIdOf<T>,
+>;
 
 pub struct RemoveMarkets<T, MarketIds>(PhantomData<T>, MarketIds);
 
@@ -79,12 +148,28 @@ where
 
         for &market_id in MarketIds::get().iter() {
             let market_id = market_id.saturated_into::<MarketIdOf<T>>();
-            if crate::Markets::<T>::contains_key(market_id)
-                // this produces a decoding error for the corrupted markets
-                && crate::Markets::<T>::try_get(market_id).is_err()
-            {
+            let is_corrupted = || {
+                if let Some(market) = get_storage_value::<CorruptedMarketOf<T>>(
+                    MARKET_COMMONS,
+                    MARKETS,
+                    &MarketIdOf::<T>::from(market_id).using_encoded(Blake2_128Concat::hash),
+                ) {
+                    match market.base_asset {
+                        BaseAssetClass::CampaignAsset(_) => true,
+                        _ => false,
+                    }
+                } else {
+                    false
+                }
+            };
+            if crate::Markets::<T>::contains_key(market_id) && is_corrupted() {
                 crate::Markets::<T>::remove(market_id);
                 corrupted_markets.push(market_id);
+            } else {
+                log::warn!(
+                    "RemoveMarkets: Market {:?} was expected to be corrupted, but isn't.",
+                    market_id
+                );
             }
         }
 
@@ -328,12 +413,45 @@ mod tests {
             set_up_version_remove_markets();
             let pallet = MARKET_COMMONS;
             let prefix = MARKETS;
+            let corrupted_market = construct_corrupt_market();
+            for market_id in RemovableMarketIds::get().iter() {
+                let storage_hash = MarketId::from(*market_id).using_encoded(Blake2_128Concat::hash);
+                put_storage_value::<CorruptedMarketOf<Runtime>>(
+                    pallet,
+                    prefix,
+                    &storage_hash,
+                    corrupted_market.clone(),
+                );
+            }
+
+            for market_id in RemovableMarketIds::get().iter() {
+                let market_id = MarketId::from(*market_id);
+                assert!(crate::Markets::<Runtime>::contains_key(market_id));
+            }
+
+            RemoveMarkets::<Runtime, RemovableMarketIds>::on_runtime_upgrade();
+
+            for market_id in RemovableMarketIds::get().iter() {
+                let market_id = MarketId::from(*market_id);
+                // all markets still present, because no market was in a corrupted storage layout
+                assert!(!crate::Markets::<Runtime>::contains_key(market_id));
+            }
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_does_not_remove_valid_markets() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_version_remove_markets();
+            let pallet = MARKET_COMMONS;
+            let prefix = MARKETS;
             let (old_market, _) = construct_old_new_tuple(
                 Some(OldMarketDisputeMechanism::SimpleDisputes),
                 Some(MarketDisputeMechanism::Authorized),
             );
             for market_id in RemovableMarketIds::get().iter() {
                 let storage_hash = MarketId::from(*market_id).using_encoded(Blake2_128Concat::hash);
+                // base asset for the market is not a campaign asset, so not corrupted
                 put_storage_value::<OldMarketOf<Runtime>>(
                     pallet,
                     prefix,
@@ -351,7 +469,8 @@ mod tests {
 
             for market_id in RemovableMarketIds::get().iter() {
                 let market_id = MarketId::from(*market_id);
-                assert!(!crate::Markets::<Runtime>::contains_key(market_id));
+                // all markets still present, because no market was in a corrupted storage layout
+                assert!(crate::Markets::<Runtime>::contains_key(market_id));
             }
         });
     }
@@ -502,6 +621,58 @@ mod tests {
             early_close: early_close.clone(),
         };
         (old_markets, new_market)
+    }
+
+    fn construct_corrupt_market() -> CorruptedMarketOf<Runtime> {
+        let market_id = 0;
+        let base_asset = BaseAssetClass::CampaignAsset(5u128);
+        let creator = 1;
+        let creation = MarketCreation::Advised;
+        let creator_fee = Perbill::from_rational(2u32, 3u32);
+        let oracle = 4;
+        let metadata = vec![5; 50];
+        let market_type = MarketType::Scalar(6..=7);
+        let period = MarketPeriod::Block(8..9);
+        let deadlines = Deadlines { grace_period: 10, oracle_duration: 11, dispute_duration: 12 };
+        let scoring_rule = ScoringRule::AmmCdaHybrid;
+        let status = MarketStatus::Resolved;
+        let report = Some(Report { at: 13, by: 14, outcome: OutcomeReport::Categorical(15) });
+        let resolved_outcome = Some(OutcomeReport::Categorical(16));
+        let bonds = MarketBonds {
+            creation: Some(Bond { who: 17, value: 18, is_settled: true }),
+            oracle: Some(Bond { who: 19, value: 20, is_settled: true }),
+            outsider: Some(Bond { who: 21, value: 22, is_settled: true }),
+            dispute: Some(Bond { who: 23, value: 24, is_settled: true }),
+            close_request: Some(Bond { who: 25, value: 26, is_settled: true }),
+            close_dispute: Some(Bond { who: 27, value: 28, is_settled: true }),
+        };
+        let early_close = Some(EarlyClose {
+            old: MarketPeriod::Block(29..30),
+            new: MarketPeriod::Block(31..32),
+            state: EarlyCloseState::Disputed,
+        });
+        let dispute_mechanism: Option<OldMarketDisputeMechanism> =
+            Some(OldMarketDisputeMechanism::Court);
+
+        OldMarketWithCampaignBaseAsset {
+            market_id,
+            creator,
+            base_asset,
+            creation,
+            creator_fee,
+            oracle,
+            metadata,
+            market_type,
+            period,
+            deadlines,
+            scoring_rule,
+            status,
+            report,
+            resolved_outcome,
+            dispute_mechanism,
+            bonds,
+            early_close,
+        }
     }
 
     #[allow(unused)]
