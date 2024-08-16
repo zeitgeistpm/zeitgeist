@@ -41,9 +41,7 @@ use {
     sp_runtime::DispatchError,
 };
 
-#[cfg(any(feature = "try-runtime", test))]
 const MARKET_COMMONS: &[u8] = b"MarketCommons";
-#[cfg(any(feature = "try-runtime", test))]
 const MARKETS: &[u8] = b"Markets";
 
 const MARKET_COMMONS_REQUIRED_STORAGE_VERSION_0: u16 = 11;
@@ -154,10 +152,7 @@ where
                     MARKETS,
                     &MarketIdOf::<T>::from(market_id).using_encoded(Blake2_128Concat::hash),
                 ) {
-                    match market.base_asset {
-                        BaseAssetClass::CampaignAsset(_) => true,
-                        _ => false,
-                    }
+                    matches!(market.base_asset, BaseAssetClass::CampaignAsset(_))
                 } else {
                     false
                 }
