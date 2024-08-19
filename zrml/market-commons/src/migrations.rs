@@ -169,8 +169,9 @@ where
         }
 
         log::info!("RemoveMarkets: Removed markets {:?}.", corrupted_markets);
-        let count = corrupted_markets.len() as u64;
-        total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(count, count));
+        let count = MarketIds::get().len() as u64;
+        total_weight = total_weight
+            .saturating_add(T::DbWeight::get().reads_writes(count.saturating_mul(2u64), count));
 
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION_0).put::<MarketCommons<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
@@ -428,7 +429,6 @@ mod tests {
 
             for market_id in RemovableMarketIds::get().iter() {
                 let market_id = MarketId::from(*market_id);
-                // all markets still present, because no market was in a corrupted storage layout
                 assert!(!crate::Markets::<Runtime>::contains_key(market_id));
             }
         });
