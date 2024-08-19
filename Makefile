@@ -33,7 +33,7 @@ try-runtime-upgrade-battery-station:
 	--execute-try-runtime
 
 try-runtime-upgrade-zeitgeist:
-	@$(MAKE) TRYRUNTIME_URL="wss://zeitgeist-rpc.dwellir.com:443" \
+	@$(MAKE) TRYRUNTIME_URL="wss://zeitgeist.api.onfinality.io:443/public-ws" \
 	RUNTIME_PATH="./target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm" \
 	-- \
 	--execute-try-runtime
