@@ -174,6 +174,10 @@ impl Contains<RuntimeCall> for IsCallable {
     }
 }
 
+parameter_types! {
+    pub RemovableMarketIds: Vec<u32> = vec![879u32, 877u32, 878u32, 880u32, 882u32];
+}
+
 decl_common_types!();
 
 create_runtime_with_additional_pallets!(

@@ -61,7 +61,7 @@
           }
         ]
       },
-      "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
+      "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG=true"],
       "buildBlockMode": "manual",
       "connections": [
         {
@@ -106,7 +106,7 @@
           }
         ]
       },
-      "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG"],
+      "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG=true"],
       "buildBlockMode": "manual",
       "connections": [
         {

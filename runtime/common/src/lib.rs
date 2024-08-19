@@ -86,13 +86,14 @@ macro_rules! decl_common_types {
             generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
         };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
-        use zrml_market_commons::migrations::MigrateDisputeMechanism;
+        use zrml_market_commons::migrations::{MigrateDisputeMechanism, RemoveMarkets};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (MigrateDisputeMechanism<Runtime>);
+        type Migrations =
+            (RemoveMarkets<Runtime, RemovableMarketIds>, MigrateDisputeMechanism<Runtime>);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
