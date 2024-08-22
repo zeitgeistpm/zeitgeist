@@ -1,4 +1,5 @@
-endpoint: wss://main.rpc.zeitgeist.pm/ws
+# endpoint: wss://main.rpc.zeitgeist.pm/ws
+endpoint: wss://zeitgeist.api.onfinality.io/public-ws
 mock-signature-host: true
 db: ./tmp/ztg_db_mba.sqlite
 # wasm-override: zeitgeist-runtime.compact.compressed.wasm
@@ -25,3 +26,26 @@ import-storage:
     AuthorFilter:
         EligibleRatio: 100
         EligibleCount: 100
+    # Complex working example of storage import
+    # AssetRegistry:
+    #     Metadata:
+    #         - 
+    #           - 
+    #             - ForeignAsset: 10
+    #           - decimals: 6
+    #             name: USD Coin
+    #             symbol: USDC
+    #             existentialDeposit: "10000"
+    #             location:
+    #                 V3:
+    #                     parents: 1
+    #                     interior:
+    #                         X3: [
+    #                             Parachain: 1000,
+    #                             PalletInstance: 50,
+    #                             GeneralIndex: 1337,
+    #                         ]
+    #             additional:
+    #                 xcm:
+    #                     feeFactor: null
+    #                 allowAsBaseAsset: false
