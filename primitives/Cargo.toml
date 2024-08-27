@@ -39,4 +39,4 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "zeitgeist-primitives"
-version = "0.5.4"
+version = "0.5.5"

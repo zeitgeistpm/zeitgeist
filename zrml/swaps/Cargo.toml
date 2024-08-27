@@ -65,4 +65,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "zrml-swaps"
-version = "0.5.4"
+version = "0.5.5"

@@ -15,4 +15,4 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "zrml-prediction-markets-runtime-api"
-version = "0.5.4"
+version = "0.5.5"
