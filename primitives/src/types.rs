@@ -167,10 +167,13 @@ pub struct CustomMetadata {
     TypeInfo,
 )]
 pub struct XcmMetadata {
-    /// The factor used to determine the fee.
-    /// It is multiplied by the fee that would have been paid in native currency, so it represents
-    /// the ratio `native_price / other_asset_price`. It is a fixed point decimal number containing
-    /// as many fractional decimals as the asset it is used for contains.
+    /// The factor used to determine the fee of the foreign asset.
+    ///
+    /// In the fee calculations, the factor is multiplied by the fee that would have been paid in
+    /// native currency, so it represents the ratio between the price of the native currency and the
+    /// foreign asset, or, equivalently, the value of the trading pair (native currency)/(foreign
+    /// asset). The factor is a fixed point decimal number with ten decimals.
+    ///
     /// Should be updated regularly.
     pub fee_factor: Option<Balance>,
 }
