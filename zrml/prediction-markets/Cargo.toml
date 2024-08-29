@@ -92,4 +92,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "zrml-prediction-markets"
-version = "0.5.3"
+version = "0.5.4"
