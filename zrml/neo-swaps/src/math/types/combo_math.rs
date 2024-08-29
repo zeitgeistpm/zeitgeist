@@ -199,11 +199,14 @@ mod detail {
     }
 
     fn calculate_spot_price_fixed(
-        _buy: Vec<FixedType>,
-        _sell: Vec<FixedType>,
-        _liquidity: FixedType,
+        buy: Vec<FixedType>,
+        sell: Vec<FixedType>,
+        liquidity: FixedType,
     ) -> Option<FixedType> {
-        None
+        let exp_sum_buy = exp_sum(buy, liquidity)?;
+        let exp_sum_sell = exp_sum(sell, liquidity)?;
+        let denominator = exp_sum_buy.checked_add(exp_sum_sell)?;
+        exp_sum_buy.checked_div(denominator)
     }
 }
 
@@ -255,6 +258,35 @@ mod tests {
     ) {
         assert_err!(
             MockMath::calculate_swap_amount_out_for_buy(buy, sell, amount_in, liquidity),
+            Error::<MockRuntime>::MathError
+        );
+    }
+
+    #[test_case(vec![_10], vec![_10], 144_269_504_088, _1_2)]
+    #[test_case(vec![_10 - 58_496_250_072], vec![_20], 144_269_504_088, _3_4)]
+    #[test_case(vec![_20], vec![_10 - 58_496_250_072], 144_269_504_088, _1_4)]
+    fn calcuate_spot_price_works(
+        buy: Vec<MockBalance>,
+        sell: Vec<MockBalance>,
+        liquidity: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(MockMath::calculate_spot_price(buy, sell, liquidity).unwrap(), expected);
+    }
+
+    #[test_case(vec![_1], vec![_1], 0)] // Division by zero
+    #[test_case(vec![1_000 * _1], vec![_1], _1)] // Overflow
+    #[test_case(vec![_1], vec![1_000 * _1], _1)] // Overflow
+    #[test_case(vec![u128::MAX], vec![_1], _1)] // to_fixed error
+    #[test_case(vec![_1], vec![u128::MAX], _1)] // to_fixed error
+    #[test_case(vec![_1], vec![_1], u128::MAX)] // to_fixed error
+    fn calculate_spot_price_throws_math_error(
+        buy: Vec<MockBalance>,
+        sell: Vec<MockBalance>,
+        liquidity: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_spot_price(buy, sell, liquidity),
             Error::<MockRuntime>::MathError
         );
     }
