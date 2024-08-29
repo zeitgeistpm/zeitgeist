@@ -14,28 +14,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
-//
-// This file incorporates work covered by the following copyright and
-// permission notice:
-//
-//     Copyright (c) 2019 Alain Brenzikofer, modified by GalacticCouncil(2021)
-//
-//     Licensed under the Apache License, Version 2.0 (the "License");
-//     you may not use this file except in compliance with the License.
-//     You may obtain a copy of the License at
-//
-//          http://www.apache.org/licenses/LICENSE-2.0
-//
-//     Unless required by applicable law or agreed to in writing, software
-//     distributed under the License is distributed on an "AS IS" BASIS,
-//     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//     See the License for the specific language governing permissions and
-//     limitations under the License.
-//
-//     Original source: https://github.com/encointer/substrate-fixed
-//
-// The changes applied are: Re-used and extended tests for `exp` and other
-// functions.
 
 use crate::{
     math::{
@@ -56,7 +34,7 @@ use typenum::U80;
 type Fractional = U80;
 type FixedType = FixedU128<Fractional>;
 
-// 32.44892769177272
+/// The point at which 32.44892769177272
 const EXP_OVERFLOW_THRESHOLD: FixedType = FixedType::from_bits(0x20_72EC_ECDA_6EBE_EACC_40C7);
 
 pub(crate) struct ComboMath<T>(PhantomData<T>);
@@ -136,6 +114,17 @@ mod detail {
         value.to_fixed_decimal(DECIMALS).ok()
     }
 
+    /// Returns `\sum_{r \in R} e^{-r/b}`, where `R` denotes `reserves` and `b` denotes `liquidity`.
+    /// The result is `None` if and only if one of the `exp` calculations has failed.
+    fn exp_sum(reserves: Vec<FixedType>, liquidity: FixedType) -> Option<FixedType> {
+        reserves
+            .iter()
+            .map(|r| exp(r.checked_div(liquidity)?, true).ok())
+            .collect::<Option<Vec<_>>>()?
+            .iter()
+            .try_fold(FixedType::zero(), |acc, &val| acc.checked_add(val))
+    }
+
     pub(super) fn calculate_swap_amount_out_for_buy(
         buy: Vec<u128>,
         sell: Vec<u128>,
@@ -180,12 +169,24 @@ mod detail {
     }
 
     fn calculate_swap_amount_out_for_buy_fixed(
-        _buy: Vec<FixedType>,
-        _sell: Vec<FixedType>,
-        _amount_in: FixedType,
-        _liquidity: FixedType,
+        buy: Vec<FixedType>,
+        sell: Vec<FixedType>,
+        amount_in: FixedType,
+        liquidity: FixedType,
     ) -> Option<FixedType> {
-        None
+        let exp_sum_buy = exp_sum(buy, liquidity)?;
+        let exp_sum_sell = exp_sum(sell, liquidity)?;
+        let amount_in_div_liquidity = amount_in.checked_div(liquidity)?;
+        let exp_of_minus_amount_in: FixedType = exp(amount_in_div_liquidity, true).ok()?;
+        let exp_of_minus_amount_in_times_exp_sum_sell =
+            exp_of_minus_amount_in.checked_mul(exp_sum_sell)?;
+        let numerator = exp_sum_buy
+            .checked_add(exp_sum_sell)?
+            .checked_sub(exp_of_minus_amount_in_times_exp_sum_sell)?;
+        let ln_arg = numerator.checked_div(exp_sum_buy)?;
+        println!("{}", ln_arg);
+        let (ln_val, _): (FixedType, _) = ln(ln_arg).ok()?;
+        ln_val.checked_mul(liquidity)
     }
 
     fn calculate_swap_amount_out_for_sell_fixed(
@@ -203,5 +204,58 @@ mod detail {
         _liquidity: FixedType,
     ) -> Option<FixedType> {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // TODO(#1328): Remove after rustc nightly-2024-04-22
+    #![allow(clippy::duplicated_attributes)]
+
+    use super::*;
+    use crate::{mock::Runtime as MockRuntime, MAX_SPOT_PRICE, MIN_SPOT_PRICE};
+    use alloc::str::FromStr;
+    use frame_support::assert_err;
+    use test_case::test_case;
+    use zeitgeist_primitives::constants::base_multiples::*;
+
+    type MockBalance = BalanceOf<MockRuntime>;
+    type MockMath = ComboMath<MockRuntime>;
+
+    // Example taken from
+    // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr
+    #[test_case(vec![_10], vec![_10], _10, 144_269_504_088, 58_496_250_072)]
+    #[test_case(vec![_1], vec![4_586_751_453], _1, _1, 7_353_256_641)]
+    #[test_case(vec![_2], vec![9_173_502_907], _2, _2, 14_706_513_281; "positive ln")]
+    #[test_case(vec![_1], vec![37_819_608_145], _1_10, _3, 386_589_943; "negative ln")]
+    fn calculate_swap_amount_out_for_buy_works(
+        buy: Vec<MockBalance>,
+        sell: Vec<MockBalance>,
+        amount_in: MockBalance,
+        liquidity: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(
+            MockMath::calculate_swap_amount_out_for_buy(buy, sell, amount_in, liquidity).unwrap(),
+            expected
+        );
+    }
+
+    #[test_case(vec![_1], vec![_1], _1, 0)] // Division by zero
+    #[test_case(vec![_1], vec![_1], 1_000 * _1, _1)] // Overflow
+    #[test_case(vec![u128::MAX], vec![_1], _1, _1)] // to_fixed error
+    #[test_case(vec![_1], vec![u128::MAX], _1, _1)] // to_fixed error
+    #[test_case(vec![_1], vec![_1], u128::MAX, _1)] // to_fixed error
+    #[test_case(vec![_1], vec![_1], _1, u128::MAX)] // to_fixed error
+    fn calculate_swap_amount_out_for_buy_throws_math_error(
+        buy: Vec<MockBalance>,
+        sell: Vec<MockBalance>,
+        amount_in: MockBalance,
+        liquidity: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_swap_amount_out_for_buy(buy, sell, amount_in, liquidity),
+            Error::<MockRuntime>::MathError
+        );
     }
 }
