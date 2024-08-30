@@ -79,14 +79,18 @@ where
 
     fn calculate_swap_amount_out_for_sell(
         buy: Vec<BalanceOf<T>>,
+        keep: Vec<BalanceOf<T>>,
         sell: Vec<BalanceOf<T>>,
-        amount_in: BalanceOf<T>,
+        amount_buy: BalanceOf<T>,
+        amount_keep: BalanceOf<T>,
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError> {
         detail::calculate_swap_amount_out_for_sell(
             buy.into_iter().map(|x| x.saturated_into()).collect(),
+            keep.into_iter().map(|x| x.saturated_into()).collect(),
             sell.into_iter().map(|x| x.saturated_into()).collect(),
-            amount_in.saturated_into(),
+            amount_buy.saturated_into(),
+            amount_keep.saturated_into(),
             liquidity.saturated_into(),
         )
         .map(|result| result.saturated_into())
@@ -158,21 +162,6 @@ mod detail {
         from_fixed(result_fixed)
     }
 
-    pub(super) fn calculate_swap_amount_out_for_sell(
-        buy: Vec<u128>,
-        sell: Vec<u128>,
-        amount_in: u128,
-        liquidity: u128,
-    ) -> Option<u128> {
-        let result_fixed = calculate_swap_amount_out_for_sell_fixed(
-            vec_to_fixed(buy)?,
-            vec_to_fixed(sell)?,
-            to_fixed(amount_in)?,
-            to_fixed(liquidity)?,
-        )?;
-        from_fixed(result_fixed)
-    }
-
     pub(super) fn calculate_equalize_amount(
         buy: Vec<u128>,
         sell: Vec<u128>,
@@ -185,6 +174,25 @@ mod detail {
             vec_to_fixed(sell)?,
             to_fixed(amount_buy)?,
             to_fixed(amount_sell)?,
+            to_fixed(liquidity)?,
+        )?;
+        from_fixed(result_fixed)
+    }
+
+    pub(super) fn calculate_swap_amount_out_for_sell(
+        buy: Vec<u128>,
+        keep: Vec<u128>,
+        sell: Vec<u128>,
+        amount_buy: u128,
+        amount_keep: u128,
+        liquidity: u128,
+    ) -> Option<u128> {
+        let result_fixed = calculate_swap_amount_out_for_sell_fixed(
+            vec_to_fixed(buy)?,
+            vec_to_fixed(keep)?,
+            vec_to_fixed(sell)?,
+            to_fixed(amount_buy)?,
+            to_fixed(amount_keep)?,
             to_fixed(liquidity)?,
         )?;
         from_fixed(result_fixed)
@@ -244,12 +252,36 @@ mod detail {
     }
 
     fn calculate_swap_amount_out_for_sell_fixed(
-        _buy: Vec<FixedType>,
-        _sell: Vec<FixedType>,
-        _amount_in: FixedType,
-        _liquidity: FixedType,
+        buy: Vec<FixedType>,
+        keep: Vec<FixedType>,
+        sell: Vec<FixedType>,
+        amount_buy: FixedType,
+        amount_keep: FixedType,
+        liquidity: FixedType,
     ) -> Option<FixedType> {
-        None
+        let amount_buy_keep = if keep.is_empty() {
+            amount_buy
+        } else {
+            let delta_buy = calculate_equalize_amount_fixed(
+                buy.clone(),
+                sell.clone(),
+                amount_buy,
+                amount_keep,
+                liquidity,
+            )?;
+            amount_buy.checked_sub(delta_buy)?
+        };
+
+        let buy_keep = buy.into_iter().chain(keep.into_iter()).collect();
+        let delta_buy_keep = calculate_equalize_amount_fixed(
+            buy_keep,
+            sell,
+            amount_buy_keep,
+            FixedType::zero(),
+            liquidity,
+        )?;
+
+        amount_buy_keep.checked_sub(delta_buy_keep)
     }
 
     fn calculate_spot_price_fixed(
@@ -352,7 +384,7 @@ mod tests {
         386_589_943;
         "negative ln"
     )]
-    fn calculate_swap_amount_out_for_sell_works(
+    fn calculate_equalize_amount_works(
         buy: Vec<MockBalance>,
         sell: Vec<MockBalance>,
         amount_buy: MockBalance,
@@ -363,6 +395,68 @@ mod tests {
         assert_eq!(
             MockMath::calculate_equalize_amount(buy, sell, amount_buy, amount_sell, liquidity)
                 .unwrap(),
+            expected
+        );
+    }
+
+    // Tests for `calculate_equalize`.
+    #[test_case(
+        vec![_10 - 58_496_250_072],
+        vec![],
+        vec![_20],
+        _10 + 58_496_250_072,
+        0,
+        144_269_504_088,
+        _10
+    )]
+    #[test_case(
+        vec![_1 - 7_353_256_641],
+        vec![],
+        vec![14_586_751_453],
+        17_353_256_641,
+        0,
+        _1,
+        _1
+    )]
+    #[test_case(
+        vec![_2 - 14_706_513_281],
+        vec![],
+        vec![_2 + 9_173_502_907],
+        _2 + 14_706_513_281,
+        0,
+        _2,
+        _2;
+        "positive ln"
+    )]
+    #[test_case(
+        vec![_1 - 386_589_943],
+        vec![],
+        vec![37_819_608_145 + _1_10],
+        _1_10 + 386_589_943,
+        0,
+        _3,
+        _1_10;
+        "negative ln"
+    )]
+    fn calculate_swap_amount_out_for_sell_works(
+        buy: Vec<MockBalance>,
+        keep: Vec<MockBalance>,
+        sell: Vec<MockBalance>,
+        amount_buy: MockBalance,
+        amount_sell: MockBalance,
+        liquidity: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(
+            MockMath::calculate_swap_amount_out_for_sell(
+                buy,
+                keep,
+                sell,
+                amount_buy,
+                amount_sell,
+                liquidity
+            )
+            .unwrap(),
             expected
         );
     }

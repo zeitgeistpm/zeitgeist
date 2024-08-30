@@ -39,8 +39,10 @@ where
 
     fn calculate_swap_amount_out_for_sell(
         buy: Vec<BalanceOf<T>>,
+        keep: Vec<BalanceOf<T>>,
         sell: Vec<BalanceOf<T>>,
-        amount_in: BalanceOf<T>,
+        amount_buy: BalanceOf<T>,
+        amount_keep: BalanceOf<T>,
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
