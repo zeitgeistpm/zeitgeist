@@ -96,7 +96,7 @@ macro_rules! decl_common_types {
             pub const CustomAssetsPalletStr: &'static str = "CustomAssets";
             pub const MarketAssetsPalletStr: &'static str = "MarketAssets";
             pub const LiquidityMiningPalletStr: &'static str = "LiquidityMining";
-            pub const RikiddoPalletStr: &'static str = "Rikiddo";
+            pub const RikiddoPalletStr: &'static str = "RikiddoSigmoidFeeMarketEma";
             pub const SimpleDisputesPalletStr: &'static str = "SimpleDisputes";
         }
 
