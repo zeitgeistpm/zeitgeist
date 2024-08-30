@@ -59,6 +59,24 @@ where
         .ok_or_else(|| Error::<T>::MathError.into())
     }
 
+    fn calculate_equalize_amount(
+        buy: Vec<BalanceOf<T>>,
+        sell: Vec<BalanceOf<T>>,
+        amount_buy: BalanceOf<T>,
+        amount_sell: BalanceOf<T>,
+        liquidity: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError> {
+        detail::calculate_equalize_amount(
+            buy.into_iter().map(|x| x.saturated_into()).collect(),
+            sell.into_iter().map(|x| x.saturated_into()).collect(),
+            amount_buy.saturated_into(),
+            amount_sell.saturated_into(),
+            liquidity.saturated_into(),
+        )
+        .map(|result| result.saturated_into())
+        .ok_or_else(|| Error::<T>::MathError.into())
+    }
+
     fn calculate_swap_amount_out_for_sell(
         buy: Vec<BalanceOf<T>>,
         sell: Vec<BalanceOf<T>>,
@@ -155,6 +173,23 @@ mod detail {
         from_fixed(result_fixed)
     }
 
+    pub(super) fn calculate_equalize_amount(
+        buy: Vec<u128>,
+        sell: Vec<u128>,
+        amount_buy: u128,
+        amount_sell: u128,
+        liquidity: u128,
+    ) -> Option<u128> {
+        let result_fixed = calculate_equalize_amount_fixed(
+            vec_to_fixed(buy)?,
+            vec_to_fixed(sell)?,
+            to_fixed(amount_buy)?,
+            to_fixed(amount_sell)?,
+            to_fixed(liquidity)?,
+        )?;
+        from_fixed(result_fixed)
+    }
+
     pub(super) fn calculate_spot_price(
         buy: Vec<u128>,
         sell: Vec<u128>,
@@ -184,6 +219,26 @@ mod detail {
             .checked_add(exp_sum_sell)?
             .checked_sub(exp_of_minus_amount_in_times_exp_sum_sell)?;
         let ln_arg = numerator.checked_div(exp_sum_buy)?;
+        let (ln_val, _): (FixedType, _) = ln(ln_arg).ok()?;
+        ln_val.checked_mul(liquidity)
+    }
+
+    fn calculate_equalize_amount_fixed(
+        buy: Vec<FixedType>,
+        sell: Vec<FixedType>,
+        amount_buy: FixedType,
+        amount_sell: FixedType,
+        liquidity: FixedType,
+    ) -> Option<FixedType> {
+        let exp_sum_buy = exp_sum(buy, liquidity)?;
+        let exp_sum_sell = exp_sum(sell, liquidity)?;
+        let numerator = exp_sum_buy.checked_add(exp_sum_sell)?;
+        let delta = amount_buy.checked_sub(amount_sell)?;
+        let delta_div_liquidity = delta.checked_div(liquidity)?;
+        let exp_delta: FixedType = exp(delta_div_liquidity, false).ok()?;
+        let exp_delta_times_exp_sum_sell = exp_delta.checked_mul(exp_sum_sell)?;
+        let denominator = exp_sum_buy.checked_add(exp_delta_times_exp_sum_sell)?;
+        let ln_arg = numerator.checked_div(denominator)?;
         let (ln_val, _): (FixedType, _) = ln(ln_arg).ok()?;
         ln_val.checked_mul(liquidity)
     }
@@ -258,6 +313,57 @@ mod tests {
         assert_err!(
             MockMath::calculate_swap_amount_out_for_buy(buy, sell, amount_in, liquidity),
             Error::<MockRuntime>::MathError
+        );
+    }
+
+    // "Reversing" the tests for `calculate_swap_amount_for_buy`.
+    #[test_case(vec![_11], vec![_12], _10, _10, 144_269_504_088, 0)]
+    #[test_case(
+        vec![_10 - 58_496_250_072],
+        vec![_20],
+        _10 + 58_496_250_072,
+        0,
+        144_269_504_088,
+        58_496_250_072
+    )]
+    #[test_case(
+        vec![_1 - 7_353_256_641],
+        vec![14_586_751_453],
+        17_353_256_641,
+        0,
+        _1,
+        7_353_256_641
+    )]
+    #[test_case(
+        vec![_2 - 14_706_513_281],
+        vec![_2 + 9_173_502_907],
+        _2 + 14_706_513_281,
+        0,
+        _2,
+        14_706_513_281;
+        "positive ln"
+    )]
+    #[test_case(
+        vec![_1 - 386_589_943],
+        vec![37_819_608_145 + _1_10],
+        _1_10 + 386_589_943,
+        0,
+        _3,
+        386_589_943;
+        "negative ln"
+    )]
+    fn calculate_swap_amount_out_for_sell_works(
+        buy: Vec<MockBalance>,
+        sell: Vec<MockBalance>,
+        amount_buy: MockBalance,
+        amount_sell: MockBalance,
+        liquidity: MockBalance,
+        expected: MockBalance,
+    ) {
+        assert_eq!(
+            MockMath::calculate_equalize_amount(buy, sell, amount_buy, amount_sell, liquidity)
+                .unwrap(),
+            expected
         );
     }
 
