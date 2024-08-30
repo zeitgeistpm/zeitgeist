@@ -184,7 +184,6 @@ mod detail {
             .checked_add(exp_sum_sell)?
             .checked_sub(exp_of_minus_amount_in_times_exp_sum_sell)?;
         let ln_arg = numerator.checked_div(exp_sum_buy)?;
-        println!("{}", ln_arg);
         let (ln_val, _): (FixedType, _) = ln(ln_arg).ok()?;
         ln_val.checked_mul(liquidity)
     }
