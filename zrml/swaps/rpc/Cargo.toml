@@ -11,4 +11,4 @@ zrml-swaps-runtime-api = { workspace = true, features = ["default"] }
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "zrml-swaps-rpc"
-version = "0.5.4"
+version = "0.5.5"
