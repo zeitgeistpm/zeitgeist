@@ -37,6 +37,50 @@
       ]
     },
     {
+      "name": "chopsticks_zeitgeist_xcm",
+      "testFileDir": ["tests/xcm-zeitgeist-chopsticks"],
+      "runScripts": ["build-node.sh"],
+      "foundation": {
+        "type": "chopsticks",
+        "launchSpec": [
+          {
+            "name": "ZeitgeistDB",
+            "type": "parachain",
+            "configPath": "./configs/zeitgeist.yml"
+          },
+          {
+            "name": "AssetHubDB",
+            "type": "parachain",
+            "configPath": "./configs/polkadot-asset-hub.yml"
+          },
+          {
+            "name": "PolkadotDB",
+            "type": "relaychain",
+            "configPath": "polkadot"
+          }
+        ]
+      },
+      "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG=true"],
+      "buildBlockMode": "manual",
+      "connections": [
+        {
+          "name": "ZeitgeistPara",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:8000"]
+        },
+        {
+          "name": "AssetHubPara",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:8001"]
+        },
+        {
+          "name": "PolkadotRelay",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:8002"]
+        }
+      ]
+    },
+    {
       "name": "chopsticks_zeitgeist_upgrade",
       "testFileDir": ["tests/rt-upgrade-zeitgeist-chopsticks"],
       "runScripts": ["build-node.sh"],
