@@ -317,6 +317,10 @@ mod tests {
     #[test_case(vec![_1], vec![4_586_751_453], _1, _1, 7_353_256_641)]
     #[test_case(vec![_2], vec![9_173_502_907], _2, _2, 14_706_513_281; "positive ln")]
     #[test_case(vec![_1], vec![37_819_608_145], _1_10, _3, 386_589_943; "negative ln")]
+    #[test_case(vec![_100, _100], vec![_100], _10, 721_347_520_444, 45_240_236_913)]
+    #[test_case(vec![_100, _100, _100], vec![_100], _10, 721_347_520_444, 30_473_182_882)]
+    #[test_case(vec![_100, _100], vec![_100, _100], _10, 721_347_520_444, 87_809_842_736)]
+    #[test_case(vec![_100], vec![_100, _100, _100], _10, 721_347_520_444, 236_684_778_998)]
     fn calculate_swap_amount_out_for_buy_works(
         buy: Vec<MockBalance>,
         sell: Vec<MockBalance>,
