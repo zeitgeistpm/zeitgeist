@@ -228,6 +228,9 @@ mod detail {
             .checked_sub(exp_of_minus_amount_in_times_exp_sum_sell)?;
         let ln_arg = numerator.checked_div(exp_sum_buy)?;
         let (ln_val, _): (FixedType, _) = ln(ln_arg).ok()?;
+        if let Some(res) = ln_val.checked_mul(liquidity) {
+            println!("{}", res);
+        }
         ln_val.checked_mul(liquidity)
     }
 
@@ -357,6 +360,27 @@ mod tests {
         527_114_788_714,
         121_489_297_813
     )]
+    #[test_case(
+        vec![848_358_525_162, 482_990_395_533],
+        vec![730_736_259_258, _100],
+        1_00,
+        527_114_788_714,
+        67
+    )]
+    #[test_case(
+        vec![848_358_525_162, 482_990_395_533],
+        vec![730_736_259_258, _100],
+        1,
+        527_114_788_714,
+        1
+    )]
+    #[test_case(
+        vec![848_358_525_162, 482_990_395_533],
+        vec![730_736_259_258, _100],
+        0,
+        527_114_788_714,
+        0
+    )]
     fn calculate_swap_amount_out_for_buy_works(
         buy: Vec<MockBalance>,
         sell: Vec<MockBalance>,
@@ -472,6 +496,38 @@ mod tests {
         _5,
         333_808_200_695,
         17_512_119_761
+    )]
+    #[test_case(
+        vec![305_865_360_520, 537_243_573_680],
+        vec![_100, 462_756_426_319],
+        _10,
+        100,
+        333_808_200_695,
+        36_763_618_626
+    )]
+    #[test_case(
+        vec![305_865_360_520, 537_243_573_680],
+        vec![_100, 462_756_426_319],
+        _10,
+        1,
+        333_808_200_695,
+        36_763_618_666
+    )]
+    #[test_case(
+        vec![305_865_360_520, 537_243_573_680],
+        vec![_100, 462_756_426_319],
+        2,
+        1,
+        333_808_200_695,
+        0
+    )]
+    #[test_case(
+        vec![305_865_360_520, 537_243_573_680],
+        vec![_100, 462_756_426_319],
+        1,
+        0,
+        333_808_200_695,
+        0
     )]
     fn calculate_equalize_amount_works(
         buy: Vec<MockBalance>,
