@@ -217,6 +217,10 @@ mod detail {
         amount_in: FixedType,
         liquidity: FixedType,
     ) -> Option<FixedType> {
+        if buy.is_empty() || sell.is_empty() || amount_in.is_zero() {
+            return None;
+        }
+
         let exp_sum_buy = exp_sum(buy, liquidity)?;
         let exp_sum_sell = exp_sum(sell, liquidity)?;
         let amount_in_div_liquidity = amount_in.checked_div(liquidity)?;
@@ -228,9 +232,6 @@ mod detail {
             .checked_sub(exp_of_minus_amount_in_times_exp_sum_sell)?;
         let ln_arg = numerator.checked_div(exp_sum_buy)?;
         let (ln_val, _): (FixedType, _) = ln(ln_arg).ok()?;
-        if let Some(res) = ln_val.checked_mul(liquidity) {
-            println!("{}", res);
-        }
         ln_val.checked_mul(liquidity)
     }
 
@@ -241,6 +242,10 @@ mod detail {
         amount_sell: FixedType,
         liquidity: FixedType,
     ) -> Option<FixedType> {
+        if buy.is_empty() || sell.is_empty() || amount_buy.is_zero() {
+            return None;
+        }
+
         let exp_sum_buy = exp_sum(buy, liquidity)?;
         let exp_sum_sell = exp_sum(sell, liquidity)?;
         let numerator = exp_sum_buy.checked_add(exp_sum_sell)?;
@@ -262,20 +267,37 @@ mod detail {
         amount_keep: FixedType,
         liquidity: FixedType,
     ) -> Option<FixedType> {
-        let amount_buy_keep = if keep.is_empty() {
-            amount_buy
+        // Ensure that either `keep` is empty and `amount_keep` is zero, or `keep` is non-empty and
+        // `amount_keep` is non-zero.
+        if keep.is_empty() && !amount_keep.is_zero() || !keep.is_empty() && amount_keep.is_zero() {
+            return None;
+        }
+
+        // Reserves change after the first equalization. Since we do two equalization calculations
+        // in one, we need to determine the intermediate reserves for the second calculation.
+        let (amount_buy_keep, buy_keep) = if keep.is_empty() {
+            (amount_buy, buy)
         } else {
             let delta_buy = calculate_equalize_amount_fixed(
                 buy.clone(),
-                sell.clone(),
+                keep.clone(),
                 amount_buy,
                 amount_keep,
                 liquidity,
             )?;
-            amount_buy.checked_sub(delta_buy)?
+
+            let delta_keep = amount_buy.checked_sub(delta_buy)?.checked_sub(amount_keep)?;
+
+            let buy_intermediate =
+                buy.into_iter().map(|x| x.checked_add(delta_buy)).collect::<Option<Vec<_>>>()?;
+            let keep_intermediate =
+                keep.into_iter().map(|x| x.checked_sub(delta_keep)).collect::<Option<Vec<_>>>()?;
+            let buy_keep =
+                buy_intermediate.into_iter().chain(keep_intermediate.into_iter()).collect();
+
+            (amount_buy.checked_sub(delta_buy)?, buy_keep)
         };
 
-        let buy_keep = buy.into_iter().chain(keep.into_iter()).collect();
         let delta_buy_keep = calculate_equalize_amount_fixed(
             buy_keep,
             sell,
@@ -374,13 +396,6 @@ mod tests {
         527_114_788_714,
         1
     )]
-    #[test_case(
-        vec![848_358_525_162, 482_990_395_533],
-        vec![730_736_259_258, _100],
-        0,
-        527_114_788_714,
-        0
-    )]
     fn calculate_swap_amount_out_for_buy_works(
         buy: Vec<MockBalance>,
         sell: Vec<MockBalance>,
@@ -400,6 +415,9 @@ mod tests {
     #[test_case(vec![_1], vec![u128::MAX], _1, _1)] // to_fixed error
     #[test_case(vec![_1], vec![_1], u128::MAX, _1)] // to_fixed error
     #[test_case(vec![_1], vec![_1], _1, u128::MAX)] // to_fixed error
+    #[test_case(vec![], vec![_1], _1, _1)] // empty vector
+    #[test_case(vec![_1], vec![], _1, _1)] // empty vector
+    #[test_case(vec![_1], vec![_1], 0, _1)] // zero value
     fn calculate_swap_amount_out_for_buy_throws_math_error(
         buy: Vec<MockBalance>,
         sell: Vec<MockBalance>,
@@ -544,6 +562,30 @@ mod tests {
         );
     }
 
+    #[test_case(vec![_1], vec![_1], _1, _1, 0)] // Division by zero
+    #[test_case(vec![_1], vec![_1], 1_000 * _1, _1, _1)] // Overflow
+    #[test_case(vec![_1], vec![_1], _1, 1_000 * _1, _1)] // Overflow
+    #[test_case(vec![u128::MAX], vec![_1], _1, _1, _1)] // to_fixed error
+    #[test_case(vec![_1], vec![u128::MAX], _1, _1, _1)] // to_fixed error
+    #[test_case(vec![_1], vec![_1], u128::MAX, _1, _1)] // to_fixed error
+    #[test_case(vec![_1], vec![_1], _1, u128::MAX, _1)] // to_fixed error
+    #[test_case(vec![_1], vec![_1], _1, _1, u128::MAX)] // to_fixed error
+    #[test_case(vec![], vec![_1], _1, _1, _1)] // empty vector
+    #[test_case(vec![_1], vec![], _1, _1, _1)] // empty vector
+    #[test_case(vec![_1], vec![_1], 0, _1, _1)] // zero value
+    fn calculate_equalize_amount_throws_error(
+        buy: Vec<MockBalance>,
+        sell: Vec<MockBalance>,
+        amount_buy: MockBalance,
+        amount_sell: MockBalance,
+        liquidity: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_equalize_amount(buy, sell, amount_buy, amount_sell, liquidity),
+            Error::<MockRuntime>::MathError
+        );
+    }
+
     // Tests for `calculate_equalize`.
     #[test_case(
         vec![_10 - 58_496_250_072],
@@ -583,6 +625,61 @@ mod tests {
         _1_10;
         "negative ln"
     )]
+    // Tests generated by Python.
+    #[test_case(
+        vec![_100, 305_865_360_520],
+        vec![768_621_786_840, _100, 768_621_786_840, _100],
+        vec![462_756_426_319],
+        76_500_000_000,
+        43_200_000_000,
+        333_808_200_695,
+        45_943_057_520
+    )]
+    #[test_case(
+        vec![_100, 305_865_360_520],
+        vec![768_621_786_840, _100, 768_621_786_840, _100],
+        vec![462_756_426_319],
+        _2,
+        _1,
+        333_808_200_695,
+        11_900_842_524
+    )]
+    #[test_case(
+        vec![_100, 305_865_360_520, 768_621_786_840],
+        vec![_100, 768_621_786_840],
+        vec![462_756_426_319, _100],
+        123_400_000_000,
+        _1,
+        333_808_200_695,
+        63_972_215_306
+    )]
+    #[test_case(
+        vec![_100, 305_865_360_520, 768_621_786_840],
+        vec![_100],
+        vec![462_756_426_319, _100, 768_621_786_840],
+        123_400_000_000,
+        1,
+        333_808_200_695,
+        62_187_083_257
+    )]
+    #[test_case(
+        vec![_100, 305_865_360_520, 768_621_786_840],
+        vec![_100],
+        vec![462_756_426_319, _100, 768_621_786_840],
+        2,
+        1,
+        333_808_200_695,
+        1
+    )]
+    #[test_case(
+        vec![_100, 305_865_360_520, 768_621_786_840],
+        vec![],
+        vec![462_756_426_319, _100, 768_621_786_840, _100],
+        123_400_000_000,
+        0,
+        333_808_200_695,
+        62_187_083_257
+    )]
     fn calculate_swap_amount_out_for_sell_works(
         buy: Vec<MockBalance>,
         keep: Vec<MockBalance>,
@@ -603,6 +700,40 @@ mod tests {
             )
             .unwrap(),
             expected
+        );
+    }
+
+    #[test_case(vec![_1], vec![_1], vec![_1], _1, _1, 0)] // Division by zero
+    #[test_case(vec![_1], vec![_1], vec![_1], 1_000 * _1, _1, _1)] // Overflow
+    #[test_case(vec![_1], vec![_1], vec![_1], _1, 1_000 * _1, _1)] // Overflow
+    #[test_case(vec![u128::MAX], vec![_1], vec![_1], _1, _1, _1)] // to_fixed error
+    #[test_case(vec![_1], vec![u128::MAX], vec![_1], _1, _1, _1)] // to_fixed error
+    #[test_case(vec![_1], vec![_1], vec![u128::MAX], u128::MAX, _1, _1)] // to_fixed error
+    #[test_case(vec![_1], vec![_1], vec![_1], _1, u128::MAX, _1)] // to_fixed error
+    #[test_case(vec![_1], vec![_1], vec![_1], _1, _1, u128::MAX)] // to_fixed error
+    #[test_case(vec![], vec![_1], vec![_1], _1, _1, _1)] // empty vector
+    #[test_case(vec![_1], vec![_1], vec![], _1, _1, _1)] // empty vector
+    #[test_case(vec![_1], vec![], vec![_1], _1, _1, _1)] // empty vector
+    #[test_case(vec![_1], vec![_1], vec![_1], 0, _1, _1)] // zero value
+    #[test_case(vec![_1], vec![_1], vec![_1], _1, 0, _1)] // zero value
+    fn calculate_swap_amount_out_for_sell_throws_error(
+        buy: Vec<MockBalance>,
+        keep: Vec<MockBalance>,
+        sell: Vec<MockBalance>,
+        amount_buy: MockBalance,
+        amount_keep: MockBalance,
+        liquidity: MockBalance,
+    ) {
+        assert_err!(
+            MockMath::calculate_swap_amount_out_for_sell(
+                buy,
+                keep,
+                sell,
+                amount_buy,
+                amount_keep,
+                liquidity
+            ),
+            Error::<MockRuntime>::MathError
         );
     }
 
