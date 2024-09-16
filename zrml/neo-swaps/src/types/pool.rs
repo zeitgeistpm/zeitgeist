@@ -17,7 +17,10 @@
 
 use crate::{
     consts::EXP_NUMERICAL_LIMIT,
-    math::{traits::MathOps, types::Math},
+    math::{
+        traits::{ComboMathOps, MathOps},
+        types::{ComboMath, Math},
+    },
     pallet::{AssetOf, BalanceOf, Config},
     traits::{LiquiditySharesManager, PoolOperations},
     Error,
@@ -71,6 +74,10 @@ where
         Ok(*self.reserves.get(asset).ok_or(Error::<T>::AssetNotFound)?)
     }
 
+    fn reserves_of(&self, assets: &Vec<AssetOf<T>>) -> Result<Vec<BalanceOf<T>>, DispatchError> {
+        assets.iter().map(|a| self.reserve_of(a)).collect()
+    }
+
     fn increase_reserve(
         &mut self,
         asset: &AssetOf<T>,
@@ -93,11 +100,19 @@ where
 
     fn calculate_swap_amount_out_for_buy(
         &self,
-        asset_out: AssetOf<T>,
+        buy: Vec<AssetOf<T>>,
+        sell: Vec<AssetOf<T>>,
         amount_in: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError> {
-        let reserve = self.reserve_of(&asset_out)?;
-        Math::<T>::calculate_swap_amount_out_for_buy(reserve, amount_in, self.liquidity_parameter)
+        let reserves_buy = self.reserves_of(&buy)?;
+        let reserves_sell = self.reserves_of(&sell)?;
+
+        ComboMath::<T>::calculate_swap_amount_out_for_buy(
+            reserves_buy,
+            reserves_sell,
+            amount_in,
+            self.liquidity_parameter,
+        )
     }
 
     fn calculate_swap_amount_out_for_sell(
@@ -146,5 +161,9 @@ where
         let reserve = self.reserve_of(&asset)?;
         let spot_price = Math::<T>::calculate_spot_price(reserve, self.liquidity_parameter)?;
         Math::<T>::calculate_sell_amount_until(until, self.liquidity_parameter, spot_price)
+    }
+
+    fn assets_complement(&self, assets: &Vec<AssetOf<T>>) -> Vec<AssetOf<T>> {
+        self.reserves.keys().filter(|a| !assets.contains(a)).cloned().collect()
     }
 }

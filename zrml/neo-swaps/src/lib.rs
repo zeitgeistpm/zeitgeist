@@ -571,8 +571,10 @@ mod pallet {
                         >= LN_NUMERICAL_LIMIT.saturated_into(),
                     Error::<T>::NumericalLimits(NumericalLimitsError::MinAmountNotMet),
                 );
+                let buy = vec![asset_out];
+                let sell = pool.assets_complement(&buy);
                 let swap_amount_out =
-                    pool.calculate_swap_amount_out_for_buy(asset_out, amount_in_minus_fees)?;
+                    pool.calculate_swap_amount_out_for_buy(buy, sell, amount_in_minus_fees)?;
                 let amount_out = swap_amount_out.checked_add_res(&amount_in_minus_fees)?;
                 ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
                 // Instead of letting `who` buy the complete sets and then transfer almost all of
