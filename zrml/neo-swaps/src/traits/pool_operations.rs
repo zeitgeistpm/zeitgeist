@@ -59,16 +59,22 @@ pub(crate) trait PoolOperations<T: Config> {
         amount_in: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
-    /// Calculate the amount receives from selling an outcome to the pool.
+    /// Calculate the amount receives from closing the specified combinatorial bet.
     ///
     /// # Parameters
     ///
-    /// - `asset_in`: The outcome being sold.
-    /// - `amount_in`: The amount of `asset_in` sold.
+    /// - `buy`: The buy of the combinatorial bet to close.
+    /// - `keep`: The keep of the combinatorial bet to close.
+    /// - `sell`: The sell of the combinatorial bet to close.
+    /// - `amount_buy`: The amount of the buy held in the combinatorial position.
+    /// - `amount_sell`: The amount of the sell held in the combinatorial position.
     fn calculate_swap_amount_out_for_sell(
         &self,
-        asset_in: AssetOf<T>,
-        amount_in: BalanceOf<T>,
+        buy: Vec<AssetOf<T>>,
+        keep: Vec<AssetOf<T>>,
+        sell: Vec<AssetOf<T>>,
+        amount_buy: BalanceOf<T>,
+        amount_sell: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
     /// Calculate the spot price of `asset`.

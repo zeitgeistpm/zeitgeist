@@ -117,11 +117,24 @@ where
 
     fn calculate_swap_amount_out_for_sell(
         &self,
-        asset_in: AssetOf<T>,
-        amount_in: BalanceOf<T>,
+        buy: Vec<AssetOf<T>>,
+        keep: Vec<AssetOf<T>>,
+        sell: Vec<AssetOf<T>>,
+        amount_buy: BalanceOf<T>,
+        amount_sell: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError> {
-        let reserve = self.reserve_of(&asset_in)?;
-        Math::<T>::calculate_swap_amount_out_for_sell(reserve, amount_in, self.liquidity_parameter)
+        let reserves_buy = self.reserves_of(&buy)?;
+        let reserves_keep = self.reserves_of(&keep)?;
+        let reserves_sell = self.reserves_of(&sell)?;
+
+        ComboMath::<T>::calculate_swap_amount_out_for_sell(
+            reserves_buy,
+            reserves_keep,
+            reserves_sell,
+            amount_buy,
+            amount_sell,
+            self.liquidity_parameter,
+        )
     }
 
     fn calculate_spot_price(&self, asset: AssetOf<T>) -> Result<BalanceOf<T>, DispatchError> {

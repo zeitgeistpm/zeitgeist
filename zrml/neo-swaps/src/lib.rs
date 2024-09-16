@@ -628,14 +628,24 @@ mod pallet {
                     amount_in <= pool.calculate_numerical_threshold(),
                     Error::<T>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
                 );
+
+                let buy = vec![asset_in];
+                let keep = vec![];
+                let sell = pool.assets_complement(&buy);
+                let amount_out = pool.calculate_swap_amount_out_for_sell(
+                    buy,
+                    keep,
+                    sell,
+                    amount_in,
+                    Zero::zero(),
+                )?;
+
                 // Instead of first executing a swap with `(n-1)` transfers from the pool account to
                 // `who` and then selling complete sets, we prevent `(n-1)` storage reads: 1)
                 // Transfer `amount_in` units of `asset_in` to the pool account, 2) sell
                 // `amount_out` complete sets using the pool account, 3) transfer
                 // `amount_out_minus_fees` units of collateral to `who`. The fees automatically end
                 // up in the pool.
-                let amount_out = pool.calculate_swap_amount_out_for_sell(asset_in, amount_in)?;
-                // Beware! This transfer **must** happen _after_ calculating `amount_out`:
                 T::MultiCurrency::transfer(asset_in, &who, &pool.account_id, amount_in)?;
                 T::CompleteSetOperations::sell_complete_set(
                     pool.account_id.clone(),
