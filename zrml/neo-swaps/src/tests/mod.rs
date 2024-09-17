@@ -19,6 +19,7 @@
 
 mod buy;
 mod buy_and_sell;
+mod combo_buy;
 mod deploy_pool;
 mod exit;
 mod join;
