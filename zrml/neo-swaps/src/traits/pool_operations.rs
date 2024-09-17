@@ -32,6 +32,11 @@ pub(crate) trait PoolOperations<T: Config> {
     /// Beware! The reserve need not coincide with the balance in the pool account.
     fn reserve_of(&self, asset: &AssetOf<T>) -> Result<BalanceOf<T>, DispatchError>;
 
+    /// Return the reserves of the specified `assets`, in the same order.
+    ///
+    /// Beware! The reserve need not coincide with the balance in the pool account.
+    fn reserves_of(&self, assets: &Vec<AssetOf<T>>) -> Result<Vec<BalanceOf<T>>, DispatchError>;
+
     /// Perform a checked addition to the balance of `asset`.
     fn increase_reserve(
         &mut self,
@@ -46,32 +51,30 @@ pub(crate) trait PoolOperations<T: Config> {
         decrease_amount: &BalanceOf<T>,
     ) -> DispatchResult;
 
-    /// Calculate the amount received from the swap that is executed when buying (the function
-    /// `y(x)` from the documentation).
-    ///
-    /// Note that `y(x)` does not include the amount of `asset_out` received from buying complete
-    /// sets and is therefore _not_ the total amount received from the buy.
-    ///
-    /// # Parameters
-    ///
-    /// - `asset_out`: The outcome being bought.
-    /// - `amount_in`: The amount of collateral paid.
+    /// Calculate the amount received when opening the specified combinatorial position.
     fn calculate_swap_amount_out_for_buy(
         &self,
-        asset_out: AssetOf<T>,
+        buy: Vec<AssetOf<T>>,
+        sell: Vec<AssetOf<T>>,
         amount_in: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
-    /// Calculate the amount receives from selling an outcome to the pool.
+    /// Calculate the amount receives from closing the specified combinatorial bet.
     ///
     /// # Parameters
     ///
-    /// - `asset_in`: The outcome being sold.
-    /// - `amount_in`: The amount of `asset_in` sold.
+    /// - `buy`: The buy of the combinatorial bet to close.
+    /// - `keep`: The keep of the combinatorial bet to close.
+    /// - `sell`: The sell of the combinatorial bet to close.
+    /// - `amount_buy`: The amount of the buy held in the combinatorial position.
+    /// - `amount_sell`: The amount of the sell held in the combinatorial position.
     fn calculate_swap_amount_out_for_sell(
         &self,
-        asset_in: AssetOf<T>,
-        amount_in: BalanceOf<T>,
+        buy: Vec<AssetOf<T>>,
+        keep: Vec<AssetOf<T>>,
+        sell: Vec<AssetOf<T>>,
+        amount_buy: BalanceOf<T>,
+        amount_sell: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
     /// Calculate the spot price of `asset`.
@@ -120,4 +123,7 @@ pub(crate) trait PoolOperations<T: Config> {
         asset: AssetOf<T>,
         until: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
+
+    /// Calculates the complement of `assets` in the set of assets contained in the pool.
+    fn assets_complement(&self, assets: &Vec<AssetOf<T>>) -> Vec<AssetOf<T>>;
 }
