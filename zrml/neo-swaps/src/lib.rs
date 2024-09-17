@@ -224,6 +224,19 @@ mod pallet {
             swap_fee_amount: BalanceOf<T>,
             external_fee_amount: BalanceOf<T>,
         },
+        /// A combinatorial position was closed.
+        ComboSellExecuted {
+            who: AccountIdOf<T>,
+            market_id: MarketIdOf<T>,
+            buy: Vec<AssetOf<T>>,
+            keep: Vec<AssetOf<T>>,
+            sell: Vec<AssetOf<T>>,
+            amount_buy: BalanceOf<T>,
+            amount_keep: BalanceOf<T>,
+            amount_out: BalanceOf<T>,
+            swap_fee_amount: BalanceOf<T>,
+            external_fee_amount: BalanceOf<T>,
+        },
     }
 
     #[pallet::error]
@@ -551,6 +564,7 @@ mod pallet {
             Self::do_deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
             Ok(Some(T::WeightInfo::deploy_pool(spot_prices_len)).into())
         }
+
         #[pallet::call_index(6)]
         #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))] // TODO
         #[transactional]
@@ -566,7 +580,37 @@ mod pallet {
             let who = ensure_signed(origin)?;
             let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
             ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
-            let _ = Self::do_combo_buy(who, market_id, buy, sell, amount_in, min_amount_out)?;
+            Self::do_combo_buy(who, market_id, buy, sell, amount_in, min_amount_out)?;
+            Ok(Some(T::WeightInfo::buy(asset_count.into())).into()) // TODO
+        }
+
+        #[pallet::call_index(7)]
+        #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))] // TODO
+        #[transactional]
+        pub fn combo_sell(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+            asset_count: AssetIndexType,
+            buy: Vec<AssetOf<T>>,
+            keep: Vec<AssetOf<T>>,
+            sell: Vec<AssetOf<T>>,
+            #[pallet::compact] amount_buy: BalanceOf<T>,
+            #[pallet::compact] amount_keep: BalanceOf<T>,
+            #[pallet::compact] min_amount_out: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
+            ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
+            Self::do_combo_sell(
+                who,
+                market_id,
+                buy,
+                keep,
+                sell,
+                amount_buy,
+                amount_keep,
+                min_amount_out,
+            )?;
             Ok(Some(T::WeightInfo::buy(asset_count.into())).into()) // TODO
         }
     }
@@ -1027,6 +1071,99 @@ mod pallet {
                     sell: sell.clone(),
                     amount_in,
                     amount_out,
+                    swap_fee_amount,
+                    external_fee_amount,
+                });
+
+                Ok(())
+            })
+        }
+
+        #[require_transactional]
+        fn do_combo_sell(
+            who: T::AccountId,
+            market_id: MarketIdOf<T>,
+            // TODO Replace `buy`/`keep`/`sell` with a struct.
+            buy: Vec<AssetOf<T>>,
+            keep: Vec<AssetOf<T>>,
+            sell: Vec<AssetOf<T>>,
+            amount_buy: BalanceOf<T>,
+            amount_keep: BalanceOf<T>,
+            min_amount_out: BalanceOf<T>,
+        ) -> DispatchResult {
+            ensure!(amount_buy != Zero::zero(), Error::<T>::ZeroAmount);
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
+            Self::try_mutate_pool(&market_id, |pool| {
+                for asset in buy.iter().chain(sell.iter()).chain(keep.iter()) {
+                    ensure!(pool.contains(&asset), Error::<T>::AssetNotFound);
+                }
+
+                // TODO Ensure that buy, sell partition the assets!
+
+                // TODO Ensure that numerical limits are observed.
+
+                // This is the amount of collateral the user will receive in the end, or,
+                // equivalently, the amount of each asset in `sell` that the user intermittently
+                // receives from the pool (before selling complete sets).
+                let amount_out = pool.calculate_swap_amount_out_for_sell(
+                    buy.clone(),
+                    keep.clone(),
+                    sell.clone(),
+                    amount_buy,
+                    amount_keep,
+                )?;
+                ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
+
+                // The deal is that the user gives up all of the assets specified in the function
+                // parameters and receives `amount_out` (minus fees) units of collateral. To create
+                // the collateral, the pool has to call `sell_complete_set`. This approach is more
+                // stable than letting the user call `sell_complete_set` after equalizing their
+                // assets, as doing so may lead to `sell_complete_set` failing due to rounding
+                // errors.
+
+                for &asset in buy.iter() {
+                    T::MultiCurrency::transfer(asset, &who, &pool.account_id, amount_buy)?;
+                    pool.increase_reserve(&asset, &amount_buy)?;
+                }
+
+                for &asset in keep.iter() {
+                    T::MultiCurrency::transfer(asset, &pool.account_id, &who, amount_keep)?;
+                    pool.increase_reserve(&asset, &amount_keep)?;
+                }
+
+                T::CompleteSetOperations::sell_complete_set(
+                    pool.account_id.clone(),
+                    market_id,
+                    amount_out,
+                )?;
+
+                for &asset in pool.assets().iter() {
+                    pool.decrease_reserve(&asset, &amount_out)?;
+                }
+
+                let FeeDistribution {
+                    remaining: amount_out_minus_fees,
+                    swap_fees: swap_fee_amount,
+                    external_fees: external_fee_amount,
+                } = Self::distribute_fees(market_id, pool, &pool.account_id.clone(), amount_out)?;
+
+                T::MultiCurrency::transfer(
+                    pool.collateral,
+                    &pool.account_id,
+                    &who,
+                    amount_out_minus_fees,
+                );
+
+                Self::deposit_event(Event::<T>::ComboSellExecuted {
+                    who: who.clone(),
+                    market_id,
+                    buy: buy.clone(),
+                    keep: keep.clone(),
+                    sell: sell.clone(),
+                    amount_buy,
+                    amount_keep,
+                    amount_out: amount_out_minus_fees,
                     swap_fee_amount,
                     external_fee_amount,
                 });
