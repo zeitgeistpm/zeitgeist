@@ -15111,6 +15111,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "zrml-combo"
+version = "0.5.5"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+]
+
+[[package]]
 name = "zrml-court"
 version = "0.5.5"
 dependencies = [

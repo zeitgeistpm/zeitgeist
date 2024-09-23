@@ -358,6 +358,7 @@ macro_rules! create_runtime {
                 Orderbook: zrml_orderbook::{Call, Event<T>, Pallet, Storage} = 61,
                 Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
                 HybridRouter: zrml_hybrid_router::{Call, Event<T>, Pallet, Storage} = 64,
+                Combo: zrml_combo::{Call, Event<T>, Pallet, Storage} = 65;
 
                 $($additional_pallets)*
             }
