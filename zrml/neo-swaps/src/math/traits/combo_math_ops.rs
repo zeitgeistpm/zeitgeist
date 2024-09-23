@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{BalanceOf, Config};
+use alloc::vec::Vec;
 use sp_runtime::DispatchError;
 
 pub(crate) trait ComboMathOps<T>
@@ -29,6 +30,7 @@ where
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
+    #[allow(dead_code)]
     fn calculate_equalize_amount(
         buy: Vec<BalanceOf<T>>,
         sell: Vec<BalanceOf<T>>,
@@ -46,6 +48,7 @@ where
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
+    #[allow(dead_code)]
     fn calculate_spot_price(
         buy: Vec<BalanceOf<T>>,
         sell: Vec<BalanceOf<T>>,

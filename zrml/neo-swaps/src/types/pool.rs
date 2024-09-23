@@ -74,7 +74,7 @@ where
         Ok(*self.reserves.get(asset).ok_or(Error::<T>::AssetNotFound)?)
     }
 
-    fn reserves_of(&self, assets: &Vec<AssetOf<T>>) -> Result<Vec<BalanceOf<T>>, DispatchError> {
+    fn reserves_of(&self, assets: &[AssetOf<T>]) -> Result<Vec<BalanceOf<T>>, DispatchError> {
         assets.iter().map(|a| self.reserve_of(a)).collect()
     }
 
@@ -176,7 +176,7 @@ where
         Math::<T>::calculate_sell_amount_until(until, self.liquidity_parameter, spot_price)
     }
 
-    fn assets_complement(&self, assets: &Vec<AssetOf<T>>) -> Vec<AssetOf<T>> {
+    fn assets_complement(&self, assets: &[AssetOf<T>]) -> Vec<AssetOf<T>> {
         self.reserves.keys().filter(|a| !assets.contains(a)).cloned().collect()
     }
 }
