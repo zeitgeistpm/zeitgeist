@@ -17,6 +17,7 @@
 
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::too_many_arguments)] // TODO Try to remove this later!
 
 extern crate alloc;
 
@@ -565,6 +566,7 @@ mod pallet {
             Ok(Some(T::WeightInfo::deploy_pool(spot_prices_len)).into())
         }
 
+        #[allow(clippy::too_many_arguments)] // TODO Bundle `buy`/`keep`/`sell` into one arg.
         #[pallet::call_index(6)]
         #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))] // TODO
         #[transactional]
@@ -584,6 +586,7 @@ mod pallet {
             Ok(Some(T::WeightInfo::buy(asset_count.into())).into()) // TODO
         }
 
+        #[allow(clippy::too_many_arguments)] // TODO Bundle `buy`/`keep`/`sell` into one arg.
         #[pallet::call_index(7)]
         #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))] // TODO
         #[transactional]
@@ -1009,6 +1012,7 @@ mod pallet {
             Ok(())
         }
 
+        #[allow(clippy::too_many_arguments)] // TODO Bundle `buy`/`keep`/`sell` into one arg.
         #[require_transactional]
         fn do_combo_buy(
             who: T::AccountId,
@@ -1024,7 +1028,7 @@ mod pallet {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             Self::try_mutate_pool(&market_id, |pool| {
                 for asset in buy.iter().chain(sell.iter()) {
-                    ensure!(pool.contains(&asset), Error::<T>::AssetNotFound);
+                    ensure!(pool.contains(asset), Error::<T>::AssetNotFound);
                 }
 
                 // TODO Ensure that buy, sell partition the assets!
@@ -1079,11 +1083,12 @@ mod pallet {
             })
         }
 
+        // TODO Replace `buy`/`keep`/`sell` with a struct.
+        #[allow(clippy::too_many_arguments)]
         #[require_transactional]
         fn do_combo_sell(
             who: T::AccountId,
             market_id: MarketIdOf<T>,
-            // TODO Replace `buy`/`keep`/`sell` with a struct.
             buy: Vec<AssetOf<T>>,
             keep: Vec<AssetOf<T>>,
             sell: Vec<AssetOf<T>>,
@@ -1096,7 +1101,7 @@ mod pallet {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             Self::try_mutate_pool(&market_id, |pool| {
                 for asset in buy.iter().chain(sell.iter()).chain(keep.iter()) {
-                    ensure!(pool.contains(&asset), Error::<T>::AssetNotFound);
+                    ensure!(pool.contains(asset), Error::<T>::AssetNotFound);
                 }
 
                 // TODO Ensure that buy, sell partition the assets!
@@ -1153,7 +1158,7 @@ mod pallet {
                     &pool.account_id,
                     &who,
                     amount_out_minus_fees,
-                );
+                )?;
 
                 Self::deposit_event(Event::<T>::ComboSellExecuted {
                     who: who.clone(),
@@ -1196,7 +1201,7 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> Result<FeeDistribution<T>, DispatchError> {
             let swap_fees = pool.swap_fee.bmul(amount)?;
-            T::MultiCurrency::transfer(pool.collateral, &account, &pool.account_id, swap_fees)?;
+            T::MultiCurrency::transfer(pool.collateral, account, &pool.account_id, swap_fees)?;
             pool.liquidity_shares_manager.deposit_fees(swap_fees)?; // Should only error unexpectedly!
             let external_fees =
                 T::ExternalFees::distribute(market_id, pool.collateral, account, amount);

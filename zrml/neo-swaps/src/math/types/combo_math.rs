@@ -25,16 +25,14 @@ use crate::{
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use fixed::FixedU128;
-use sp_runtime::{
-    traits::{One, Zero},
-    DispatchError, SaturatedConversion,
-};
+use sp_runtime::{traits::Zero, DispatchError, SaturatedConversion};
 use typenum::U80;
 
 type Fractional = U80;
 type FixedType = FixedU128<Fractional>;
 
 /// The point at which 32.44892769177272
+#[allow(dead_code)] // TODO Block calls that go outside of these bounds.
 const EXP_OVERFLOW_THRESHOLD: FixedType = FixedType::from_bits(0x20_72EC_ECDA_6EBE_EACC_40C7);
 
 pub(crate) struct ComboMath<T>(PhantomData<T>);
@@ -292,8 +290,7 @@ mod detail {
                 buy.into_iter().map(|x| x.checked_add(delta_buy)).collect::<Option<Vec<_>>>()?;
             let keep_intermediate =
                 keep.into_iter().map(|x| x.checked_sub(delta_keep)).collect::<Option<Vec<_>>>()?;
-            let buy_keep =
-                buy_intermediate.into_iter().chain(keep_intermediate.into_iter()).collect();
+            let buy_keep = buy_intermediate.into_iter().chain(keep_intermediate).collect();
 
             (amount_buy.checked_sub(delta_buy)?, buy_keep)
         };
@@ -327,8 +324,7 @@ mod tests {
     #![allow(clippy::duplicated_attributes)]
 
     use super::*;
-    use crate::{mock::Runtime as MockRuntime, MAX_SPOT_PRICE, MIN_SPOT_PRICE};
-    use alloc::str::FromStr;
+    use crate::mock::Runtime as MockRuntime;
     use frame_support::assert_err;
     use test_case::test_case;
     use zeitgeist_primitives::constants::base_multiples::*;

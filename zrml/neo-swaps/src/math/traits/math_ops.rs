@@ -16,18 +16,21 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{BalanceOf, Config};
+use alloc::vec::Vec;
 use sp_runtime::DispatchError;
 
 pub(crate) trait MathOps<T>
 where
     T: Config,
 {
+    #[allow(dead_code)]
     fn calculate_swap_amount_out_for_buy(
         reserve: BalanceOf<T>,
         amount_in: BalanceOf<T>,
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
+    #[allow(dead_code)]
     fn calculate_swap_amount_out_for_sell(
         reserve: BalanceOf<T>,
         amount_in: BalanceOf<T>,

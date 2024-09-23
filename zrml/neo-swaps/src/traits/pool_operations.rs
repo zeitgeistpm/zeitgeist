@@ -35,7 +35,7 @@ pub(crate) trait PoolOperations<T: Config> {
     /// Return the reserves of the specified `assets`, in the same order.
     ///
     /// Beware! The reserve need not coincide with the balance in the pool account.
-    fn reserves_of(&self, assets: &Vec<AssetOf<T>>) -> Result<Vec<BalanceOf<T>>, DispatchError>;
+    fn reserves_of(&self, assets: &[AssetOf<T>]) -> Result<Vec<BalanceOf<T>>, DispatchError>;
 
     /// Perform a checked addition to the balance of `asset`.
     fn increase_reserve(
@@ -125,5 +125,5 @@ pub(crate) trait PoolOperations<T: Config> {
     ) -> Result<BalanceOf<T>, DispatchError>;
 
     /// Calculates the complement of `assets` in the set of assets contained in the pool.
-    fn assets_complement(&self, assets: &Vec<AssetOf<T>>) -> Vec<AssetOf<T>>;
+    fn assets_complement(&self, assets: &[AssetOf<T>]) -> Vec<AssetOf<T>>;
 }
