@@ -324,7 +324,7 @@ mod tests {
     #![allow(clippy::duplicated_attributes)]
 
     use super::*;
-    use crate::{mock::Runtime as MockRuntime};
+    use crate::mock::Runtime as MockRuntime;
     use frame_support::assert_err;
     use test_case::test_case;
     use zeitgeist_primitives::constants::base_multiples::*;
