@@ -215,6 +215,7 @@ runtime-benchmarks = [
     "sp-runtime/runtime-benchmarks",
     "xcm-builder?/runtime-benchmarks",
     "zrml-authorized/runtime-benchmarks",
+    "zrml-combo/runtime-benchmarks",
     "zrml-court/runtime-benchmarks",
     "zrml-hybrid-router/runtime-benchmarks",
     "zrml-neo-swaps/runtime-benchmarks",
@@ -383,6 +384,7 @@ try-runtime = [
 
     # Zeitgeist runtime pallets
     "zrml-authorized/try-runtime",
+    "zrml-combo/try-runtime",
     "zrml-court/try-runtime",
     "zrml-hybrid-router/try-runtime",
     "zrml-market-commons/try-runtime",
