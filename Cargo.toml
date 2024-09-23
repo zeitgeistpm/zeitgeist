@@ -246,6 +246,7 @@ common-runtime = { path = "runtime/common", default-features = false }
 zeitgeist-macros = { path = "macros", default-features = false }
 zeitgeist-primitives = { path = "primitives", default-features = false }
 zrml-authorized = { path = "zrml/authorized", default-features = false }
+zrml-combo = { path = "zrml/combo", default-features = false }
 zrml-court = { path = "zrml/court", default-features = false }
 zrml-global-disputes = { path = "zrml/global-disputes", default-features = false }
 zrml-hybrid-router = { path = "zrml/hybrid-router", default-features = false }
