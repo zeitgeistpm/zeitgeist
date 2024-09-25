@@ -21,6 +21,7 @@
 extern crate alloc;
 
 mod traits;
+mod types;
 
 pub use pallet::*;
 
