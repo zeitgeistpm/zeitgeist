@@ -27,11 +27,12 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use core::marker::PhantomData;
-    use frame_support::pallet_prelude::StorageVersion;
+    use frame_support::pallet_prelude::{IsType, StorageVersion};
 
-    // TODO Config
     #[pallet::config]
-    pub trait Config: frame_system::Config {}
+    pub trait Config: frame_system::Config {
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+    }
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -42,9 +43,15 @@ mod pallet {
 
     // TODO Storage Items
 
-    // TODO `Event` enum
+    #[pallet::event]
+    #[pallet::generate_deposit(fn deposit_event)]
+    pub enum Event<T>
+    where
+        T: Config, {}
 
-    // TODO `Error` enum
+    #[pallet::error]
+    pub enum Error<T> {}
 
-    // TODO Dispatchables
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {}
 }
