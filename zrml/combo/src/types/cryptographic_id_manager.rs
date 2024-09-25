@@ -81,12 +81,7 @@ impl MaybeToBytes for U256 {
 
 impl MaybeToBytes for bool {
     fn maybe_to_bytes(&self) -> Option<Vec<u8>> {
-        let result = match self {
-            true => vec![1],
-            false => vec![0],
-        };
-
-        Some(result)
+        Some(vec![*self as u8])
     }
 }
 
