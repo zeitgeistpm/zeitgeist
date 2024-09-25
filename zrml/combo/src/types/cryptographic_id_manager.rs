@@ -1,12 +1,18 @@
 use crate::traits::IdManager;
+use core::marker::PhantomData;
 use ethnum::U256;
 use sp_runtime::DispatchError;
 
-pub(crate) struct CryptographicIdManager;
+type Id = U256;
 
-impl IdManager for CryptographicIdManager {
+pub(crate) struct CryptographicIdManager<Asset, MarketId>(PhantomData<(Asset, MarketId)>);
+
+impl<Asset, MarketId> IdManager for CryptographicIdManager<Asset, MarketId>
+where
+    MarketId: Into<Id>,
+{
     type Asset = u128;
-    type Id = U256;
+    type Id = Id;
     type MarketId = u128;
 
     fn get_collection_id(
