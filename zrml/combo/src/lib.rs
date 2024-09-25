@@ -20,14 +20,19 @@
 
 extern crate alloc;
 
-// TODO Modules
+mod traits;
 
 pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
     use core::marker::PhantomData;
-    use frame_support::pallet_prelude::{IsType, StorageVersion};
+    use frame_support::{
+        pallet_prelude::{IsType, StorageVersion},
+        require_transactional, transactional,
+    };
+    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use sp_runtime::DispatchResult;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -53,5 +58,33 @@ mod pallet {
     pub enum Error<T> {}
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {}
+    impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
+        #[pallet::weight(0)] // TODO
+        #[transactional]
+        pub fn split_position(origin: OriginFor<T>) -> DispatchResult {
+            let _ = ensure_signed(origin)?;
+            Self::do_split_position()
+        }
+
+        #[pallet::call_index(1)]
+        #[pallet::weight(0)] // TODO
+        #[transactional]
+        pub fn merge_position(origin: OriginFor<T>) -> DispatchResult {
+            let _ = ensure_signed(origin)?;
+            Self::do_merge_position()
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
+        #[require_transactional]
+        fn do_split_position() -> DispatchResult {
+            Ok(())
+        }
+
+        #[require_transactional]
+        fn do_merge_position() -> DispatchResult {
+            Ok(())
+        }
+    }
 }
