@@ -15129,6 +15129,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
+ "zeitgeist-primitives",
 ]
 
 [[package]]
