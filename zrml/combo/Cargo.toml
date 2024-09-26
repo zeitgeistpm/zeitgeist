@@ -3,10 +3,14 @@ ethnum = { workspace = true }
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+halo2curves = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
 sp-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
+
+[dev-dependencies]
+test-case = { workspace = true }
 
 [features]
 default = ["std"]

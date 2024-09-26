@@ -20,6 +20,7 @@
 
 extern crate alloc;
 
+mod alt_bn128;
 mod traits;
 mod types;
 
