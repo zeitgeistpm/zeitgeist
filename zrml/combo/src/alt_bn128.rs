@@ -463,12 +463,11 @@ mod tests {
     use super::*;
     use test_case::test_case;
 
-    // TODO Add unwraps and from_str_prefixed to test
     #[test_case("0x0", "0x0")]
     #[test_case("0x1", "0x1")]
     #[test_case(
         "0x0000000000000000000000000000000000000000000000000000000000000002",
-        "17918450306617730576773466553562392805212959031101866706334976164702657599807"
+        "0x279d7bc4e184e3a57f5fa684690c6df6b484a7f1daa1de608d266a2a4be6593f"
     )]
     #[test_case(
         "0x0000000000000000000000000000000000000000000000000000000000000003",
@@ -508,7 +507,31 @@ mod tests {
     )]
     #[test_case(
         "0x00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        "0x5f01ae4b9556bff71e988a7268d8faeddb82ac1f0f472e74f5e05f3c524cbb2"
+        "0x05f01ae4b9556bff71e988a7268d8faeddb82ac1f0f472e74f5e05f3c524cbb2"
+    )]
+    #[test_case(
+        "0x0000000000000000000000000000000000000000000000000002bacf38d0ee9d",
+        "0x2bb83c2e6a71464d3072fb62139c9e13a419cf13d5b31b17f3438cdcc2ab5a79"
+    )]
+    #[test_case(
+        "0x0000000000000000000000000000000000000000000000269fa8c16b8066ea69",
+        "0x0c250f940031ee8f6e14788aaec7bb1bb3cf23fe6ea76db7ee8dea724681c57c"
+    )]
+    #[test_case(
+        "0x000000000000000000000000000000000000000801241bb1f6295e704fba336b",
+        "0x0228ae1957bfe58548d834b28463d1d98fe69e2de54b873fcf78cd3e9d0fa195"
+    )]
+    #[test_case(
+        "0x00000000000000000000000000000000000000e132f566fa6d16bf5486f5bf6a",
+        "0x2c0dbf7f0f4afe4421700aa8ed8788757b0b12b1197931b7be00281772c0dc27"
+    )]
+    #[test_case(
+        "0x123456789abcde00000000000000000fffffffffffffffffffffffffffffffff",
+        "0x21b8fe191fb7d5a2ebf018c8c52f4317a41dddcb1a1ffc4ec9141bbbc97bcc62"
+    )]
+    #[test_case(
+        "0x00fedcbafedcbafedcbafedcbaffffffffffffffffffffffffffffffffffffff",
+        "0x00b2577cf5861468ac05eb9334b380f22bb78c575cb69061fc10f2358e539a31"
     )]
     fn test_pseudo_sqrt(x: &str, expected: &str) {
         let x = Fq::from_str_prefixed(x).unwrap();
