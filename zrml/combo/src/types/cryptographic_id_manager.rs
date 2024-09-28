@@ -1,45 +1,46 @@
-use crate::traits::IdManager;
+use crate::{alt_bn128, traits::IdManager};
 use core::marker::PhantomData;
 use ethnum::U256;
 use frame_support::{Blake2_256, StorageHasher};
 use sp_runtime::DispatchError;
 use zeitgeist_primitives::types::Asset;
 
+type Hash = [u8; 32];
+
 pub(crate) struct CryptographicIdManager<MarketId>(PhantomData<MarketId>);
 
 impl<MarketId> IdManager for CryptographicIdManager<MarketId>
 where
-    MarketId: Into<U256> + MaybeToBytes,
+    MarketId: MaybeToBytes,
 {
     type Asset = Asset<MarketId>;
-    type Id = U256;
+    type Id = Hash;
     type MarketId = MarketId;
 
     fn get_collection_id(
-        _parent_collection_id: Option<Self::Id>,
+        parent_collection_id: Option<Self::Id>,
         market_id: Self::MarketId,
         index_set: Vec<bool>,
+        // TODO: This could just return an `Option` as we don't really expect this to fail with any
+        // informative results.
     ) -> Result<Self::Id, DispatchError> {
-        let _hash = hash_pair((market_id, index_set));
-        Ok(0u8.into())
+        let hash = hash_pair((market_id, index_set)).ok_or(DispatchError::Other("TODO"))?;
+        alt_bn128::get_collection_id(hash, parent_collection_id).ok_or(DispatchError::Other("TODO"))
     }
 
     fn get_position_id(
         collateral: Self::Asset,
         collection_id: Self::Id,
+        // TODO: This could just return an `Option` as we don't really expect this to fail with any
+        // informative results.
     ) -> Result<Self::Id, DispatchError> {
-        let bytes_vec =
-            hash_pair((collateral, collection_id)).ok_or(DispatchError::Other("TODO"))?;
-
-        let bytes_slice =
-            <[u8; 32]>::try_from(&bytes_vec[..32]).map_err(|_| DispatchError::Other("TODO"))?;
-
-        Ok(U256::from_be_bytes(bytes_slice))
+        hash_pair((collateral, collection_id)).ok_or(DispatchError::Other("TODO"))
     }
 }
 
 // TODO Replace pair with parameters.
-fn hash_pair<T1, T2>(pair: (T1, T2)) -> Option<Vec<u8>>
+fn hash_pair<T1, T2>(pair: (T1, T2)) -> Option<[u8; 32]>
+// TODO Let this return Hash.
 where
     T1: MaybeToBytes,
     T2: MaybeToBytes,
@@ -49,7 +50,7 @@ where
     bytes.extend_from_slice(&pair.0.maybe_to_bytes()?);
     bytes.extend_from_slice(&pair.1.maybe_to_bytes()?);
 
-    let result = Blake2_256::hash(&bytes).to_vec();
+    let result = Blake2_256::hash(&bytes);
 
     Some(result)
 }
@@ -85,6 +86,12 @@ impl MaybeToBytes for bool {
     }
 }
 
+impl MaybeToBytes for [u8; 32] {
+    fn maybe_to_bytes(&self) -> Option<Vec<u8>> {
+        Some(self.to_vec())
+    }
+}
+
 impl<T> MaybeToBytes for Vec<T>
 where
     T: MaybeToBytes,
@@ -110,6 +117,6 @@ impl<MarketId> MaybeToBytes for Asset<MarketId> {
             _ => return None,
         };
 
-        hash_pair(pair)
+        hash_pair(pair).map(|x| x.to_vec())
     }
 }

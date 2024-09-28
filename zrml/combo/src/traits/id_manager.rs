@@ -2,7 +2,7 @@ use sp_runtime::DispatchError;
 
 pub(crate) trait IdManager {
     type Asset;
-    type MarketId: Into<Self::Id>;
+    type MarketId;
     type Id;
 
     // TODO Replace `Vec<bool>` with a more effective bit mask type.

@@ -1,3 +1,4 @@
+/// Highest/lowest bit always refers to the big endian representation of each bit sequence.
 use core::num::ParseIntError;
 use ethnum::U256;
 use halo2curves::{
@@ -6,13 +7,37 @@ use halo2curves::{
     CurveAffine,
 };
 
+pub(crate) fn get_collection_id(
+    hash: [u8; 32],
+    parent_collection_id: Option<[u8; 32]>,
+) -> Option<[u8; 32]> {
+    let mut u = decompress_hash(hash)?;
+
+    if let Some(pci) = parent_collection_id {
+        let v = decompress_collection_id(pci)?;
+        let w = u + v; // Projective coordinates.
+        u = w.into(); // Affine coordaintes.
+    }
+
+    let mut x = u.x;
+
+    if u.y.is_odd().into() {
+        x = flip_second_highest_bit(x)?;
+    }
+
+    let mut bytes = x.to_bytes();
+    bytes.reverse(); // Little-endian to big-endian.
+
+    Some(bytes)
+}
+
 // TODO Benchmarking info!
 pub(crate) fn decompress_hash(hash: [u8; 32]) -> Option<G1Affine> {
     // Calculate `odd` first, then get congruent point `x` in `Fq`. As `hash` might represent a
     // larger big endian number than `field_modulus()`, the MSB of `x` might be different from the
     // MSB of `x_u256`.
+    let odd = is_msb_set(&hash);
     let x_u256 = U256::from_be_bytes(hash);
-    let odd = is_msb_set(x_u256)?;
     let mut x = Fq::from_u256(x_u256 % field_modulus())?;
 
     let mut iterations = 0;
@@ -38,10 +63,12 @@ pub(crate) fn decompress_hash(hash: [u8; 32]) -> Option<G1Affine> {
     G1Affine::from_xy(x, y).into()
 }
 
-pub(crate) fn decompress_collection_id(collection_id: U256) -> Option<G1Affine> {
-    let odd = is_second_msb_set(collection_id)?;
-    let x_u256 = chop_off_two_highest_bits(collection_id)?;
-    let x = Fq::from_u256(x_u256)?;
+pub(crate) fn decompress_collection_id(mut collection_id: [u8; 32]) -> Option<G1Affine> {
+    let odd = is_second_msb_set(&collection_id);
+    chop_off_two_highest_bits(&mut collection_id);
+    collection_id.reverse(); // Big-endian to little-endian. TODO: Abstract this away since we're doing this at least twice.
+    let x_opt: Option<_> = Fq::from_bytes(&collection_id).into();
+    let x = x_opt?;
     let mut y = matching_y_coordinate(x)?; // TODO Raise clear error here: InvalidCollectionId.
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
@@ -51,6 +78,16 @@ pub(crate) fn decompress_collection_id(collection_id: U256) -> Option<G1Affine> 
     }
 
     G1Affine::from_xy(x, y).into()
+}
+
+/// Flips the second highests bit of `x`. Always returns `Some`.
+fn flip_second_highest_bit(x: Fq) -> Option<Fq> {
+    let mut le_bytes = x.to_bytes();
+
+    // Little endian representation, so highest bits are at the end of the sequence.
+    le_bytes[31] ^= 0b01000000;
+
+    Fq::from_bytes(&le_bytes).into()
 }
 
 // TODO Refactor: Make sure that on-chain, we're using BoundedVec<u8, 32> or [u8; 32]. The types in
@@ -68,23 +105,24 @@ fn field_modulus() -> U256 {
     ])
 }
 
-fn is_msb_set(x: U256) -> Option<bool> {
-    let msb = x.checked_shl(255)?;
-    Some(msb != U256::from(0u8))
+/// Checks if the most significant bit of the big-endian `bytes` is set.
+fn is_msb_set(bytes: &[u8; 32]) -> bool {
+    bytes[0] != 0u8
 }
 
-fn is_second_msb_set(x: U256) -> Option<bool> {
-    let mask = U256::from(1u8).checked_shr(254)?;
-    Some(x & mask != U256::from(0u8))
+/// Checks if the second most significant bit of the big-endian `bytes` is set.
+fn is_second_msb_set(bytes: &[u8; 32]) -> bool {
+    bytes[1] != 0u8
 }
 
-fn chop_off_two_highest_bits(x: U256) -> Option<U256> {
-    let mask: u8 = 0b11;
-    let mask = U256::from(mask).checked_shr(254)?;
-    let mask = !mask;
-    Some(x & mask)
+/// Zeroes out the two most significant bits off the big-endian `bytes`.
+fn chop_off_two_highest_bits(bytes: &mut [u8; 32]) {
+    bytes[0] = 0u8;
+    bytes[1] = 0u8;
 }
 
+/// Returns a value `y` of `Fq` so that `(x, y)` is a point on `alt_bn128` or `None` if there is no
+/// such value.
 fn matching_y_coordinate(x: Fq) -> Option<Fq> {
     let xx = x * x;
     let xxx = x * xx;
@@ -508,8 +546,8 @@ where
 
 impl FromU256 for Fq {
     fn from_u256(x: U256) -> Option<Fq> {
-        let bytes = x.to_le_bytes();
-        let ct_opt = Fq::from_bytes(&bytes);
+        let le_bytes = x.to_le_bytes();
+        let ct_opt = Fq::from_bytes(&le_bytes);
 
         ct_opt.into()
     }
