@@ -7,10 +7,12 @@ use halo2curves::{
     CurveAffine,
 };
 
+pub(crate) type Hash = [u8; 32];
+
 pub(crate) fn get_collection_id(
-    hash: [u8; 32],
-    parent_collection_id: Option<[u8; 32]>,
-) -> Option<[u8; 32]> {
+    hash: Hash,
+    parent_collection_id: Option<Hash>,
+) -> Option<Hash> {
     let mut u = decompress_hash(hash)?;
 
     if let Some(pci) = parent_collection_id {
@@ -31,8 +33,10 @@ pub(crate) fn get_collection_id(
     Some(bytes)
 }
 
+// TODO Put everything below here into details!
+
 // TODO Benchmarking info!
-pub(crate) fn decompress_hash(hash: [u8; 32]) -> Option<G1Affine> {
+pub(crate) fn decompress_hash(hash: Hash) -> Option<G1Affine> {
     // Calculate `odd` first, then get congruent point `x` in `Fq`. As `hash` might represent a
     // larger big endian number than `field_modulus()`, the MSB of `x` might be different from the
     // MSB of `x_u256`.
@@ -63,7 +67,7 @@ pub(crate) fn decompress_hash(hash: [u8; 32]) -> Option<G1Affine> {
     G1Affine::from_xy(x, y).into()
 }
 
-pub(crate) fn decompress_collection_id(mut collection_id: [u8; 32]) -> Option<G1Affine> {
+pub(crate) fn decompress_collection_id(mut collection_id: Hash) -> Option<G1Affine> {
     let odd = is_second_msb_set(&collection_id);
     chop_off_two_highest_bits(&mut collection_id);
     collection_id.reverse(); // Big-endian to little-endian. TODO: Abstract this away since we're doing this at least twice.
@@ -90,10 +94,8 @@ fn flip_second_highest_bit(x: Fq) -> Option<Fq> {
     Fq::from_bytes(&le_bytes).into()
 }
 
-// TODO Refactor: Make sure that on-chain, we're using BoundedVec<u8, 32> or [u8; 32]. The types in
+// TODO Refactor: Make sure that on-chain, we're using BoundedVec<u8, 32> or Hash. The types in
 // use here (U256, Fq, etc.) should all be implementation details.
-
-// TODO Put everything below here into details!
 
 const DECOMPRESS_HASH_MAX_ITERATIONS: usize = 500;
 
@@ -106,17 +108,17 @@ fn field_modulus() -> U256 {
 }
 
 /// Checks if the most significant bit of the big-endian `bytes` is set.
-fn is_msb_set(bytes: &[u8; 32]) -> bool {
+fn is_msb_set(bytes: &Hash) -> bool {
     bytes[0] != 0u8
 }
 
 /// Checks if the second most significant bit of the big-endian `bytes` is set.
-fn is_second_msb_set(bytes: &[u8; 32]) -> bool {
+fn is_second_msb_set(bytes: &Hash) -> bool {
     bytes[1] != 0u8
 }
 
 /// Zeroes out the two most significant bits off the big-endian `bytes`.
-fn chop_off_two_highest_bits(bytes: &mut [u8; 32]) {
+fn chop_off_two_highest_bits(bytes: &mut Hash) {
     bytes[0] = 0u8;
     bytes[1] = 0u8;
 }

@@ -1,11 +1,12 @@
-use crate::{alt_bn128, traits::IdManager};
+mod alt_bn128;
+
+use crate::traits::IdManager;
+use alt_bn128::Hash;
 use core::marker::PhantomData;
 use ethnum::U256;
 use frame_support::{Blake2_256, StorageHasher};
 use sp_runtime::DispatchError;
 use zeitgeist_primitives::types::Asset;
-
-type Hash = [u8; 32];
 
 pub(crate) struct CryptographicIdManager<MarketId>(PhantomData<MarketId>);
 
@@ -39,7 +40,7 @@ where
 }
 
 // TODO Replace pair with parameters.
-fn hash_pair<T1, T2>(pair: (T1, T2)) -> Option<[u8; 32]>
+fn hash_pair<T1, T2>(pair: (T1, T2)) -> Option<Hash>
 // TODO Let this return Hash.
 where
     T1: MaybeToBytes,
@@ -86,7 +87,7 @@ impl MaybeToBytes for bool {
     }
 }
 
-impl MaybeToBytes for [u8; 32] {
+impl MaybeToBytes for Hash {
     fn maybe_to_bytes(&self) -> Option<Vec<u8>> {
         Some(self.to_vec())
     }
