@@ -25,7 +25,8 @@ where
         // TODO: This could just return an `Option` as we don't really expect this to fail with any
         // informative results.
     ) -> Result<Self::Id, DispatchError> {
-        let hash = hash_pair((market_id, index_set)).ok_or(DispatchError::Other("TODO"))?;
+        let input = (market_id, index_set);
+        let hash = hash_tuple(input).ok_or(DispatchError::Other("TODO"))?;
         alt_bn128::get_collection_id(hash, parent_collection_id).ok_or(DispatchError::Other("TODO"))
     }
 
@@ -35,21 +36,20 @@ where
         // TODO: This could just return an `Option` as we don't really expect this to fail with any
         // informative results.
     ) -> Result<Self::Id, DispatchError> {
-        hash_pair((collateral, collection_id)).ok_or(DispatchError::Other("TODO"))
+        let input = (collateral, collection_id);
+        hash_tuple(input).ok_or(DispatchError::Other("TODO"))
     }
 }
 
-// TODO Replace pair with parameters.
-fn hash_pair<T1, T2>(pair: (T1, T2)) -> Option<Hash>
-// TODO Let this return Hash.
+fn hash_tuple<T1, T2>(tuple: (T1, T2)) -> Option<Hash>
 where
     T1: MaybeToBytes,
     T2: MaybeToBytes,
 {
     let mut bytes = Vec::new();
 
-    bytes.extend_from_slice(&pair.0.maybe_to_bytes()?);
-    bytes.extend_from_slice(&pair.1.maybe_to_bytes()?);
+    bytes.extend_from_slice(&tuple.0.maybe_to_bytes()?);
+    bytes.extend_from_slice(&tuple.1.maybe_to_bytes()?);
 
     let result = Blake2_256::hash(&bytes);
 
@@ -118,6 +118,6 @@ impl<MarketId> MaybeToBytes for Asset<MarketId> {
             _ => return None,
         };
 
-        hash_pair(pair).map(|x| x.to_vec())
+        hash_tuple(pair).map(|x| x.to_vec())
     }
 }
