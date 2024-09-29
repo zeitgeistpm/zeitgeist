@@ -32,11 +32,12 @@ pub(crate) fn get_collection_id(hash: Hash, parent_collection_id: Option<Hash>) 
 // TODO Put everything below here into details!
 
 // TODO Benchmarking info!
-pub(crate) fn decompress_hash(hash: Hash) -> Option<G1Affine> {
+fn decompress_hash(hash: Hash) -> Option<G1Affine> {
     // Calculate `odd` first, then get congruent point `x` in `Fq`. As `hash` might represent a
     // larger big endian number than `field_modulus()`, the MSB of `x` might be different from the
     // MSB of `x_u256`.
     let odd = is_msb_set(&hash);
+
     let x_u256 = U256::from_be_bytes(hash);
     let mut x = Fq::from_u256(x_u256 % field_modulus())?;
 
@@ -63,7 +64,7 @@ pub(crate) fn decompress_hash(hash: Hash) -> Option<G1Affine> {
     G1Affine::from_xy(x, y).into()
 }
 
-pub(crate) fn decompress_collection_id(mut collection_id: Hash) -> Option<G1Affine> {
+fn decompress_collection_id(mut collection_id: Hash) -> Option<G1Affine> {
     let odd = is_second_msb_set(&collection_id);
     chop_off_two_highest_bits(&mut collection_id);
     collection_id.reverse(); // Big-endian to little-endian. TODO: Abstract this away since we're doing this at least twice.

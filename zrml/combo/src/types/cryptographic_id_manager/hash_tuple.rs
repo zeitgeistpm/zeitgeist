@@ -20,18 +20,20 @@ pub trait ToBytes {
     fn to_bytes(&self) -> Vec<u8>;
 }
 
-// TODO Use macros for this
-impl ToBytes for u32 {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_be_bytes().to_vec()
-    }
+/// Implements `ToBytes` for any type implementing `to_be_bytes`.
+macro_rules! impl_to_bytes {
+    ($($t:ty),*) => {
+        $(
+            impl ToBytes for $t {
+                fn to_bytes(&self) -> Vec<u8> {
+                    self.to_be_bytes().to_vec()
+                }
+            }
+        )*
+    };
 }
 
-impl ToBytes for u128 {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_be_bytes().to_vec()
-    }
-}
+impl_to_bytes!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
 
 impl ToBytes for bool {
     fn to_bytes(&self) -> Vec<u8> {
@@ -64,7 +66,8 @@ where
 /// restriction will result in assets changing hashes between versions, causing unreachable funds.
 ///
 /// Of course, this is true of any modification of the collection ID manager, but this is the place
-/// where it's most likely to happen.
+/// where it's most likely to happen. We're using tests below to ensure that unintentional changes
+/// are caught.
 impl<MarketId> ToBytes for Asset<MarketId>
 where
     MarketId: Encode,
