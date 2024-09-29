@@ -1,4 +1,4 @@
-mod alt_bn128;
+mod decompressor;
 mod hash_tuple;
 mod typedefs;
 
@@ -29,7 +29,7 @@ where
     ) -> Option<Self::Id> {
         let input = (market_id, index_set);
         let hash = hash_tuple(input);
-        alt_bn128::get_collection_id(hash, parent_collection_id)
+        decompressor::get_collection_id(hash, parent_collection_id)
     }
 
     fn get_position_id(collateral: Self::Asset, collection_id: Self::Id) -> Option<Self::Id> {
