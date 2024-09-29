@@ -22,22 +22,18 @@ where
         parent_collection_id: Option<Self::Id>,
         market_id: Self::MarketId,
         index_set: Vec<bool>,
-        // TODO: This could just return an `Option` as we don't really expect this to fail with any
-        // informative results.
-    ) -> Result<Self::Id, DispatchError> {
+    ) -> Option<Self::Id> {
         let input = (market_id, index_set);
-        let hash = hash_tuple(input).ok_or(DispatchError::Other("TODO"))?;
-        alt_bn128::get_collection_id(hash, parent_collection_id).ok_or(DispatchError::Other("TODO"))
+        let hash = hash_tuple(input)?;
+        alt_bn128::get_collection_id(hash, parent_collection_id)
     }
 
     fn get_position_id(
         collateral: Self::Asset,
         collection_id: Self::Id,
-        // TODO: This could just return an `Option` as we don't really expect this to fail with any
-        // informative results.
-    ) -> Result<Self::Id, DispatchError> {
+    ) -> Option<Self::Id> {
         let input = (collateral, collection_id);
-        hash_tuple(input).ok_or(DispatchError::Other("TODO"))
+        hash_tuple(input)
     }
 }
 
@@ -75,12 +71,6 @@ impl MaybeToBytes for u128 {
     }
 }
 
-impl MaybeToBytes for U256 {
-    fn maybe_to_bytes(&self) -> Option<Vec<u8>> {
-        Some(self.to_be_bytes().to_vec())
-    }
-}
-
 impl MaybeToBytes for bool {
     fn maybe_to_bytes(&self) -> Option<Vec<u8>> {
         Some(vec![*self as u8])
@@ -108,8 +98,11 @@ where
     }
 }
 
-/// Beware! All changes to this function need to be backwards compatible. Failure to follow this
+/// Beware! All changes to this implementation need to be backwards compatible. Failure to follow this
 /// restriction will result in assets changing hashes between versions, causing unreachable funds.
+///
+/// Of course, this is true of any modification of the collection ID manager, but this is the place
+/// where it's most likely to happen.
 impl<MarketId> MaybeToBytes for Asset<MarketId> {
     fn maybe_to_bytes(&self) -> Option<Vec<u8>> {
         let pair = match self {

@@ -10,10 +10,10 @@ pub(crate) trait IdManager {
         parent_collection_id: Option<Self::Id>,
         market_id: Self::MarketId,
         index_set: Vec<bool>,
-    ) -> Result<Self::Id, DispatchError>;
+    ) -> Option<Self::Id>;
 
     fn get_position_id(
         collateral: Self::Asset,
         collection_id: Self::Id,
-    ) -> Result<Self::Id, DispatchError>;
+    ) -> Option<Self::Id>;
 }
