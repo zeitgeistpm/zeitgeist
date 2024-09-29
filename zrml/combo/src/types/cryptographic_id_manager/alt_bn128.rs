@@ -6,13 +6,9 @@ use halo2curves::{
     ff::PrimeField,
     CurveAffine,
 };
+use super::typedefs::Hash;
 
-pub(crate) type Hash = [u8; 32];
-
-pub(crate) fn get_collection_id(
-    hash: Hash,
-    parent_collection_id: Option<Hash>,
-) -> Option<Hash> {
+pub(crate) fn get_collection_id(hash: Hash, parent_collection_id: Option<Hash>) -> Option<Hash> {
     let mut u = decompress_hash(hash)?;
 
     if let Some(pci) = parent_collection_id {
