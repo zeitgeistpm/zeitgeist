@@ -1,5 +1,4 @@
 /// Highest/lowest bit always refers to the big endian representation of each bit sequence.
-
 mod tests;
 
 use super::typedefs::Hash;
@@ -20,14 +19,14 @@ pub(crate) fn get_collection_id(hash: Hash, parent_collection_id: Option<Hash>) 
         u = w.into(); // Affine coordinates.
     }
 
-    let mut x = u.x;
+    // Convert back to bytes _before_ flipping, as flipping will sometimes result in numbers larger
+    // than the base field modulus.
+    let mut bytes = u.x.to_bytes();
+    bytes.reverse(); // Little-endian to big-endian.
 
     if u.y.is_odd().into() {
-        x = flip_second_highest_bit(x)?;
+        flip_second_highest_bit(&mut bytes);
     }
-
-    let mut bytes = x.to_bytes();
-    bytes.reverse(); // Little-endian to big-endian.
 
     Some(bytes)
 }
@@ -70,7 +69,7 @@ fn decompress_hash(hash: Hash, force_max_iters: bool) -> Option<G1Affine> {
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
     // `odd` is set but `y` isn't odd, we switch to the other option.
-    if odd && y.is_even().into() || !odd && y.is_odd().into() {
+    if (odd && y.is_even().into()) || (!odd && y.is_odd().into()) {
         y = y.neg();
     }
 
@@ -103,30 +102,24 @@ fn field_modulus() -> U256 {
     ])
 }
 
-/// Flips the second highests bit of `x`. Always returns `Some`.
-fn flip_second_highest_bit(x: Fq) -> Option<Fq> {
-    let mut le_bytes = x.to_bytes();
-
-    // Little endian representation, so highest bits are at the end of the sequence.
-    le_bytes[31] ^= 0b01000000;
-
-    Fq::from_bytes(&le_bytes).into()
+/// Flips the second highests bit of big-endian `bytes`.
+fn flip_second_highest_bit(bytes: &mut Hash) {
+    bytes[0] ^= 0b01000000;
 }
 
 /// Checks if the most significant bit of the big-endian `bytes` is set.
 fn is_msb_set(bytes: &Hash) -> bool {
-    bytes[0] != 0u8
+    (bytes[0] & 0b10000000) != 0
 }
 
 /// Checks if the second most significant bit of the big-endian `bytes` is set.
 fn is_second_msb_set(bytes: &Hash) -> bool {
-    bytes[1] != 0u8
+    (bytes[0] & 0b01000000) != 0
 }
 
 /// Zeroes out the two most significant bits off the big-endian `bytes`.
 fn chop_off_two_highest_bits(bytes: &mut Hash) {
-    bytes[0] = 0u8;
-    bytes[1] = 0u8;
+    bytes[0] &= 0b00111111;
 }
 
 /// Returns a value `y` of `Fq` so that `(x, y)` is a point on `alt_bn128` or `None` if there is no

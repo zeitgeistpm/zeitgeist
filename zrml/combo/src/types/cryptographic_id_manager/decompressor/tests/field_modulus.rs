@@ -1,5 +1,4 @@
 use super::*;
-use test_case::test_case;
 
 fn field_modulus_works() {
     let expected = U256::from_str_prefixed(

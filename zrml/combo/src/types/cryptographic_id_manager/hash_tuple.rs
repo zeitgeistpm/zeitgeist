@@ -3,21 +3,30 @@ use frame_support::{Blake2_256, StorageHasher};
 use parity_scale_codec::Encode;
 use zeitgeist_primitives::types::Asset;
 
-pub(crate) fn hash_tuple<T1, T2>(tuple: (T1, T2)) -> Hash
-where
-    T1: ToBytes,
-    T2: ToBytes,
-{
-    let mut bytes = Vec::new();
-
-    bytes.extend_from_slice(&tuple.0.to_bytes());
-    bytes.extend_from_slice(&tuple.1.to_bytes());
-
-    Blake2_256::hash(&bytes)
-}
-
 pub trait ToBytes {
     fn to_bytes(&self) -> Vec<u8>;
+}
+
+pub trait HashTuple {
+    fn hash_tuple<T1, T2>(tuple: (T1, T2)) -> Hash
+    where
+        T1: ToBytes,
+        T2: ToBytes;
+}
+
+impl HashTuple for Blake2_256 {
+    fn hash_tuple<T1, T2>(tuple: (T1, T2)) -> Hash
+    where
+        T1: ToBytes,
+        T2: ToBytes,
+    {
+        let mut bytes = Vec::new();
+
+        bytes.extend_from_slice(&tuple.0.to_bytes());
+        bytes.extend_from_slice(&tuple.1.to_bytes());
+
+        Blake2_256::hash(&bytes)
+    }
 }
 
 /// Implements `ToBytes` for any type implementing `to_be_bytes`.
