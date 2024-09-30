@@ -64,7 +64,7 @@ fn decompress_hash(hash: Hash, force_max_work: bool) -> Option<G1Affine> {
         if y_opt.is_some() {
             // Perform the same calculations as below, but store them in the dummy variables to
             // avoid setting off rustc optimizations.
-            dummy_x = x + Fq::one();
+            let dummy_x = x + Fq::one();
 
             let matching_y = matching_y_coordinate(dummy_x);
 
@@ -85,6 +85,8 @@ fn decompress_hash(hash: Hash, force_max_work: bool) -> Option<G1Affine> {
             }
         }
     }
+    std::mem::forget(dummy_x); // Ensure that the dummies are considered "read" by rustc.
+    std::mem::forget(dummy_y);
     let mut y = y_opt?; // This **should** be infallible.
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
