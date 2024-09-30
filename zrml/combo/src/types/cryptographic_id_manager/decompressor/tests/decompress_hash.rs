@@ -746,8 +746,8 @@ use rstest::rstest;
 )]
 fn decompress_hash_works(
     #[case] hash: Hash,
-    #[case] expected: (&str, &str),
     #[values(false, true)] force_max_work: bool,
+    #[case] expected: (&str, &str),
 ) {
     let x = Fq::from_str_prefixed(expected.0).unwrap();
     let y = Fq::from_str_prefixed(expected.1).unwrap();

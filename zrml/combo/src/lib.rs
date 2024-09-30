@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+// TODO Refactor so that collection IDs are their own type with an `Fq` field and an `odd` field?
+
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 

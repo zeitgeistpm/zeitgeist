@@ -2,6 +2,7 @@
 
 use super::*;
 
+mod decompress_collection_id;
 mod decompress_hash;
 mod field_modulus;
 mod get_collection_id;

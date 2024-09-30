@@ -10,6 +10,7 @@ use halo2curves::{
     CurveAffine,
 };
 
+/// Will return `None` if and only if `parent_collection_id` is not a valid collection ID.
 pub(crate) fn get_collection_id(
     hash: Hash,
     parent_collection_id: Option<Hash>,
@@ -35,14 +36,17 @@ pub(crate) fn get_collection_id(
     Some(bytes)
 }
 
-const DECOMPRESS_HASH_MAX_ITERS: usize = 600;
+const DECOMPRESS_HASH_MAX_ITERS: usize = 1_000;
 
 /// Decompresses a collection ID `hash` to a point of `alt_bn128`. The amount of work done can be
 /// forced to be independent of the input by setting the `force_max_work` flag.
 ///
 /// We don't have mathematical proof that the points of `alt_bn128` are distributed so that the
 /// required number of iterations is below the specified limit of iterations, but there's good
-/// evidence that input hash requires more than `log_2(P) = 507.19338271000436` iterations.
+/// evidence that input hash requires more than `log_2(P) = 507.19338271000436` iterations. We
+/// will use `1_000` iterations as maximum for now.
+///
+/// Provided the assumption above is correct, this function cannot return `None`.
 fn decompress_hash(hash: Hash, force_max_work: bool) -> Option<G1Affine> {
     // Calculate `odd` first, then get congruent point `x` in `Fq`. As `hash` might represent a
     // larger big endian number than `field_modulus()`, the MSB of `x` might be different from the
@@ -53,7 +57,7 @@ fn decompress_hash(hash: Hash, force_max_work: bool) -> Option<G1Affine> {
     // `hash` does not satisfy `x < P`, so we need to use `U256` to calculate the remainder of `x`
     // when dividing by `P`. That's the whole reason we need ethnum.
     let x_u256 = U256::from_be_bytes(hash);
-    let mut x = Fq::from_u256(x_u256.checked_rem(field_modulus())?)?;
+    let mut x = Fq::from_u256(x_u256.checked_rem(field_modulus())?)?; // Infallible.
 
     let mut y_opt = None;
     let mut dummy_x = Fq::zero(); // Used to prevent rustc from optimizing dummy work away.
@@ -103,9 +107,9 @@ fn decompress_collection_id(mut collection_id: Hash) -> Option<G1Affine> {
     chop_off_two_highest_bits(&mut collection_id);
     collection_id.reverse(); // Big-endian to little-endian.
     let x_opt: Option<_> = Fq::from_bytes(&collection_id).into();
-    let x = x_opt?;
+    let x = x_opt?; // Fails if `collection_id` is not a collection ID.
 
-    let mut y = matching_y_coordinate(x)?; // TODO Raise clear error here: InvalidCollectionId.
+    let mut y = matching_y_coordinate(x)?; // Fails if `collection_id` is not a collection ID.
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
     // `odd` is set but `y` isn't odd, we switch to the other option.
