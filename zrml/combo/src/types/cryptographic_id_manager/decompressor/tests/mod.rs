@@ -2,6 +2,7 @@
 
 use super::*;
 
+mod decompress_hash;
 mod field_modulus;
 mod get_collection_id;
 mod matching_y_coordinate;
