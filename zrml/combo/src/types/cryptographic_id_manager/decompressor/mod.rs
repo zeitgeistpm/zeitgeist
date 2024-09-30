@@ -1,7 +1,8 @@
+/// Highest/lowest bit always refers to the big endian representation of each bit sequence.
+
 mod tests;
 
 use super::typedefs::Hash;
-/// Highest/lowest bit always refers to the big endian representation of each bit sequence.
 use core::num::ParseIntError;
 use ethnum::U256;
 use halo2curves::{
@@ -16,7 +17,7 @@ pub(crate) fn get_collection_id(hash: Hash, parent_collection_id: Option<Hash>) 
     if let Some(pci) = parent_collection_id {
         let v = decompress_collection_id(pci)?;
         let w = u + v; // Projective coordinates.
-        u = w.into(); // Affine coordaintes.
+        u = w.into(); // Affine coordinates.
     }
 
     let mut x = u.x;
@@ -33,8 +34,8 @@ pub(crate) fn get_collection_id(hash: Hash, parent_collection_id: Option<Hash>) 
 
 const DECOMPRESS_HASH_MAX_ITERS: usize = 600;
 
-/// Decompresses a collection ID `hash` to a point of `alt_bn128`. The number of work done can be
-/// forced to be independent of the input by betting the `force_max_iters` flag.
+/// Decompresses a collection ID `hash` to a point of `alt_bn128`. The amount of work done can be
+/// forced to be independent of the input by setting the `force_max_iters` flag.
 ///
 /// We don't have mathematical proof that the points of `alt_bn128` are distributed so that the
 /// required number of iterations is below the specified limit of iterations, but there's good
@@ -139,7 +140,7 @@ fn matching_y_coordinate(x: Fq) -> Option<Fq> {
     if y * y == yy { Some(y) } else { None }
 }
 
-/// Returns `x` to the power of `(P - 1) / 4` where `P` is the base field modulus of `alt_bn128`.
+/// Returns `x` to the power of `(P + 1) / 4` where `P` is the base field modulus of `alt_bn128`.
 fn pow_magic_number(mut x: Fq) -> Fq {
     let x_1 = x;
     x = x * x;
