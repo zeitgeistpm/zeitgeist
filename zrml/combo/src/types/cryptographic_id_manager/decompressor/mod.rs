@@ -10,8 +10,12 @@ use halo2curves::{
     CurveAffine,
 };
 
-pub(crate) fn get_collection_id(hash: Hash, parent_collection_id: Option<Hash>) -> Option<Hash> {
-    let mut u = decompress_hash(hash, false)?;
+pub(crate) fn get_collection_id(
+    hash: Hash,
+    parent_collection_id: Option<Hash>,
+    force_max_work: bool,
+) -> Option<Hash> {
+    let mut u = decompress_hash(hash, force_max_work)?;
 
     if let Some(pci) = parent_collection_id {
         let v = decompress_collection_id(pci)?;
@@ -34,38 +38,54 @@ pub(crate) fn get_collection_id(hash: Hash, parent_collection_id: Option<Hash>) 
 const DECOMPRESS_HASH_MAX_ITERS: usize = 600;
 
 /// Decompresses a collection ID `hash` to a point of `alt_bn128`. The amount of work done can be
-/// forced to be independent of the input by setting the `force_max_iters` flag.
+/// forced to be independent of the input by setting the `force_max_work` flag.
 ///
 /// We don't have mathematical proof that the points of `alt_bn128` are distributed so that the
 /// required number of iterations is below the specified limit of iterations, but there's good
 /// evidence that input hash requires more than `log_2(P) = 507.19338271000436` iterations.
-fn decompress_hash(hash: Hash, force_max_iters: bool) -> Option<G1Affine> {
+fn decompress_hash(hash: Hash, force_max_work: bool) -> Option<G1Affine> {
     // Calculate `odd` first, then get congruent point `x` in `Fq`. As `hash` might represent a
     // larger big endian number than `field_modulus()`, the MSB of `x` might be different from the
     // MSB of `x_u256`.
     let odd = is_msb_set(&hash);
 
-    // Fq won't let us create an element of the Galois field if the number `x` represented by `hash`
-    // does not satisfy `x < P`, so we need to use `U256` to calculate the remainder of `x` when
-    // dividing by `P`. That's the whole reason we need ethnum.
+    // `Fq` won't let us create an element of the Galois field if the number `x` represented by
+    // `hash` does not satisfy `x < P`, so we need to use `U256` to calculate the remainder of `x`
+    // when dividing by `P`. That's the whole reason we need ethnum.
     let x_u256 = U256::from_be_bytes(hash);
     let mut x = Fq::from_u256(x_u256.checked_rem(field_modulus())?)?;
 
     let mut y_opt = None;
+    let mut dummy_x = Fq::zero(); // Used to prevent rustc from optimizing dummy work away.
+    let mut dummy_y = None;
     for _ in 0..DECOMPRESS_HASH_MAX_ITERS {
-        x = x + Fq::one();
+        // If `y_opt.is_some()` and we're still in the loop, then `force_max_work` is set and we're
+        // jus here to spin our wheels for the benchmarks.
+        if y_opt.is_some() {
+            // Perform the same calculations as below, but store them in the dummy variables to
+            // avoid setting off rustc optimizations.
+            dummy_x = x + Fq::one();
 
-        let matching_y = matching_y_coordinate(x);
+            let matching_y = matching_y_coordinate(dummy_x);
 
-        if matching_y.is_some() && y_opt.is_none() {
-            y_opt = matching_y;
+            if matching_y.is_some() {
+                dummy_y = matching_y;
+            }
+        } else {
+            x = x + Fq::one();
 
-            if !force_max_iters {
-                break;
+            let matching_y = matching_y_coordinate(x);
+
+            if matching_y.is_some() {
+                y_opt = matching_y;
+
+                if !force_max_work {
+                    break;
+                }
             }
         }
     }
-    let mut y = y_opt?;
+    let mut y = y_opt?; // This **should** be infallible.
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
     // `odd` is set but `y` isn't odd, we switch to the other option.

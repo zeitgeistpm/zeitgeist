@@ -11,6 +11,7 @@ zeitgeist-primitives = { workspace = true }
 
 [dev-dependencies]
 test-case = { workspace = true }
+rstest = { workspace = true }
 
 [features]
 default = ["std"]

@@ -10,6 +10,7 @@ pub(crate) trait IdManager {
         parent_collection_id: Option<Self::Id>,
         market_id: Self::MarketId,
         index_set: Vec<bool>,
+        force_max_work: bool,
     ) -> Option<Self::Id>;
 
     fn get_position_id(

@@ -27,10 +27,11 @@ where
         parent_collection_id: Option<Self::Id>,
         market_id: Self::MarketId,
         index_set: Vec<bool>,
+        force_max_work: bool,
     ) -> Option<Self::Id> {
         let input = (market_id, index_set);
         let hash = Hasher::hash_tuple(input);
-        decompressor::get_collection_id(hash, parent_collection_id)
+        decompressor::get_collection_id(hash, parent_collection_id, force_max_work)
     }
 
     fn get_position_id(collateral: Self::Asset, collection_id: Self::Id) -> Option<Self::Id> {
