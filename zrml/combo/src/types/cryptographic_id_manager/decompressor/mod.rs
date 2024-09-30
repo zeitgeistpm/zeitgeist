@@ -153,7 +153,7 @@ fn chop_off_two_highest_bits(bytes: &mut Hash) {
 fn matching_y_coordinate(x: Fq) -> Option<Fq> {
     let xx = x * x;
     let xxx = x * xx;
-    let yy = xxx + Fq::from_raw([3u64, 0u64, 0u64, 0u64]); // 3
+    let yy = xxx + Fq::from(3);
     let y = pow_magic_number(yy);
 
     if y * y == yy { Some(y) } else { None }
