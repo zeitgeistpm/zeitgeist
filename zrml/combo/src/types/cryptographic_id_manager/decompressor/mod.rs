@@ -34,10 +34,11 @@ pub(crate) fn get_collection_id(hash: Hash, parent_collection_id: Option<Hash>) 
 const DECOMPRESS_HASH_MAX_ITERS: usize = 600;
 
 /// Decompresses a collection ID `hash` to a point of `alt_bn128`. The number of work done can be
-/// forced to
+/// forced to be independent of the input by betting the `force_max_iters` flag.
 ///
 /// We don't have mathematical proof that the points of `alt_bn128` are distributed so that the
-/// required number of iterations is below `log_2(P) = 507.19338271000436`.
+/// required number of iterations is below the specified limit of iterations, but there's good
+/// evidence that input hash requires more than `log_2(P) = 507.19338271000436` iterations.
 fn decompress_hash(hash: Hash, force_max_iters: bool) -> Option<G1Affine> {
     // Calculate `odd` first, then get congruent point `x` in `Fq`. As `hash` might represent a
     // larger big endian number than `field_modulus()`, the MSB of `x` might be different from the
@@ -64,12 +65,7 @@ fn decompress_hash(hash: Hash, force_max_iters: bool) -> Option<G1Affine> {
             }
         }
     }
-
-    let mut y = if let Some(y) = y_opt {
-        y
-    } else {
-        return None; // TODO Better error handling.
-    };
+    let mut y = y_opt?;
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
     // `odd` is set but `y` isn't odd, we switch to the other option.
@@ -86,6 +82,7 @@ fn decompress_collection_id(mut collection_id: Hash) -> Option<G1Affine> {
     collection_id.reverse(); // Big-endian to little-endian. TODO: Abstract this away since we're doing this at least twice.
     let x_opt: Option<_> = Fq::from_bytes(&collection_id).into();
     let x = x_opt?;
+
     let mut y = matching_y_coordinate(x)?; // TODO Raise clear error here: InvalidCollectionId.
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
@@ -97,6 +94,14 @@ fn decompress_collection_id(mut collection_id: Hash) -> Option<G1Affine> {
     G1Affine::from_xy(x, y).into()
 }
 
+fn field_modulus() -> U256 {
+    U256::from_be_bytes([
+        0x30, 0x64, 0x4e, 0x72, 0xe1, 0x31, 0xa0, 0x29, 0xb8, 0x50, 0x45, 0xb6, 0x81, 0x81, 0x58,
+        0x5d, 0x97, 0x81, 0x6a, 0x91, 0x68, 0x71, 0xca, 0x8d, 0x3c, 0x20, 0x8c, 0x16, 0xd8, 0x7c,
+        0xfd, 0x47,
+    ])
+}
+
 /// Flips the second highests bit of `x`. Always returns `Some`.
 fn flip_second_highest_bit(x: Fq) -> Option<Fq> {
     let mut le_bytes = x.to_bytes();
@@ -105,14 +110,6 @@ fn flip_second_highest_bit(x: Fq) -> Option<Fq> {
     le_bytes[31] ^= 0b01000000;
 
     Fq::from_bytes(&le_bytes).into()
-}
-
-fn field_modulus() -> U256 {
-    U256::from_be_bytes([
-        0x30, 0x64, 0x4e, 0x72, 0xe1, 0x31, 0xa0, 0x29, 0xb8, 0x50, 0x45, 0xb6, 0x81, 0x81, 0x58,
-        0x5d, 0x97, 0x81, 0x6a, 0x91, 0x68, 0x71, 0xca, 0x8d, 0x3c, 0x20, 0x8c, 0x16, 0xd8, 0x7c,
-        0xfd, 0x47,
-    ])
 }
 
 /// Checks if the most significant bit of the big-endian `bytes` is set.
