@@ -79,7 +79,7 @@ fn decompress_hash(hash: Hash, force_max_iters: bool) -> Option<G1Affine> {
 fn decompress_collection_id(mut collection_id: Hash) -> Option<G1Affine> {
     let odd = is_second_msb_set(&collection_id);
     chop_off_two_highest_bits(&mut collection_id);
-    collection_id.reverse(); // Big-endian to little-endian. TODO: Abstract this away since we're doing this at least twice.
+    collection_id.reverse(); // Big-endian to little-endian.
     let x_opt: Option<_> = Fq::from_bytes(&collection_id).into();
     let x = x_opt?;
 
