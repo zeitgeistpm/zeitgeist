@@ -15,23 +15,32 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+// TODO Refactor so that collection IDs are their own type with an `Fq` field and an `odd` field?
+
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
 
-// TODO Modules
+mod traits;
+mod types;
 
 pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
     use core::marker::PhantomData;
-    use frame_support::pallet_prelude::StorageVersion;
+    use frame_support::{
+        pallet_prelude::{IsType, StorageVersion},
+        require_transactional, transactional,
+    };
+    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use sp_runtime::DispatchResult;
 
-    // TODO Config
     #[pallet::config]
-    pub trait Config: frame_system::Config {}
+    pub trait Config: frame_system::Config {
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+    }
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -42,9 +51,43 @@ mod pallet {
 
     // TODO Storage Items
 
-    // TODO `Event` enum
+    #[pallet::event]
+    #[pallet::generate_deposit(fn deposit_event)]
+    pub enum Event<T>
+    where
+        T: Config, {}
 
-    // TODO `Error` enum
+    #[pallet::error]
+    pub enum Error<T> {}
 
-    // TODO Dispatchables
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
+        #[pallet::weight(0)] // TODO
+        #[transactional]
+        pub fn split_position(origin: OriginFor<T>) -> DispatchResult {
+            let _ = ensure_signed(origin)?;
+            Self::do_split_position()
+        }
+
+        #[pallet::call_index(1)]
+        #[pallet::weight(0)] // TODO
+        #[transactional]
+        pub fn merge_position(origin: OriginFor<T>) -> DispatchResult {
+            let _ = ensure_signed(origin)?;
+            Self::do_merge_position()
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
+        #[require_transactional]
+        fn do_split_position() -> DispatchResult {
+            Ok(())
+        }
+
+        #[require_transactional]
+        fn do_merge_position() -> DispatchResult {
+            Ok(())
+        }
+    }
 }
