@@ -1,6 +1,5 @@
 mod decompressor;
 mod hash_tuple;
-mod typedefs;
 
 use crate::traits::IdManager;
 use core::marker::PhantomData;
@@ -9,7 +8,7 @@ use frame_support::{Blake2_256, StorageHasher};
 use hash_tuple::{HashTuple, ToBytes};
 use parity_scale_codec::Encode;
 use sp_runtime::DispatchError;
-use typedefs::Hash;
+use crate::types::Hash;
 use zeitgeist_primitives::types::Asset;
 
 pub(crate) struct CryptographicIdManager<MarketId, Hasher>(PhantomData<(MarketId, Hasher)>);

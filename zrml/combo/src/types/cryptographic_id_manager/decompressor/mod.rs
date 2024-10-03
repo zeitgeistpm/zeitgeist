@@ -1,7 +1,7 @@
 /// Highest/lowest bit always refers to the big endian representation of each bit sequence.
 mod tests;
 
-use super::typedefs::Hash;
+use crate::types::Hash;
 use core::num::ParseIntError;
 use ethnum::U256;
 use halo2curves::{

@@ -29,22 +29,38 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
+    use crate::{traits::IdManager, types::Hash};
     use core::marker::PhantomData;
     use frame_support::{
         pallet_prelude::{IsType, StorageVersion},
         require_transactional, transactional,
     };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{
+        ensure_signed,
+        pallet_prelude::{BlockNumberFor, OriginFor},
+    };
+    use orml_traits::MultiCurrency;
     use sp_runtime::DispatchResult;
+    use zeitgeist_primitives::{traits::MarketCommonsPalletApi, types::Asset};
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        type CollectionIdManager: IdManager<Asset = AssetOf<Self>, MarketId = MarketIdOf<Self>, Id = Hash>;
+
+        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = BlockNumberFor<Self>>;
+
+        type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
+
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
     }
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
+
+    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
+    pub(crate) type MarketIdOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
 
     // TODO Types
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
