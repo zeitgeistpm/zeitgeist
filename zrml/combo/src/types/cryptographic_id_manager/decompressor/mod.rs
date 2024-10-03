@@ -89,8 +89,8 @@ fn decompress_hash(hash: Hash, force_max_work: bool) -> Option<G1Affine> {
             }
         }
     }
-    std::mem::forget(dummy_x); // Ensure that the dummies are considered "read" by rustc.
-    std::mem::forget(dummy_y);
+    std::hint::black_box(dummy_x); // Ensure that the dummies are considered "read" by rustc.
+    std::hint::black_box(dummy_y);
     let mut y = y_opt?; // This **should** be infallible.
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If

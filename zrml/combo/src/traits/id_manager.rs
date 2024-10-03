@@ -16,5 +16,5 @@ pub(crate) trait IdManager {
     fn get_position_id(
         collateral: Self::Asset,
         collection_id: Self::Id,
-    ) -> Option<Self::Id>;
+    ) -> Self::Id;
 }
