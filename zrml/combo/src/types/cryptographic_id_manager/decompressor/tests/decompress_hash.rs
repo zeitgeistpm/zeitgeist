@@ -745,7 +745,7 @@ use rstest::rstest;
     )
 )]
 fn decompress_hash_works(
-    #[case] hash: Hash,
+    #[case] hash: CombinatorialId,
     #[values(false, true)] force_max_work: bool,
     #[case] expected: (&str, &str),
 ) {

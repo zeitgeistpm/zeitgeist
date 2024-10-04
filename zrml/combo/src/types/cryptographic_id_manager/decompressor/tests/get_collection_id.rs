@@ -64,10 +64,10 @@ use rstest::rstest;
     ])
 )]
 fn get_collection_id_works(
-    #[case] hash: Hash,
-    #[case] parent_collection_id: Option<Hash>,
+    #[case] hash: CombinatorialId,
+    #[case] parent_collection_id: Option<CombinatorialId>,
     #[values(false, true)] force_max_work: bool,
-    #[case] expected: Option<Hash>,
+    #[case] expected: Option<CombinatorialId>,
 ) {
     assert_eq!(get_collection_id(hash, parent_collection_id, force_max_work), expected);
 }

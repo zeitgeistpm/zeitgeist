@@ -20,7 +20,7 @@
 use crate::traits::ZeitgeistAssetEnumerator;
 use crate::{
     traits::PoolSharesId,
-    types::{CategoryIndex, PoolId},
+    types::{CategoryIndex, PoolId, CombinatorialId},
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -48,13 +48,14 @@ use serde::{Deserialize, Serialize};
 pub enum Asset<MarketId> {
     CategoricalOutcome(MarketId, CategoryIndex),
     ScalarOutcome(MarketId, ScalarPosition),
-    CombinatorialOutcome,
+    CombinatorialToken(CombinatorialId),
     PoolShare(PoolId),
     #[default]
     Ztg,
     ForeignAsset(u32),
     ParimutuelShare(MarketId, CategoryIndex),
 }
+// TODO Needs storage migration
 
 #[cfg(feature = "runtime-benchmarks")]
 impl<MarketId: MaxEncodedLen> ZeitgeistAssetEnumerator<MarketId> for Asset<MarketId> {

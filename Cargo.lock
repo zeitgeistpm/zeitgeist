@@ -15270,6 +15270,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "halo2curves",
+ "orml-traits",
  "parity-scale-codec",
  "rstest",
  "scale-info",
