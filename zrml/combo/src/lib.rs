@@ -158,7 +158,7 @@ mod pallet {
                     T::MultiCurrency::withdraw(position, &who, amount)?;
                 } else {
                     // Split collateral into first level position. Store the collateral in the
-                    // pallet account.
+                    // pallet account. This is the legacy `buy_complete_set`.
                     T::MultiCurrency::transfer(
                         collateral_token,
                         &who,
@@ -167,6 +167,7 @@ mod pallet {
                     )?;
                 }
             } else {
+                // Horizontal split.
                 let remaining_index_set = free_index_set.into_iter().map(|i| !i).collect();
                 let position = Self::position_from_collection(
                     parent_collection_id,
@@ -199,7 +200,52 @@ mod pallet {
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
         ) -> DispatchResult {
+            let market = T::MarketCommons::market(&market_id)?;
+            let collateral_token = market.base_asset;
+
             let free_index_set = Self::free_index_set(parent_collection_id, market_id, &partition)?;
+
+            // Destory the old tokens.
+            let position_ids = partition
+                .iter()
+                .cloned()
+                .map(|index_set| {
+                    Self::position_from_collection(parent_collection_id, market_id, index_set)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            for &position in position_ids.iter() {
+                T::MultiCurrency::withdraw(position, &who, amount)?;
+            }
+
+            // Destroy/store the tokens to be split.
+            if free_index_set.iter().any(|&i| i) {
+                // Vertical merge.
+                if let Some(pci) = parent_collection_id {
+                    // Merge combinatorial token into higher level position. Destroy the tokens.
+                    let position_id =
+                        T::CombinatorialIdManager::get_position_id(collateral_token, pci);
+                    let position = Asset::CombinatorialToken(position_id);
+                    T::MultiCurrency::deposit(position, &who, amount)?;
+                } else {
+                    // Merge first-level tokens into collateral. Move collateral from the pallet
+                    // account to the user's wallet. This is the legacy `sell_complete_set`.
+                    T::MultiCurrency::transfer(
+                        collateral_token,
+                        &Self::account_id(),
+                        &who,
+                        amount,
+                    )?;
+                }
+            } else {
+                // Horizontal merge.
+                let remaining_index_set = free_index_set.into_iter().map(|i| !i).collect();
+                let position = Self::position_from_collection(
+                    parent_collection_id,
+                    market_id,
+                    remaining_index_set,
+                )?;
+                T::MultiCurrency::deposit(position, &who, amount)?;
+            }
 
             Ok(())
         }
