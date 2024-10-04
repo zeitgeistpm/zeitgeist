@@ -1,4 +1,4 @@
-use crate::types::Hash;
+use crate::types::Hash256;
 use frame_support::{Blake2_256, StorageHasher};
 use parity_scale_codec::Encode;
 use zeitgeist_primitives::types::Asset;
@@ -8,14 +8,14 @@ pub trait ToBytes {
 }
 
 pub trait HashTuple {
-    fn hash_tuple<T1, T2>(tuple: (T1, T2)) -> Hash
+    fn hash_tuple<T1, T2>(tuple: (T1, T2)) -> Hash256
     where
         T1: ToBytes,
         T2: ToBytes;
 }
 
 impl HashTuple for Blake2_256 {
-    fn hash_tuple<T1, T2>(tuple: (T1, T2)) -> Hash
+    fn hash_tuple<T1, T2>(tuple: (T1, T2)) -> Hash256
     where
         T1: ToBytes,
         T2: ToBytes,
@@ -50,7 +50,7 @@ impl ToBytes for bool {
     }
 }
 
-impl ToBytes for Hash {
+impl ToBytes for Hash256 {
     fn to_bytes(&self) -> Vec<u8> {
         self.to_vec()
     }

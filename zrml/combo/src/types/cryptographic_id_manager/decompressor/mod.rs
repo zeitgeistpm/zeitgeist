@@ -1,7 +1,7 @@
 /// Highest/lowest bit always refers to the big endian representation of each bit sequence.
 mod tests;
 
-use crate::types::Hash;
+use zeitgeist_primitives::types::CombinatorialId;
 use core::num::ParseIntError;
 use ethnum::U256;
 use halo2curves::{
@@ -12,10 +12,10 @@ use halo2curves::{
 
 /// Will return `None` if and only if `parent_collection_id` is not a valid collection ID.
 pub(crate) fn get_collection_id(
-    hash: Hash,
-    parent_collection_id: Option<Hash>,
+    hash: CombinatorialId,
+    parent_collection_id: Option<CombinatorialId>,
     force_max_work: bool,
-) -> Option<Hash> {
+) -> Option<CombinatorialId> {
     let mut u = decompress_hash(hash, force_max_work)?;
 
     if let Some(pci) = parent_collection_id {
@@ -47,7 +47,7 @@ const DECOMPRESS_HASH_MAX_ITERS: usize = 1_000;
 /// will use `1_000` iterations as maximum for now.
 ///
 /// Provided the assumption above is correct, this function cannot return `None`.
-fn decompress_hash(hash: Hash, force_max_work: bool) -> Option<G1Affine> {
+fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affine> {
     // Calculate `odd` first, then get congruent point `x` in `Fq`. As `hash` might represent a
     // larger big endian number than `field_modulus()`, the MSB of `x` might be different from the
     // MSB of `x_u256`.
@@ -102,7 +102,7 @@ fn decompress_hash(hash: Hash, force_max_work: bool) -> Option<G1Affine> {
     G1Affine::from_xy(x, y).into()
 }
 
-fn decompress_collection_id(mut collection_id: Hash) -> Option<G1Affine> {
+fn decompress_collection_id(mut collection_id: CombinatorialId) -> Option<G1Affine> {
     let odd = is_second_msb_set(&collection_id);
     chop_off_two_highest_bits(&mut collection_id);
     collection_id.reverse(); // Big-endian to little-endian.
@@ -129,22 +129,22 @@ fn field_modulus() -> U256 {
 }
 
 /// Flips the second highests bit of big-endian `bytes`.
-fn flip_second_highest_bit(bytes: &mut Hash) {
+fn flip_second_highest_bit(bytes: &mut CombinatorialId) {
     bytes[0] ^= 0b01000000;
 }
 
 /// Checks if the most significant bit of the big-endian `bytes` is set.
-fn is_msb_set(bytes: &Hash) -> bool {
+fn is_msb_set(bytes: &CombinatorialId) -> bool {
     (bytes[0] & 0b10000000) != 0
 }
 
 /// Checks if the second most significant bit of the big-endian `bytes` is set.
-fn is_second_msb_set(bytes: &Hash) -> bool {
+fn is_second_msb_set(bytes: &CombinatorialId) -> bool {
     (bytes[0] & 0b01000000) != 0
 }
 
 /// Zeroes out the two most significant bits off the big-endian `bytes`.
-fn chop_off_two_highest_bits(bytes: &mut Hash) {
+fn chop_off_two_highest_bits(bytes: &mut CombinatorialId) {
     bytes[0] &= 0b00111111;
 }
 

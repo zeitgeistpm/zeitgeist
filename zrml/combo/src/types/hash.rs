@@ -1,1 +1,1 @@
-pub type Hash = [u8; 32];
+pub type Hash256 = [u8; 32];

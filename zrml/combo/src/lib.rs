@@ -29,7 +29,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{traits::IdManager, types::Hash};
+    use crate::traits::CombinatorialIdManager;
     use core::marker::PhantomData;
     use frame_support::{
         ensure,
@@ -42,11 +42,18 @@ mod pallet {
     };
     use orml_traits::MultiCurrency;
     use sp_runtime::{DispatchError, DispatchResult};
-    use zeitgeist_primitives::{traits::MarketCommonsPalletApi, types::Asset};
+    use zeitgeist_primitives::{
+        traits::MarketCommonsPalletApi,
+        types::{Asset, CombinatorialId},
+    };
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type CollectionIdManager: IdManager<Asset = AssetOf<Self>, MarketId = MarketIdOf<Self>, Id = Hash>;
+        type CombinatorialIdManager: CombinatorialIdManager<
+                Asset = AssetOf<Self>,
+                MarketId = MarketIdOf<Self>,
+                CombinatorialId = CombinatorialId,
+            >;
 
         type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = BlockNumberFor<Self>>;
 
@@ -63,7 +70,8 @@ mod pallet {
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-    pub(crate) type CollectionIdOf<T> = <<T as Config>::CollectionIdManager as IdManager>::Id;
+    pub(crate) type CombinatorialIdOf<T> =
+        <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::CombinatorialId;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
 
@@ -95,7 +103,7 @@ mod pallet {
         pub fn split_position(
             origin: OriginFor<T>,
             // TODO Abstract this into a separate type.
-            parent_collection_id: Option<CollectionIdOf<T>>,
+            parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
@@ -109,7 +117,7 @@ mod pallet {
         #[transactional]
         pub fn merge_position(
             origin: OriginFor<T>,
-            parent_collection_id: Option<CollectionIdOf<T>>,
+            parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
@@ -123,7 +131,7 @@ mod pallet {
         #[require_transactional]
         fn do_split_position(
             who: AccountIdOf<T>,
-            parent_collection_id: Option<CollectionIdOf<T>>,
+            parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
             _amount: BalanceOf<T>,
@@ -136,7 +144,7 @@ mod pallet {
         #[require_transactional]
         fn do_merge_position(
             who: AccountIdOf<T>,
-            parent_collection_id: Option<CollectionIdOf<T>>,
+            parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
             _amount: BalanceOf<T>,
@@ -156,7 +164,7 @@ mod pallet {
         }
 
         fn free_index_set(
-            parent_collection_id: Option<CollectionIdOf<T>>,
+            parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             partition: &Vec<Vec<bool>>,
         ) -> Result<Vec<bool>, DispatchError> {
@@ -186,14 +194,14 @@ mod pallet {
         }
 
         fn position(
-            parent_collection_id: Option<CollectionIdOf<T>>,
+            parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
-        ) -> Result<CollectionIdOf<T>, DispatchError> {
+        ) -> Result<CombinatorialIdOf<T>, DispatchError> {
             let market = T::MarketCommons::market(&market_id)?;
             let collateral_token = market.base_asset;
 
-            let collection_id = T::CollectionIdManager::get_collection_id(
+            let collection_id = T::CombinatorialIdManager::get_collection_id(
                 parent_collection_id,
                 market_id,
                 index_set,
@@ -202,7 +210,7 @@ mod pallet {
             .ok_or(Error::<T>::InvalidCollectionId)?;
 
             let position_id =
-                T::CollectionIdManager::get_position_id(collateral_token, collection_id);
+                T::CombinatorialIdManager::get_position_id(collateral_token, collection_id);
 
             Ok(position_id)
             // TODO Return Asset::Combinatorial(position_id) instead.

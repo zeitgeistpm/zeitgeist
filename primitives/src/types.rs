@@ -54,6 +54,9 @@ pub type BlockNumber = u64;
 /// The index of the category for a `CategoricalOutcome` asset.
 pub type CategoryIndex = u16;
 
+/// The type used to identify combinatorial outcomes.
+pub type CombinatorialId = [u8; 32];
+
 /// Multihash for digest sizes up to 384 bit.
 /// The multicodec encoding the hash algorithm uses only 1 byte,
 /// effecitvely limiting the number of available hash types.

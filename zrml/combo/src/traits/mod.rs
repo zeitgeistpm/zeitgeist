@@ -1,3 +1,3 @@
-mod id_manager;
+mod combinatorial_id_manager;
 
-pub(crate) use id_manager::IdManager;
+pub(crate) use combinatorial_id_manager::CombinatorialIdManager;
