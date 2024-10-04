@@ -358,7 +358,7 @@ macro_rules! create_runtime {
                 Orderbook: zrml_orderbook::{Call, Event<T>, Pallet, Storage} = 61,
                 Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
                 HybridRouter: zrml_hybrid_router::{Call, Event<T>, Pallet, Storage} = 64,
-                Combo: zrml_combo::{Pallet, Storage} = 65,
+                CombinatorialTokens: zrml_combinatorial_tokens::{Pallet, Storage} = 65,
 
                 $($additional_pallets)*
             }
@@ -1169,7 +1169,13 @@ macro_rules! impl_config_traits {
             type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
         }
 
-        impl zrml_combo::Config for Runtime {}
+        impl zrml_combinatorial_tokens::Config for Runtime {
+            type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
+            type MarketCommons = MarketCommons;
+            type MultiCurrency = AssetManager;
+            type PalletId = CombinatorialTokensPalletId;
+            type RuntimeEvent = RuntimeEvent;
+        }
 
         impl zrml_court::Config for Runtime {
             type AppealBond = AppealBond;

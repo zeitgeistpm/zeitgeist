@@ -89,6 +89,9 @@ parameter_types! {
     pub const TechnicalCommitteeMaxProposals: u32 = 64;
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
+    // CombinatorialTokens
+    pub const CombinatorialTokensPalletId: PalletId = COMBINATORIAL_TOKENS_PALLET_ID;
+
     // Contracts
     pub const ContractsCodeHashLockupDepositPercent: Perbill = Perbill::from_percent(10);
     pub const ContractsDefaultDepositLimit: Balance = deposit(16, 16 * 1024 * 1024);

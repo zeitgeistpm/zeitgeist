@@ -25,6 +25,8 @@ std = [
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
+    "orml-traits/std",
+    "parity-scale-codec/std",
     "sp-runtime/std",
     "zeitgeist-primitives/std",
 ]
@@ -35,5 +37,5 @@ try-runtime = [
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
-name = "zrml-combo"
+name = "zrml-combinatorial-tokens"
 version = "0.5.5"

@@ -881,7 +881,7 @@ dependencies = [
  "xcm-emulator",
  "zeitgeist-primitives",
  "zrml-authorized",
- "zrml-combo",
+ "zrml-combinatorial-tokens",
  "zrml-court",
  "zrml-global-disputes",
  "zrml-hybrid-router",
@@ -15189,7 +15189,7 @@ dependencies = [
  "xcm-emulator",
  "zeitgeist-primitives",
  "zrml-authorized",
- "zrml-combo",
+ "zrml-combinatorial-tokens",
  "zrml-court",
  "zrml-global-disputes",
  "zrml-hybrid-router",
@@ -15262,7 +15262,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "zrml-combo"
+name = "zrml-combinatorial-tokens"
 version = "0.5.5"
 dependencies = [
  "ethnum",
