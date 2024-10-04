@@ -89,8 +89,8 @@ fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affi
             }
         }
     }
-    std::hint::black_box(dummy_x); // Ensure that the dummies are considered "read" by rustc.
-    std::hint::black_box(dummy_y);
+    core::hint::black_box(dummy_x); // Ensure that the dummies are considered "read" by rustc.
+    core::hint::black_box(dummy_y);
     let mut y = y_opt?; // This **should** be infallible.
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
