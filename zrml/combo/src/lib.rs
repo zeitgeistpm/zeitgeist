@@ -34,14 +34,17 @@ mod pallet {
     use frame_support::{
         ensure,
         pallet_prelude::{IsType, StorageVersion},
-        require_transactional, transactional,
+        require_transactional, transactional, PalletId,
     };
     use frame_system::{
         ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
     use orml_traits::MultiCurrency;
-    use sp_runtime::{DispatchError, DispatchResult};
+    use sp_runtime::{
+        traits::{AccountIdConversion, Get},
+        DispatchError, DispatchResult,
+    };
     use zeitgeist_primitives::{
         traits::MarketCommonsPalletApi,
         types::{Asset, CombinatorialId},
@@ -58,6 +61,9 @@ mod pallet {
         type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = BlockNumberFor<Self>>;
 
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
+
+        #[pallet::constant]
+        type PalletId: Get<PalletId>;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
     }
@@ -134,9 +140,53 @@ mod pallet {
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
-            _amount: BalanceOf<T>,
+            amount: BalanceOf<T>,
         ) -> DispatchResult {
+            let market = T::MarketCommons::market(&market_id)?;
+            let collateral_token = market.base_asset;
+
             let free_index_set = Self::free_index_set(parent_collection_id, market_id, &partition)?;
+
+            // Destroy/store the tokens to be split.
+            if free_index_set.iter().any(|&i| i) {
+                // Vertical split.
+                if let Some(pci) = parent_collection_id {
+                    // Split combinatorial token into higher level position. Destroy the tokens.
+                    let position_id =
+                        T::CombinatorialIdManager::get_position_id(collateral_token, pci);
+                    let position = Asset::CombinatorialToken(position_id);
+                    T::MultiCurrency::withdraw(position, &who, amount)?;
+                } else {
+                    // Split collateral into first level position. Store the collateral in the
+                    // pallet account.
+                    T::MultiCurrency::transfer(
+                        collateral_token,
+                        &who,
+                        &Self::account_id(),
+                        amount,
+                    )?;
+                }
+            } else {
+                let remaining_index_set = free_index_set.into_iter().map(|i| !i).collect();
+                let position = Self::position_from_collection(
+                    parent_collection_id,
+                    market_id,
+                    remaining_index_set,
+                )?;
+                T::MultiCurrency::withdraw(position, &who, amount)?;
+            }
+
+            // Deposit the new tokens.
+            let position_ids = partition
+                .iter()
+                .cloned()
+                .map(|index_set| {
+                    Self::position_from_collection(parent_collection_id, market_id, index_set)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            for &position in position_ids.iter() {
+                T::MultiCurrency::deposit(position, &who, amount)?;
+            }
 
             Ok(())
         }
@@ -147,18 +197,9 @@ mod pallet {
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
-            _amount: BalanceOf<T>,
+            amount: BalanceOf<T>,
         ) -> DispatchResult {
             let free_index_set = Self::free_index_set(parent_collection_id, market_id, &partition)?;
-            let position_ids = partition
-                .iter()
-                .cloned()
-                .map(|index_set| Self::position(parent_collection_id, market_id, index_set))
-                .collect::<Result<Vec<_>, _>>()?;
-
-            for position in position_ids.iter() {
-                // TODO
-            }
 
             Ok(())
         }
@@ -193,11 +234,11 @@ mod pallet {
             Ok(free_index_set)
         }
 
-        fn position(
+        fn position_from_collection(
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
-        ) -> Result<CombinatorialIdOf<T>, DispatchError> {
+        ) -> Result<AssetOf<T>, DispatchError> {
             let market = T::MarketCommons::market(&market_id)?;
             let collateral_token = market.base_asset;
 
@@ -211,9 +252,13 @@ mod pallet {
 
             let position_id =
                 T::CombinatorialIdManager::get_position_id(collateral_token, collection_id);
+            let asset = Asset::CombinatorialToken(position_id);
 
-            Ok(position_id)
-            // TODO Return Asset::Combinatorial(position_id) instead.
+            Ok(asset)
+        }
+
+        fn account_id() -> T::AccountId {
+            T::PalletId::get().into_account_truncating()
         }
     }
 }
