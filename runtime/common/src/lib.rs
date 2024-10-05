@@ -72,7 +72,7 @@ macro_rules! decl_common_types {
             parameter_types,
             storage::child,
             traits::{Currency, Get, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced},
-            BoundedVec, Twox64Concat,
+            Blake2_256, BoundedVec, Twox64Concat,
         };
         use frame_system::EnsureSigned;
         #[cfg(feature = "try-runtime")]
@@ -86,6 +86,7 @@ macro_rules! decl_common_types {
             generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
         };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
+        use zrml_combinatorial_tokens::types::CryptographicIdManager;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -358,7 +359,7 @@ macro_rules! create_runtime {
                 Orderbook: zrml_orderbook::{Call, Event<T>, Pallet, Storage} = 61,
                 Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
                 HybridRouter: zrml_hybrid_router::{Call, Event<T>, Pallet, Storage} = 64,
-                CombinatorialTokens: zrml_combinatorial_tokens::{Pallet, Storage} = 65,
+                CombinatorialTokens: zrml_combinatorial_tokens::{Call, Event<T>, Pallet, Storage} = 65,
 
                 $($additional_pallets)*
             }

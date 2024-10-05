@@ -4,31 +4,30 @@ use super::*;
 
 mod decompress_collection_id;
 mod decompress_hash;
-mod field_modulus;
 mod get_collection_id;
 mod matching_y_coordinate;
 mod pow_magic_number;
 
-#[derive(Debug)]
-enum FromStrPrefixedError {
-    /// Failed to convert bytes to scalar.
-    FromBytesError,
-
-    /// Failed to convert prefixed string to U256.
-    ParseIntError(core::num::ParseIntError),
+trait FromHexStr {
+    fn from_hex_str(hex_str: &str) -> Self
+    where
+        Self: Sized;
 }
 
-trait FromStrPrefixed
-where
-    Self: Sized,
-{
-    fn from_str_prefixed(x: &str) -> Result<Self, FromStrPrefixedError>;
-}
+impl FromHexStr for Fq {
+    fn from_hex_str(hex_str: &str) -> Fq {
+        let hex_str_sans_prefix = &hex_str[2..];
 
-impl FromStrPrefixed for Fq {
-    fn from_str_prefixed(x: &str) -> Result<Fq, FromStrPrefixedError> {
-        let x_u256 =
-            U256::from_str_prefixed(x).map_err(|e| FromStrPrefixedError::ParseIntError(e))?;
-        Fq::from_u256(x_u256).ok_or(FromStrPrefixedError::FromBytesError)
+        // Pad with zeroes on the left.
+        let hex_str_padded = format!("{:0>64}", hex_str_sans_prefix);
+
+        let mut bytes: Vec<u8> = (0..hex_str_padded.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&hex_str_padded[i..i + 2], 16).unwrap())
+            .collect();
+
+        let fixed_bytes: [u8; 32] = bytes.try_into().unwrap();
+
+        Fq::from_be_bytes_mod_order(&fixed_bytes)
     }
 }

@@ -1,14 +1,12 @@
 /// Highest/lowest bit always refers to the big endian representation of each bit sequence.
 mod tests;
 
-use zeitgeist_primitives::types::CombinatorialId;
-use core::num::ParseIntError;
+use ark_bn254::{g1::G1Affine, Fq};
+use ark_ff::{BigInteger, PrimeField};
+use core::{num::ParseIntError, ops::Neg};
 use ethnum::U256;
-use halo2curves::{
-    bn256::{Fq, G1Affine},
-    ff::PrimeField,
-    CurveAffine,
-};
+use sp_runtime::traits::{One, Zero};
+use zeitgeist_primitives::types::CombinatorialId;
 
 /// Will return `None` if and only if `parent_collection_id` is not a valid collection ID.
 pub(crate) fn get_collection_id(
@@ -26,10 +24,9 @@ pub(crate) fn get_collection_id(
 
     // Convert back to bytes _before_ flipping, as flipping will sometimes result in numbers larger
     // than the base field modulus.
-    let mut bytes = u.x.to_bytes();
-    bytes.reverse(); // Little-endian to big-endian.
+    let mut bytes: CombinatorialId = u.x.into_bigint().to_bytes_be().try_into().ok()?;
 
-    if u.y.is_odd().into() {
+    if u.y.into_bigint().is_odd().into() {
         flip_second_highest_bit(&mut bytes);
     }
 
@@ -53,12 +50,7 @@ fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affi
     // MSB of `x_u256`.
     let odd = is_msb_set(&hash);
 
-    // `Fq` won't let us create an element of the Galois field if the number `x` represented by
-    // `hash` does not satisfy `x < P`, so we need to use `U256` to calculate the remainder of `x`
-    // when dividing by `P`. That's the whole reason we need ethnum.
-    let x_u256 = U256::from_be_bytes(hash);
-    let mut x = Fq::from_u256(x_u256.checked_rem(field_modulus())?)?; // Infallible.
-
+    let mut x = Fq::from_be_bytes_mod_order(&hash);
     let mut y_opt = None;
     let mut dummy_x = Fq::zero(); // Used to prevent rustc from optimizing dummy work away.
     let mut dummy_y = None;
@@ -95,29 +87,33 @@ fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affi
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
     // `odd` is set but `y` isn't odd, we switch to the other option.
-    if (odd && y.is_even().into()) || (!odd && y.is_odd().into()) {
+    if (odd && y.into_bigint().is_even()) || (!odd && y.into_bigint().is_odd()) {
         y = y.neg();
     }
 
-    G1Affine::from_xy(x, y).into()
+    Some(G1Affine::new(x, y))
 }
 
 fn decompress_collection_id(mut collection_id: CombinatorialId) -> Option<G1Affine> {
     let odd = is_second_msb_set(&collection_id);
     chop_off_two_highest_bits(&mut collection_id);
-    collection_id.reverse(); // Big-endian to little-endian.
-    let x_opt: Option<_> = Fq::from_bytes(&collection_id).into();
-    let x = x_opt?; // Fails if `collection_id` is not a collection ID.
+    let x = Fq::from_be_bytes_mod_order(&collection_id);
+
+    // Ensure that the big-endian integer represented by `collection_id` was less than the field
+    // modulus. Otherwise, we consider `collection_id` an invalid ID.
+    if x.into_bigint().to_bytes_be() != collection_id {
+        return None;
+    }
 
     let mut y = matching_y_coordinate(x)?; // Fails if `collection_id` is not a collection ID.
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
     // `odd` is set but `y` isn't odd, we switch to the other option.
-    if (odd && y.is_even().into()) || (!odd && y.is_odd().into()) {
+    if (odd && y.into_bigint().is_even()) || (!odd && y.into_bigint().is_odd()) {
         y = y.neg();
     }
 
-    G1Affine::from_xy(x, y).into()
+    Some(G1Affine::new(x, y))
 }
 
 fn field_modulus() -> U256 {
@@ -563,20 +559,4 @@ fn pow_magic_number(mut x: Fq) -> Fq {
     x = x * x;
     x = x * x;
     x * x_50346348778524711845084650194522292050
-}
-
-trait FromU256
-where
-    Self: Sized,
-{
-    fn from_u256(x: U256) -> Option<Self>;
-}
-
-impl FromU256 for Fq {
-    fn from_u256(x: U256) -> Option<Fq> {
-        let le_bytes = x.to_le_bytes();
-        let ct_opt = Fq::from_bytes(&le_bytes);
-
-        ct_opt.into()
-    }
 }

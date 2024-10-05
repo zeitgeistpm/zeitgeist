@@ -749,8 +749,8 @@ fn decompress_hash_works(
     #[values(false, true)] force_max_work: bool,
     #[case] expected: (&str, &str),
 ) {
-    let x = Fq::from_str_prefixed(expected.0).unwrap();
-    let y = Fq::from_str_prefixed(expected.1).unwrap();
-    let expected: Option<_> = G1Affine::from_xy(x, y).into();
-    assert_eq!(decompress_hash(hash, force_max_work), expected);
+    let x = Fq::from_hex_str(expected.0);
+    let y = Fq::from_hex_str(expected.1);
+    let expected = G1Affine::new(x, y);
+    assert_eq!(decompress_hash(hash, force_max_work).unwrap(), expected);
 }

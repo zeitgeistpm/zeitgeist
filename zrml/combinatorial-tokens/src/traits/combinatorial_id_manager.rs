@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use sp_runtime::DispatchError;
 
 pub(crate) trait CombinatorialIdManager {

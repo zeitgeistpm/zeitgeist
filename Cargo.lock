@@ -239,6 +239,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ark-bn254"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a22f4561524cd949590d78d7d4c5df8f592430d221f7f3c9497bbafd8972120f"
+dependencies = [
+ "ark-ec",
+ "ark-ff",
+ "ark-std",
+]
+
+[[package]]
 name = "ark-ec"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3040,7 +3051,6 @@ version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ded41244b729663b1e574f1b4fb731469f69f79c17667b5d776b16cda0479449"
 dependencies = [
- "bitvec",
  "rand_core 0.6.4",
  "subtle",
 ]
@@ -3798,47 +3808,6 @@ name = "half"
 version = "1.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b43ede17f21864e81be2fa654110bf1e793774238d86ef8555c37e6519c0403"
-
-[[package]]
-name = "halo2curves"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d380afeef3f1d4d3245b76895172018cfb087d9976a7cabcd5597775b2933e07"
-dependencies = [
- "blake2",
- "digest 0.10.7",
- "ff",
- "group",
- "halo2derive",
- "lazy_static",
- "num-bigint",
- "num-integer",
- "num-traits",
- "pairing",
- "pasta_curves",
- "paste",
- "rand 0.8.5",
- "rand_core 0.6.4",
- "rayon",
- "sha2 0.10.8",
- "static_assertions",
- "subtle",
- "unroll",
-]
-
-[[package]]
-name = "halo2derive"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdb99e7492b4f5ff469d238db464131b86c2eaac814a78715acba369f64d2c76"
-dependencies = [
- "num-bigint",
- "num-integer",
- "num-traits",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
 
 [[package]]
 name = "handlebars"
@@ -4628,9 +4597,6 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
-dependencies = [
- "spin 0.5.2",
-]
 
 [[package]]
 name = "lazycell"
@@ -6162,15 +6128,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pairing"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81fec4625e73cf41ef4bb6846cafa6d44736525f442ba45e407c4a000a13996f"
-dependencies = [
- "group",
-]
-
-[[package]]
 name = "pallet-asset-tx-payment"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#c8d2251cafadc108ba2f1f8a3208dc547ff38901"
@@ -7530,21 +7487,6 @@ name = "partial_sort"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7924d1d0ad836f665c9065e26d016c673ece3993f30d340068b16f282afc1156"
-
-[[package]]
-name = "pasta_curves"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3e57598f73cc7e1b2ac63c79c517b31a0877cd7c402cdcaa311b5208de7a095"
-dependencies = [
- "blake2b_simd",
- "ff",
- "group",
- "lazy_static",
- "rand 0.8.5",
- "static_assertions",
- "subtle",
-]
 
 [[package]]
 name = "paste"
@@ -13888,16 +13830,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "unroll"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ad948c1cb799b1a70f836077721a92a35ac177d4daddf4c20a633786d4cf618"
-dependencies = [
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "unsigned-varint"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15265,11 +15197,12 @@ dependencies = [
 name = "zrml-combinatorial-tokens"
 version = "0.5.5"
 dependencies = [
+ "ark-bn254",
+ "ark-ff",
  "ethnum",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "halo2curves",
  "orml-traits",
  "parity-scale-codec",
  "rstest",

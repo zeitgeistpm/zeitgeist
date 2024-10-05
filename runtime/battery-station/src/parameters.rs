@@ -451,7 +451,7 @@ parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
         match currency_id {
             Asset::CategoricalOutcome(_,_) => ExistentialDeposit::get(),
-            Asset::CombinatorialOutcome => ExistentialDeposit::get(),
+            Asset::CombinatorialToken(_) => ExistentialDeposit::get(),
             Asset::PoolShare(_)  => ExistentialDeposit::get(),
             Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]

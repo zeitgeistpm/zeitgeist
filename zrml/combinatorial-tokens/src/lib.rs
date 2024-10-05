@@ -23,13 +23,14 @@
 extern crate alloc;
 
 mod traits;
-mod types;
+pub mod types;
 
 pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
     use crate::traits::CombinatorialIdManager;
+    use alloc::{vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
         ensure,

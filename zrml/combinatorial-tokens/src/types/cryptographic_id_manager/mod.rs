@@ -9,8 +9,9 @@ use hash_tuple::{HashTuple, ToBytes};
 use parity_scale_codec::Encode;
 use sp_runtime::DispatchError;
 use zeitgeist_primitives::types::{Asset, CombinatorialId};
+use alloc::vec::Vec;
 
-pub(crate) struct CryptographicIdManager<MarketId, Hasher>(PhantomData<(MarketId, Hasher)>);
+pub struct CryptographicIdManager<MarketId, Hasher>(PhantomData<(MarketId, Hasher)>);
 
 impl<MarketId, Hasher> CombinatorialIdManager for CryptographicIdManager<MarketId, Hasher>
 where
