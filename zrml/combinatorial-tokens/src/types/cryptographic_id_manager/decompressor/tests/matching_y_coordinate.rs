@@ -248,8 +248,7 @@ use test_case::test_case;
 )]
 fn matching_y_coordinate_works(x: &str, expected: &str) {
     let x = Fq::from_hex_str(x);
-    let expected =
-        if expected.is_empty() { None } else { Some(Fq::from_hex_str(expected)) };
+    let expected = if expected.is_empty() { None } else { Some(Fq::from_hex_str(expected)) };
 
     let result = matching_y_coordinate(x);
     assert_eq!(result, expected);

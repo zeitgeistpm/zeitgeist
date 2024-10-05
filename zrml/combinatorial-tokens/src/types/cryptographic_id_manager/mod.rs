@@ -2,11 +2,11 @@ mod decompressor;
 mod hash_tuple;
 
 use crate::traits::CombinatorialIdManager;
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use hash_tuple::{HashTuple, ToBytes};
 use parity_scale_codec::Encode;
 use zeitgeist_primitives::types::{Asset, CombinatorialId};
-use alloc::vec::Vec;
 
 pub struct CryptographicIdManager<MarketId, Hasher>(PhantomData<(MarketId, Hasher)>);
 

@@ -20,7 +20,7 @@
 use crate::traits::ZeitgeistAssetEnumerator;
 use crate::{
     traits::PoolSharesId,
-    types::{CategoryIndex, PoolId, CombinatorialId},
+    types::{CategoryIndex, CombinatorialId, PoolId},
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
