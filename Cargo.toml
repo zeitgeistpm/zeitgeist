@@ -277,7 +277,6 @@ arrayvec = { version = "0.7.4", default-features = false }
 ark-bn254 = { version = "0.4.0", default-features = false, features = ["curve"] }
 ark-ff = { version = "0.4.0", default-features = false }
 cfg-if = { version = "1.0.0" }
-ethnum = { version = "1.4.0" }
 fixed = { version = "=1.15.0", default-features = false, features = ["num-traits"] }
 # Hashbrown works in no_std by default and default features are used in Rikiddo
 hashbrown = { version = "0.14.3", default-features = true }

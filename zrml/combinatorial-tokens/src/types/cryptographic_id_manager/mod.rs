@@ -3,11 +3,8 @@ mod hash_tuple;
 
 use crate::traits::CombinatorialIdManager;
 use core::marker::PhantomData;
-use ethnum::U256;
-use frame_support::{Blake2_256, StorageHasher};
 use hash_tuple::{HashTuple, ToBytes};
 use parity_scale_codec::Encode;
-use sp_runtime::DispatchError;
 use zeitgeist_primitives::types::{Asset, CombinatorialId};
 use alloc::vec::Vec;
 

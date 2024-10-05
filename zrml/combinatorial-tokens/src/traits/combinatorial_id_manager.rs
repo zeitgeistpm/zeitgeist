@@ -1,7 +1,6 @@
 use alloc::vec::Vec;
-use sp_runtime::DispatchError;
 
-pub(crate) trait CombinatorialIdManager {
+pub trait CombinatorialIdManager {
     type Asset;
     type MarketId;
     type CombinatorialId;

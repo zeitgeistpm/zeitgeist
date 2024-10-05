@@ -91,7 +91,11 @@ mod pallet {
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T>
     where
-        T: Config, {}
+        T: Config,
+    {
+        TokenSplit,
+        TokenMerged,
+    }
 
     #[pallet::error]
     pub enum Error<T> {
@@ -105,7 +109,7 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
-        #[pallet::weight(0)] // TODO
+        #[pallet::weight({0})] // TODO
         #[transactional]
         pub fn split_position(
             origin: OriginFor<T>,
@@ -120,7 +124,7 @@ mod pallet {
         }
 
         #[pallet::call_index(1)]
-        #[pallet::weight(0)] // TODO
+        #[pallet::weight({0})] // TODO
         #[transactional]
         pub fn merge_position(
             origin: OriginFor<T>,
@@ -146,7 +150,7 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             let collateral_token = market.base_asset;
 
-            let free_index_set = Self::free_index_set(parent_collection_id, market_id, &partition)?;
+            let free_index_set = Self::free_index_set(market_id, &partition)?;
 
             // Destroy/store the tokens to be split.
             if free_index_set.iter().any(|&i| i) {
@@ -190,6 +194,8 @@ mod pallet {
                 T::MultiCurrency::deposit(position, &who, amount)?;
             }
 
+            Self::deposit_event(Event::<T>::TokenSplit);
+
             Ok(())
         }
 
@@ -204,7 +210,7 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             let collateral_token = market.base_asset;
 
-            let free_index_set = Self::free_index_set(parent_collection_id, market_id, &partition)?;
+            let free_index_set = Self::free_index_set(market_id, &partition)?;
 
             // Destory the old tokens.
             let position_ids = partition
@@ -248,13 +254,14 @@ mod pallet {
                 T::MultiCurrency::deposit(position, &who, amount)?;
             }
 
+            Self::deposit_event(Event::<T>::TokenMerged);
+
             Ok(())
         }
 
         fn free_index_set(
-            parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
-            partition: &Vec<Vec<bool>>,
+            partition: &[Vec<bool>],
         ) -> Result<Vec<bool>, DispatchError> {
             let market = T::MarketCommons::market(&market_id)?;
             let asset_count = market.outcomes() as usize;
