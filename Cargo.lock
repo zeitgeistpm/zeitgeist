@@ -15196,13 +15196,18 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "orml-currencies",
+ "orml-tokens",
  "orml-traits",
+ "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "rstest",
  "scale-info",
  "sp-runtime",
  "test-case",
  "zeitgeist-primitives",
+ "zrml-market-commons",
 ]
 
 [[package]]
