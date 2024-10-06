@@ -1,9 +1,9 @@
 [dependencies]
-ethnum = { workspace = true }
+ark-bn254 = { workspace = true }
+ark-ff = { workspace = true }
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
-halo2curves = { workspace = true }
 orml-traits = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 scale-info = { workspace = true, features = ["derive"] }
@@ -25,6 +25,10 @@ std = [
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
+    "ark-bn254/std",
+    "ark-ff/std",
+    "orml-traits/std",
+    "parity-scale-codec/std",
     "sp-runtime/std",
     "zeitgeist-primitives/std",
 ]
@@ -35,5 +39,5 @@ try-runtime = [
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
-name = "zrml-combo"
+name = "zrml-combinatorial-tokens"
 version = "0.5.5"

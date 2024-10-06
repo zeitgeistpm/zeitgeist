@@ -1073,8 +1073,8 @@ use test_case::test_case;
     "0xb13a6b0f347da61aff1a5273fc125b6a050cc903022f0ebf366a5d2ed3debc3"
 )]
 fn pow_magic_number_works(x: &str, expected: &str) {
-    let x = Fq::from_str_prefixed(x).unwrap();
-    let expected = Fq::from_str_prefixed(expected).unwrap();
+    let x = Fq::from_hex_str(x);
+    let expected = Fq::from_hex_str(expected);
 
     let actual = pow_magic_number(x);
     assert_eq!(actual, expected);

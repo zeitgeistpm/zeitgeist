@@ -2,8 +2,8 @@ use super::*;
 use test_case::test_case;
 
 // Empty string in the `expected` argument signals `None`.
-#[test_case("0", "")]
-#[test_case("1", "2")]
+#[test_case("0x00", "")]
+#[test_case("0x01", "0x02")]
 // Python-generated:
 #[test_case(
     "0x20e949416f9b53d227472744dcc6e807311aa8cf1f3de6e23d9f146759d5afe2",
@@ -247,9 +247,8 @@ use test_case::test_case;
     "0x2f3a7f5710ff2bc13fd4b2cd3a84a61f6c7bc7ea3a2e125ae89fcfabfd9e737d"
 )]
 fn matching_y_coordinate_works(x: &str, expected: &str) {
-    let x = Fq::from_str_prefixed(x).unwrap();
-    let expected =
-        if expected.is_empty() { None } else { Some(Fq::from_str_prefixed(expected).unwrap()) };
+    let x = Fq::from_hex_str(x);
+    let expected = if expected.is_empty() { None } else { Some(Fq::from_hex_str(expected)) };
 
     let result = matching_y_coordinate(x);
     assert_eq!(result, expected);

@@ -14,7 +14,7 @@ default-members = [
     "runtime/battery-station",
     "runtime/zeitgeist",
     "zrml/authorized",
-    "zrml/combo",
+    "zrml/combinatorial-tokens",
     "zrml/court",
     "zrml/hybrid-router",
     "zrml/global-disputes",
@@ -37,7 +37,7 @@ members = [
     "runtime/battery-station",
     "runtime/zeitgeist",
     "zrml/authorized",
-    "zrml/combo",
+    "zrml/combinatorial-tokens",
     "zrml/court",
     "zrml/hybrid-router",
     "zrml/global-disputes",
@@ -246,7 +246,7 @@ common-runtime = { path = "runtime/common", default-features = false }
 zeitgeist-macros = { path = "macros", default-features = false }
 zeitgeist-primitives = { path = "primitives", default-features = false }
 zrml-authorized = { path = "zrml/authorized", default-features = false }
-zrml-combo = { path = "zrml/combo", default-features = false }
+zrml-combinatorial-tokens = { path = "zrml/combinatorial-tokens", default-features = false }
 zrml-court = { path = "zrml/court", default-features = false }
 zrml-global-disputes = { path = "zrml/global-disputes", default-features = false }
 zrml-hybrid-router = { path = "zrml/hybrid-router", default-features = false }
@@ -274,9 +274,9 @@ url = "2.5.0"
 # Other (wasm)
 arbitrary = { version = "1.3.2", default-features = false }
 arrayvec = { version = "0.7.4", default-features = false }
-halo2curves = { version = "0.7.0" }
+ark-bn254 = { version = "0.4.0", default-features = false, features = ["curve"] }
+ark-ff = { version = "0.4.0", default-features = false }
 cfg-if = { version = "1.0.0" }
-ethnum = { version = "1.4.0" }
 fixed = { version = "=1.15.0", default-features = false, features = ["num-traits"] }
 # Hashbrown works in no_std by default and default features are used in Rikiddo
 hashbrown = { version = "0.14.3", default-features = true }

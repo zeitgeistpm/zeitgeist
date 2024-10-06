@@ -2,15 +2,13 @@ mod decompressor;
 mod hash_tuple;
 
 use crate::traits::CombinatorialIdManager;
+use alloc::vec::Vec;
 use core::marker::PhantomData;
-use ethnum::U256;
-use frame_support::{Blake2_256, StorageHasher};
 use hash_tuple::{HashTuple, ToBytes};
 use parity_scale_codec::Encode;
-use sp_runtime::DispatchError;
 use zeitgeist_primitives::types::{Asset, CombinatorialId};
 
-pub(crate) struct CryptographicIdManager<MarketId, Hasher>(PhantomData<(MarketId, Hasher)>);
+pub struct CryptographicIdManager<MarketId, Hasher>(PhantomData<(MarketId, Hasher)>);
 
 impl<MarketId, Hasher> CombinatorialIdManager for CryptographicIdManager<MarketId, Hasher>
 where

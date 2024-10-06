@@ -391,9 +391,9 @@ use test_case::test_case;
     ("0x1", "0x2")
 )]
 fn decompress_collection_id_works(collection_id: CombinatorialId, expected: (&str, &str)) {
-    let x = Fq::from_str_prefixed(expected.0).unwrap();
-    let y = Fq::from_str_prefixed(expected.1).unwrap();
-    let expected = G1Affine::from_xy(x, y).unwrap();
+    let x = Fq::from_hex_str(expected.0);
+    let y = Fq::from_hex_str(expected.1);
+    let expected = G1Affine::new(x, y);
 
     let actual = decompress_collection_id(collection_id).unwrap();
     assert_eq!(actual, expected);
