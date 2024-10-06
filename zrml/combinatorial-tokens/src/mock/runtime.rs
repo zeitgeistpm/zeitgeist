@@ -1,5 +1,3 @@
-#![cfg(feature = "mock")]
-
 use crate as zrml_combinatorial_tokens;
 use crate::types::CryptographicIdManager;
 use frame_support::{construct_runtime, traits::Everything, Blake2_256};
@@ -7,20 +5,19 @@ use frame_system::mocking::MockBlock;
 use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
-        MaxReserves, MinimumPeriod, CombinatorialTokensPalletId,
+        BlockHashCount, CombinatorialTokensPalletId, ExistentialDeposit, ExistentialDeposits,
+        GetNativeCurrencyId, MaxLocks, MaxReserves, MinimumPeriod,
     },
     types::{
-        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CurrencyId,
-        MarketId, Moment, Hash
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CurrencyId, Hash, MarketId, Moment,
     },
 };
 
 construct_runtime! {
     pub enum Runtime {
         CombinatorialTokens: zrml_combinatorial_tokens,
-        AssetManager: orml_currencies,
         Balances: pallet_balances,
+        Currencies: orml_currencies,
         MarketCommons: zrml_market_commons,
         System: frame_system,
         Timestamp: pallet_timestamp,
@@ -31,7 +28,7 @@ construct_runtime! {
 impl zrml_combinatorial_tokens::Config for Runtime {
     type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
     type MarketCommons = MarketCommons;
-    type MultiCurrency = AssetManager;
+    type MultiCurrency = Currencies;
     type PalletId = CombinatorialTokensPalletId;
     type RuntimeEvent = RuntimeEvent;
 }

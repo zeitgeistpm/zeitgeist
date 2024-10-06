@@ -22,7 +22,8 @@
 
 extern crate alloc;
 
-mod mock;
+pub mod mock;
+mod tests;
 mod traits;
 pub mod types;
 
@@ -154,7 +155,7 @@ mod pallet {
             let free_index_set = Self::free_index_set(market_id, &partition)?;
 
             // Destroy/store the tokens to be split.
-            if free_index_set.iter().any(|&i| i) {
+            if !free_index_set.iter().any(|&i| i) {
                 // Vertical split.
                 if let Some(pci) = parent_collection_id {
                     // Split combinatorial token into higher level position. Destroy the tokens.
@@ -226,7 +227,7 @@ mod pallet {
             }
 
             // Destroy/store the tokens to be split.
-            if free_index_set.iter().any(|&i| i) {
+            if !free_index_set.iter().any(|&i| i) {
                 // Vertical merge.
                 if let Some(pci) = parent_collection_id {
                     // Merge combinatorial token into higher level position. Destroy the tokens.

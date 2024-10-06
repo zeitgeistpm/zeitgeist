@@ -15193,6 +15193,7 @@ version = "0.5.5"
 dependencies = [
  "ark-bn254",
  "ark-ff",
+ "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -15204,9 +15205,11 @@ dependencies = [
  "parity-scale-codec",
  "rstest",
  "scale-info",
+ "sp-io",
  "sp-runtime",
  "test-case",
  "zeitgeist-primitives",
+ "zrml-combinatorial-tokens",
  "zrml-market-commons",
 ]
 

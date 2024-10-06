@@ -12,21 +12,26 @@ zeitgeist-primitives = { workspace = true }
 
 # mock
 
+env_logger = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
+sp-io = { workspace = true, optional = true }
 zrml-market-commons = { workspace = true, optional = true }
 
 [dev-dependencies]
 test-case = { workspace = true }
 rstest = { workspace = true }
+zrml-combinatorial-tokens = { workspace = true, features = ["default", "mock"] }
 
 [features]
 default = ["std"]
 mock = [
+    "env_logger/default",
     "orml-currencies/default",
     "orml-tokens/default",
+    "sp-io/default",
     "pallet-balances/default",
     "pallet-timestamp/default",
     "zrml-market-commons/default",
