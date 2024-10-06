@@ -70,6 +70,9 @@ parameter_types! {
 /// Pallet identifier, mainly used for named balance reserves.
 pub const AUTHORIZED_PALLET_ID: PalletId = PalletId(*b"zge/atzd");
 
+// Combinatorial Tokens
+pub const COMBINATORIAL_TOKENS_PALLET_ID: PalletId = PalletId(*b"zge/coto");
+
 // Court
 /// Pallet identifier, mainly used for named balance reserves.
 pub const COURT_PALLET_ID: PalletId = PalletId(*b"zge/cout");
