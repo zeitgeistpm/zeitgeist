@@ -101,7 +101,8 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// The specified partition is empty, contains overlaps or is too long.
+        /// The specified partition is empty, contains overlaps, is too long or doesn't match the
+        /// market's number of outcomes.
         InvalidPartition,
 
         /// The specified collection ID is invalid.
@@ -166,6 +167,11 @@ mod pallet {
                 } else {
                     // Split collateral into first level position. Store the collateral in the
                     // pallet account. This is the legacy `buy_complete_set`.
+                    T::MultiCurrency::ensure_can_withdraw(
+                        collateral_token,
+                        &who,
+                        amount,
+                    )?;
                     T::MultiCurrency::transfer(
                         collateral_token,
                         &who,
@@ -238,6 +244,11 @@ mod pallet {
                 } else {
                     // Merge first-level tokens into collateral. Move collateral from the pallet
                     // account to the user's wallet. This is the legacy `sell_complete_set`.
+                    T::MultiCurrency::ensure_can_withdraw(
+                        collateral_token,
+                        &Self::account_id(),
+                        amount,
+                    )?;
                     T::MultiCurrency::transfer(
                         collateral_token,
                         &Self::account_id(),
@@ -270,10 +281,9 @@ mod pallet {
             let mut free_index_set = vec![true; asset_count];
 
             for index_set in partition.iter() {
-                // Ensure that the partition is not trivial.
-                let ones = index_set.iter().fold(0usize, |acc, &val| acc + (val as usize));
-                ensure!(ones > 0, Error::<T>::InvalidPartition);
-                ensure!(ones < asset_count, Error::<T>::InvalidPartition);
+                // Ensure that the partition is not trivial and matches the market's outcomes.
+                ensure!(index_set.iter().any(|&i| i), Error::<T>::InvalidPartition);
+                ensure!(index_set.len() == asset_count, Error::<T>::InvalidPartition);
 
                 // Ensure that `index_set` is disjoint from the previously iterated elements of the
                 // partition.

@@ -1,23 +1,56 @@
 #![cfg(all(feature = "mock", test))]
 
+mod integration;
 mod split_position;
 
-use crate::mock::{
-    ext_builder::ExtBuilder,
-    runtime::{CombinatorialTokens, Currencies, Runtime, RuntimeOrigin},
+use crate::{
+    mock::{
+        ext_builder::ExtBuilder,
+        runtime::{CombinatorialTokens, Currencies, MarketCommons, Runtime, RuntimeOrigin},
+    },
+    Error,
 };
-use frame_support::assert_noop;
+use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
-use sp_runtime::DispatchError;
+use sp_runtime::{DispatchError, Perbill};
 use zeitgeist_primitives::{
     constants::base_multiples::*,
-    types::{AccountIdTest, Asset, Balance, MarketId},
+    types::{
+        AccountIdTest, Asset, Balance, Market, MarketBonds, MarketCreation, MarketId, MarketPeriod,
+        MarketStatus, MarketType, ScoringRule,
+    },
 };
+use zrml_market_commons::MarketCommonsPalletApi;
 
 // For better readability of index sets.
-pub(crate) const _0: bool = false;
-pub(crate) const _1: bool = true;
+pub(crate) const _B0: bool = false;
+pub(crate) const _B1: bool = true;
 
+fn create_market(base_asset: Asset<MarketId>, market_type: MarketType) -> MarketId {
+    let market = Market {
+        base_asset,
+        market_id: Default::default(),
+        creation: MarketCreation::Permissionless,
+        creator_fee: Perbill::zero(),
+        creator: Default::default(),
+        market_type,
+        dispute_mechanism: None,
+        metadata: Default::default(),
+        oracle: Default::default(),
+        period: MarketPeriod::Block(Default::default()),
+        deadlines: Default::default(),
+        report: None,
+        resolved_outcome: None,
+        scoring_rule: ScoringRule::AmmCdaHybrid,
+        status: MarketStatus::Disputed,
+        bonds: MarketBonds::default(),
+        early_close: None,
+    };
+    MarketCommons::push_market(market).unwrap();
+    MarketCommons::latest_market_id().unwrap()
+}
+
+/// Utility struct for managing test accounts.
 pub(crate) struct Account {
     id: AccountIdTest,
 }
