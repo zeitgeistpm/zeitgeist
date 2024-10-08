@@ -6,9 +6,9 @@ mod split_position;
 use crate::{
     mock::{
         ext_builder::ExtBuilder,
-        runtime::{CombinatorialTokens, Currencies, MarketCommons, Runtime, RuntimeOrigin},
+        runtime::{CombinatorialTokens, Currencies, MarketCommons, Runtime, RuntimeOrigin, System},
     },
-    Error,
+    Error, Event, Pallet,
 };
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
@@ -16,8 +16,8 @@ use sp_runtime::{DispatchError, Perbill};
 use zeitgeist_primitives::{
     constants::base_multiples::*,
     types::{
-        AccountIdTest, Asset, Balance, Market, MarketBonds, MarketCreation, MarketId, MarketPeriod,
-        MarketStatus, MarketType, ScoringRule,
+        AccountIdTest, Asset, Asset::CombinatorialToken, Balance, Market, MarketBonds,
+        MarketCreation, MarketId, MarketPeriod, MarketStatus, MarketType, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;

@@ -13,9 +13,11 @@ pub(crate) fn get_collection_id(
     parent_collection_id: Option<CombinatorialId>,
     force_max_work: bool,
 ) -> Option<CombinatorialId> {
+    println!("decompress_hash");
     let mut u = decompress_hash(hash, force_max_work)?;
 
     if let Some(pci) = parent_collection_id {
+        println!("decompress_collection_id");
         let v = decompress_collection_id(pci)?;
         let w = u + v; // Projective coordinates.
         u = w.into(); // Affine coordinates.
@@ -23,6 +25,7 @@ pub(crate) fn get_collection_id(
 
     // Convert back to bytes _before_ flipping, as flipping will sometimes result in numbers larger
     // than the base field modulus.
+    println!("before flipping");
     let mut bytes: CombinatorialId = u.x.into_bigint().to_bytes_be().try_into().ok()?;
 
     if u.y.into_bigint().is_odd() {
@@ -104,7 +107,9 @@ fn decompress_collection_id(mut collection_id: CombinatorialId) -> Option<G1Affi
         return None;
     }
 
+    println!("matching y coordinate");
     let mut y = matching_y_coordinate(x)?; // Fails if `collection_id` is not a collection ID.
+    println!("after");
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
     // `odd` is set but `y` isn't odd, we switch to the other option.
