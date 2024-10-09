@@ -203,12 +203,16 @@ mod pallet {
                 }
             } else {
                 // Horizontal split.
+                println!("horizontal");
                 let remaining_index_set = free_index_set.into_iter().map(|i| !i).collect();
+                println!("remaining: {:?}", remaining_index_set);
                 let position = Self::position_from_parent_collection(
                     parent_collection_id,
                     market_id,
                     remaining_index_set,
                 )?;
+                println!("position: {:?}", position);
+                T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                 T::MultiCurrency::withdraw(position, &who, amount)?;
 
                 position

@@ -92,11 +92,11 @@ fn split_position_works_vertical_with_parent() {
 
         // Alice is left with 1 unit of [0, 0, 1], 2 units of [1, 1, 0] and one unit of each of the
         // two new tokens.
-        let ct_001: Asset<MarketId> = CombinatorialToken([
+        let ct_001 = CombinatorialToken([
             207, 168, 160, 93, 238, 221, 197, 1, 171, 102, 28, 24, 18, 107, 205, 231, 227, 98, 220,
             105, 211, 29, 181, 30, 53, 7, 200, 154, 134, 246, 38, 139,
         ]);
-        let ct_110: Asset<MarketId> = CombinatorialToken([
+        let ct_110 = CombinatorialToken([
             101, 210, 61, 196, 5, 247, 150, 41, 186, 49, 11, 63, 139, 53, 25, 65, 161, 83, 24, 142,
             225, 102, 57, 241, 199, 18, 226, 137, 68, 3, 219, 131,
         ]);
@@ -141,6 +141,16 @@ fn split_position_works_vertical_with_parent() {
         );
     });
 }
+
+// Intentionally left out as it is covered by
+// `integration::vertical_split_followed_by_horizontal_split_no_parent`.
+// #[test]
+// fn split_position_works_horizontal_no_parent() {}
+
+// Intentionally left out as it is covered by
+// `integration::vertical_split_followed_by_horizontal_split_with_parent`.
+// #[test]
+// fn split_position_works_horizontal_with_parent() {}
 
 #[test]
 fn split_position_fails_if_market_not_found() {
