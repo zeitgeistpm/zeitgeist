@@ -23,8 +23,8 @@ use zeitgeist_primitives::{
 use zrml_market_commons::MarketCommonsPalletApi;
 
 // For better readability of index sets.
-pub(crate) const _B0: bool = false;
-pub(crate) const _B1: bool = true;
+pub(crate) const B0: bool = false;
+pub(crate) const B1: bool = true;
 
 fn create_market(base_asset: Asset<MarketId>, market_type: MarketType) -> MarketId {
     let market = Market {

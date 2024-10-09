@@ -173,7 +173,6 @@ mod pallet {
             let collateral_token = market.base_asset;
 
             let free_index_set = Self::free_index_set(market_id, &partition)?;
-            println!("free_index_set: {:?}", free_index_set);
 
             // Destroy/store the tokens to be split.
             let split_asset = if !free_index_set.iter().any(|&i| i) {
@@ -205,7 +204,6 @@ mod pallet {
             } else {
                 // Horizontal split.
                 let remaining_index_set = free_index_set.into_iter().map(|i| !i).collect();
-                println!("remaining_index_set: {:?}", remaining_index_set);
                 let position = Self::position_from_parent_collection(
                     parent_collection_id,
                     market_id,

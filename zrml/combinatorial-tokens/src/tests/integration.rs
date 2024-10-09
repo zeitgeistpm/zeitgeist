@@ -6,7 +6,7 @@ fn split_followed_by_merge_vertical_no_parent() {
         let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
 
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
-        let partition = vec![vec![_B1, _B0, _B1], vec![_B0, _B1, _B0]];
+        let partition = vec![vec![B1, B0, B1], vec![B0, B1, B0]];
         let amount = _1;
 
         assert_ok!(CombinatorialTokens::split_position(
@@ -32,12 +32,11 @@ fn split_followed_by_merge_vertical_no_parent() {
 #[test]
 fn split_followed_by_merge_vertical_with_parent() {
     ExtBuilder::build().execute_with(|| {
-        // TODO
         // let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
 
-        // let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
+        // let parent_market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
         // let amount = _1;
-        // let partition = vec![vec![_B1, _B0, _B1], vec![_B0, _B1, _B0]];
+        // let partition = vec![vec![B1, B0, B1], vec![B0, B1, B0]];
 
         // assert_ok!(CombinatorialTokens::split_position(
         //     alice.signed(),
@@ -74,14 +73,14 @@ fn vertical_split_followed_by_horizontal_split_no_parent() {
             alice.signed(),
             None,
             market_id,
-            vec![vec![_B0, _B0, _B1], vec![_B1, _B1, _B0]],
+            vec![vec![B0, B0, B1], vec![B1, B1, B0]],
             amount,
         ));
         assert_ok!(CombinatorialTokens::split_position(
             alice.signed(),
             None,
             market_id,
-            vec![vec![_B1, _B0, _B0], vec![_B0, _B1, _B0]],
+            vec![vec![B1, B0, B0], vec![B0, B1, B0]],
             amount,
         ));
 
@@ -107,7 +106,7 @@ fn vertical_split_followed_by_horizontal_split_no_parent() {
             alice.signed(),
             None,
             market_id,
-            vec![vec![_B1, _B0, _B0], vec![_B0, _B1, _B0], vec![_B0, _B0, _B1]],
+            vec![vec![B1, B0, B0], vec![B0, B1, B0], vec![B0, B0, B1]],
             amount,
         ));
 
