@@ -131,6 +131,169 @@ fn split_followed_by_merge_vertical_with_parent() {
     });
 }
 
+#[test]
+fn split_followed_by_merge_vertical_with_parent_in_opposite_order() {
+    ExtBuilder::build().execute_with(|| {
+        let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
+        let pallet = Account::new(Pallet::<Runtime>::account_id());
+
+        let market_0 = create_market(Asset::Ztg, MarketType::Categorical(3));
+        let market_1 = create_market(Asset::Ztg, MarketType::Categorical(4));
+
+        let partition_0 = vec![vec![B0, B0, B1], vec![B1, B1, B0]];
+        let partition_1 = vec![vec![B0, B0, B1, B1], vec![B1, B1, B0, B0]];
+
+        let amount = _1;
+
+        let ct_001 = CombinatorialToken([
+            207, 168, 160, 93, 238, 221, 197, 1, 171, 102, 28, 24, 18, 107, 205, 231, 227, 98, 220,
+            105, 211, 29, 181, 30, 53, 7, 200, 154, 134, 246, 38, 139,
+        ]);
+        let ct_110 = CombinatorialToken([
+            101, 210, 61, 196, 5, 247, 150, 41, 186, 49, 11, 63, 139, 53, 25, 65, 161, 83, 24, 142,
+            225, 102, 57, 241, 199, 18, 226, 137, 68, 3, 219, 131,
+        ]);
+        let id_001 = [
+            6, 44, 173, 50, 122, 106, 144, 185, 253, 19, 252, 218, 215, 241, 218, 37, 196, 112, 45,
+            133, 165, 48, 231, 189, 87, 123, 131, 18, 190, 5, 110, 93,
+        ];
+        let id_110 = [
+            1, 189, 94, 224, 153, 162, 145, 214, 33, 231, 230, 19, 122, 179, 122, 117, 193, 123,
+            73, 220, 240, 131, 180, 180, 137, 14, 179, 148, 188, 13, 107, 65,
+        ];
+
+        let ct_0011 = CombinatorialToken([
+            32, 70, 65, 46, 183, 161, 122, 58, 80, 224, 102, 106, 63, 89, 191, 19, 235, 137, 64,
+            182, 25, 222, 198, 172, 230, 42, 120, 101, 100, 150, 172, 125,
+        ]);
+        let ct_1100 = CombinatorialToken([
+            28, 158, 82, 180, 87, 230, 168, 233, 74, 123, 50, 76, 131, 203, 82, 194, 214, 165, 87,
+            200, 58, 244, 23, 184, 79, 127, 201, 39, 82, 243, 186, 1,
+        ]);
+        let id_0011 = [
+            77, 83, 228, 134, 221, 156, 53, 34, 133, 83, 120, 8, 232, 53, 54, 200, 181, 110, 13,
+            145, 238, 130, 69, 147, 108, 167, 41, 217, 105, 22, 126, 136,
+        ];
+        let id_1100 = [
+            10, 211, 115, 219, 24, 177, 205, 243, 234, 68, 234, 119, 21, 211, 103, 229, 185, 23,
+            63, 75, 206, 10, 196, 75, 10, 110, 147, 40, 90, 61, 145, 90,
+        ];
+
+        let ct_001_0011 = CombinatorialToken([
+            156, 47, 254, 154, 29, 5, 149, 94, 214, 135, 92, 36, 188, 120, 42, 144, 136, 151, 255,
+            91, 232, 152, 91, 236, 177, 66, 36, 72, 134, 234, 212, 177,
+        ]);
+        let ct_001_1100 = CombinatorialToken([
+            224, 47, 73, 22, 156, 226, 199, 74, 28, 251, 44, 108, 73, 125, 192, 151, 193, 60, 156,
+            240, 215, 23, 138, 168, 181, 175, 241, 70, 71, 126, 48, 45,
+        ]);
+        let ct_110_0011 = CombinatorialToken([
+            191, 106, 159, 227, 136, 131, 143, 101, 127, 7, 109, 82, 45, 169, 246, 45, 250, 217,
+            33, 147, 166, 174, 232, 35, 58, 20, 111, 167, 6, 6, 73, 67,
+        ]);
+        let ct_110_1100 = CombinatorialToken([
+            184, 155, 104, 90, 231, 10, 30, 1, 213, 7, 1, 58, 117, 172, 118, 72, 118, 89, 219, 216,
+            140, 27, 228, 2, 87, 26, 169, 150, 172, 154, 49, 219,
+        ]);
+
+        // TODO Add token checks for all combinations.!
+
+        // Split ZTG into A|B and C.
+        assert_ok!(CombinatorialTokens::split_position(
+            alice.signed(),
+            None,
+            market_0,
+            partition_0.clone(),
+            amount,
+        ));
+
+        // Split C into C&(U|V) and C&(W|X).
+        assert_ok!(CombinatorialTokens::split_position(
+            alice.signed(),
+            Some(id_001),
+            market_1,
+            partition_1.clone(),
+            amount,
+        ));
+
+        // Split A|B into into (A|B)&(U|V) and (A|B)&(W|X).
+        assert_ok!(CombinatorialTokens::split_position(
+            alice.signed(),
+            Some(id_110),
+            market_1,
+            partition_1.clone(),
+            amount,
+        ));
+
+        assert_eq!(alice.free_balance(ct_001), 0);
+        assert_eq!(alice.free_balance(ct_110), 0);
+        assert_eq!(alice.free_balance(ct_001_0011), _1);
+        assert_eq!(alice.free_balance(ct_001_1100), _1);
+        assert_eq!(alice.free_balance(ct_110_0011), _1);
+        assert_eq!(alice.free_balance(ct_110_1100), _1);
+        assert_eq!(alice.free_balance(ct_0011), 0);
+        assert_eq!(alice.free_balance(ct_1100), 0);
+        assert_eq!(alice.free_balance(Asset::Ztg), _99);
+
+        // Merge C&(U|V) and (A|B)&(U|V) into U|V.
+        assert_ok!(CombinatorialTokens::merge_position(
+            alice.signed(),
+            Some(id_1100),
+            market_0,
+            partition_0.clone(),
+            amount,
+        ));
+
+        assert_eq!(alice.free_balance(ct_001), 0);
+        assert_eq!(alice.free_balance(ct_110), 0);
+        assert_eq!(alice.free_balance(ct_001_0011), _1);
+        assert_eq!(alice.free_balance(ct_001_1100), 0);
+        assert_eq!(alice.free_balance(ct_110_0011), _1);
+        assert_eq!(alice.free_balance(ct_110_1100), 0);
+        assert_eq!(alice.free_balance(ct_0011), 0);
+        assert_eq!(alice.free_balance(ct_1100), _1);
+        assert_eq!(alice.free_balance(Asset::Ztg), _99);
+
+        // Merge C&(W|X) and (A|B)&(W|X) into W|X.
+        assert_ok!(CombinatorialTokens::merge_position(
+            alice.signed(),
+            Some(id_0011),
+            market_0,
+            partition_0,
+            amount,
+        ));
+
+        assert_eq!(alice.free_balance(ct_001), 0);
+        assert_eq!(alice.free_balance(ct_110), 0);
+        assert_eq!(alice.free_balance(ct_001_0011), 0);
+        assert_eq!(alice.free_balance(ct_001_1100), 0);
+        assert_eq!(alice.free_balance(ct_110_0011), 0);
+        assert_eq!(alice.free_balance(ct_110_1100), 0);
+        assert_eq!(alice.free_balance(ct_0011), _1);
+        assert_eq!(alice.free_balance(ct_1100), _1);
+        assert_eq!(alice.free_balance(Asset::Ztg), _99);
+
+        // Merge U|V and W|X into ZTG.
+        assert_ok!(CombinatorialTokens::merge_position(
+            alice.signed(),
+            None,
+            market_1,
+            partition_1,
+            amount,
+        ));
+
+        assert_eq!(alice.free_balance(ct_001), 0);
+        assert_eq!(alice.free_balance(ct_110), 0);
+        assert_eq!(alice.free_balance(ct_001_0011), 0);
+        assert_eq!(alice.free_balance(ct_001_1100), 0);
+        assert_eq!(alice.free_balance(ct_110_0011), 0);
+        assert_eq!(alice.free_balance(ct_110_1100), 0);
+        assert_eq!(alice.free_balance(ct_0011), 0);
+        assert_eq!(alice.free_balance(ct_1100), 0);
+        assert_eq!(alice.free_balance(Asset::Ztg), _100);
+    });
+}
+
 // This test shows that splitting a token horizontally can be accomplished by splitting the parent
 // token vertically with a finer partition.
 #[test]
