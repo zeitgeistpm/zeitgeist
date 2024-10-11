@@ -1,7 +1,7 @@
 #![cfg(all(feature = "mock", test))]
 
 mod integration;
-// mod merge_position;
+mod merge_position;
 mod split_position;
 
 use crate::{

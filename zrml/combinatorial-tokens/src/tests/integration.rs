@@ -295,7 +295,7 @@ fn split_followed_by_merge_vertical_with_parent_in_opposite_order() {
 // This test shows that splitting a token horizontally can be accomplished by splitting the parent
 // token vertically with a finer partition.
 #[test]
-fn vertical_split_followed_by_horizontal_split_no_parent() {
+fn split_vertical_followed_by_horizontal_split_no_parent() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
 
@@ -353,7 +353,7 @@ fn vertical_split_followed_by_horizontal_split_no_parent() {
 // This test shows that splitting a token horizontally can be accomplished by splitting a the parent
 // token vertically with a finer partition.
 #[test]
-fn vertical_split_followed_by_horizontal_split_with_parent() {
+fn split_vertical_followed_by_horizontal_split_with_parent() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
         let pallet = Account::new(Pallet::<Runtime>::account_id());
@@ -446,5 +446,52 @@ fn vertical_split_followed_by_horizontal_split_with_parent() {
         assert_eq!(alice.free_balance(ct_001_0100), total_child_amount);
         assert_eq!(pallet.free_balance(Asset::Ztg), parent_amount);
         assert_eq!(pallet.free_balance(ct_001_1100), 0);
+    });
+}
+
+#[test]
+fn split_horizontal_followed_by_merge_horizontal() {
+    ExtBuilder::build().execute_with(|| {
+        let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
+        let pallet = Account::new(Pallet::<Runtime>::account_id());
+
+        let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
+        let amount = _1;
+
+        let ct_001 = CombinatorialToken([
+            207, 168, 160, 93, 238, 221, 197, 1, 171, 102, 28, 24, 18, 107, 205, 231, 227, 98, 220,
+            105, 211, 29, 181, 30, 53, 7, 200, 154, 134, 246, 38, 139,
+        ]);
+        let ct_110 = CombinatorialToken([
+            101, 210, 61, 196, 5, 247, 150, 41, 186, 49, 11, 63, 139, 53, 25, 65, 161, 83, 24, 142,
+            225, 102, 57, 241, 199, 18, 226, 137, 68, 3, 219, 131,
+        ]);
+
+        assert_ok!(CombinatorialTokens::split_position(
+            alice.signed(),
+            None,
+            market_id,
+            vec![vec![B0, B0, B1], vec![B1, B1, B0]],
+            amount,
+        ));
+
+        assert_ok!(CombinatorialTokens::split_position(
+            alice.signed(),
+            None,
+            market_id,
+            vec![vec![B1, B0, B0], vec![B0, B1, B0]],
+            amount,
+        ));
+
+        assert_ok!(CombinatorialTokens::merge_position(
+            alice.signed(),
+            None,
+            market_id,
+            vec![vec![B1, B0, B0], vec![B0, B1, B0]],
+            amount,
+        ));
+
+        assert_eq!(alice.free_balance(ct_001), _1);
+        assert_eq!(alice.free_balance(ct_110), _1);
     });
 }
