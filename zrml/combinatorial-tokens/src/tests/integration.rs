@@ -135,7 +135,6 @@ fn split_followed_by_merge_vertical_with_parent() {
 fn split_followed_by_merge_vertical_with_parent_in_opposite_order() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
-        let pallet = Account::new(Pallet::<Runtime>::account_id());
 
         let market_0 = create_market(Asset::Ztg, MarketType::Categorical(3));
         let market_1 = create_market(Asset::Ztg, MarketType::Categorical(4));
@@ -453,7 +452,6 @@ fn split_vertical_followed_by_horizontal_split_with_parent() {
 fn split_horizontal_followed_by_merge_horizontal() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
-        let pallet = Account::new(Pallet::<Runtime>::account_id());
 
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
         let amount = _1;
