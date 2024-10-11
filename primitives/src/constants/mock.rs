@@ -33,6 +33,11 @@ parameter_types! {
     pub const CorrectionPeriod: BlockNumber = 4;
 }
 
+// CombinatorialTokens
+parameter_types! {
+    pub const CombinatorialTokensPalletId: PalletId = PalletId(*b"zge/coto");
+}
+
 // Court
 parameter_types! {
     pub const AppealBond: Balance = 5 * BASE;

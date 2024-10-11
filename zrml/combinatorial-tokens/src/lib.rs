@@ -22,6 +22,8 @@
 
 extern crate alloc;
 
+pub mod mock;
+mod tests;
 mod traits;
 pub mod types;
 
@@ -82,10 +84,7 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
 
-    // TODO Types
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
-
-    // TODO Storage Items
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
@@ -93,13 +92,36 @@ mod pallet {
     where
         T: Config,
     {
-        TokenSplit,
-        TokenMerged,
+        /// User `who` has split `amount` units of token `asset_in` into the same amount of each
+        /// token in `assets_out` using `partition`. The ith element of `partition` matches the ith
+        /// element of `assets_out`, so `assets_out[i]` is the outcome represented by the specified
+        /// `parent_collection_id` together with `partition` in `market_id`.
+        /// TODO The second sentence is confusing.
+        TokenSplit {
+            who: AccountIdOf<T>,
+            parent_collection_id: Option<CombinatorialId>,
+            market_id: MarketIdOf<T>,
+            partition: Vec<Vec<bool>>,
+            asset_in: AssetOf<T>,
+            assets_out: Vec<AssetOf<T>>,
+            collection_ids: Vec<CombinatorialId>,
+            amount: BalanceOf<T>,
+        },
+
+        /// User `who` has merged `amount` units of each of the tokens in `assets_in` into the same
+        /// amount of `asset_out`.
+        TokenMerged {
+            who: AccountIdOf<T>,
+            asset_out: AssetOf<T>,
+            assets_in: Vec<AssetOf<T>>,
+            amount: BalanceOf<T>,
+        },
     }
 
     #[pallet::error]
     pub enum Error<T> {
-        /// The specified partition is empty, contains overlaps or is too long.
+        /// The specified partition is empty, contains overlaps, is too long or doesn't match the
+        /// market's number of outcomes.
         InvalidPartition,
 
         /// The specified collection ID is invalid.
@@ -153,48 +175,78 @@ mod pallet {
             let free_index_set = Self::free_index_set(market_id, &partition)?;
 
             // Destroy/store the tokens to be split.
-            if free_index_set.iter().any(|&i| i) {
+            let split_asset = if !free_index_set.iter().any(|&i| i) {
                 // Vertical split.
                 if let Some(pci) = parent_collection_id {
                     // Split combinatorial token into higher level position. Destroy the tokens.
                     let position_id =
                         T::CombinatorialIdManager::get_position_id(collateral_token, pci);
                     let position = Asset::CombinatorialToken(position_id);
+
+                    // This will fail if the market has a different collateral than the previous
+                    // markets. TODO A cleaner error message would be nice though...
+                    T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                     T::MultiCurrency::withdraw(position, &who, amount)?;
+
+                    position
                 } else {
                     // Split collateral into first level position. Store the collateral in the
                     // pallet account. This is the legacy `buy_complete_set`.
+                    T::MultiCurrency::ensure_can_withdraw(collateral_token, &who, amount)?;
                     T::MultiCurrency::transfer(
                         collateral_token,
                         &who,
                         &Self::account_id(),
                         amount,
                     )?;
+
+                    collateral_token
                 }
             } else {
                 // Horizontal split.
                 let remaining_index_set = free_index_set.into_iter().map(|i| !i).collect();
-                let position = Self::position_from_collection(
+                let position = Self::position_from_parent_collection(
                     parent_collection_id,
                     market_id,
                     remaining_index_set,
                 )?;
+                T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                 T::MultiCurrency::withdraw(position, &who, amount)?;
-            }
+
+                position
+            };
 
             // Deposit the new tokens.
-            let position_ids = partition
+            let collection_ids = partition
                 .iter()
                 .cloned()
                 .map(|index_set| {
-                    Self::position_from_collection(parent_collection_id, market_id, index_set)
+                    Self::collection_id_from_parent_collection(
+                        parent_collection_id,
+                        market_id,
+                        index_set,
+                    )
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            for &position in position_ids.iter() {
+            let positions = collection_ids
+                .iter()
+                .cloned()
+                .map(|collection_id| Self::position_from_collection_id(market_id, collection_id))
+                .collect::<Result<Vec<_>, _>>()?;
+            for &position in positions.iter() {
                 T::MultiCurrency::deposit(position, &who, amount)?;
             }
 
-            Self::deposit_event(Event::<T>::TokenSplit);
+            Self::deposit_event(Event::<T>::TokenSplit {
+                who,
+                parent_collection_id,
+                market_id,
+                partition,
+                asset_in: split_asset,
+                assets_out: positions,
+                collection_ids,
+                amount,
+            });
 
             Ok(())
         }
@@ -213,19 +265,23 @@ mod pallet {
             let free_index_set = Self::free_index_set(market_id, &partition)?;
 
             // Destory the old tokens.
-            let position_ids = partition
+            let positions = partition
                 .iter()
                 .cloned()
                 .map(|index_set| {
-                    Self::position_from_collection(parent_collection_id, market_id, index_set)
+                    Self::position_from_parent_collection(
+                        parent_collection_id,
+                        market_id,
+                        index_set,
+                    )
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            for &position in position_ids.iter() {
+            for &position in positions.iter() {
                 T::MultiCurrency::withdraw(position, &who, amount)?;
             }
 
             // Destroy/store the tokens to be split.
-            if free_index_set.iter().any(|&i| i) {
+            let merged_token = if !free_index_set.iter().any(|&i| i) {
                 // Vertical merge.
                 if let Some(pci) = parent_collection_id {
                     // Merge combinatorial token into higher level position. Destroy the tokens.
@@ -233,30 +289,50 @@ mod pallet {
                         T::CombinatorialIdManager::get_position_id(collateral_token, pci);
                     let position = Asset::CombinatorialToken(position_id);
                     T::MultiCurrency::deposit(position, &who, amount)?;
+
+                    position
                 } else {
                     // Merge first-level tokens into collateral. Move collateral from the pallet
                     // account to the user's wallet. This is the legacy `sell_complete_set`.
+                    T::MultiCurrency::ensure_can_withdraw(
+                        collateral_token,
+                        &Self::account_id(),
+                        amount,
+                    )?; // Required because `transfer` throws `Underflow` errors sometimes.
                     T::MultiCurrency::transfer(
                         collateral_token,
                         &Self::account_id(),
                         &who,
                         amount,
                     )?;
+
+                    collateral_token
                 }
             } else {
                 // Horizontal merge.
                 let remaining_index_set = free_index_set.into_iter().map(|i| !i).collect();
-                let position = Self::position_from_collection(
+                let position = Self::position_from_parent_collection(
                     parent_collection_id,
                     market_id,
                     remaining_index_set,
                 )?;
                 T::MultiCurrency::deposit(position, &who, amount)?;
-            }
 
-            Self::deposit_event(Event::<T>::TokenMerged);
+                position
+            };
+
+            Self::deposit_event(Event::<T>::TokenMerged {
+                who,
+                asset_out: merged_token,
+                assets_in: positions,
+                amount,
+            });
 
             Ok(())
+        }
+
+        pub(crate) fn account_id() -> T::AccountId {
+            T::PalletId::get().into_account_truncating()
         }
 
         fn free_index_set(
@@ -268,10 +344,10 @@ mod pallet {
             let mut free_index_set = vec![true; asset_count];
 
             for index_set in partition.iter() {
-                // Ensure that the partition is not trivial.
-                let ones = index_set.iter().fold(0usize, |acc, &val| acc + (val as usize));
-                ensure!(ones > 0, Error::<T>::InvalidPartition);
-                ensure!(ones < asset_count, Error::<T>::InvalidPartition);
+                // Ensure that the partition is not trivial and matches the market's outcomes.
+                ensure!(index_set.iter().any(|&i| i), Error::<T>::InvalidPartition);
+                ensure!(index_set.len() == asset_count, Error::<T>::InvalidPartition);
+                ensure!(!index_set.iter().all(|&i| i), Error::<T>::InvalidPartition);
 
                 // Ensure that `index_set` is disjoint from the previously iterated elements of the
                 // partition.
@@ -288,21 +364,26 @@ mod pallet {
             Ok(free_index_set)
         }
 
-        fn position_from_collection(
+        fn collection_id_from_parent_collection(
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
-        ) -> Result<AssetOf<T>, DispatchError> {
-            let market = T::MarketCommons::market(&market_id)?;
-            let collateral_token = market.base_asset;
-
-            let collection_id = T::CombinatorialIdManager::get_collection_id(
+        ) -> Result<CombinatorialIdOf<T>, DispatchError> {
+            T::CombinatorialIdManager::get_collection_id(
                 parent_collection_id,
                 market_id,
                 index_set,
                 false, // TODO Expose this parameter!
             )
-            .ok_or(Error::<T>::InvalidCollectionId)?;
+            .ok_or(Error::<T>::InvalidCollectionId.into())
+        }
+
+        fn position_from_collection_id(
+            market_id: MarketIdOf<T>,
+            collection_id: CombinatorialIdOf<T>,
+        ) -> Result<AssetOf<T>, DispatchError> {
+            let market = T::MarketCommons::market(&market_id)?;
+            let collateral_token = market.base_asset;
 
             let position_id =
                 T::CombinatorialIdManager::get_position_id(collateral_token, collection_id);
@@ -311,8 +392,18 @@ mod pallet {
             Ok(asset)
         }
 
-        fn account_id() -> T::AccountId {
-            T::PalletId::get().into_account_truncating()
+        fn position_from_parent_collection(
+            parent_collection_id: Option<CombinatorialIdOf<T>>,
+            market_id: MarketIdOf<T>,
+            index_set: Vec<bool>,
+        ) -> Result<AssetOf<T>, DispatchError> {
+            let collection_id = Self::collection_id_from_parent_collection(
+                parent_collection_id,
+                market_id,
+                index_set,
+            )?;
+
+            Self::position_from_collection_id(market_id, collection_id)
         }
     }
 }

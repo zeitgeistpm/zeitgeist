@@ -39,6 +39,7 @@ pub const _36: u128 = 36 * _1;
 pub const _40: u128 = 40 * _1;
 pub const _70: u128 = 70 * _1;
 pub const _80: u128 = 80 * _1;
+pub const _99: u128 = 99 * _1;
 pub const _100: u128 = 100 * _1;
 pub const _101: u128 = 101 * _1;
 pub const _444: u128 = 444 * _1;
