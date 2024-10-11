@@ -277,8 +277,10 @@ mod pallet {
                 })
                 .collect::<Result<Vec<_>, _>>()?;
             for &position in positions.iter() {
+                println!("{:?}", position);
                 T::MultiCurrency::withdraw(position, &who, amount)?;
             }
+            println!("after");
 
             // Destroy/store the tokens to be split.
             let merged_token = if !free_index_set.iter().any(|&i| i) {
