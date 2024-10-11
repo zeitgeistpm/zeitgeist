@@ -183,8 +183,9 @@ mod pallet {
                         T::CombinatorialIdManager::get_position_id(collateral_token, pci);
                     let position = Asset::CombinatorialToken(position_id);
 
-                    // TODO This will fail if the market has a different collateral than the
-                    // previous markets. A cleaner error message would be nice though...
+                    // This will fail if the market has a different collateral than the previous
+                    // markets. TODO A cleaner error message would be nice though...
+                    T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                     T::MultiCurrency::withdraw(position, &who, amount)?;
 
                     position
@@ -203,15 +204,12 @@ mod pallet {
                 }
             } else {
                 // Horizontal split.
-                println!("horizontal");
                 let remaining_index_set = free_index_set.into_iter().map(|i| !i).collect();
-                println!("remaining: {:?}", remaining_index_set);
                 let position = Self::position_from_parent_collection(
                     parent_collection_id,
                     market_id,
                     remaining_index_set,
                 )?;
-                println!("position: {:?}", position);
                 T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                 T::MultiCurrency::withdraw(position, &who, amount)?;
 

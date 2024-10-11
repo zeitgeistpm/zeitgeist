@@ -196,8 +196,6 @@ fn split_followed_by_merge_vertical_with_parent_in_opposite_order() {
             140, 27, 228, 2, 87, 26, 169, 150, 172, 154, 49, 219,
         ]);
 
-        // TODO Add token checks for all combinations.!
-
         // Split ZTG into A|B and C.
         assert_ok!(CombinatorialTokens::split_position(
             alice.signed(),
