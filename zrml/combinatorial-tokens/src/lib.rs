@@ -14,6 +14,14 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work licensed under the GNU Lesser General
+// Public License 3.0 but published without copyright notice by Gnosis
+// (<https://gnosis.io>, info@gnosis.io) in the
+// conditional-tokens-contracts repository
+// <https://github.com/gnosis/conditional-tokens-contracts>,
+// and has been relicensed under GPL-3.0-or-later in this repository.
+
 
 // TODO Refactor so that collection IDs are their own type with an `Fq` field and an `odd` field?
 
