@@ -21,8 +21,8 @@ sp-io = { workspace = true, optional = true }
 zrml-market-commons = { workspace = true, optional = true }
 
 [dev-dependencies]
-test-case = { workspace = true }
 rstest = { workspace = true }
+test-case = { workspace = true }
 zrml-combinatorial-tokens = { workspace = true, features = ["default", "mock"] }
 
 [features]
