@@ -1,5 +1,19 @@
-use super::*;
-use test_case::test_case;
+// Copyright 2024 Forecasting Technologies LTD.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #[test_case(
     [0x16, 0x74, 0xab, 0x10, 0xed, 0xf8, 0xc4, 0xe2, 0x25, 0x72, 0x9e, 0x20, 0x9a, 0x58, 0x75, 0xa1, 0x9f, 0x14, 0x46, 0xba, 0xec, 0x3b, 0x30, 0xdf, 0x9b, 0xa8, 0x65, 0x75, 0xd5, 0x2d, 0xe3, 0xd3],
