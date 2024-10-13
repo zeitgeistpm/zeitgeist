@@ -35,7 +35,7 @@ type Fractional = U80;
 type FixedType = FixedU128<Fractional>;
 
 // 32.44892769177272
-const EXP_OVERFLOW_THRESHOLD: FixedType = FixedType::from_bits(0x20_72EC_ECDA_6EBE_EACC_40C7);
+const EXP_NUMERICAL_THRESHOLD: FixedType = FixedType::from_bits(0x20_72EC_ECDA_6EBE_EACC_40C7);
 
 pub(crate) struct Math<T>(PhantomData<T>);
 
@@ -242,6 +242,12 @@ mod detail {
         value.to_fixed_decimal(DECIMALS).ok()
     }
 
+    /// Calculates `exp(value)` but returns `None` if `value` lies outside of the numerical
+    /// boundaries.
+    fn protected_exp(value: FixedType, neg: bool) -> Option<FixedType> {
+        if value < EXP_NUMERICAL_THRESHOLD { exp(value, neg).ok() } else { None }
+    }
+
     fn calculate_swap_amount_out_for_buy_fixed(
         reserve: FixedType,
         amount_in: FixedType,
@@ -264,8 +270,8 @@ mod detail {
             // Ensure that if the reserve is zero, we don't accidentally return a non-zero value.
             return None;
         }
-        let exp_neg_x_over_b: FixedType = exp(amount_in.checked_div(liquidity)?, true).ok()?;
-        let exp_r_over_b = exp(reserve.checked_div(liquidity)?, false).ok()?;
+        let exp_neg_x_over_b: FixedType = protected_exp(amount_in.checked_div(liquidity)?, true)?;
+        let exp_r_over_b = protected_exp(reserve.checked_div(liquidity)?, false)?;
         let inside_ln = exp_neg_x_over_b
             .checked_add(exp_r_over_b)?
             .checked_sub(FixedType::checked_from_num(1)?)?;
@@ -278,7 +284,7 @@ mod detail {
         reserve: FixedType,
         liquidity: FixedType,
     ) -> Option<FixedType> {
-        exp(reserve.checked_div(liquidity)?, true).ok()
+        protected_exp(reserve.checked_div(liquidity)?, true)
     }
 
     fn calculate_reserve_from_spot_prices_fixed(
@@ -308,10 +314,10 @@ mod detail {
         amount_in: FixedType,
         liquidity: FixedType,
     ) -> Option<FixedType> {
-        let exp_x_over_b: FixedType = exp(amount_in.checked_div(liquidity)?, false).ok()?;
+        let exp_x_over_b: FixedType = protected_exp(amount_in.checked_div(liquidity)?, false)?;
         let r_over_b = reserve.checked_div(liquidity)?;
-        let exp_neg_r_over_b = if r_over_b < EXP_OVERFLOW_THRESHOLD {
-            exp(reserve.checked_div(liquidity)?, true).ok()?
+        let exp_neg_r_over_b = if r_over_b < EXP_NUMERICAL_THRESHOLD {
+            protected_exp(reserve.checked_div(liquidity)?, true)?
         } else {
             FixedType::checked_from_num(0)? // Underflow to zero.
         };
@@ -573,7 +579,7 @@ mod tests {
     #[test_case(true, FixedType::from_str("0.000000000000008083692034").unwrap())]
     fn exp_does_not_overflow_or_underflow(neg: bool, expected: FixedType) {
         let result: FixedType =
-            exp(FixedType::checked_from_num(EXP_OVERFLOW_THRESHOLD).unwrap(), neg).unwrap();
+            exp(FixedType::checked_from_num(EXP_NUMERICAL_THRESHOLD).unwrap(), neg).unwrap();
         assert_eq!(result, expected);
     }
 
