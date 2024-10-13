@@ -22,7 +22,6 @@
 // <https://github.com/gnosis/conditional-tokens-contracts>,
 // and has been relicensed under GPL-3.0-or-later in this repository.
 
-
 // TODO Refactor so that collection IDs are their own type with an `Fq` field and an `odd` field?
 
 #![doc = include_str!("../README.md")]
