@@ -297,6 +297,10 @@ mod pallet {
         MinRelativeLiquidityThresholdViolated,
         /// Narrowing type conversion occurred.
         NarrowingConversion,
+
+        /// The buy/sell/keep partition specified is empty, or contains overlaps or assets that don't
+        /// belong to the market.
+        InvalidPartition,
     }
 
     #[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
@@ -1031,7 +1035,15 @@ mod pallet {
                     ensure!(pool.contains(asset), Error::<T>::AssetNotFound);
                 }
 
-                // TODO Ensure that buy, sell partition the assets!
+                // Ensure that `buy` and `sell` partition are disjoint and only contain assets from
+                // the market.
+                for asset in buy.iter() {
+                    ensure!(!sell.contains(asset), Error::<T>::InvalidPartition);
+                    ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
+                }
+                for asset in sell.iter() {
+                    ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
+                }
 
                 // TODO Ensure that numerical limits are observed.
 
@@ -1104,7 +1116,20 @@ mod pallet {
                     ensure!(pool.contains(asset), Error::<T>::AssetNotFound);
                 }
 
-                // TODO Ensure that buy, sell partition the assets!
+                // Ensure that `buy` and `sell` partition are disjoint and only contain assets from
+                // the market.
+                for asset in buy.iter() {
+                    ensure!(!keep.contains(asset), Error::<T>::InvalidPartition);
+                    ensure!(!sell.contains(asset), Error::<T>::InvalidPartition);
+                    ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
+                }
+                for asset in sell.iter() {
+                    ensure!(!keep.contains(asset), Error::<T>::InvalidPartition);
+                    ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
+                }
+                for asset in keep.iter() {
+                    ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
+                }
 
                 // TODO Ensure that numerical limits are observed.
 
