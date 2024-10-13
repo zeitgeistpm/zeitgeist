@@ -31,9 +31,8 @@ use typenum::U80;
 type Fractional = U80;
 type FixedType = FixedU128<Fractional>;
 
-/// The point at which 32.44892769177272
-#[allow(dead_code)] // TODO Block calls that go outside of these bounds.
-const EXP_OVERFLOW_THRESHOLD: FixedType = FixedType::from_bits(0x20_72EC_ECDA_6EBE_EACC_40C7);
+/// The point at which `exp` values become too large, 32.44892769177272.
+const EXP_NUMERICAL_THRESHOLD: FixedType = FixedType::from_bits(0x20_72EC_ECDA_6EBE_EACC_40C7);
 
 pub(crate) struct ComboMath<T>(PhantomData<T>);
 
@@ -134,12 +133,18 @@ mod detail {
         value.to_fixed_decimal(DECIMALS).ok()
     }
 
+    /// Calculates `exp(value)` but returns `None` if `value` lies outside of the numerical
+    /// boundaries.
+    fn protected_exp(value: FixedType, neg: bool) -> Option<FixedType> {
+        if value < EXP_NUMERICAL_THRESHOLD { exp(value, neg).ok() } else { None }
+    }
+
     /// Returns `\sum_{r \in R} e^{-r/b}`, where `R` denotes `reserves` and `b` denotes `liquidity`.
-    /// The result is `None` if and only if one of the `exp` calculations has failed.
+    /// The result is `None` if and only if any of the `exp` calculations has failed.
     fn exp_sum(reserves: Vec<FixedType>, liquidity: FixedType) -> Option<FixedType> {
         reserves
             .iter()
-            .map(|r| exp(r.checked_div(liquidity)?, true).ok())
+            .map(|r| protected_exp(r.checked_div(liquidity)?, true))
             .collect::<Option<Vec<_>>>()?
             .iter()
             .try_fold(FixedType::zero(), |acc, &val| acc.checked_add(val))
@@ -222,7 +227,7 @@ mod detail {
         let exp_sum_buy = exp_sum(buy, liquidity)?;
         let exp_sum_sell = exp_sum(sell, liquidity)?;
         let amount_in_div_liquidity = amount_in.checked_div(liquidity)?;
-        let exp_of_minus_amount_in: FixedType = exp(amount_in_div_liquidity, true).ok()?;
+        let exp_of_minus_amount_in: FixedType = protected_exp(amount_in_div_liquidity, true)?;
         let exp_of_minus_amount_in_times_exp_sum_sell =
             exp_of_minus_amount_in.checked_mul(exp_sum_sell)?;
         let numerator = exp_sum_buy
@@ -249,7 +254,7 @@ mod detail {
         let numerator = exp_sum_buy.checked_add(exp_sum_sell)?;
         let delta = amount_buy.checked_sub(amount_sell)?;
         let delta_div_liquidity = delta.checked_div(liquidity)?;
-        let exp_delta: FixedType = exp(delta_div_liquidity, false).ok()?;
+        let exp_delta: FixedType = protected_exp(delta_div_liquidity, false)?;
         let exp_delta_times_exp_sum_sell = exp_delta.checked_mul(exp_sum_sell)?;
         let denominator = exp_sum_buy.checked_add(exp_delta_times_exp_sum_sell)?;
         let ln_arg = numerator.checked_div(denominator)?;

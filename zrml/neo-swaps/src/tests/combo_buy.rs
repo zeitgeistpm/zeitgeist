@@ -19,6 +19,7 @@ use super::*;
 #[cfg(not(feature = "parachain"))]
 use sp_runtime::{DispatchError, TokenError};
 use test_case::test_case;
+use zeitgeist_primitives::types::Asset::CategoricalOutcome;
 
 // Example taken from
 // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr
@@ -210,33 +211,6 @@ fn combo_buy_fails_on_pool_not_found() {
     });
 }
 
-#[test_case(MarketType::Categorical(2))]
-#[test_case(MarketType::Scalar(0..=1))]
-fn combo_buy_fails_on_asset_not_found(market_type: MarketType) {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
-            ALICE,
-            BASE_ASSET,
-            market_type,
-            _10,
-            vec![_1_2, _1_2],
-            CENT,
-        );
-        assert_noop!(
-            NeoSwaps::combo_buy(
-                RuntimeOrigin::signed(BOB),
-                market_id,
-                2,
-                vec![Asset::CategoricalOutcome(market_id, 2)],
-                vec![Asset::CategoricalOutcome(market_id, 1)],
-                _1,
-                0
-            ),
-            Error::<Runtime>::AssetNotFound,
-        );
-    });
-}
-
 #[test]
 fn combo_buy_fails_on_insufficient_funds() {
     ExtBuilder::default().build().execute_with(|| {
@@ -290,6 +264,38 @@ fn combo_buy_fails_on_amount_out_below_min() {
                 _2,
             ),
             Error::<Runtime>::AmountOutBelowMin,
+        );
+    });
+}
+
+#[test_case(vec![0], vec![0]; "overlap")]
+#[test_case(vec![], vec![0, 1]; "empty_buy")]
+#[test_case(vec![2, 3], vec![]; "empty_sell")]
+#[test_case(vec![0, 2, 3], vec![1, 3, 4]; "overlap2")]
+#[test_case(vec![0, 1, 3, 1], vec![2]; "duplicate_buy")]
+#[test_case(vec![0, 1, 3], vec![4, 2, 4]; "duplicate_sell")]
+#[test_case(vec![999], vec![0, 1, 2, 3, 4]; "out_of_bounds_buy")]
+#[test_case(vec![0, 1, 3], vec![999]; "out_of_bounds_sell")]
+fn combo_buy_fails_on_invalid_partition(indices_buy: Vec<u16>, indices_sell: Vec<u16>) {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(5),
+            _10,
+            vec![_1_5, _1_5, _1_5, _1_5, _1_5],
+            CENT,
+        );
+        let amount_in = _1;
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
+
+        let buy = indices_buy.into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+        let sell = indices_sell.into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+
+        // Buying 1 at price of .5 will return less than 2 outcomes due to slippage.
+        assert_noop!(
+            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), market_id, 5, buy, sell, amount_in, 0),
+            Error::<Runtime>::InvalidPartition,
         );
     });
 }
