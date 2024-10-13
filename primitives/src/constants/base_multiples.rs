@@ -60,6 +60,8 @@ pub const _1_5: u128 = _1 / 5;
 pub const _1_6: u128 = _1 / 6;
 pub const _5_6: u128 = _5 / 6;
 
+pub const _1_7: u128 = _1 / 7;
+
 pub const _1_10: u128 = _1 / 10;
 pub const _2_10: u128 = _2 / 10;
 pub const _3_10: u128 = _3 / 10;

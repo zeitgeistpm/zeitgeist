@@ -46,7 +46,11 @@ mod pallet {
         types::{FeeDistribution, MaxAssets, Pool},
         weights::*,
     };
-    use alloc::{collections::BTreeMap, vec, vec::Vec};
+    use alloc::{
+        collections::{BTreeMap, BTreeSet},
+        vec,
+        vec::Vec,
+    };
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
@@ -1031,12 +1035,10 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             Self::try_mutate_pool(&market_id, |pool| {
-                for asset in buy.iter().chain(sell.iter()) {
-                    ensure!(pool.contains(asset), Error::<T>::AssetNotFound);
-                }
-
-                // Ensure that `buy` and `sell` partition are disjoint and only contain assets from
-                // the market.
+                // Ensure that `buy` and `sell` partition are disjoint, only contain assets from
+                // the market and don't contain dupliates.
+                ensure!(!buy.is_empty(), Error::<T>::InvalidPartition);
+                ensure!(!sell.is_empty(), Error::<T>::InvalidPartition);
                 for asset in buy.iter() {
                     ensure!(!sell.contains(asset), Error::<T>::InvalidPartition);
                     ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
@@ -1044,8 +1046,10 @@ mod pallet {
                 for asset in sell.iter() {
                     ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
                 }
-
-                // TODO Ensure that numerical limits are observed.
+                let buy_set = buy.iter().collect::<BTreeSet<_>>();
+                let sell_set = sell.iter().collect::<BTreeSet<_>>();
+                ensure!(buy_set.len() == buy.len(), Error::<T>::InvalidPartition);
+                ensure!(sell_set.len() == sell.len(), Error::<T>::InvalidPartition);
 
                 let FeeDistribution {
                     remaining: amount_in_minus_fees,
@@ -1112,12 +1116,10 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             Self::try_mutate_pool(&market_id, |pool| {
-                for asset in buy.iter().chain(sell.iter()).chain(keep.iter()) {
-                    ensure!(pool.contains(asset), Error::<T>::AssetNotFound);
-                }
-
                 // Ensure that `buy` and `sell` partition are disjoint and only contain assets from
                 // the market.
+                ensure!(!buy.is_empty(), Error::<T>::InvalidPartition);
+                ensure!(!sell.is_empty(), Error::<T>::InvalidPartition);
                 for asset in buy.iter() {
                     ensure!(!keep.contains(asset), Error::<T>::InvalidPartition);
                     ensure!(!sell.contains(asset), Error::<T>::InvalidPartition);
@@ -1130,8 +1132,14 @@ mod pallet {
                 for asset in keep.iter() {
                     ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
                 }
-
-                // TODO Ensure that numerical limits are observed.
+                let buy_set = buy.iter().collect::<BTreeSet<_>>();
+                let keep_set = keep.iter().collect::<BTreeSet<_>>();
+                let sell_set = sell.iter().collect::<BTreeSet<_>>();
+                ensure!(buy_set.len() == buy.len(), Error::<T>::InvalidPartition);
+                ensure!(keep_set.len() == keep.len(), Error::<T>::InvalidPartition);
+                ensure!(sell_set.len() == sell.len(), Error::<T>::InvalidPartition);
+                let total_assets = buy.len().saturating_add(keep.len()).saturating_add(sell.len());
+                ensure!(total_assets == market.outcomes() as usize, Error::<T>::InvalidPartition);
 
                 // This is the amount of collateral the user will receive in the end, or,
                 // equivalently, the amount of each asset in `sell` that the user intermittently

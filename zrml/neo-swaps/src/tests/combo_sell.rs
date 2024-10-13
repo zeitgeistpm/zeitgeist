@@ -17,6 +17,7 @@
 
 use super::*;
 use test_case::test_case;
+use zeitgeist_primitives::types::Asset::CategoricalOutcome;
 
 #[test]
 fn combo_sell_works() {
@@ -215,36 +216,6 @@ fn combo_sell_fails_on_pool_not_found() {
     });
 }
 
-// TODO Needs to be expanded.
-#[test_case(MarketType::Categorical(2))]
-#[test_case(MarketType::Scalar(0..=1))]
-fn combo_sell_fails_on_asset_not_found(market_type: MarketType) {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
-            ALICE,
-            BASE_ASSET,
-            market_type,
-            _10,
-            vec![_1_2, _1_2],
-            CENT,
-        );
-        assert_noop!(
-            NeoSwaps::combo_sell(
-                RuntimeOrigin::signed(BOB),
-                market_id,
-                2,
-                vec![Asset::CategoricalOutcome(market_id, 3)],
-                vec![Asset::CategoricalOutcome(market_id, 5)],
-                vec![Asset::CategoricalOutcome(market_id, 4)],
-                _1,
-                0,
-                u128::MAX,
-            ),
-            Error::<Runtime>::AssetNotFound,
-        );
-    });
-}
-
 #[test]
 fn combo_sell_fails_on_insufficient_funds() {
     ExtBuilder::default().build().execute_with(|| {
@@ -304,6 +275,55 @@ fn combo_sell_fails_on_amount_out_below_min() {
                 _10
             ),
             Error::<Runtime>::AmountOutBelowMin,
+        );
+    });
+}
+
+#[test_case(vec![], vec![], vec![2]; "empty_buy")]
+#[test_case(vec![0], vec![], vec![]; "empty_sell")]
+#[test_case(vec![0, 1], vec![2, 1], vec![3, 4]; "buy_keep_overlap")]
+#[test_case(vec![0, 1], vec![2, 4], vec![3, 1]; "buy_sell_overlap")]
+#[test_case(vec![0, 1], vec![2, 4], vec![4, 3]; "keep_sell_overlap")]
+#[test_case(vec![0, 1, 999], vec![2, 4], vec![5, 3]; "out_of_bounds_buy")]
+#[test_case(vec![0, 1], vec![2, 4, 999], vec![5, 3]; "out_of_bounds_keep")]
+#[test_case(vec![0, 1], vec![2, 4], vec![5, 999, 3]; "out_of_bounds_sell")]
+#[test_case(vec![0, 6, 1, 6], vec![2, 4], vec![5, 3]; "duplicate_buy")]
+#[test_case(vec![0, 1], vec![2, 2, 4], vec![5, 3]; "duplicate_keep")]
+#[test_case(vec![0, 1], vec![2, 4], vec![5, 3, 6, 6, 6]; "duplicate_sell")]
+fn combo_buy_fails_on_invalid_partition(
+    indices_buy: Vec<u16>,
+    indices_keep: Vec<u16>,
+    indices_sell: Vec<u16>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        println!("{:?}", _1_7);
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(7),
+            _10,
+            vec![_1_7, _1_7, _1_7, _1_7, _1_7, _1_7, _1_7 + 4],
+            CENT,
+        );
+
+        let buy = indices_buy.into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+        let keep = indices_keep.into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+        let sell = indices_sell.into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+
+        // Buying 1 at price of .5 will return less than 2 outcomes due to slippage.
+        assert_noop!(
+            NeoSwaps::combo_sell(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                7,
+                buy,
+                keep,
+                sell,
+                _2,
+                _1,
+                0
+            ),
+            Error::<Runtime>::InvalidPartition,
         );
     });
 }
