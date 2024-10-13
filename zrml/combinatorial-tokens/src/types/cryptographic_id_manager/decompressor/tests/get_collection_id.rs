@@ -15,6 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use super::*;
+use rstest::rstest;
+
 // Gnosis test cases using mocked keccak256 results, found here: https://docs.gnosis.io/conditionaltokens/docs/devguide05
 #[rstest]
 #[case(

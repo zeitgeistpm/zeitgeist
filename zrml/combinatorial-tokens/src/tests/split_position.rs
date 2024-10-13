@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use super::*;
+
 #[test]
 fn split_position_works_vertical_no_parent() {
     ExtBuilder::build().execute_with(|| {

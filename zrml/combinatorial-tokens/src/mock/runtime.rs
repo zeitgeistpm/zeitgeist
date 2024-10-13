@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use crate as zrml_combinatorial_tokens;
+use crate::types::CryptographicIdManager;
 use frame_support::{construct_runtime, traits::Everything, Blake2_256};
 use frame_system::mocking::MockBlock;
 use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};

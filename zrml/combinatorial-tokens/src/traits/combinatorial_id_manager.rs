@@ -22,6 +22,7 @@
 // <https://github.com/gnosis/conditional-tokens-contracts>,
 // and has been relicensed under GPL-3.0-or-later in this repository.
 
+use alloc::vec::Vec;
 
 pub trait CombinatorialIdManager {
     type Asset;

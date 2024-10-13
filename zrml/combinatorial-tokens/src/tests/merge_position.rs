@@ -15,6 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use super::*;
+use test_case::test_case;
+
 #[test_case(
     Asset::Ztg,
     CombinatorialToken([207, 168, 160, 93, 238, 221, 197, 1, 171, 102, 28, 24, 18, 107, 205, 231, 227, 98, 220, 105, 211, 29, 181, 30, 53, 7, 200, 154, 134, 246, 38, 139]),
