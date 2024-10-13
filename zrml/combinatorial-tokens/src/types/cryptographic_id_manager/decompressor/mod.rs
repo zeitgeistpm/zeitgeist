@@ -22,6 +22,10 @@
 // <https://github.com/gnosis/conditional-tokens-contracts>,
 // and has been relicensed under GPL-3.0-or-later in this repository.
 
+//! Highest/lowest bit always refers to the big endian representation of each bit sequence.
+
+mod tests;
+
 use ark_bn254::{g1::G1Affine, Fq};
 use ark_ff::{BigInteger, PrimeField};
 use core::ops::Neg;

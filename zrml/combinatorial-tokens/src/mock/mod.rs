@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#![cfg(feature = "mock")]
+
 pub(crate) mod consts;
 pub mod ext_builder;
 pub(crate) mod runtime;

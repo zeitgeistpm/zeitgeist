@@ -15,8 +15,4 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-pub(crate) mod cryptographic_id_manager;
-pub(crate) mod hash;
-
-pub use cryptographic_id_manager::CryptographicIdManager;
-pub(crate) use hash::Hash256;
+pub type Hash256 = [u8; 32];

@@ -22,6 +22,9 @@
 // <https://github.com/gnosis/conditional-tokens-contracts>,
 // and has been relicensed under GPL-3.0-or-later in this repository.
 
+mod decompressor;
+mod hash_tuple;
+
 use crate::traits::CombinatorialIdManager;
 use alloc::vec::Vec;
 use core::marker::PhantomData;

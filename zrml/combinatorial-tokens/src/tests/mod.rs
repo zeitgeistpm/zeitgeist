@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#![cfg(all(feature = "mock", test))]
+
 mod integration;
 mod merge_position;
 mod split_position;

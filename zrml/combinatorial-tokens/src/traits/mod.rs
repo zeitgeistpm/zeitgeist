@@ -15,4 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+mod combinatorial_id_manager;
+
 pub use combinatorial_id_manager::CombinatorialIdManager;

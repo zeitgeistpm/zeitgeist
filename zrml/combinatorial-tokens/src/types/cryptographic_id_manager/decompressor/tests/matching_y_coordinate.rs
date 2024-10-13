@@ -15,6 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use super::*;
+use test_case::test_case;
+
 // Empty string in the `expected` argument signals `None`.
 #[test_case("0x00", "")]
 #[test_case("0x01", "0x02")]

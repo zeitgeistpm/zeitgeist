@@ -15,6 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use super::*;
+use test_case::test_case;
+
 #[test_case("0x0", "0x0")]
 #[test_case("0x1", "0x1")]
 #[test_case(

@@ -15,6 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::types::Hash256;
+use alloc::{vec, vec::Vec};
+
 use frame_support::{Blake2_256, StorageHasher};
 use parity_scale_codec::Encode;
 use zeitgeist_primitives::types::Asset;
