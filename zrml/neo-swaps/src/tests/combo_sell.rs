@@ -290,7 +290,7 @@ fn combo_sell_fails_on_amount_out_below_min() {
 #[test_case(vec![0, 6, 1, 6], vec![2, 4], vec![5, 3]; "duplicate_buy")]
 #[test_case(vec![0, 1], vec![2, 2, 4], vec![5, 3]; "duplicate_keep")]
 #[test_case(vec![0, 1], vec![2, 4], vec![5, 3, 6, 6, 6]; "duplicate_sell")]
-fn combo_buy_fails_on_invalid_partition(
+fn combo_sell_fails_on_invalid_partition(
     indices_buy: Vec<u16>,
     indices_keep: Vec<u16>,
     indices_sell: Vec<u16>,
@@ -324,6 +324,129 @@ fn combo_buy_fails_on_invalid_partition(
                 0
             ),
             Error::<Runtime>::InvalidPartition,
+        );
+    });
+}
+
+#[test]
+fn combo_sell_fails_on_spot_price_slipping_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(5),
+            _10,
+            vec![_1_5, _1_5, _1_5, _1_5, _1_5],
+            CENT,
+        );
+        let amount_buy = _100;
+
+        for i in 0..4 {
+            assert_ok!(AssetManager::deposit(
+                Asset::CategoricalOutcome(market_id, i),
+                &BOB,
+                amount_buy
+            ));
+        }
+
+        let buy = [0, 1, 2, 3].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+        let sell = [4].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+
+        assert_noop!(
+            NeoSwaps::combo_sell(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                5,
+                buy,
+                vec![],
+                sell,
+                amount_buy,
+                0,
+                0
+            ),
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow),
+        );
+    });
+}
+
+#[test]
+fn combo_sell_fails_on_spot_price_slipping_too_high() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(5),
+            _10,
+            vec![_1_5, _1_5, _1_5, _1_5, _1_5],
+            CENT,
+        );
+        let amount_buy = _100;
+
+        for i in 0..4 {
+            assert_ok!(AssetManager::deposit(
+                Asset::CategoricalOutcome(market_id, i),
+                &BOB,
+                amount_buy
+            ));
+        }
+
+        let buy = [0].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+        let sell = [1, 2, 3, 4].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+
+        assert_noop!(
+            NeoSwaps::combo_sell(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                5,
+                buy,
+                vec![],
+                sell,
+                amount_buy,
+                0,
+                0
+            ),
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow),
+        );
+    });
+}
+
+#[test]
+fn combo_sell_fails_on_large_amount() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(5),
+            _10,
+            vec![_1_5, _1_5, _1_5, _1_5, _1_5],
+            CENT,
+        );
+        let amount_buy = 100 * _100;
+
+        for i in 0..4 {
+            assert_ok!(AssetManager::deposit(
+                Asset::CategoricalOutcome(market_id, i),
+                &BOB,
+                amount_buy
+            ));
+        }
+
+        let buy = [0].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+        let sell = [1, 2, 3, 4].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+
+        assert_noop!(
+            NeoSwaps::combo_sell(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                5,
+                buy,
+                vec![],
+                sell,
+                amount_buy,
+                0,
+                0
+            ),
+            Error::<Runtime>::MathError,
         );
     });
 }

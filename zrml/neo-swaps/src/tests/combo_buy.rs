@@ -299,3 +299,78 @@ fn combo_buy_fails_on_invalid_partition(indices_buy: Vec<u16>, indices_sell: Vec
         );
     });
 }
+
+#[test]
+fn combo_buy_fails_on_spot_price_slipping_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(5),
+            _10,
+            vec![_1_5, _1_5, _1_5, _1_5, _1_5],
+            CENT,
+        );
+        let amount_in = _100;
+
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
+
+        let buy = [0, 1, 2, 3].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+        let sell = [4].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+
+        assert_noop!(
+            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), market_id, 5, buy, sell, amount_in, 0),
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow),
+        );
+    });
+}
+
+#[test]
+fn combo_buy_fails_on_spot_price_slipping_too_high() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(5),
+            _10,
+            vec![_1_5, _1_5, _1_5, _1_5, _1_5],
+            CENT,
+        );
+        let amount_in = _100;
+
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
+
+        let buy = [0].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+        let sell = [1, 2, 3, 4].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+
+        assert_noop!(
+            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), market_id, 5, buy, sell, amount_in, 0),
+            Error::<Runtime>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooHigh),
+        );
+    });
+}
+
+#[test]
+fn combo_buy_fails_on_large_buy() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(5),
+            _10,
+            vec![_1_5, _1_5, _1_5, _1_5, _1_5],
+            CENT,
+        );
+        let amount_in = 100 * _100;
+
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
+
+        let buy = [0].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+        let sell = [1, 2].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+
+        assert_noop!(
+            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), market_id, 5, buy, sell, amount_in, 0),
+            Error::<Runtime>::MathError,
+        );
+    });
+}
