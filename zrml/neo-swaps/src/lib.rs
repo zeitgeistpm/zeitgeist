@@ -1279,10 +1279,12 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> Result<FeeDistribution<T>, DispatchError> {
             let swap_fees = pool.swap_fee.bmul(amount)?;
+            println!("swap_fees: {:?}", swap_fees);
             T::MultiCurrency::transfer(pool.collateral, account, &pool.account_id, swap_fees)?;
             pool.liquidity_shares_manager.deposit_fees(swap_fees)?; // Should only error unexpectedly!
             let external_fees =
                 T::ExternalFees::distribute(market_id, pool.collateral, account, amount);
+            println!("external_fees: {:?}", external_fees);
             let total_fees = external_fees.saturating_add(swap_fees);
             let remaining = amount.checked_sub(&total_fees).ok_or(Error::<T>::Unexpected)?;
             Ok(FeeDistribution { remaining, swap_fees, external_fees })

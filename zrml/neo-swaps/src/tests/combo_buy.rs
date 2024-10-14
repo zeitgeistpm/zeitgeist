@@ -50,7 +50,6 @@ fn combo_buy_works() {
         let buy = vec![pool.assets()[0]];
         let sell = pool.assets_complement(&buy);
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
-        println!("{}", AssetManager::free_balance(BASE_ASSET, &BOB));
         // Deposit some stuff in the pool account to check that the pools `reserves` fields tracks
         // the reserve correctly.
         assert_ok!(AssetManager::deposit(sell[0], &pool.account_id, _100));
@@ -99,6 +98,69 @@ fn combo_buy_works() {
                 external_fee_amount: expected_external_fee_amount,
             }
             .into(),
+        );
+    });
+}
+
+#[test_case(
+    333 * _1,
+    vec![10 * CENT, 30 * CENT, 25 * CENT, 13 * CENT, 22 * CENT],
+    vec![0, 2],
+    vec![1, 4],
+    102_040_816_327,
+    236_865_613_847,
+    vec![3193134386152, 1841186221785, 1867994157274, 2950568636818, 2289732472863],
+    vec![1_099_260_911, 2_799_569_315, 2_748_152_277, 1_300_000_000, 2_053_017_497],
+    1_020_408_163
+)]
+fn combo_buy_works_multi_market(
+    liquidity: u128,
+    spot_prices: Vec<u128>,
+    buy_indices: Vec<u16>,
+    sell_indices: Vec<u16>,
+    amount_in: u128,
+    expected_amount_out: u128,
+    expected_reserves: Vec<u128>,
+    expected_spot_prices: Vec<u128>,
+    expected_fees: u128,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        let asset_count = spot_prices.len() as u16;
+        let swap_fee = CENT;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            liquidity,
+            spot_prices.clone(),
+            swap_fee,
+        );
+        let sentinel = 123_456_789;
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in + sentinel));
+
+        let pool = Pools::<Runtime>::get(market_id).unwrap();
+        let expected_liquidity = pool.liquidity_parameter;
+
+        let buy = buy_indices.iter().map(|&i| Asset::CategoricalOutcome(market_id, i)).collect();
+        let sell = sell_indices.iter().map(|&i| Asset::CategoricalOutcome(market_id, i)).collect();
+        assert_ok!(NeoSwaps::combo_buy(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            asset_count,
+            buy,
+            sell,
+            amount_in,
+            0,
+        ));
+
+        assert_balance!(BOB, BASE_ASSET, sentinel);
+        assert_pool_state!(
+            market_id,
+            expected_reserves,
+            expected_spot_prices,
+            expected_liquidity,
+            create_b_tree_map!({ ALICE => liquidity }),
+            expected_fees,
         );
     });
 }
