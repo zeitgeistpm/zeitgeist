@@ -224,14 +224,8 @@ mod detail {
             return None;
         }
 
-        println!("buy: {:?}", buy);
-        println!("sell: {:?}", sell);
-        println!("amount_in: {:?}", amount_in);
-        println!("liquidity: {:?}", liquidity);
         let exp_sum_buy = exp_sum(buy, liquidity)?;
         let exp_sum_sell = exp_sum(sell, liquidity)?;
-        println!("exp_sum_buy: {:?}", exp_sum_buy);
-        println!("exp_sum_sell: {:?}", exp_sum_sell);
         let amount_in_div_liquidity = amount_in.checked_div(liquidity)?;
         let exp_of_minus_amount_in: FixedType = protected_exp(amount_in_div_liquidity, true)?;
         let exp_of_minus_amount_in_times_exp_sum_sell =

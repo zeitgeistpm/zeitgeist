@@ -309,6 +309,10 @@ mod pallet {
         /// The buy/sell/keep partition specified is empty, or contains overlaps or assets that don't
         /// belong to the market.
         InvalidPartition,
+
+        /// The `amount_keep` parameter must be zero if `keep` is empty and less than `amount_buy`
+        /// if `keep` is not empty.
+        InvalidAmountKeep,
     }
 
     #[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
@@ -1134,6 +1138,13 @@ mod pallet {
             ensure!(amount_buy != Zero::zero(), Error::<T>::ZeroAmount);
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
+
+            if keep.is_empty() {
+                ensure!(amount_keep.is_zero(), Error::<T>::InvalidAmountKeep);
+            } else {
+                ensure!(amount_keep < amount_buy, Error::<T>::InvalidAmountKeep);
+            }
+
             Self::try_mutate_pool(&market_id, |pool| {
                 // Ensure that `buy` and `sell` partition are disjoint and only contain assets from
                 // the market.
@@ -1185,7 +1196,7 @@ mod pallet {
                 }
 
                 for &asset in keep.iter() {
-                    T::MultiCurrency::transfer(asset, &pool.account_id, &who, amount_keep)?;
+                    T::MultiCurrency::transfer(asset, &who, &pool.account_id, amount_keep)?;
                     pool.increase_reserve(&asset, &amount_keep)?;
                 }
 
@@ -1279,12 +1290,10 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> Result<FeeDistribution<T>, DispatchError> {
             let swap_fees = pool.swap_fee.bmul(amount)?;
-            println!("swap_fees: {:?}", swap_fees);
             T::MultiCurrency::transfer(pool.collateral, account, &pool.account_id, swap_fees)?;
             pool.liquidity_shares_manager.deposit_fees(swap_fees)?; // Should only error unexpectedly!
             let external_fees =
                 T::ExternalFees::distribute(market_id, pool.collateral, account, amount);
-            println!("external_fees: {:?}", external_fees);
             let total_fees = external_fees.saturating_add(swap_fees);
             let remaining = amount.checked_sub(&total_fees).ok_or(Error::<T>::Unexpected)?;
             Ok(FeeDistribution { remaining, swap_fees, external_fees })

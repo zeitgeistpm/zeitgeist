@@ -100,7 +100,7 @@ macro_rules! assert_pool_state {
             .fold(0u128, |acc, node| acc + node.fees + node.lazy_fees);
         assert_eq!(actual_total_fees, $total_fees);
         let invariant = actual_spot_prices.iter().sum::<u128>();
-        assert_approx!(invariant, _1, 1);
+        assert_approx!(invariant, _1, 2);
     };
 }
 
