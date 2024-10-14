@@ -577,7 +577,6 @@ fn combo_sell_fails_on_invalid_amount_keep(keep_indices: Vec<u16>, amount_in_kee
     ExtBuilder::default().build().execute_with(|| {
         let spot_prices = vec![25 * CENT; 4];
         let asset_count = spot_prices.len() as u16;
-        let swap_fee = CENT;
         let market_id = create_market_and_deploy_pool(
             ALICE,
             BASE_ASSET,
