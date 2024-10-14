@@ -100,6 +100,127 @@ fn combo_sell_works() {
     });
 }
 
+#[test_case(
+    1000 * _1,
+    vec![1_250_000_000; 8],
+    vec![0, 2, 5],
+    vec![6, 7],
+    vec![1, 3, 4],
+    _500,
+    _300,
+    2_091_832_646_248,
+    vec![
+        12_865_476_891_584,
+        7_865_476_891_584,
+        12_865_476_891_584,
+        7_865_476_891_584,
+        7_865_476_891_584,
+        12_865_476_891_584,
+        10_865_476_891_584,
+        10_865_476_891_584,
+    ],
+    vec![
+        688_861_105,
+        1_948_393_435,
+        688_861_105,
+        1_948_393_435,
+        1_948_393_435,
+        688_861_105,
+        1_044_118_189,
+        1_044_118_189,
+    ],
+    21_345_231_084
+)]
+#[test_case(
+    _321,
+    vec![20 * CENT, 30 * CENT, 50 * CENT],
+    vec![0, 2],
+    vec![],
+    vec![1],
+    _500,
+    0,
+    2_012_922_832_062,
+    vec![
+        6_155_997_110_140,
+        347_302_977_256,
+        4_328_468_861_556,
+    ],
+    vec![
+        456_610_616,
+        8_401_862_845,
+        1_141_526_539,
+    ],
+    20_540_028_899
+)]
+fn combo_sell_works_multi_market(
+    liquidity: u128,
+    spot_prices: Vec<u128>,
+    buy_indices: Vec<u16>,
+    keep_indices: Vec<u16>,
+    sell_indices: Vec<u16>,
+    amount_in_buy: u128,
+    amount_in_keep: u128,
+    expected_amount_out: u128,
+    expected_reserves: Vec<u128>,
+    expected_spot_prices: Vec<u128>,
+    expected_fees: u128,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        let asset_count = spot_prices.len() as u16;
+        let swap_fee = CENT;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            liquidity,
+            spot_prices.clone(),
+            swap_fee,
+        );
+
+        let buy: Vec<_> =
+            buy_indices.iter().map(|&i| Asset::CategoricalOutcome(market_id, i)).collect();
+        let keep: Vec<_> =
+            keep_indices.iter().map(|&i| Asset::CategoricalOutcome(market_id, i)).collect();
+        let sell: Vec<_> =
+            sell_indices.iter().map(|&i| Asset::CategoricalOutcome(market_id, i)).collect();
+
+        for &asset in buy.iter() {
+            assert_ok!(AssetManager::deposit(asset, &BOB, amount_in_buy));
+        }
+        for &asset in keep.iter() {
+            assert_ok!(AssetManager::deposit(asset, &BOB, amount_in_keep));
+        }
+
+        let pool = Pools::<Runtime>::get(market_id).unwrap();
+        let expected_liquidity = pool.liquidity_parameter;
+
+        assert_ok!(NeoSwaps::combo_sell(
+            RuntimeOrigin::signed(BOB),
+            market_id,
+            asset_count,
+            buy.clone(),
+            keep.clone(),
+            sell.clone(),
+            amount_in_buy,
+            amount_in_keep,
+            0,
+        ));
+
+        assert_balance!(BOB, BASE_ASSET, expected_amount_out);
+        for asset in pool.assets() {
+            assert_balance!(BOB, asset, 0);
+        }
+        assert_pool_state!(
+            market_id,
+            expected_reserves,
+            expected_spot_prices,
+            expected_liquidity,
+            create_b_tree_map!({ ALICE => liquidity }),
+            expected_fees,
+        );
+    });
+}
+
 #[test]
 fn combo_sell_fails_on_incorrect_asset_count() {
     ExtBuilder::default().build().execute_with(|| {
@@ -296,7 +417,6 @@ fn combo_sell_fails_on_invalid_partition(
     indices_sell: Vec<u16>,
 ) {
     ExtBuilder::default().build().execute_with(|| {
-        println!("{:?}", _1_7);
         let market_id = create_market_and_deploy_pool(
             ALICE,
             BASE_ASSET,
@@ -320,7 +440,7 @@ fn combo_sell_fails_on_invalid_partition(
                 keep,
                 sell,
                 _2,
-                _1,
+                0, // Keep this zero to avoid a different error due to invalid `amount_keep` param.
                 0
             ),
             Error::<Runtime>::InvalidPartition,
@@ -447,6 +567,43 @@ fn combo_sell_fails_on_large_amount() {
                 0
             ),
             Error::<Runtime>::MathError,
+        );
+    });
+}
+
+#[test_case(vec![], 1)]
+#[test_case(vec![2], _2)]
+fn combo_sell_fails_on_invalid_amount_keep(keep_indices: Vec<u16>, amount_in_keep: u128) {
+    ExtBuilder::default().build().execute_with(|| {
+        let spot_prices = vec![25 * CENT; 4];
+        let asset_count = spot_prices.len() as u16;
+        let market_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(asset_count),
+            _10,
+            spot_prices,
+            CENT,
+        );
+
+        let buy = vec![Asset::CategoricalOutcome(market_id, 0)];
+        let sell = vec![Asset::CategoricalOutcome(market_id, 1)];
+        let keep: Vec<_> =
+            keep_indices.iter().map(|&i| Asset::CategoricalOutcome(market_id, i)).collect();
+
+        assert_noop!(
+            NeoSwaps::combo_sell(
+                RuntimeOrigin::signed(BOB),
+                market_id,
+                asset_count,
+                buy.clone(),
+                keep.clone(),
+                sell.clone(),
+                _1,
+                amount_in_keep,
+                0,
+            ),
+            Error::<Runtime>::InvalidAmountKeep
         );
     });
 }
