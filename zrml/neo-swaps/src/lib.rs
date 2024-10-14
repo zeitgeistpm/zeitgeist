@@ -94,6 +94,10 @@ mod pallet {
     pub(crate) const MAX_SPOT_PRICE: u128 = BASE - CENT / 2;
     /// The minimum allowed spot price when creating a pool.
     pub(crate) const MIN_SPOT_PRICE: u128 = CENT / 2;
+    /// The maximum value the spot price is allowed to take in a combinatorial market.
+    pub(crate) const COMBO_MAX_SPOT_PRICE: u128 = BASE - CENT / 10;
+    /// The minimum value the spot price is allowed to take in a combinatorial market.
+    pub(crate) const COMBO_MIN_SPOT_PRICE: u128 = CENT / 10;
     /// The minimum vallowed value of a pool's liquidity parameter.
     pub(crate) const MIN_LIQUIDITY: u128 = BASE;
     /// The minimum percentage each new LP position must increase the liquidity by, represented as
@@ -311,12 +315,14 @@ mod pallet {
     pub enum NumericalLimitsError {
         /// Selling is not allowed at prices this low.
         SpotPriceTooLow,
-        /// Sells which move the price below this threshold are not allowed.
+        /// Interactions which move the price below a particular threshold are not allowed.
         SpotPriceSlippedTooLow,
         /// The maximum buy or sell amount was exceeded.
         MaxAmountExceeded,
         /// The minimum buy or sell amount was exceeded.
         MinAmountNotMet,
+        /// Interactions which move the price above a particular threshold are not allowed.
+        SpotPriceSlippedTooHigh,
     }
 
     #[pallet::call]
@@ -1041,10 +1047,10 @@ mod pallet {
                 ensure!(!sell.is_empty(), Error::<T>::InvalidPartition);
                 for asset in buy.iter() {
                     ensure!(!sell.contains(asset), Error::<T>::InvalidPartition);
-                    ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
+                    ensure!(pool.assets().contains(asset), Error::<T>::InvalidPartition);
                 }
                 for asset in sell.iter() {
-                    ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
+                    ensure!(pool.assets().contains(asset), Error::<T>::InvalidPartition);
                 }
                 let buy_set = buy.iter().collect::<BTreeSet<_>>();
                 let sell_set = sell.iter().collect::<BTreeSet<_>>();
@@ -1082,6 +1088,19 @@ mod pallet {
                         amount_in_minus_fees,
                     )?;
                     pool.increase_reserve(&asset, &amount_in_minus_fees)?;
+                }
+
+                // Ensure that numerical limits of all prices are respected.
+                for &asset in pool.assets().iter() {
+                    let spot_price = pool.calculate_spot_price(asset)?;
+                    ensure!(
+                        spot_price >= COMBO_MIN_SPOT_PRICE.saturated_into(),
+                        Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow)
+                    );
+                    ensure!(
+                        spot_price <= COMBO_MAX_SPOT_PRICE.saturated_into(),
+                        Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooHigh)
+                    );
                 }
 
                 Self::deposit_event(Event::<T>::ComboBuyExecuted {
@@ -1123,14 +1142,14 @@ mod pallet {
                 for asset in buy.iter() {
                     ensure!(!keep.contains(asset), Error::<T>::InvalidPartition);
                     ensure!(!sell.contains(asset), Error::<T>::InvalidPartition);
-                    ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
+                    ensure!(pool.assets().contains(asset), Error::<T>::InvalidPartition);
                 }
                 for asset in sell.iter() {
                     ensure!(!keep.contains(asset), Error::<T>::InvalidPartition);
-                    ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
+                    ensure!(pool.assets().contains(asset), Error::<T>::InvalidPartition);
                 }
                 for asset in keep.iter() {
-                    ensure!(market.outcome_assets().contains(asset), Error::<T>::InvalidPartition);
+                    ensure!(pool.assets().contains(asset), Error::<T>::InvalidPartition);
                 }
                 let buy_set = buy.iter().collect::<BTreeSet<_>>();
                 let keep_set = keep.iter().collect::<BTreeSet<_>>();
@@ -1192,6 +1211,32 @@ mod pallet {
                     &who,
                     amount_out_minus_fees,
                 )?;
+
+                // Ensure that numerical limits of all prices are respected.
+                for &asset in pool.assets().iter() {
+                    let spot_price = pool.calculate_spot_price(asset)?;
+                    ensure!(
+                        spot_price >= COMBO_MIN_SPOT_PRICE.saturated_into(),
+                        Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow)
+                    );
+                    ensure!(
+                        spot_price <= COMBO_MAX_SPOT_PRICE.saturated_into(),
+                        Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooHigh)
+                    );
+                }
+
+                // Ensure that numerical limits of all prices are respected.
+                for &asset in pool.assets().iter() {
+                    let spot_price = pool.calculate_spot_price(asset)?;
+                    ensure!(
+                        spot_price >= COMBO_MIN_SPOT_PRICE.saturated_into(),
+                        Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow)
+                    );
+                    ensure!(
+                        spot_price <= COMBO_MAX_SPOT_PRICE.saturated_into(),
+                        Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooHigh)
+                    );
+                }
 
                 Self::deposit_event(Event::<T>::ComboSellExecuted {
                     who: who.clone(),
