@@ -894,6 +894,7 @@ dependencies = [
  "zrml-authorized",
  "zrml-combinatorial-tokens",
  "zrml-court",
+ "zrml-futarchy",
  "zrml-global-disputes",
  "zrml-hybrid-router",
  "zrml-market-commons",
@@ -15117,6 +15118,7 @@ dependencies = [
  "zrml-authorized",
  "zrml-combinatorial-tokens",
  "zrml-court",
+ "zrml-futarchy",
  "zrml-global-disputes",
  "zrml-hybrid-router",
  "zrml-market-commons",
@@ -15238,6 +15240,18 @@ dependencies = [
  "zeitgeist-macros",
  "zeitgeist-primitives",
  "zrml-market-commons",
+]
+
+[[package]]
+name = "zrml-futarchy"
+version = "0.5.5"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
 ]
 
 [[package]]

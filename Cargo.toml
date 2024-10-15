@@ -16,6 +16,7 @@ default-members = [
     "zrml/authorized",
     "zrml/combinatorial-tokens",
     "zrml/court",
+    "zrml/futarchy",
     "zrml/hybrid-router",
     "zrml/global-disputes",
     "zrml/market-commons",
@@ -39,6 +40,7 @@ members = [
     "zrml/authorized",
     "zrml/combinatorial-tokens",
     "zrml/court",
+    "zrml/futarchy",
     "zrml/hybrid-router",
     "zrml/global-disputes",
     "zrml/market-commons",
@@ -247,6 +249,7 @@ zeitgeist-macros = { path = "macros", default-features = false }
 zeitgeist-primitives = { path = "primitives", default-features = false }
 zrml-authorized = { path = "zrml/authorized", default-features = false }
 zrml-combinatorial-tokens = { path = "zrml/combinatorial-tokens", default-features = false }
+zrml-futarchy = { path = "zrml/futarchy", default-features = false }
 zrml-court = { path = "zrml/court", default-features = false }
 zrml-global-disputes = { path = "zrml/global-disputes", default-features = false }
 zrml-hybrid-router = { path = "zrml/hybrid-router", default-features = false }
