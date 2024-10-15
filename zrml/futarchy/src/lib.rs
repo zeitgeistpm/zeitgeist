@@ -20,7 +20,10 @@
 
 extern crate alloc;
 
-// TODO Modules
+pub mod mock;
+mod tests;
+mod traits;
+pub mod types;
 
 pub use pallet::*;
 
