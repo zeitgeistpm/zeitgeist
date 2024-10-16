@@ -30,18 +30,41 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use core::marker::PhantomData;
-    use frame_support::pallet_prelude::{IsType, StorageVersion};
+    use frame_support::{
+        pallet_prelude::{EnsureOrigin, IsType, StorageVersion},
+        require_transactional,
+        traits::{QueryPreimage, StorePreimage},
+        transactional,
+    };
+    use frame_system::pallet_prelude::OriginFor;
+    use orml_traits::MultiCurrency;
+    use sp_runtime::DispatchResult;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        type MultiCurrency: MultiCurrency<Self::AccountId>;
+
+        // Preimage interface for acquiring call data.
+        type Preimages: QueryPreimage + StorePreimage;
+
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+        type SubmitOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
+
+        // // TODO
+        // // The origin from which proposals may be whitelisted.
+        // type WhitelistOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
+        // TODO Scheduler, EnactmentPeriod
     }
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
-    // TODO Types
+    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub(crate) type BalanceOf<T> =
+        <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
@@ -57,5 +80,21 @@ mod pallet {
     pub enum Error<T> {}
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {}
+    impl<T: Config> Pallet<T> {
+        ///
+        #[pallet::call_index(0)]
+        #[transactional]
+        #[pallet::weight({0})]
+        pub fn submit(origin: OriginFor<T>) -> DispatchResult {
+            let who = T::SubmitOrigin::ensure_origin(origin)?;
+            Self::do_submit(who)
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
+        #[require_transactional]
+        fn do_submit(who: T::AccountId) -> DispatchResult {
+            Ok(())
+        }
+    }
 }
