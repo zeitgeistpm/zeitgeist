@@ -360,6 +360,7 @@ macro_rules! create_runtime {
                 Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
                 HybridRouter: zrml_hybrid_router::{Call, Event<T>, Pallet, Storage} = 64,
                 CombinatorialTokens: zrml_combinatorial_tokens::{Call, Event<T>, Pallet, Storage} = 65,
+                Futarchy: zrml_futarchy::{Call, Event<T>, Pallet, Storage} = 66,
 
                 $($additional_pallets)*
             }
@@ -1203,6 +1204,13 @@ macro_rules! impl_config_traits {
             type Slash = Treasury;
             type TreasuryPalletId = TreasuryPalletId;
             type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
+        }
+
+        impl zrml_futarchy::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            type MultiCurrency = AssetManager;
+            type Preimages = Preimage;
+            type SubmitOrigin = EnsureRoot<AccountId>;
         }
 
         impl zrml_market_commons::Config for Runtime {
