@@ -16,24 +16,28 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate as zrml_futarchy;
-use frame_support::{construct_runtime, traits::Everything, Blake2_256};
-use frame_system::mocking::MockBlock;
+use frame_support::{construct_runtime, parameter_types, traits::Everything};
+use frame_system::{mocking::MockBlock, EnsureRoot};
 use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, CombinatorialTokensPalletId, ExistentialDeposit, ExistentialDeposits,
-        GetNativeCurrencyId, MaxLocks, MaxReserves, MinimumPeriod,
+        BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
+        MaxReserves, MinimumPeriod,
     },
-    types::{
-        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CurrencyId, Hash, MarketId, Moment,
-    },
+    types::{AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CurrencyId, Hash, Moment},
 };
+
+parameter_types! {
+    pub const PreimageBaseDeposit: Balance = 0;
+    pub const PreimageByteDeposit: Balance = 0;
+}
 
 construct_runtime! {
     pub enum Runtime {
         Futarchy: zrml_futarchy,
         Balances: pallet_balances,
         Currencies: orml_currencies,
+        Preimage: pallet_preimage,
         System: frame_system,
         Timestamp: pallet_timestamp,
         Tokens: orml_tokens,
@@ -42,6 +46,9 @@ construct_runtime! {
 
 impl zrml_futarchy::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
+    type MultiCurrency = Currencies;
+    type Preimages = Preimage;
+    type SubmitOrigin = EnsureRoot<<Runtime as frame_system::Config>::AccountId>;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -67,10 +74,13 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = ();
 }
 
-impl zrml_market_commons::Config for Runtime {
-    type Balance = Balance;
-    type MarketId = MarketId;
-    type Timestamp = Timestamp;
+impl pallet_preimage::Config for Runtime {
+    type WeightInfo = ();
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type ManagerOrigin = EnsureRoot<AccountIdTest>;
+    type BaseDeposit = PreimageBaseDeposit;
+    type ByteDeposit = PreimageByteDeposit;
 }
 
 impl frame_system::Config for Runtime {

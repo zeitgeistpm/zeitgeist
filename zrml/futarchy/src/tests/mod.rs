@@ -16,5 +16,3 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(all(feature = "mock", test))]
-
-

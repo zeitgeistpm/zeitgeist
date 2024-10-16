@@ -1208,6 +1208,9 @@ macro_rules! impl_config_traits {
 
         impl zrml_futarchy::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
+            type MultiCurrency = AssetManager;
+            type Preimages = Preimage;
+            type SubmitOrigin = EnsureRoot<AccountId>;
         }
 
         impl zrml_market_commons::Config for Runtime {

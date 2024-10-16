@@ -49,7 +49,7 @@ mod pallet {
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-        type SubmitOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
+        type SubmitOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         // // TODO
         // // The origin from which proposals may be whitelisted.
@@ -81,19 +81,18 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        ///
         #[pallet::call_index(0)]
         #[transactional]
         #[pallet::weight({0})]
         pub fn submit(origin: OriginFor<T>) -> DispatchResult {
-            let who = T::SubmitOrigin::ensure_origin(origin)?;
-            Self::do_submit(who)
+            T::SubmitOrigin::ensure_origin(origin)?;
+            Self::do_submit()
         }
     }
 
     impl<T: Config> Pallet<T> {
         #[require_transactional]
-        fn do_submit(who: T::AccountId) -> DispatchResult {
+        fn do_submit() -> DispatchResult {
             Ok(())
         }
     }
