@@ -72,7 +72,7 @@ macro_rules! decl_common_types {
             parameter_types,
             storage::child,
             traits::{Currency, Get, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced},
-            BoundedVec, Twox64Concat,
+            Blake2_256, BoundedVec, Twox64Concat,
         };
         use frame_system::EnsureSigned;
         #[cfg(feature = "try-runtime")]
@@ -86,6 +86,7 @@ macro_rules! decl_common_types {
             generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
         };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
+        use zrml_combinatorial_tokens::types::CryptographicIdManager;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -358,6 +359,8 @@ macro_rules! create_runtime {
                 Orderbook: zrml_orderbook::{Call, Event<T>, Pallet, Storage} = 61,
                 Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
                 HybridRouter: zrml_hybrid_router::{Call, Event<T>, Pallet, Storage} = 64,
+                CombinatorialTokens: zrml_combinatorial_tokens::{Call, Event<T>, Pallet, Storage} = 65,
+                Futarchy: zrml_futarchy::{Call, Event<T>, Pallet, Storage} = 66,
 
                 $($additional_pallets)*
             }
@@ -1168,6 +1171,14 @@ macro_rules! impl_config_traits {
             type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
         }
 
+        impl zrml_combinatorial_tokens::Config for Runtime {
+            type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
+            type MarketCommons = MarketCommons;
+            type MultiCurrency = AssetManager;
+            type PalletId = CombinatorialTokensPalletId;
+            type RuntimeEvent = RuntimeEvent;
+        }
+
         impl zrml_court::Config for Runtime {
             type AppealBond = AppealBond;
             type BlocksPerYear = BlocksPerYear;
@@ -1193,6 +1204,16 @@ macro_rules! impl_config_traits {
             type Slash = Treasury;
             type TreasuryPalletId = TreasuryPalletId;
             type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
+        }
+
+        impl zrml_futarchy::Config for Runtime {
+            type MultiCurrency = Currencies;
+            type MinDuration = MinDuration;
+            type OracleQuery = MockOracleQuery;
+            type Preimages = Preimage;
+            type RuntimeEvent = RuntimeEvent;
+            type Scheduler = Scheduler;
+            type SubmitOrigin = EnsureRoot<AccountId>;
         }
 
         impl zrml_market_commons::Config for Runtime {
