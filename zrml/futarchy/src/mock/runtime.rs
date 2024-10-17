@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate as zrml_futarchy;
+use crate::mock::types::MockOracleQuery;
 use frame_support::{construct_runtime, parameter_types, traits::Everything};
 use frame_system::{mocking::MockBlock, EnsureRoot};
 use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};
@@ -45,9 +46,10 @@ construct_runtime! {
 }
 
 impl zrml_futarchy::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
     type MultiCurrency = Currencies;
+    type OracleQuery = MockOracleQuery;
     type Preimages = Preimage;
+    type RuntimeEvent = RuntimeEvent;
     type SubmitOrigin = EnsureRoot<<Runtime as frame_system::Config>::AccountId>;
 }
 

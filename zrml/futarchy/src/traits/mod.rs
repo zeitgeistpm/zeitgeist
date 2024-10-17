@@ -14,3 +14,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
+mod oracle_query;
+
+pub(crate) use oracle_query::OracleQuery;
