@@ -1,11 +1,11 @@
-use crate::{traits::OracleQuery, Config, Event, Pallet, ProposalOf};
+use crate::{traits::OracleQuery, Config, Event, Pallet, types::Proposal};
 use frame_support::{dispatch::RawOrigin, pallet_prelude::Weight, traits::schedule::DispatchTime};
 use frame_support::traits::schedule::v3::Anon;
 
 impl<T: Config> Pallet<T> {
     /// Evaluates `proposal` using the specified oracle and schedules the contained call if the
     /// oracle approves.
-    pub(crate) fn maybe_schedule_proposal(proposal: ProposalOf<T>) -> Weight {
+    pub(crate) fn maybe_schedule_proposal(proposal: Proposal<T>) -> Weight {
         let (evaluate_weight, approved) = proposal.query.evaluate();
 
         if approved {

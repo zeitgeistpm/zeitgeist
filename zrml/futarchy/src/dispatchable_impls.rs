@@ -1,4 +1,4 @@
-use crate::{Config, Error, Pallet, ProposalOf, Proposals};
+use crate::{Config, Error, Pallet, types::Proposal, Proposals};
 use frame_support::{ensure, require_transactional, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{DispatchResult, Saturating};
@@ -7,7 +7,7 @@ impl<T: Config> Pallet<T> {
     #[require_transactional]
     pub(crate) fn do_submit_proposal(
         duration: BlockNumberFor<T>,
-        proposal: ProposalOf<T>,
+        proposal: Proposal<T>,
     ) -> DispatchResult {
         ensure!(duration >= T::MinDuration::get(), Error::<T>::DurationTooShort);
 

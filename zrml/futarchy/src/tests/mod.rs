@@ -18,3 +18,31 @@
 #![cfg(all(feature = "mock", test))]
 
 mod submit_proposal;
+
+use crate::{
+    mock::{
+        ext_builder::ExtBuilder,
+        runtime::{Futarchy, Runtime, RuntimeCall, RuntimeOrigin},
+        types::MockOracleQuery,
+    },
+    types::Proposal,
+    Config,
+};
+use frame_support::{assert_noop, pallet_prelude::Weight};
+use sp_runtime::DispatchError;
+
+/// Utility struct for managing test accounts.
+pub(crate) struct Account {
+    id: <Runtime as frame_system::Config>::AccountId,
+}
+
+impl Account {
+    // TODO Not a pressing issue, but double booking accounts should be illegal.
+    pub(crate) fn new(id: <Runtime as frame_system::Config>::AccountId) -> Account {
+        Account { id }
+    }
+
+    pub(crate) fn signed(&self) -> RuntimeOrigin {
+        RuntimeOrigin::signed(self.id)
+    }
+}

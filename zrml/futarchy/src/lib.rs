@@ -21,8 +21,8 @@
 extern crate alloc;
 
 mod dispatchable_impls;
-mod pallet_impls;
 pub mod mock;
+mod pallet_impls;
 mod tests;
 mod traits;
 pub mod types;
@@ -34,13 +34,9 @@ mod pallet {
     use crate::{traits::OracleQuery, types::Proposal};
     use core::marker::PhantomData;
     use frame_support::{
-        dispatch::RawOrigin,
-        ensure,
         pallet_prelude::{EnsureOrigin, IsType, StorageMap, StorageVersion, ValueQuery, Weight},
-        require_transactional,
         traits::{
-            schedule::{v3::Anon as ScheduleAnon, DispatchTime},
-            Bounded, Hooks, QueryPreimage, StorePreimage,
+            schedule::v3::Anon as ScheduleAnon, Bounded, Hooks, QueryPreimage, StorePreimage,
         },
         transactional, Blake2_128Concat, BoundedVec,
     };
@@ -48,7 +44,7 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{ConstU32, Get},
-        DispatchResult, Saturating,
+        DispatchResult,
     };
 
     #[pallet::config]
@@ -82,7 +78,6 @@ mod pallet {
     pub(crate) type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
     pub(crate) type BoundedCallOf<T> = Bounded<CallOf<T>>;
     pub(crate) type OracleQueryOf<T> = <T as Config>::OracleQuery;
-    pub(crate) type ProposalOf<T> = Proposal<BlockNumberFor<T>, BoundedCallOf<T>, OracleQueryOf<T>>;
 
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
@@ -91,7 +86,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         BlockNumberFor<T>,
-        BoundedVec<ProposalOf<T>, CacheSize>,
+        BoundedVec<Proposal<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -102,7 +97,7 @@ mod pallet {
         T: Config,
     {
         /// A proposal has been submitted.
-        Submitted { duration: BlockNumberFor<T>, proposal: ProposalOf<T> },
+        Submitted { duration: BlockNumberFor<T>, proposal: Proposal<T> },
 
         /// A proposal has been rejected by the oracle.
         Rejected,
@@ -132,7 +127,7 @@ mod pallet {
         pub fn submit_proposal(
             origin: OriginFor<T>,
             duration: BlockNumberFor<T>,
-            proposal: ProposalOf<T>,
+            proposal: Proposal<T>,
         ) -> DispatchResult {
             T::SubmitOrigin::ensure_origin(origin)?;
 

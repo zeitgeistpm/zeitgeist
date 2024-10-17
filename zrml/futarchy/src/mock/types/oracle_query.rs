@@ -4,7 +4,7 @@ use scale_info::TypeInfo;
 use alloc::fmt::Debug;
 use frame_support::pallet_prelude::Weight;
 
-#[derive(Clone, Debug, Decode, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
+#[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
 pub struct MockOracleQuery {
     weight: Weight,
     value: bool,

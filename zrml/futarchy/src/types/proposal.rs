@@ -1,16 +1,20 @@
+use crate::{BoundedCallOf, Config, OracleQueryOf};
+use alloc::fmt::Debug;
+use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
+use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use alloc::fmt::Debug;
 
 // TODO Make config a generic, keeps things simple.
-#[derive(Clone, Debug, Decode, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
-pub struct Proposal<When, BoundedCall, OracleQuery>
+#[derive(
+    CloneNoBound, Decode, Encode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
+)]
+#[scale_info(skip_type_params(S, T))]
+pub struct Proposal<T>
 where
-    When: Clone + Debug + Decode + Encode + MaxEncodedLen + PartialEq + TypeInfo,
-    BoundedCall: Clone + Debug + Decode + Encode + MaxEncodedLen + PartialEq + TypeInfo,
-    OracleQuery: Clone + Debug + Decode + Encode + MaxEncodedLen + PartialEq + TypeInfo,
+    T: Config,
 {
-    pub when: When,
-    pub call: BoundedCall,
-    pub query: OracleQuery,
+    pub when: BlockNumberFor<T>,
+    pub call: BoundedCallOf<T>,
+    pub query: OracleQueryOf<T>,
 }

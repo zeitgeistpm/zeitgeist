@@ -17,24 +17,13 @@
 
 use crate as zrml_futarchy;
 use crate::mock::types::{MockOracleQuery, MockScheduler};
-use frame_support::{
-    construct_runtime,
-    pallet_prelude::Weight,
-    parameter_types,
-    traits::{EqualPrivilegeOnly, Everything},
-};
+use frame_support::{construct_runtime, parameter_types, traits::Everything};
 use frame_system::{mocking::MockBlock, EnsureRoot};
-use sp_runtime::{
-    traits::{BlakeTwo256, ConstU32, IdentityLookup},
-    Perbill,
-};
+use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};
 use zeitgeist_primitives::{
-    constants::{
-        mock::{
-            BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
-            MaxReserves, MinimumPeriod,
-        },
-        BLOCKS_PER_MINUTE,
+    constants::mock::{
+        BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
+        MaxReserves, MinimumPeriod,
     },
     types::{
         AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, CurrencyId, Hash, Moment,

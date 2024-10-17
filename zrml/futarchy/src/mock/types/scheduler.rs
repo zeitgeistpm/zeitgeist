@@ -3,7 +3,6 @@ use core::cell::RefCell;
 use frame_support::traits::schedule::{v3::Anon as ScheduleAnon, DispatchTime, Period, Priority};
 use frame_system::{
     pallet_prelude::{BlockNumberFor, OriginFor},
-    Call, Origin,
 };
 use sp_runtime::{traits::Bounded, DispatchError, DispatchResult};
 
