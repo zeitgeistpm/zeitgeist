@@ -32,8 +32,9 @@ mod pallet {
     use crate::{traits::OracleQuery, types::Proposal};
     use core::marker::PhantomData;
     use frame_support::{
+        dispatch::RawOrigin,
         ensure,
-        pallet_prelude::{EnsureOrigin, IsType, StorageMap, StorageVersion, ValueQuery},
+        pallet_prelude::{EnsureOrigin, IsType, StorageMap, StorageVersion, ValueQuery, Weight},
         require_transactional,
         traits::{
             schedule::{v3::Anon as ScheduleAnon, DispatchTime},
@@ -47,7 +48,6 @@ mod pallet {
         traits::{ConstU32, Get},
         DispatchResult, Saturating,
     };
-    use frame_support::pallet_prelude::Weight;use frame_support::dispatch::RawOrigin;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -58,7 +58,7 @@ mod pallet {
         type OracleQuery: OracleQuery;
 
         /// Preimage interface for acquiring call data.
-        type Preimages: QueryPreimage + StorePreimage;
+        type Preimages: QueryPreimage + StorePreimage; // TODO Why do we even need this?
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -116,6 +116,7 @@ mod pallet {
     pub enum Error<T> {
         /// The cache for this particular block is full. Try another block.
         CacheFull,
+
         /// The specified duration must be at least equal to `MinDuration`.
         DurationTooShort,
     }
@@ -132,6 +133,7 @@ mod pallet {
             proposal: ProposalOf<T>,
         ) -> DispatchResult {
             T::SubmitOrigin::ensure_origin(origin)?;
+
             Self::do_submit_proposal(duration, proposal)
         }
     }
@@ -147,9 +149,11 @@ mod pallet {
             let now = frame_system::Pallet::<T>::block_number();
             let to_be_scheduled_at = now.saturating_add(duration);
 
-            Ok(Proposals::<T>::try_mutate(to_be_scheduled_at, |proposals| {
+            let try_mutate_result = Proposals::<T>::try_mutate(to_be_scheduled_at, |proposals| {
                 proposals.try_push(proposal).map_err(|_| Error::<T>::CacheFull)
-            })?)
+            });
+
+            Ok(try_mutate_result?)
         }
 
         /// Evaluates `proposal` using the specified oracle and schedules the contained call if the

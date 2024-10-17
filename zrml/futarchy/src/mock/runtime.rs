@@ -16,19 +16,36 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate as zrml_futarchy;
-use crate::mock::types::MockOracleQuery;
-use frame_support::{construct_runtime, parameter_types, traits::Everything};
+use crate::mock::types::{MockOracleQuery, MockScheduler};
+use frame_support::{
+    construct_runtime,
+    pallet_prelude::Weight,
+    parameter_types,
+    traits::{EqualPrivilegeOnly, Everything},
+};
 use frame_system::{mocking::MockBlock, EnsureRoot};
-use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};
+use sp_runtime::{
+    traits::{BlakeTwo256, ConstU32, IdentityLookup},
+    Perbill,
+};
 use zeitgeist_primitives::{
-    constants::mock::{
-        BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
-        MaxReserves, MinimumPeriod,
+    constants::{
+        mock::{
+            BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
+            MaxReserves, MinimumPeriod,
+        },
+        BLOCKS_PER_MINUTE,
     },
-    types::{AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CurrencyId, Hash, Moment},
+    types::{
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, CurrencyId, Hash, Moment,
+    },
 };
 
 parameter_types! {
+    // zrml-futarchy
+    pub const MinDuration: BlockNumber = 10;
+
+    // pallet-preimage
     pub const PreimageBaseDeposit: Balance = 0;
     pub const PreimageByteDeposit: Balance = 0;
 }
@@ -47,9 +64,11 @@ construct_runtime! {
 
 impl zrml_futarchy::Config for Runtime {
     type MultiCurrency = Currencies;
+    type MinDuration = MinDuration;
     type OracleQuery = MockOracleQuery;
     type Preimages = Preimage;
     type RuntimeEvent = RuntimeEvent;
+    type Scheduler = MockScheduler;
     type SubmitOrigin = EnsureRoot<<Runtime as frame_system::Config>::AccountId>;
 }
 
@@ -80,7 +99,7 @@ impl pallet_preimage::Config for Runtime {
     type WeightInfo = ();
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
-    type ManagerOrigin = EnsureRoot<AccountIdTest>;
+    type ManagerOrigin = EnsureRoot<<Runtime as frame_system::Config>::AccountId>;
     type BaseDeposit = PreimageBaseDeposit;
     type ByteDeposit = PreimageByteDeposit;
 }

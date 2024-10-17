@@ -15255,6 +15255,7 @@ dependencies = [
  "orml-traits",
  "pallet-balances",
  "pallet-preimage",
+ "pallet-scheduler",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",

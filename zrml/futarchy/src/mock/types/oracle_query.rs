@@ -1,20 +1,17 @@
 use crate::traits::OracleQuery;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use alloc::fmt::Debug;
+use frame_support::pallet_prelude::Weight;
 
-#[derive(Decode, Encode, MaxEncodedLen, TypeInfo)]
+#[derive(Clone, Debug, Decode, Encode, MaxEncodedLen, PartialEq, TypeInfo)]
 pub struct MockOracleQuery {
+    weight: Weight,
     value: bool,
 }
 
-impl MockOracleQuery {
-    fn new(value: bool) -> Self {
-        Self { value }
-    }
-}
-
 impl OracleQuery for MockOracleQuery {
-    fn evaluate(&self) -> bool {
-        self.value
+    fn evaluate(&self) -> (Weight, bool) {
+        (self.weight, self.value)
     }
 }

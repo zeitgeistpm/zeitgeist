@@ -167,6 +167,9 @@ parameter_types! {
     /// The maximum number of public proposals that can exist at any time.
     pub const MaxProposals: u32 = 100;
 
+    // Futarchy
+    pub const MinDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
+
     // Hybrid Router parameters
     pub const HybridRouterPalletId: PalletId = HYBRID_ROUTER_PALLET_ID;
     /// Maximum number of orders that can be placed in a single trade transaction.

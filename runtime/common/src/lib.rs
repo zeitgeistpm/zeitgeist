@@ -1207,9 +1207,12 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_futarchy::Config for Runtime {
-            type RuntimeEvent = RuntimeEvent;
-            type MultiCurrency = AssetManager;
+            type MultiCurrency = Currencies;
+            type MinDuration = MinDuration;
+            type OracleQuery = MockOracleQuery;
             type Preimages = Preimage;
+            type RuntimeEvent = RuntimeEvent;
+            type Scheduler = Scheduler;
             type SubmitOrigin = EnsureRoot<AccountId>;
         }
 
