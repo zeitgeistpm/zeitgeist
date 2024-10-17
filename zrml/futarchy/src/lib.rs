@@ -20,6 +20,8 @@
 
 extern crate alloc;
 
+mod dispatchable_impls;
+mod pallet_impls;
 pub mod mock;
 mod tests;
 mod traits;
@@ -51,7 +53,7 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type MultiCurrency: MultiCurrency<Self::AccountId>;
+        type MultiCurrency: MultiCurrency<Self::AccountId>; // TODO Do we need this?
 
         type MinDuration: Get<BlockNumberFor<Self>>;
 
@@ -94,7 +96,7 @@ mod pallet {
     >;
 
     #[pallet::event]
-    #[pallet::generate_deposit(fn deposit_event)]
+    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T>
     where
         T: Config,
@@ -135,53 +137,6 @@ mod pallet {
             T::SubmitOrigin::ensure_origin(origin)?;
 
             Self::do_submit_proposal(duration, proposal)
-        }
-    }
-
-    impl<T: Config> Pallet<T> {
-        #[require_transactional]
-        fn do_submit_proposal(
-            duration: BlockNumberFor<T>,
-            proposal: ProposalOf<T>,
-        ) -> DispatchResult {
-            ensure!(duration >= T::MinDuration::get(), Error::<T>::DurationTooShort);
-
-            let now = frame_system::Pallet::<T>::block_number();
-            let to_be_scheduled_at = now.saturating_add(duration);
-
-            let try_mutate_result = Proposals::<T>::try_mutate(to_be_scheduled_at, |proposals| {
-                proposals.try_push(proposal).map_err(|_| Error::<T>::CacheFull)
-            });
-
-            Ok(try_mutate_result?)
-        }
-
-        /// Evaluates `proposal` using the specified oracle and schedules the contained call if the
-        /// oracle approves.
-        fn maybe_schedule_proposal(proposal: ProposalOf<T>) -> Weight {
-            let (evaluate_weight, approved) = proposal.query.evaluate();
-
-            if approved {
-                let result = T::Scheduler::schedule(
-                    DispatchTime::At(proposal.when),
-                    None,
-                    63,
-                    RawOrigin::Root.into(),
-                    proposal.call,
-                );
-
-                if result.is_ok() {
-                    Self::deposit_event(Event::<T>::Scheduled);
-                } else {
-                    Self::deposit_event(Event::<T>::UnexpectedSchedulerError);
-                }
-
-                evaluate_weight // TODO Add benchmark!
-            } else {
-                Self::deposit_event(Event::<T>::Rejected);
-
-                evaluate_weight
-            }
         }
     }
 
