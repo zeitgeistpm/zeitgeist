@@ -41,56 +41,11 @@ parameter_types! {
 
 construct_runtime! {
     pub enum Runtime {
-        Futarchy: zrml_futarchy,
-        Balances: pallet_balances,
-        Currencies: orml_currencies,
-        Preimage: pallet_preimage,
         System: frame_system,
-        Timestamp: pallet_timestamp,
-        Tokens: orml_tokens,
+        Balances: pallet_balances,
+        Preimage: pallet_preimage,
+        Futarchy: zrml_futarchy,
     }
-}
-
-impl zrml_futarchy::Config for Runtime {
-    type MultiCurrency = Currencies;
-    type MinDuration = MinDuration;
-    type OracleQuery = MockOracleQuery;
-    type Preimages = Preimage;
-    type RuntimeEvent = RuntimeEvent;
-    type Scheduler = MockScheduler;
-    type SubmitOrigin = EnsureRoot<<Runtime as frame_system::Config>::AccountId>;
-}
-
-impl orml_currencies::Config for Runtime {
-    type GetNativeCurrencyId = GetNativeCurrencyId;
-    type MultiCurrency = Tokens;
-    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
-    type WeightInfo = ();
-}
-
-impl pallet_balances::Config for Runtime {
-    type AccountStore = System;
-    type Balance = Balance;
-    type DustRemoval = ();
-    type FreezeIdentifier = ();
-    type RuntimeHoldReason = ();
-    type RuntimeEvent = RuntimeEvent;
-    type ExistentialDeposit = ExistentialDeposit;
-    type MaxHolds = ();
-    type MaxFreezes = ();
-    type MaxLocks = MaxLocks;
-    type MaxReserves = MaxReserves;
-    type ReserveIdentifier = [u8; 8];
-    type WeightInfo = ();
-}
-
-impl pallet_preimage::Config for Runtime {
-    type WeightInfo = ();
-    type RuntimeEvent = RuntimeEvent;
-    type Currency = Balances;
-    type ManagerOrigin = EnsureRoot<<Runtime as frame_system::Config>::AccountId>;
-    type BaseDeposit = PreimageBaseDeposit;
-    type ByteDeposit = PreimageByteDeposit;
 }
 
 impl frame_system::Config for Runtime {
@@ -119,23 +74,35 @@ impl frame_system::Config for Runtime {
     type OnSetCode = ();
 }
 
-impl pallet_timestamp::Config for Runtime {
-    type MinimumPeriod = MinimumPeriod;
-    type Moment = Moment;
-    type OnTimestampSet = ();
+impl pallet_balances::Config for Runtime {
+    type AccountStore = System;
+    type Balance = Balance;
+    type DustRemoval = ();
+    type FreezeIdentifier = ();
+    type RuntimeHoldReason = ();
+    type RuntimeEvent = RuntimeEvent;
+    type ExistentialDeposit = ExistentialDeposit;
+    type MaxHolds = ();
+    type MaxFreezes = ();
+    type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 
-impl orml_tokens::Config for Runtime {
-    type Amount = Amount;
-    type Balance = Balance;
-    type CurrencyId = CurrencyId;
-    type DustRemovalWhitelist = Everything;
-    type RuntimeEvent = RuntimeEvent;
-    type ExistentialDeposits = ExistentialDeposits;
-    type MaxLocks = MaxLocks;
-    type MaxReserves = MaxReserves;
-    type CurrencyHooks = ();
-    type ReserveIdentifier = [u8; 8];
+impl pallet_preimage::Config for Runtime {
     type WeightInfo = ();
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type ManagerOrigin = EnsureRoot<<Runtime as frame_system::Config>::AccountId>;
+    type BaseDeposit = PreimageBaseDeposit;
+    type ByteDeposit = PreimageByteDeposit;
+}
+
+impl zrml_futarchy::Config for Runtime {
+    type MinDuration = MinDuration;
+    type OracleQuery = MockOracleQuery;
+    type RuntimeEvent = RuntimeEvent;
+    type Scheduler = MockScheduler;
+    type SubmitOrigin = EnsureRoot<<Runtime as frame_system::Config>::AccountId>;
 }

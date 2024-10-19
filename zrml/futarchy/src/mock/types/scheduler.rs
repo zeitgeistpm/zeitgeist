@@ -1,23 +1,25 @@
 use crate::{mock::runtime::Runtime, BoundedCallOf, CallOf};
 use core::cell::RefCell;
 use frame_support::traits::schedule::{v3::Anon as ScheduleAnon, DispatchTime, Period, Priority};
-use frame_system::{
-    pallet_prelude::{BlockNumberFor, OriginFor},
-};
+use frame_system::pallet_prelude::{BlockNumberFor, OriginFor};
 use sp_runtime::{traits::Bounded, DispatchError, DispatchResult};
 
 pub struct MockScheduler;
 
 impl MockScheduler {
-    fn set_return_value(value: DispatchResult) {
+    pub(crate) fn set_return_value(value: DispatchResult) {
         SCHEDULER_RETURN_VALUE.with(|v| *v.borrow_mut() = Some(value));
     }
 
-    fn called_once_with(
+    pub(crate) fn not_called() -> bool {
+        SCHEDULER_CALL_DATA.with(|values| values.borrow().is_empty())
+    }
+
+    pub(crate) fn called_once_with(
         when: DispatchTime<BlockNumberFor<Runtime>>,
         call: BoundedCallOf<Runtime>,
     ) -> bool {
-        if SCHEDULER_CALL_DATA.with(|value| value.borrow().len()) != 1 {
+        if SCHEDULER_CALL_DATA.with(|values| values.borrow().len()) != 1 {
             return false;
         }
 

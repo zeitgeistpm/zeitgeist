@@ -49,14 +49,9 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type MultiCurrency: MultiCurrency<Self::AccountId>; // TODO Do we need this?
-
         type MinDuration: Get<BlockNumberFor<Self>>;
 
         type OracleQuery: OracleQuery;
-
-        /// Preimage interface for acquiring call data.
-        type Preimages: QueryPreimage + StorePreimage; // TODO Why do we even need this?
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -72,8 +67,6 @@ mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub(crate) type BalanceOf<T> =
-        <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     pub(crate) type CacheSize = ConstU32<16>;
     pub(crate) type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
     pub(crate) type BoundedCallOf<T> = Bounded<CallOf<T>>;

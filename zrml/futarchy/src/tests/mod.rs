@@ -22,14 +22,21 @@ mod submit_proposal;
 use crate::{
     mock::{
         ext_builder::ExtBuilder,
-        runtime::{Futarchy, Runtime, RuntimeCall, RuntimeOrigin},
-        types::MockOracleQuery,
+        runtime::{Futarchy, Preimage, Runtime, RuntimeCall, RuntimeOrigin, System},
+        types::{MockOracleQuery, MockScheduler},
+        utility,
     },
     types::Proposal,
-    Config,
+    CacheSize, CallOf, Config, Error, Event, Proposals,
 };
-use frame_support::{assert_noop, pallet_prelude::Weight};
-use sp_runtime::DispatchError;
+use frame_support::{
+    assert_noop, assert_ok,
+    dispatch::RawOrigin,
+    pallet_prelude::Weight,
+    traits::{schedule::DispatchTime, StorePreimage},
+};
+use frame_system::Call as SystemCall;
+use sp_runtime::{traits::Get, BoundedVec, DispatchError};
 
 /// Utility struct for managing test accounts.
 pub(crate) struct Account {

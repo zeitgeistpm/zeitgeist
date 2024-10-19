@@ -1,4 +1,4 @@
-use crate::{Config, Error, Pallet, types::Proposal, Proposals};
+use crate::{types::Proposal, Config, Error, Event, Pallet, Proposals};
 use frame_support::{ensure, require_transactional, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{DispatchResult, Saturating};
@@ -15,8 +15,10 @@ impl<T: Config> Pallet<T> {
         let to_be_scheduled_at = now.saturating_add(duration);
 
         let try_mutate_result = Proposals::<T>::try_mutate(to_be_scheduled_at, |proposals| {
-            proposals.try_push(proposal).map_err(|_| Error::<T>::CacheFull)
+            proposals.try_push(proposal.clone()).map_err(|_| Error::<T>::CacheFull)
         });
+
+        Self::deposit_event(Event::<T>::Submitted { duration, proposal });
 
         Ok(try_mutate_result?)
     }
