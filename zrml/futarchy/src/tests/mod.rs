@@ -23,7 +23,7 @@ use crate::{
     mock::{
         ext_builder::ExtBuilder,
         runtime::{Futarchy, Preimage, Runtime, RuntimeOrigin, System},
-        types::{MockOracleQuery, MockScheduler},
+        types::{MockOracle, MockScheduler},
         utility,
     },
     types::Proposal,

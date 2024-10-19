@@ -31,7 +31,8 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{traits::OracleQuery, types::Proposal};
+    use crate::types::Proposal;
+    use alloc::fmt::Debug;
     use core::marker::PhantomData;
     use frame_support::{
         pallet_prelude::{EnsureOrigin, IsType, StorageMap, StorageVersion, ValueQuery, Weight},
@@ -39,16 +40,28 @@ mod pallet {
         transactional, Blake2_128Concat, BoundedVec,
     };
     use frame_system::pallet_prelude::{BlockNumberFor, OriginFor};
+    use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+    use scale_info::TypeInfo;
     use sp_runtime::{
         traits::{ConstU32, Get},
         DispatchResult,
     };
+    use zeitgeist_primitives::traits::FutarchyOracle;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
         type MinDuration: Get<BlockNumberFor<Self>>;
 
-        type OracleQuery: OracleQuery;
+        // The type used to define the oracle for each proposal.
+        type Oracle: FutarchyOracle
+            + Clone
+            + Debug
+            + Decode
+            + Encode
+            + Eq
+            + MaxEncodedLen
+            + PartialEq
+            + TypeInfo;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -66,7 +79,7 @@ mod pallet {
     pub(crate) type CacheSize = ConstU32<16>;
     pub(crate) type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
     pub(crate) type BoundedCallOf<T> = Bounded<CallOf<T>>;
-    pub(crate) type OracleQueryOf<T> = <T as Config>::OracleQuery;
+    pub(crate) type OracleOf<T> = <T as Config>::Oracle;
     pub(crate) type PalletsOriginOf<T> =
         <<T as frame_system::Config>::RuntimeOrigin as OriginTrait>::PalletsOrigin;
 
