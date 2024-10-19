@@ -1,41 +1,6 @@
 use super::*;
 
 #[test]
-fn submit_proposal_rejects_proposals() {
-    ExtBuilder::build().execute_with(|| {
-        let duration = <Runtime as Config>::MinDuration::get();
-
-        let remark = SystemCall::remark { remark: "hullo".into() };
-        let call = Preimage::bound(CallOf::<Runtime>::from(remark)).unwrap();
-        let query = MockOracleQuery::new(Default::default(), false);
-        let proposal = Proposal { when: Default::default(), call, query };
-
-        // This ensures that if the scheduler is erroneously called, the test doesn't fail due to a
-        // failure to configure the return value.
-        MockScheduler::set_return_value(Ok(()));
-
-        assert_ok!(Futarchy::submit_proposal(RawOrigin::Root.into(), duration, proposal.clone()));
-
-        System::assert_last_event(
-            Event::<Runtime>::Submitted { duration, proposal: proposal.clone() }.into(),
-        );
-
-        // Check that vector now contains proposal.
-        let now = System::block_number();
-        let to_be_scheduled_at = now + duration;
-        assert_eq!(Proposals::get(to_be_scheduled_at).pop(), Some(proposal));
-
-        utility::run_to_block(to_be_scheduled_at);
-
-        // The proposal has now been removed and failed.
-        assert!(Proposals::<Runtime>::get(to_be_scheduled_at).is_empty());
-        assert!(MockScheduler::not_called());
-
-        System::assert_last_event(Event::<Runtime>::Rejected.into());
-    });
-}
-
-#[test]
 fn submit_proposal_schedules_proposals() {
     ExtBuilder::build().execute_with(|| {
         let duration = <Runtime as Config>::MinDuration::get();
@@ -64,9 +29,47 @@ fn submit_proposal_schedules_proposals() {
 
         // The proposal has now been removed and failed.
         assert!(Proposals::<Runtime>::get(to_be_scheduled_at).is_empty());
-        assert!(MockScheduler::called_once_with(DispatchTime::At(proposal.when), proposal.call));
+        assert!(MockScheduler::called_once_with(
+            DispatchTime::At(proposal.when.clone()),
+            proposal.call.clone()
+        ));
 
-        System::assert_last_event(Event::<Runtime>::Scheduled.into());
+        System::assert_last_event(Event::<Runtime>::Scheduled { proposal }.into());
+    });
+}
+
+#[test]
+fn submit_proposal_rejects_proposals() {
+    ExtBuilder::build().execute_with(|| {
+        let duration = <Runtime as Config>::MinDuration::get();
+
+        let remark = SystemCall::remark { remark: "hullo".into() };
+        let call = Preimage::bound(CallOf::<Runtime>::from(remark)).unwrap();
+        let query = MockOracleQuery::new(Default::default(), false);
+        let proposal = Proposal { when: Default::default(), call, query };
+
+        // This ensures that if the scheduler is erroneously called, the test doesn't fail due to a
+        // failure to configure the return value.
+        MockScheduler::set_return_value(Ok(()));
+
+        assert_ok!(Futarchy::submit_proposal(RawOrigin::Root.into(), duration, proposal.clone()));
+
+        System::assert_last_event(
+            Event::<Runtime>::Submitted { duration, proposal: proposal.clone() }.into(),
+        );
+
+        // Check that vector now contains proposal.
+        let now = System::block_number();
+        let to_be_scheduled_at = now + duration;
+        assert_eq!(Proposals::get(to_be_scheduled_at).pop(), Some(proposal.clone()));
+
+        utility::run_to_block(to_be_scheduled_at);
+
+        // The proposal has now been removed and failed.
+        assert!(Proposals::<Runtime>::get(to_be_scheduled_at).is_empty());
+        assert!(MockScheduler::not_called());
+
+        System::assert_last_event(Event::<Runtime>::Rejected { proposal }.into());
     });
 }
 

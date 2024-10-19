@@ -10,22 +10,22 @@ impl<T: Config> Pallet<T> {
 
         if approved {
             let result = T::Scheduler::schedule(
-                DispatchTime::At(proposal.when),
+                DispatchTime::At(proposal.when.clone()),
                 None,
                 63,
                 RawOrigin::Root.into(),
-                proposal.call,
+                proposal.call.clone(),
             );
 
             if result.is_ok() {
-                Self::deposit_event(Event::<T>::Scheduled);
+                Self::deposit_event(Event::<T>::Scheduled { proposal });
             } else {
                 Self::deposit_event(Event::<T>::UnexpectedSchedulerError);
             }
 
             evaluate_weight // TODO Add benchmark!
         } else {
-            Self::deposit_event(Event::<T>::Rejected);
+            Self::deposit_event(Event::<T>::Rejected { proposal });
 
             evaluate_weight
         }

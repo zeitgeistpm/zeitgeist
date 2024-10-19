@@ -93,10 +93,10 @@ mod pallet {
         Submitted { duration: BlockNumberFor<T>, proposal: Proposal<T> },
 
         /// A proposal has been rejected by the oracle.
-        Rejected,
+        Rejected { proposal: Proposal<T> },
 
         /// A proposal has been scheduled for execution.
-        Scheduled,
+        Scheduled { proposal: Proposal<T> },
 
         /// This is a logic error. You shouldn't see this.
         UnexpectedSchedulerError,
