@@ -10,7 +10,7 @@ impl<T: Config> Pallet<T> {
 
         if approved {
             let result = T::Scheduler::schedule(
-                DispatchTime::At(proposal.when.clone()),
+                DispatchTime::At(proposal.when),
                 None,
                 63,
                 RawOrigin::Root.into(),

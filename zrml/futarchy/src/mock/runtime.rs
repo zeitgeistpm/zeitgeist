@@ -22,11 +22,11 @@ use frame_system::{mocking::MockBlock, EnsureRoot};
 use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, ExistentialDeposit, ExistentialDeposits, GetNativeCurrencyId, MaxLocks,
-        MaxReserves, MinimumPeriod,
+        BlockHashCount, ExistentialDeposit, MaxLocks,
+        MaxReserves,
     },
     types::{
-        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, CurrencyId, Hash, Moment,
+        AccountIdTest, Balance, BlockNumber, Hash, 
     },
 };
 

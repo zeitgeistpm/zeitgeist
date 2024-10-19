@@ -1,21 +1,21 @@
-use crate::{mock::runtime::Runtime, BoundedCallOf, CallOf};
+use crate::{mock::runtime::Runtime, BoundedCallOf, CallOf, PalletsOriginOf};
 use core::cell::RefCell;
 use frame_support::traits::schedule::{v3::Anon as ScheduleAnon, DispatchTime, Period, Priority};
-use frame_system::pallet_prelude::{BlockNumberFor, OriginFor};
-use sp_runtime::{traits::Bounded, DispatchError, DispatchResult};
+use frame_system::pallet_prelude::BlockNumberFor;
+use sp_runtime::{DispatchError, DispatchResult};
 
 pub struct MockScheduler;
 
 impl MockScheduler {
-    pub(crate) fn set_return_value(value: DispatchResult) {
+    pub fn set_return_value(value: DispatchResult) {
         SCHEDULER_RETURN_VALUE.with(|v| *v.borrow_mut() = Some(value));
     }
 
-    pub(crate) fn not_called() -> bool {
+    pub fn not_called() -> bool {
         SCHEDULER_CALL_DATA.with(|values| values.borrow().is_empty())
     }
 
-    pub(crate) fn called_once_with(
+    pub fn called_once_with(
         when: DispatchTime<BlockNumberFor<Runtime>>,
         call: BoundedCallOf<Runtime>,
     ) -> bool {
@@ -36,14 +36,16 @@ struct SchedulerCallData {
     call: BoundedCallOf<Runtime>,
 }
 
-impl ScheduleAnon<BlockNumberFor<Runtime>, CallOf<Runtime>, OriginFor<Runtime>> for MockScheduler {
+impl ScheduleAnon<BlockNumberFor<Runtime>, CallOf<Runtime>, PalletsOriginOf<Runtime>>
+    for MockScheduler
+{
     type Address = ();
 
     fn schedule(
         when: DispatchTime<BlockNumberFor<Runtime>>,
         _maybe_periodic: Option<Period<BlockNumberFor<Runtime>>>,
         _priority: Priority,
-        _origin: OriginFor<Runtime>,
+        _origin: PalletsOriginOf<Runtime>,
         call: BoundedCallOf<Runtime>,
     ) -> Result<Self::Address, DispatchError> {
         SCHEDULER_CALL_DATA

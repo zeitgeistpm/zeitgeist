@@ -14,7 +14,7 @@ env_logger = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
-pallet-preimage = { workspace = true }
+pallet-preimage = { workspace = true, optional = true }
 pallet-scheduler = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }

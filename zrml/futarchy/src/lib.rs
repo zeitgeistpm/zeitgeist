@@ -35,13 +35,10 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         pallet_prelude::{EnsureOrigin, IsType, StorageMap, StorageVersion, ValueQuery, Weight},
-        traits::{
-            schedule::v3::Anon as ScheduleAnon, Bounded, Hooks, QueryPreimage, StorePreimage,
-        },
+        traits::{schedule::v3::Anon as ScheduleAnon, Bounded, Hooks, OriginTrait},
         transactional, Blake2_128Concat, BoundedVec,
     };
     use frame_system::pallet_prelude::{BlockNumberFor, OriginFor};
-    use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{ConstU32, Get},
         DispatchResult,
@@ -56,7 +53,7 @@ mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// Scheduler interface for executing proposals.
-        type Scheduler: ScheduleAnon<BlockNumberFor<Self>, CallOf<Self>, OriginFor<Self>>;
+        type Scheduler: ScheduleAnon<BlockNumberFor<Self>, CallOf<Self>, PalletsOriginOf<Self>>;
 
         /// The origin that is allowed to submit proposals.
         type SubmitOrigin: EnsureOrigin<Self::RuntimeOrigin>;
@@ -66,11 +63,12 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
-    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type CacheSize = ConstU32<16>;
     pub(crate) type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
     pub(crate) type BoundedCallOf<T> = Bounded<CallOf<T>>;
     pub(crate) type OracleQueryOf<T> = <T as Config>::OracleQuery;
+    pub(crate) type PalletsOriginOf<T> =
+        <<T as frame_system::Config>::RuntimeOrigin as OriginTrait>::PalletsOrigin;
 
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 

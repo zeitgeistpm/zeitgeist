@@ -30,7 +30,7 @@ fn submit_proposal_schedules_proposals() {
         // The proposal has now been removed and failed.
         assert!(Proposals::<Runtime>::get(to_be_scheduled_at).is_empty());
         assert!(MockScheduler::called_once_with(
-            DispatchTime::At(proposal.when.clone()),
+            DispatchTime::At(proposal.when),
             proposal.call.clone()
         ));
 

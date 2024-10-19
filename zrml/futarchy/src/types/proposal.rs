@@ -1,5 +1,4 @@
 use crate::{BoundedCallOf, Config, OracleQueryOf};
-use alloc::fmt::Debug;
 use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
