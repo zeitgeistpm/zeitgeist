@@ -34,6 +34,7 @@ pub trait LiquiditySharesManager<T: Config> {
     fn exit(&mut self, who: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult;
 
     /// Transfer `amount` units of pool shares from `sender` to `receiver`.
+    #[allow(unused)]
     fn split(
         &mut self,
         sender: &T::AccountId,
