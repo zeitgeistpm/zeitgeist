@@ -87,6 +87,7 @@ macro_rules! decl_common_types {
         };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
         use zrml_combinatorial_tokens::types::CryptographicIdManager;
+        use zrml_neo_swaps::types::DecisionMarketOracle;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -1208,7 +1209,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_futarchy::Config for Runtime {
             type MinDuration = MinDuration;
-            type OracleQuery = MockOracleQuery;
+            type Oracle = DecisionMarketOracle<Runtime>;
             type RuntimeEvent = RuntimeEvent;
             type Scheduler = Scheduler;
             type SubmitOrigin = EnsureRoot<AccountId>;
