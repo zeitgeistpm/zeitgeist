@@ -21,13 +21,8 @@ use frame_support::{construct_runtime, parameter_types, traits::Everything};
 use frame_system::{mocking::MockBlock, EnsureRoot};
 use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};
 use zeitgeist_primitives::{
-    constants::mock::{
-        BlockHashCount, ExistentialDeposit, MaxLocks,
-        MaxReserves,
-    },
-    types::{
-        AccountIdTest, Balance, BlockNumber, Hash, 
-    },
+    constants::mock::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves},
+    types::{AccountIdTest, Balance, BlockNumber, Hash},
 };
 
 parameter_types! {

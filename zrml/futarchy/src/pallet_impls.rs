@@ -15,10 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Config, Event, Pallet, types::Proposal};
+use crate::{types::Proposal, Config, Event, Pallet};
+use frame_support::{
+    dispatch::RawOrigin,
+    pallet_prelude::Weight,
+    traits::schedule::{v3::Anon, DispatchTime},
+};
 use zeitgeist_primitives::traits::FutarchyOracle;
-use frame_support::{dispatch::RawOrigin, pallet_prelude::Weight, traits::schedule::DispatchTime};
-use frame_support::traits::schedule::v3::Anon;
 
 impl<T: Config> Pallet<T> {
     /// Evaluates `proposal` using the specified oracle and schedules the contained call if the
