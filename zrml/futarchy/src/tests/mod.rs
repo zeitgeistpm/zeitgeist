@@ -22,8 +22,8 @@ mod submit_proposal;
 use crate::{
     mock::{
         ext_builder::ExtBuilder,
-        runtime::{Futarchy, Preimage, Runtime, RuntimeCall, RuntimeOrigin, System},
-        types::{MockOracleQuery, MockScheduler},
+        runtime::{Futarchy, Preimage, Runtime, RuntimeOrigin, System},
+        types::{MockOracle, MockScheduler},
         utility,
     },
     types::Proposal,
@@ -32,7 +32,6 @@ use crate::{
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::RawOrigin,
-    pallet_prelude::Weight,
     traits::{schedule::DispatchTime, StorePreimage},
 };
 use frame_system::Call as SystemCall;

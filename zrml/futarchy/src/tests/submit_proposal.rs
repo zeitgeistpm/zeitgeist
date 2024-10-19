@@ -7,8 +7,8 @@ fn submit_proposal_schedules_proposals() {
 
         let remark = SystemCall::remark { remark: "hullo".into() };
         let call = Preimage::bound(CallOf::<Runtime>::from(remark)).unwrap();
-        let query = MockOracleQuery::new(Default::default(), true);
-        let proposal = Proposal { when: Default::default(), call, query };
+        let oracle = MockOracle::new(Default::default(), true);
+        let proposal = Proposal { when: Default::default(), call, oracle };
 
         // This ensures that if the scheduler is erroneously called, the test doesn't fail due to a
         // failure to configure the return value.
@@ -30,7 +30,7 @@ fn submit_proposal_schedules_proposals() {
         // The proposal has now been removed and failed.
         assert!(Proposals::<Runtime>::get(to_be_scheduled_at).is_empty());
         assert!(MockScheduler::called_once_with(
-            DispatchTime::At(proposal.when.clone()),
+            DispatchTime::At(proposal.when),
             proposal.call.clone()
         ));
 
@@ -45,8 +45,8 @@ fn submit_proposal_rejects_proposals() {
 
         let remark = SystemCall::remark { remark: "hullo".into() };
         let call = Preimage::bound(CallOf::<Runtime>::from(remark)).unwrap();
-        let query = MockOracleQuery::new(Default::default(), false);
-        let proposal = Proposal { when: Default::default(), call, query };
+        let oracle = MockOracle::new(Default::default(), false);
+        let proposal = Proposal { when: Default::default(), call, oracle };
 
         // This ensures that if the scheduler is erroneously called, the test doesn't fail due to a
         // failure to configure the return value.
@@ -82,8 +82,8 @@ fn submit_proposal_fails_on_bad_origin() {
 
         let remark = SystemCall::remark { remark: "hullo".into() };
         let call = Preimage::bound(CallOf::<Runtime>::from(remark)).unwrap();
-        let query = MockOracleQuery::new(Default::default(), Default::default());
-        let proposal = Proposal { when: Default::default(), call, query };
+        let oracle = MockOracle::new(Default::default(), Default::default());
+        let proposal = Proposal { when: Default::default(), call, oracle };
 
         assert_noop!(
             Futarchy::submit_proposal(alice.signed(), duration, proposal),
@@ -99,8 +99,8 @@ fn submit_proposal_fails_if_duration_is_too_short() {
 
         let remark = SystemCall::remark { remark: "hullo".into() };
         let call = Preimage::bound(CallOf::<Runtime>::from(remark)).unwrap();
-        let query = MockOracleQuery::new(Default::default(), Default::default());
-        let proposal = Proposal { when: Default::default(), call, query };
+        let oracle = MockOracle::new(Default::default(), Default::default());
+        let proposal = Proposal { when: Default::default(), call, oracle };
 
         assert_noop!(
             Futarchy::submit_proposal(RawOrigin::Root.into(), duration, proposal),
@@ -116,8 +116,8 @@ fn submit_proposal_fails_if_cache_is_full() {
 
         let remark = SystemCall::remark { remark: "hullo".into() };
         let call = Preimage::bound(CallOf::<Runtime>::from(remark)).unwrap();
-        let query = MockOracleQuery::new(Default::default(), Default::default());
-        let proposal = Proposal { when: Default::default(), call, query };
+        let oracle = MockOracle::new(Default::default(), Default::default());
+        let proposal = Proposal { when: Default::default(), call, oracle };
 
         // Mock up a full vector of proposals.
         let now = System::block_number();

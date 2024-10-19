@@ -1,5 +1,4 @@
-use crate::{BoundedCallOf, Config, OracleQueryOf};
-use alloc::fmt::Debug;
+use crate::{BoundedCallOf, Config, OracleOf};
 use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -16,5 +15,5 @@ where
 {
     pub when: BlockNumberFor<T>,
     pub call: BoundedCallOf<T>,
-    pub query: OracleQueryOf<T>,
+    pub oracle: OracleOf<T>,
 }
