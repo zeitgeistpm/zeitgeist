@@ -22,7 +22,7 @@ use scale_info::TypeInfo;
 use sp_runtime::DispatchError;
 use zeitgeist_primitives::traits::FutarchyOracle;
 
-#[derive(Clone, Debug, Decode, Default, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
+#[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
 pub struct DecisionMarketOracle<T>
 where
     T: Config,
@@ -48,6 +48,22 @@ where
         let success = positive_value > negative_value;
         // TODO Benchmark
         Ok((Default::default(), success))
+    }
+}
+
+// This "trivial" implementations prevents rustc from requiring that T implement Default.
+impl<T> Default for DecisionMarketOracle<T>
+where
+    T: Config,
+    MarketIdOf<T>: Default,
+    AssetOf<T>: Default,
+{
+    fn default() -> Self {
+        Self {
+            market_id: Default::default(),
+            positive_outcome: Default::default(),
+            negative_outcome: Default::default(),
+        }
     }
 }
 
