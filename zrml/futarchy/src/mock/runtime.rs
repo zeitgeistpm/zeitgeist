@@ -25,6 +25,9 @@ use zeitgeist_primitives::{
     types::{AccountIdTest, Balance, BlockNumber, Hash},
 };
 
+#[cfg(feature = "runtime-benchmarks")]
+use crate::mock::types::MockBenchmarkHelper;
+
 parameter_types! {
     // zrml-futarchy
     pub const MinDuration: BlockNumber = 10;
@@ -95,6 +98,8 @@ impl pallet_preimage::Config for Runtime {
 }
 
 impl zrml_futarchy::Config for Runtime {
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = MockBenchmarkHelper;
     type MinDuration = MinDuration;
     type Oracle = MockOracle;
     type RuntimeEvent = RuntimeEvent;

@@ -43,7 +43,7 @@ mod dispatchable_impls;
 pub mod mock;
 mod pallet_impls;
 mod tests;
-mod traits;
+pub mod traits;
 pub mod types;
 
 pub use pallet::*;
@@ -67,13 +67,13 @@ mod pallet {
     };
     use zeitgeist_primitives::traits::FutarchyOracle;
 
-    // #[cfg(feature = "runtime-benchmarks")]
-    // use crate::traits::BenchmarkHelper;
+    #[cfg(feature = "runtime-benchmarks")]
+    use zeitgeist_primitives::traits::FutarchyBenchmarkHelper;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        // #[cfg(feature = "runtime-benchmarks")]
-        // type BenchmarkHelper: BenchmarkHelper<Self>;
+        #[cfg(feature = "runtime-benchmarks")]
+        type BenchmarkHelper: FutarchyBenchmarkHelper<Self::Oracle>;
 
         type MinDuration: Get<BlockNumberFor<Self>>;
 
@@ -82,7 +82,6 @@ mod pallet {
             + Clone
             + Debug
             + Decode
-            + Default
             + Encode
             + Eq
             + MaxEncodedLen

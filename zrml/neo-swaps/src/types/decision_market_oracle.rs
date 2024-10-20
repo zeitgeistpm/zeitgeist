@@ -51,22 +51,6 @@ where
     }
 }
 
-// This "trivial" implementations prevents rustc from requiring that T implement Default.
-impl<T> Default for DecisionMarketOracle<T>
-where
-    T: Config,
-    MarketIdOf<T>: Default,
-    AssetOf<T>: Default,
-{
-    fn default() -> Self {
-        Self {
-            market_id: Default::default(),
-            positive_outcome: Default::default(),
-            negative_outcome: Default::default(),
-        }
-    }
-}
-
 impl<T> FutarchyOracle for DecisionMarketOracle<T>
 where
     T: Config,

@@ -25,7 +25,7 @@ pub struct MockScheduler;
 
 impl MockScheduler {
     pub fn set_return_value(value: DispatchResult) {
-        SCHEDULER_RETURN_VALUE.with(|v| *v.borrow_mut() = Some(value));
+        SCHEDULER_RETURN_VALUE.with(|v| *v.borrow_mut() = value);
     }
 
     pub fn not_called() -> bool {
@@ -70,7 +70,6 @@ impl ScheduleAnon<BlockNumberFor<Runtime>, CallOf<Runtime>, PalletsOriginOf<Runt
 
         SCHEDULER_RETURN_VALUE
             .with(|value| *value.borrow())
-            .expect("no return value configured for scheduler mock")
     }
 
     fn cancel(_address: Self::Address) -> Result<(), DispatchError> {
@@ -94,6 +93,5 @@ impl ScheduleAnon<BlockNumberFor<Runtime>, CallOf<Runtime>, PalletsOriginOf<Runt
 thread_local! {
     pub static SCHEDULER_CALL_DATA: RefCell<Vec<SchedulerCallData>> =
         const { RefCell::new(vec![]) };
-    pub static SCHEDULER_RETURN_VALUE: RefCell<Option<DispatchResult>> =
-        const { RefCell::new(None) };
+    pub static SCHEDULER_RETURN_VALUE: RefCell<DispatchResult> = const { RefCell::new(Ok(())) };
 }

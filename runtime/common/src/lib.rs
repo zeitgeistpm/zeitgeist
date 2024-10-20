@@ -1453,7 +1453,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_bounties, Bounties);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
-                    list_benchmark!(list, extra, pallet_contracts, Contracts);
+                    // list_benchmark!(list, extra, pallet_contracts, Contracts);
                     list_benchmark!(list, extra, pallet_democracy, Democracy);
                     list_benchmark!(list, extra, pallet_identity, Identity);
                     list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
@@ -1468,6 +1468,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_swaps, Swaps);
                     list_benchmark!(list, extra, zrml_authorized, Authorized);
                     list_benchmark!(list, extra, zrml_court, Court);
+                    list_benchmark!(list, extra, zrml_futarchy, Futarchy);
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
                     list_benchmark!(list, extra, zrml_orderbook, Orderbook);
                     list_benchmark!(list, extra, zrml_parimutuel, Parimutuel);
@@ -1542,7 +1543,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_bounties, Bounties);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
-                    add_benchmark!(params, batches, pallet_contracts, Contracts);
+                    // add_benchmark!(params, batches, pallet_contracts, Contracts);
                     add_benchmark!(params, batches, pallet_democracy, Democracy);
                     add_benchmark!(params, batches, pallet_identity, Identity);
                     add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
@@ -1557,6 +1558,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_swaps, Swaps);
                     add_benchmark!(params, batches, zrml_authorized, Authorized);
                     add_benchmark!(params, batches, zrml_court, Court);
+                    add_benchmark!(params, batches, zrml_futarchy, Futarchy);
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
                     add_benchmark!(params, batches, zrml_orderbook, Orderbook);
                     add_benchmark!(params, batches, zrml_parimutuel, Parimutuel);

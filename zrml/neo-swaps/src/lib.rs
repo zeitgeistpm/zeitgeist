@@ -132,7 +132,11 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
             >;
 
-        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = BlockNumberFor<Self>>;
+        type MarketCommons: MarketCommonsPalletApi<
+                AccountId = Self::AccountId,
+                BlockNumber = BlockNumberFor<Self>,
+                Balance = BalanceOf<Self>,
+            >;
 
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 
@@ -638,7 +642,7 @@ mod pallet {
 
     impl<T: Config> Pallet<T> {
         #[require_transactional]
-        fn do_buy(
+        pub(crate) fn do_buy(
             who: T::AccountId,
             market_id: MarketIdOf<T>,
             asset_out: AssetOf<T>,
@@ -700,7 +704,7 @@ mod pallet {
         }
 
         #[require_transactional]
-        fn do_sell(
+        pub(crate) fn do_sell(
             who: T::AccountId,
             market_id: MarketIdOf<T>,
             asset_in: AssetOf<T>,
@@ -789,7 +793,7 @@ mod pallet {
         }
 
         #[require_transactional]
-        fn do_join(
+        pub(crate) fn do_join(
             who: T::AccountId,
             market_id: MarketIdOf<T>,
             pool_shares_amount: BalanceOf<T>,
@@ -848,7 +852,7 @@ mod pallet {
         }
 
         #[require_transactional]
-        fn do_exit(
+        pub(crate) fn do_exit(
             who: T::AccountId,
             market_id: MarketIdOf<T>,
             pool_shares_amount: BalanceOf<T>,
@@ -935,7 +939,10 @@ mod pallet {
         }
 
         #[require_transactional]
-        fn do_withdraw_fees(who: T::AccountId, market_id: MarketIdOf<T>) -> DispatchResult {
+        pub(crate) fn do_withdraw_fees(
+            who: T::AccountId,
+            market_id: MarketIdOf<T>,
+        ) -> DispatchResult {
             Self::try_mutate_pool(&market_id, |pool| {
                 let amount = pool.liquidity_shares_manager.withdraw_fees(&who)?;
                 T::MultiCurrency::transfer(pool.collateral, &pool.account_id, &who, amount)?; // Should never fail.
@@ -949,7 +956,7 @@ mod pallet {
         }
 
         #[require_transactional]
-        fn do_deploy_pool(
+        pub(crate) fn do_deploy_pool(
             who: T::AccountId,
             market_id: MarketIdOf<T>,
             amount: BalanceOf<T>,
@@ -1032,7 +1039,7 @@ mod pallet {
 
         #[allow(clippy::too_many_arguments)] // TODO Bundle `buy`/`keep`/`sell` into one arg.
         #[require_transactional]
-        fn do_combo_buy(
+        pub(crate) fn do_combo_buy(
             who: T::AccountId,
             market_id: MarketIdOf<T>,
             // TODO Replace `buy`/`keep`/`sell` with a struct.
@@ -1125,7 +1132,7 @@ mod pallet {
         // TODO Replace `buy`/`keep`/`sell` with a struct.
         #[allow(clippy::too_many_arguments)]
         #[require_transactional]
-        fn do_combo_sell(
+        pub(crate) fn do_combo_sell(
             who: T::AccountId,
             market_id: MarketIdOf<T>,
             buy: Vec<AssetOf<T>>,

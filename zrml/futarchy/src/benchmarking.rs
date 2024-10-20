@@ -26,6 +26,7 @@ use frame_support::{
     traits::{Bounded, Get},
 };
 use frame_system::{pallet_prelude::BlockNumberFor, Pallet as System};
+use zeitgeist_primitives::traits::FutarchyBenchmarkHelper;
 
 #[benchmarks]
 mod benchmarks {
@@ -35,10 +36,11 @@ mod benchmarks {
     fn submit_proposal() {
         let duration = T::MinDuration::get();
 
+        let oracle = T::BenchmarkHelper::create_oracle(true);
         let proposal = Proposal {
             when: Default::default(),
             call: Bounded::Inline(vec![7u8; 128].try_into().unwrap()),
-            oracle: Default::default(),
+            oracle,
         };
 
         #[extrinsic_call]
@@ -51,10 +53,11 @@ mod benchmarks {
 
     #[benchmark]
     fn maybe_schedule_proposal() {
+        let oracle = T::BenchmarkHelper::create_oracle(true);
         let proposal = Proposal {
             when: Default::default(),
             call: Bounded::Inline(vec![7u8; 128].try_into().unwrap()),
-            oracle: Default::default(),
+            oracle,
         };
 
         let block_number: BlockNumberFor<T> = 1u32.into();

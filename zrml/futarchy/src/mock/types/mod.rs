@@ -15,8 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+mod benchmark_helper;
 mod oracle;
 mod scheduler;
 
+pub use benchmark_helper::MockBenchmarkHelper;
 pub(crate) use oracle::MockOracle;
 pub(crate) use scheduler::MockScheduler;
