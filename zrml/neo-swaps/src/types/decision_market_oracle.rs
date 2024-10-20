@@ -22,7 +22,7 @@ use scale_info::TypeInfo;
 use sp_runtime::DispatchError;
 use zeitgeist_primitives::traits::FutarchyOracle;
 
-#[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
+#[derive(Clone, Debug, Decode, Default, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
 pub struct DecisionMarketOracle<T>
 where
     T: Config,

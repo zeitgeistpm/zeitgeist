@@ -22,7 +22,7 @@ mod submit_proposal;
 use crate::{
     mock::{
         ext_builder::ExtBuilder,
-        runtime::{Futarchy, Preimage, Runtime, RuntimeOrigin, System},
+        runtime::{Futarchy, Runtime, RuntimeOrigin, System},
         types::{MockOracle, MockScheduler},
         utility,
     },
@@ -32,7 +32,7 @@ use crate::{
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::RawOrigin,
-    traits::{schedule::DispatchTime, StorePreimage},
+    traits::{schedule::DispatchTime, Bounded, StorePreimage},
 };
 use frame_system::Call as SystemCall;
 use sp_runtime::{traits::Get, BoundedVec, DispatchError};

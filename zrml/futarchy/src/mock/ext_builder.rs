@@ -22,6 +22,7 @@ use sp_runtime::BuildStorage;
 #[cfg(feature = "parachain")]
 use {crate::mock::consts::FOREIGN_ASSET, zeitgeist_primitives::types::CustomMetadata};
 
+#[derive(Default)]
 pub struct ExtBuilder;
 
 impl ExtBuilder {

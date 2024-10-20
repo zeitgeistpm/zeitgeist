@@ -22,8 +22,7 @@ fn submit_proposal_schedules_proposals() {
     ExtBuilder::build().execute_with(|| {
         let duration = <Runtime as Config>::MinDuration::get();
 
-        let remark = SystemCall::remark { remark: "hullo".into() };
-        let call = Preimage::bound(CallOf::<Runtime>::from(remark)).unwrap();
+        let call = Bounded::Inline(vec![7u8; 128].try_into().unwrap());
         let oracle = MockOracle::new(Default::default(), true);
         let proposal = Proposal { when: Default::default(), call, oracle };
 
@@ -60,8 +59,7 @@ fn submit_proposal_rejects_proposals() {
     ExtBuilder::build().execute_with(|| {
         let duration = <Runtime as Config>::MinDuration::get();
 
-        let remark = SystemCall::remark { remark: "hullo".into() };
-        let call = Preimage::bound(CallOf::<Runtime>::from(remark)).unwrap();
+        let call = Bounded::Inline(vec![7u8; 128].try_into().unwrap());
         let oracle = MockOracle::new(Default::default(), false);
         let proposal = Proposal { when: Default::default(), call, oracle };
 
@@ -97,8 +95,7 @@ fn submit_proposal_fails_on_bad_origin() {
 
         let duration = <Runtime as Config>::MinDuration::get();
 
-        let remark = SystemCall::remark { remark: "hullo".into() };
-        let call = Preimage::bound(CallOf::<Runtime>::from(remark)).unwrap();
+        let call = Bounded::Inline(vec![7u8; 128].try_into().unwrap());
         let oracle = MockOracle::new(Default::default(), Default::default());
         let proposal = Proposal { when: Default::default(), call, oracle };
 
@@ -114,8 +111,7 @@ fn submit_proposal_fails_if_duration_is_too_short() {
     ExtBuilder::build().execute_with(|| {
         let duration = <Runtime as Config>::MinDuration::get() - 1;
 
-        let remark = SystemCall::remark { remark: "hullo".into() };
-        let call = Preimage::bound(CallOf::<Runtime>::from(remark)).unwrap();
+        let call = Bounded::Inline(vec![7u8; 128].try_into().unwrap());
         let oracle = MockOracle::new(Default::default(), Default::default());
         let proposal = Proposal { when: Default::default(), call, oracle };
 
@@ -131,8 +127,7 @@ fn submit_proposal_fails_if_cache_is_full() {
     ExtBuilder::build().execute_with(|| {
         let duration = <Runtime as Config>::MinDuration::get();
 
-        let remark = SystemCall::remark { remark: "hullo".into() };
-        let call = Preimage::bound(CallOf::<Runtime>::from(remark)).unwrap();
+        let call = Bounded::Inline(vec![7u8; 128].try_into().unwrap());
         let oracle = MockOracle::new(Default::default(), Default::default());
         let proposal = Proposal { when: Default::default(), call, oracle };
 

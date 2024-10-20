@@ -38,6 +38,7 @@
 
 extern crate alloc;
 
+mod benchmarking;
 mod dispatchable_impls;
 pub mod mock;
 mod pallet_impls;
@@ -66,8 +67,14 @@ mod pallet {
     };
     use zeitgeist_primitives::traits::FutarchyOracle;
 
+    // #[cfg(feature = "runtime-benchmarks")]
+    // use crate::traits::BenchmarkHelper;
+
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        // #[cfg(feature = "runtime-benchmarks")]
+        // type BenchmarkHelper: BenchmarkHelper<Self>;
+
         type MinDuration: Get<BlockNumberFor<Self>>;
 
         // The type used to define the oracle for each proposal.
@@ -75,6 +82,7 @@ mod pallet {
             + Clone
             + Debug
             + Decode
+            + Default
             + Encode
             + Eq
             + MaxEncodedLen

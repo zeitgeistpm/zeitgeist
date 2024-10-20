@@ -21,7 +21,7 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use zeitgeist_primitives::traits::FutarchyOracle;
 
-#[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
+#[derive(Clone, Debug, Decode, Default, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
 pub struct MockOracle {
     weight: Weight,
     value: bool,
