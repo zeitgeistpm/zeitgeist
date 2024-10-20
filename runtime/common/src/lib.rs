@@ -75,8 +75,6 @@ macro_rules! decl_common_types {
             Blake2_256, BoundedVec, Twox64Concat,
         };
         use frame_system::EnsureSigned;
-        #[cfg(feature = "try-runtime")]
-        use frame_try_runtime::{TryStateSelect, UpgradeCheckSelect};
         use orml_traits::MultiCurrency;
         use pallet_balances::CreditOf;
         use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -88,6 +86,12 @@ macro_rules! decl_common_types {
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
         use zrml_combinatorial_tokens::types::CryptographicIdManager;
         use zrml_neo_swaps::types::DecisionMarketOracle;
+
+        #[cfg(feature = "try-runtime")]
+        use frame_try_runtime::{TryStateSelect, UpgradeCheckSelect};
+
+        #[cfg(feature = "runtime-benchmarks")]
+        use zrml_neo_swaps::types::DecisionMarketBenchmarkHelper;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -1208,6 +1212,8 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_futarchy::Config for Runtime {
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = DecisionMarketBenchmarkHelper<Runtime>;
             type MinDuration = MinDuration;
             type Oracle = DecisionMarketOracle<Runtime>;
             type RuntimeEvent = RuntimeEvent;

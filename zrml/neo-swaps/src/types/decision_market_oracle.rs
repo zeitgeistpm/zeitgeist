@@ -32,12 +32,20 @@ where
     negative_outcome: AssetOf<T>,
 }
 
-// Utility implementation that uses the question mark operator to implement a fallible version of
-// `evaluate`.
 impl<T> DecisionMarketOracle<T>
 where
     T: Config,
 {
+    pub fn new(
+        market_id: MarketIdOf<T>,
+        positive_outcome: AssetOf<T>,
+        negative_outcome: AssetOf<T>,
+    ) -> Self {
+        Self { market_id, positive_outcome, negative_outcome }
+    }
+
+    // Utility implementation that uses the question mark operator to implement a fallible version
+    // of `evaluate`.
     fn try_evaluate(&self) -> Result<(Weight, bool), DispatchError> {
         let pool = Pools::<T>::get(self.market_id)
             .ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
