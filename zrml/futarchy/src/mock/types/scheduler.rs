@@ -68,8 +68,7 @@ impl ScheduleAnon<BlockNumberFor<Runtime>, CallOf<Runtime>, PalletsOriginOf<Runt
         SCHEDULER_CALL_DATA
             .with(|values| values.borrow_mut().push(SchedulerCallData { when, call }));
 
-        SCHEDULER_RETURN_VALUE
-            .with(|value| *value.borrow())
+        SCHEDULER_RETURN_VALUE.with(|value| *value.borrow())
     }
 
     fn cancel(_address: Self::Address) -> Result<(), DispatchError> {

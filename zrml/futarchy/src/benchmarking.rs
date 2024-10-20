@@ -53,17 +53,10 @@ mod benchmarks {
 
     #[benchmark]
     fn maybe_schedule_proposal() {
+        let when = u32::MAX.into();
         let oracle = T::BenchmarkHelper::create_oracle(true);
-        let proposal = Proposal {
-            when: Default::default(),
-            call: Bounded::Inline(vec![7u8; 128].try_into().unwrap()),
-            oracle,
-        };
-
-        let block_number: BlockNumberFor<T> = 1u32.into();
-        assert_ok!(Proposals::<T>::try_mutate(block_number, |proposals| {
-            proposals.try_push(proposal.clone())
-        }));
+        let proposal =
+            Proposal { when, call: Bounded::Inline(vec![7u8; 128].try_into().unwrap()), oracle };
 
         #[block]
         {
