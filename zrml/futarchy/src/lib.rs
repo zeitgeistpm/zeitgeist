@@ -168,9 +168,11 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(now: BlockNumberFor<T>) -> Weight {
-            let mut total_weight = Weight::zero();
+            let mut total_weight = Weight::zero(); // Add buffer.
 
             let proposals = Proposals::<T>::take(now);
+            // TODO Add one storage read.
+
             for proposal in proposals.into_iter() {
                 let weight = Self::maybe_schedule_proposal(proposal);
                 total_weight = total_weight.saturating_add(weight);
