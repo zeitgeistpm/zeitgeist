@@ -11,8 +11,6 @@ zeitgeist-primitives = { workspace = true }
 
 env_logger = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
-pallet-preimage = { workspace = true, optional = true }
-pallet-scheduler = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -25,8 +23,6 @@ mock = [
     "env_logger/default",
     "sp-io/default",
     "pallet-balances/default",
-    "pallet-preimage/default",
-    "pallet-scheduler/default",
     "zeitgeist-primitives/mock",
 ]
 runtime-benchmarks = [

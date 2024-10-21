@@ -16,8 +16,6 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-#[cfg(not(feature = "parachain"))]
-use sp_runtime::{DispatchError, TokenError};
 use test_case::test_case;
 use zeitgeist_primitives::types::Asset::CategoricalOutcome;
 

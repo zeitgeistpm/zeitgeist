@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::mock::runtime::{Balances, Futarchy, Preimage, System};
+use crate::mock::runtime::{Balances, Futarchy, System};
 use frame_support::traits::Hooks;
 use zeitgeist_primitives::types::BlockNumber;
 
@@ -24,7 +24,6 @@ pub fn run_to_block(to: BlockNumber) {
         let now = System::block_number();
 
         Futarchy::on_finalize(now);
-        Preimage::on_finalize(now);
         Balances::on_finalize(now);
         System::on_finalize(now);
 
@@ -33,7 +32,6 @@ pub fn run_to_block(to: BlockNumber) {
 
         System::on_initialize(next);
         Balances::on_initialize(next);
-        Preimage::on_initialize(next);
         Futarchy::on_initialize(next);
     }
 }
