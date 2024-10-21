@@ -16,7 +16,6 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{traits::pool_operations::PoolOperations, AssetOf, Config, Error, MarketIdOf, Pools};
-use alloc::format;
 use frame_support::pallet_prelude::Weight;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;

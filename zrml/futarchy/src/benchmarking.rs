@@ -17,15 +17,14 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use crate::{types::Proposal, Call, Config, Event, Pallet, Proposals};
+use crate::{types::Proposal, Call, Config, Event, Pallet};
 use alloc::vec;
 use frame_benchmarking::v2::*;
 use frame_support::{
-    assert_ok,
     dispatch::RawOrigin,
     traits::{Bounded, Get},
 };
-use frame_system::{pallet_prelude::BlockNumberFor, Pallet as System};
+use frame_system::Pallet as System;
 use zeitgeist_primitives::traits::FutarchyBenchmarkHelper;
 
 #[benchmarks]

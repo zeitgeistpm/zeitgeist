@@ -3,30 +3,22 @@
 use crate::{
     liquidity_tree::types::LiquidityTree,
     types::{DecisionMarketOracle, Pool},
-    BalanceOf, Config, MarketIdOf, Pallet, Pools, MIN_SWAP_FEE,
+    BalanceOf, Config, MarketIdOf, Pallet, Pools,
 };
 use alloc::collections::BTreeMap;
 use core::marker::PhantomData;
-use frame_benchmarking::whitelisted_caller;
-use orml_traits::MultiCurrency;
-use sp_runtime::{traits::Zero, Perbill, SaturatedConversion, Saturating};
+use sp_runtime::{traits::Zero, Saturating};
 use zeitgeist_primitives::{
-    constants::{BASE, CENT},
     math::fixed::{BaseProvider, ZeitgeistBase},
-    traits::{CompleteSetOperationsApi, FutarchyBenchmarkHelper, MarketBuilderTrait},
-    types::{Asset, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
+    traits::FutarchyBenchmarkHelper,
+    types::Asset,
 };
-use zrml_market_commons::{types::MarketBuilder, MarketCommonsPalletApi};
 
 pub struct DecisionMarketBenchmarkHelper<T>(PhantomData<T>);
 
 impl<T> FutarchyBenchmarkHelper<DecisionMarketOracle<T>> for DecisionMarketBenchmarkHelper<T>
 where
-    T: Config + zrml_market_commons::Config,
-    <zrml_market_commons::Pallet<T> as MarketCommonsPalletApi>::MarketId:
-        Into<<T as zrml_market_commons::Config>::MarketId>,
-    <T as zrml_market_commons::Config>::MarketId:
-        Into<<zrml_market_commons::Pallet<T> as MarketCommonsPalletApi>::MarketId>,
+    T: Config,
 {
     /// Creates a mocked up pool with prices so that the returned decision market oracle evaluates
     /// to `value`. The pool is technically in invalid state.
@@ -54,7 +46,7 @@ where
             account_id: account_id.clone(),
             reserves: reserves.try_into().unwrap(),
             collateral,
-            liquidity_parameter: one.clone(),
+            liquidity_parameter: one,
             liquidity_shares_manager: LiquidityTree::new(account_id, one).unwrap(),
             swap_fee: Zero::zero(),
         };
