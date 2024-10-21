@@ -69,10 +69,7 @@ where
     fn evaluate(&self) -> (Weight, bool) {
         // Err on the side of caution if the pool is not found or a calculation fails by not
         // enacting the policy.
-        let value = match self.try_evaluate() {
-            Ok(result) => result,
-            Err(_) => false,
-        };
+        let value = self.try_evaluate().unwrap_or(false);
 
         (T::WeightInfo::decision_market_oracle_evaluate(), value)
     }
