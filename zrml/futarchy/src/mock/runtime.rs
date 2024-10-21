@@ -34,17 +34,12 @@ use crate::mock::types::MockBenchmarkHelper;
 parameter_types! {
     // zrml-futarchy
     pub const MinDuration: BlockNumber = 10;
-
-    // pallet-preimage
-    pub const PreimageBaseDeposit: Balance = 0;
-    pub const PreimageByteDeposit: Balance = 0;
 }
 
 construct_runtime! {
     pub enum Runtime {
         System: frame_system,
         Balances: pallet_balances,
-        Preimage: pallet_preimage,
         Futarchy: zrml_futarchy,
     }
 }
@@ -89,15 +84,6 @@ impl pallet_balances::Config for Runtime {
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-}
-
-impl pallet_preimage::Config for Runtime {
-    type WeightInfo = ();
-    type RuntimeEvent = RuntimeEvent;
-    type Currency = Balances;
-    type ManagerOrigin = EnsureRoot<<Runtime as frame_system::Config>::AccountId>;
-    type BaseDeposit = PreimageBaseDeposit;
-    type ByteDeposit = PreimageByteDeposit;
 }
 
 impl zrml_futarchy::Config for Runtime {

@@ -2184,6 +2184,33 @@ macro_rules! create_common_tests {
         mod common_tests {
             common_runtime::fee_tests!();
 
+            mod utility {
+                use crate::{Balances, BlockNumber, Futarchy, Preimage, Scheduler, System};
+                use frame_support::traits::Hooks;
+
+                // Beware! This only advances certain pallets.
+                pub(crate) fn run_to_block(to: BlockNumber) {
+                    while System::block_number() < to {
+                        let now = System::block_number();
+
+                        Futarchy::on_finalize(now);
+                        Balances::on_finalize(now);
+                        Preimage::on_finalize(now);
+                        Scheduler::on_finalize(now);
+                        System::on_finalize(now);
+
+                        let next = now + 1;
+                        System::set_block_number(next);
+
+                        System::on_initialize(next);
+                        Scheduler::on_initialize(next);
+                        Preimage::on_initialize(next);
+                        Balances::on_initialize(next);
+                        Futarchy::on_initialize(next);
+                    }
+                }
+            }
+
             mod dust_removal {
                 use crate::*;
                 use frame_support::PalletId;
@@ -2220,6 +2247,133 @@ macro_rules! create_common_tests {
                     t.execute_with(|| {
                         let not_whitelisted = AccountId::from([0u8; 32]);
                         assert!(!DustRemovalWhitelist::contains(&not_whitelisted))
+                    });
+                }
+            }
+
+            mod futarchy {
+                use crate::{
+                    common_tests::utility, AccountId, Asset, AssetManager, Balance, Balances,
+                    Futarchy, MarketId, NeoSwaps, PredictionMarkets, Preimage, Runtime,
+                    RuntimeCall, RuntimeOrigin, Scheduler, System,
+                };
+                use frame_support::{assert_ok, dispatch::RawOrigin, traits::StorePreimage};
+                use orml_traits::MultiCurrency;
+                use sp_runtime::{
+                    traits::{Hash, Zero},
+                    BuildStorage, Perbill,
+                };
+                use zeitgeist_primitives::{
+                    math::fixed::{BaseProvider, ZeitgeistBase},
+                    traits::MarketBuilderTrait,
+                    types::{
+                        Deadlines, MarketCreation, MarketPeriod, MarketType, MultiHash, ScoringRule,
+                    },
+                };
+                use zrml_futarchy::types::Proposal;
+                use zrml_market_commons::types::MarketBuilder;
+                use zrml_neo_swaps::types::DecisionMarketOracle;
+
+                #[test]
+                fn futarchy_schedules_and_executes_call() {
+                    let mut t: sp_io::TestExternalities =
+                        frame_system::GenesisConfig::<Runtime>::default()
+                            .build_storage()
+                            .unwrap()
+                            .into();
+                    t.execute_with(|| {
+                        let alice = AccountId::from([0u8; 32]);
+
+                        let collateral: Asset<MarketId> = Asset::Ztg;
+                        let one: Balance = ZeitgeistBase::get().unwrap();
+                        let total_cost: Balance = one.saturating_mul(100_000u128);
+                        assert_ok!(AssetManager::deposit(collateral, &alice, total_cost));
+
+                        let mut metadata = [0x01; 50];
+                        metadata[0] = 0x15;
+                        metadata[1] = 0x30;
+                        let multihash = MultiHash::Sha3_384(metadata);
+
+                        let oracle_duration =
+                            <Runtime as zrml_prediction_markets::Config>::MinOracleDuration::get();
+                        let deadlines = Deadlines {
+                            grace_period: Default::default(),
+                            oracle_duration,
+                            dispute_duration: Zero::zero(),
+                        };
+                        assert_ok!(PredictionMarkets::create_market(
+                            RuntimeOrigin::signed(alice.clone()),
+                            collateral,
+                            Perbill::zero(),
+                            alice.clone(),
+                            MarketPeriod::Block(0..999),
+                            deadlines,
+                            multihash,
+                            MarketCreation::Permissionless,
+                            MarketType::Categorical(2),
+                            None,
+                            ScoringRule::AmmCdaHybrid,
+                        ));
+
+                        let market_id = 0;
+                        let amount = one * 100u128;
+                        assert_ok!(PredictionMarkets::buy_complete_set(
+                            RuntimeOrigin::signed(alice.clone()),
+                            market_id,
+                            amount,
+                        ));
+
+                        assert_ok!(NeoSwaps::deploy_pool(
+                            RuntimeOrigin::signed(alice.clone()),
+                            market_id,
+                            amount,
+                            vec![one / 10u128 * 9u128, one / 10u128],
+                            one / 100,
+                        ));
+
+                        let duration = <Runtime as zrml_futarchy::Config>::MinDuration::get();
+
+                        // Wrap `remark_with_event` call in `dispatch_as` so that it doesn't error
+                        // with `BadOrigin`.
+                        let bob = AccountId::from([0x01; 32]);
+                        let remark = b"hullo".to_vec();
+                        let remark_dispatched_as = pallet_utility::Call::<Runtime>::dispatch_as {
+                            as_origin: Box::new(RawOrigin::Signed(bob.clone()).into()),
+                            call: Box::new(
+                                frame_system::Call::remark_with_event { remark: remark.clone() }
+                                    .into(),
+                            ),
+                        };
+                        let call =
+                            Preimage::bound(RuntimeCall::from(remark_dispatched_as)).unwrap();
+                        let oracle = DecisionMarketOracle::new(
+                            market_id,
+                            Asset::CategoricalOutcome(market_id, 0),
+                            Asset::CategoricalOutcome(market_id, 1),
+                        );
+                        let when = duration + 10;
+                        let proposal = Proposal { when, call, oracle };
+
+                        assert_ok!(Futarchy::submit_proposal(
+                            RawOrigin::Root.into(),
+                            duration,
+                            proposal.clone()
+                        ));
+
+                        utility::run_to_block(when);
+
+                        let hash = <Runtime as frame_system::Config>::Hashing::hash(&remark);
+                        System::assert_has_event(
+                            frame_system::Event::<Runtime>::Remarked { sender: bob, hash }.into(),
+                        );
+                        System::assert_has_event(
+                            pallet_scheduler::Event::<Runtime>::Dispatched {
+                                task: (when, 0),
+                                id: None,
+                                result: Ok(()),
+                            }
+                            .into(),
+                        );
                     });
                 }
             }

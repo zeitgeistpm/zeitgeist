@@ -15,10 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#[cfg(feature = "runtime-benchmarks")]
 mod benchmark_helper;
 mod oracle;
 mod scheduler;
 
+#[cfg(feature = "runtime-benchmarks")]
 pub use benchmark_helper::MockBenchmarkHelper;
 pub(crate) use oracle::MockOracle;
 pub(crate) use scheduler::MockScheduler;
