@@ -15,7 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{traits::pool_operations::PoolOperations, AssetOf, Config, Error, MarketIdOf, Pools};
+use crate::{
+    traits::pool_operations::PoolOperations, weights::WeightInfoZeitgeist, AssetOf, Config, Error,
+    MarketIdOf, Pools,
+};
 use frame_support::pallet_prelude::Weight;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -46,7 +49,7 @@ where
 
     // Utility implementation that uses the question mark operator to implement a fallible version
     // of `evaluate`.
-    fn try_evaluate(&self) -> Result<(Weight, bool), DispatchError> {
+    fn try_evaluate(&self) -> Result<bool, DispatchError> {
         let pool = Pools::<T>::get(self.market_id)
             .ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
 
@@ -54,8 +57,8 @@ where
         let negative_value = pool.calculate_spot_price(self.negative_outcome)?;
 
         let success = positive_value > negative_value;
-        // TODO Benchmark
-        Ok((Default::default(), success))
+
+        Ok(success)
     }
 }
 
@@ -66,10 +69,11 @@ where
     fn evaluate(&self) -> (Weight, bool) {
         // Err on the side of caution if the pool is not found or a calculation fails by not
         // enacting the policy.
-        match self.try_evaluate() {
+        let value = match self.try_evaluate() {
             Ok(result) => result,
-            // TODO Benchmark
-            Err(_) => (Default::default(), false),
-        }
+            Err(_) => false,
+        };
+
+        (T::WeightInfo::decision_market_oracle_evaluate(), value)
     }
 }

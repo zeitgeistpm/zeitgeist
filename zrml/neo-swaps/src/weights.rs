@@ -57,6 +57,7 @@ pub trait WeightInfoZeitgeist {
     fn exit(n: u32) -> Weight;
     fn withdraw_fees() -> Weight;
     fn deploy_pool(n: u32) -> Weight;
+    fn decision_market_oracle_evaluate() -> Weight;
 }
 
 /// Weight functions for zrml_neo_swaps (automatically generated)
@@ -239,5 +240,14 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(2))
             .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(n.into())))
             .saturating_add(Weight::from_parts(0, 5196).saturating_mul(n.into()))
+    }
+    /// Storage: `NeoSwaps::Pools` (r:1 w:0)
+    /// Proof: `NeoSwaps::Pools` (`max_values`: None, `max_size`: Some(146552), added: 149027, mode: `MaxEncodedLen`)
+    fn decision_market_oracle_evaluate() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `365`
+        //  Estimated: `150017`
+        // Minimum execution time: 44_000 nanoseconds.
+        Weight::from_parts(44_000_000, 150017).saturating_add(T::DbWeight::get().reads(1))
     }
 }
