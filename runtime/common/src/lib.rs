@@ -91,30 +91,7 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        parameter_types! {
-            pub const CampaignAssetsPalletStr: &'static str = "CampaignAssets";
-            pub const CustomAssetsPalletStr: &'static str = "CustomAssets";
-            pub const MarketAssetsPalletStr: &'static str = "MarketAssets";
-            pub const LiquidityMiningPalletStr: &'static str = "LiquidityMining";
-            pub const RikiddoPalletStr: &'static str = "RikiddoSigmoidFeeMarketEma";
-            pub const SimpleDisputesPalletStr: &'static str = "SimpleDisputes";
-        }
-
-        type RemoveCustomAssets = RemovePallet<CustomAssetsPalletStr, RocksDbWeight>;
-        type RemoveCampaignAssets = RemovePallet<CampaignAssetsPalletStr, RocksDbWeight>;
-        type RemoveMarketAssets = RemovePallet<MarketAssetsPalletStr, RocksDbWeight>;
-        type RemoveLiquidityMining = RemovePallet<LiquidityMiningPalletStr, RocksDbWeight>;
-        type RemoveRikiddo = RemovePallet<RikiddoPalletStr, RocksDbWeight>;
-        type RemoveSimpleDisputes = RemovePallet<SimpleDisputesPalletStr, RocksDbWeight>;
-
-        type Migrations = (
-            RemoveCustomAssets,
-            RemoveCampaignAssets,
-            RemoveMarketAssets,
-            RemoveLiquidityMining,
-            RemoveRikiddo,
-            RemoveSimpleDisputes,
-        );
+        type Migrations = ();
 
         pub type Executive = frame_executive::Executive<
             Runtime,
