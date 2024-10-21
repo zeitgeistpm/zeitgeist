@@ -89,6 +89,9 @@ parameter_types! {
     pub const TechnicalCommitteeMaxProposals: u32 = 64;
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
+    // CombinatorialTokens
+    pub const CombinatorialTokensPalletId: PalletId = COMBINATORIAL_TOKENS_PALLET_ID;
+
     // Contracts
     pub const ContractsCodeHashLockupDepositPercent: Perbill = Perbill::from_percent(10);
     pub const ContractsDefaultDepositLimit: Balance = deposit(16, 16 * 1024 * 1024);
@@ -163,6 +166,9 @@ parameter_types! {
     pub const MaxVotes: u32 = 100;
     /// The maximum number of public proposals that can exist at any time.
     pub const MaxProposals: u32 = 100;
+
+    // Futarchy
+    pub const MinDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Hybrid Router parameters
     pub const HybridRouterPalletId: PalletId = HYBRID_ROUTER_PALLET_ID;
@@ -448,7 +454,7 @@ parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
         match currency_id {
             Asset::CategoricalOutcome(_,_) => ExistentialDeposit::get(),
-            Asset::CombinatorialOutcome => ExistentialDeposit::get(),
+            Asset::CombinatorialToken(_) => ExistentialDeposit::get(),
             Asset::PoolShare(_)  => ExistentialDeposit::get(),
             Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]

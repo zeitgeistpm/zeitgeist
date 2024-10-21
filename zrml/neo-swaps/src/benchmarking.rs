@@ -21,6 +21,7 @@ use super::*;
 use crate::{
     liquidity_tree::{traits::LiquidityTreeHelper, types::LiquidityTree},
     traits::{liquidity_shares_manager::LiquiditySharesManager, pool_operations::PoolOperations},
+    types::DecisionMarketOracle,
     AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools, MIN_SPOT_PRICE,
 };
 use alloc::{vec, vec::Vec};
@@ -39,7 +40,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::{base_multiples::*, CENT},
     math::fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
-    traits::CompleteSetOperationsApi,
+    traits::{CompleteSetOperationsApi, FutarchyOracle},
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -490,6 +491,29 @@ mod benchmarks {
             create_spot_prices::<T>(asset_count),
             CENT.saturated_into(),
         );
+    }
+
+    #[benchmark]
+    fn decision_market_oracle_evaluate() {
+        let alice = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = 2;
+        let market_id = create_market_and_deploy_pool::<T>(
+            alice,
+            base_asset,
+            asset_count,
+            _10.saturated_into(),
+        );
+
+        let pool = Pools::<T>::get(market_id).unwrap();
+        let assets = pool.assets();
+
+        let oracle = DecisionMarketOracle::<T>::new(market_id, assets[0], assets[1]);
+
+        #[block]
+        {
+            let _ = oracle.evaluate();
+        }
     }
 
     impl_benchmark_test_suite!(

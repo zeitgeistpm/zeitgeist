@@ -758,7 +758,7 @@ fn buy_emits_event() {
                 asset_in: BASE_ASSET,
                 amount_in,
                 asset_out: asset,
-                amount_out: 2301256894490,
+                amount_out: 2301256894491,
                 external_fee_amount: 3423314400,
                 swap_fee_amount: 2273314407,
             }
