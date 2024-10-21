@@ -2226,8 +2226,8 @@ macro_rules! create_common_tests {
                         System::set_block_number(next);
 
                         System::on_initialize(next);
-                        Scheduler::on_initialize(now);
-                        Preimage::on_initialize(now);
+                        Scheduler::on_initialize(next);
+                        Preimage::on_initialize(next);
                         Balances::on_initialize(next);
                         Futarchy::on_initialize(next);
                     }
@@ -2383,7 +2383,7 @@ macro_rules! create_common_tests {
                             proposal.clone()
                         ));
 
-                        utility::run_to_block(when + 1);
+                        utility::run_to_block(when);
 
                         let hash = <Runtime as frame_system::Config>::Hashing::hash(&remark);
                         System::assert_has_event(
@@ -2398,26 +2398,6 @@ macro_rules! create_common_tests {
                             .into(),
                         );
                     });
-
-                    // System::assert_last_event(
-                    //     Event::<Runtime>::Submitted { duration, proposal: proposal.clone() }.into(),
-                    // );
-
-                    // // Check that vector now contains proposal.
-                    // let now = System::block_number();
-                    // let to_be_scheduled_at = now + duration;
-                    // assert_eq!(Proposals::get(to_be_scheduled_at).pop(), Some(proposal.clone()));
-
-                    // utility::run_to_block(to_be_scheduled_at);
-
-                    // // The proposal has now been removed and failed.
-                    // assert!(Proposals::<Runtime>::get(to_be_scheduled_at).is_empty());
-                    // assert!(MockScheduler::called_once_with(
-                    //     DispatchTime::At(proposal.when),
-                    //     proposal.call.clone()
-                    // ));
-
-                    // System::assert_last_event(Event::<Runtime>::Scheduled { proposal }.into());
                 }
             }
         }
