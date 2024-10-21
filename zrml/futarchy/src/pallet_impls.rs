@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{types::Proposal, Config, Event, Pallet};
+use crate::{types::Proposal, weights::WeightInfoZeitgeist, Config, Event, Pallet};
 use frame_support::{
     dispatch::RawOrigin,
     pallet_prelude::Weight,
@@ -43,12 +43,10 @@ impl<T: Config> Pallet<T> {
             } else {
                 Self::deposit_event(Event::<T>::UnexpectedSchedulerError);
             }
-
-            evaluate_weight // TODO Add benchmark!
         } else {
             Self::deposit_event(Event::<T>::Rejected { proposal });
-
-            evaluate_weight
         }
+
+        T::WeightInfo::maybe_schedule_proposal().saturating_add(evaluate_weight)
     }
 }

@@ -1219,6 +1219,7 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type Scheduler = Scheduler;
             type SubmitOrigin = EnsureRoot<AccountId>;
+            type WeightInfo = zrml_futarchy::weights::WeightInfo<Runtime>;
         }
 
         impl zrml_market_commons::Config for Runtime {

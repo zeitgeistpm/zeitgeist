@@ -16,7 +16,10 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate as zrml_futarchy;
-use crate::mock::types::{MockOracle, MockScheduler};
+use crate::{
+    mock::types::{MockOracle, MockScheduler},
+    weights::WeightInfo,
+};
 use frame_support::{construct_runtime, parameter_types, traits::Everything};
 use frame_system::{mocking::MockBlock, EnsureRoot};
 use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};
@@ -105,4 +108,5 @@ impl zrml_futarchy::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Scheduler = MockScheduler;
     type SubmitOrigin = EnsureRoot<<Runtime as frame_system::Config>::AccountId>;
+    type WeightInfo = WeightInfo<Runtime>;
 }

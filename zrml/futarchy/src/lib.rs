@@ -45,12 +45,13 @@ mod pallet_impls;
 mod tests;
 pub mod traits;
 pub mod types;
+pub mod weights;
 
 pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::types::Proposal;
+    use crate::{types::Proposal, weights::WeightInfoZeitgeist};
     use alloc::fmt::Debug;
     use core::marker::PhantomData;
     use frame_support::{
@@ -95,6 +96,8 @@ mod pallet {
 
         /// The origin that is allowed to submit proposals.
         type SubmitOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
+        type WeightInfo: WeightInfoZeitgeist;
     }
 
     #[pallet::pallet]
@@ -147,12 +150,11 @@ mod pallet {
         DurationTooShort,
     }
 
-    // TODO: Index for proposal?
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
         #[transactional]
-        #[pallet::weight({0})]
+        #[pallet::weight(T::WeightInfo::submit_proposal())]
         pub fn submit_proposal(
             origin: OriginFor<T>,
             duration: BlockNumberFor<T>,
@@ -170,7 +172,7 @@ mod pallet {
             let mut total_weight = Weight::zero(); // Add buffer.
 
             let proposals = Proposals::<T>::take(now);
-            // TODO Add one storage read.
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
             for proposal in proposals.into_iter() {
                 let weight = Self::maybe_schedule_proposal(proposal);
