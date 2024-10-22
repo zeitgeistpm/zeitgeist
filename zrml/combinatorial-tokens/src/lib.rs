@@ -22,8 +22,6 @@
 // <https://github.com/gnosis/conditional-tokens-contracts>,
 // and has been relicensed under GPL-3.0-or-later in this repository.
 
-// TODO Refactor so that collection IDs are their own type with an `Fq` field and an `odd` field?
-
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -52,11 +50,15 @@ mod pallet {
     };
     use orml_traits::MultiCurrency;
     use sp_runtime::{
-        traits::{AccountIdConversion, Get},
+        traits::{AccountIdConversion, Get, Zero},
         DispatchError, DispatchResult,
     };
     use zeitgeist_primitives::{
-        traits::MarketCommonsPalletApi,
+        math::{
+            checked_ops_res::{CheckedAddRes},
+            fixed::FixedMul,
+        },
+        traits::{MarketCommonsPalletApi, PayoutApi},
         types::{Asset, CombinatorialId},
     };
 
@@ -72,10 +74,12 @@ mod pallet {
 
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 
-        #[pallet::constant]
-        type PalletId: Get<PalletId>;
+        type Payout: PayoutApi<Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+        #[pallet::constant]
+        type PalletId: Get<PalletId>;
     }
 
     #[pallet::pallet]
@@ -127,12 +131,27 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// The specified partition is empty, contains overlaps, is too long or doesn't match the
+        /// Specified index set is trival, empty, or doesn't match the market's number of outcomes.
+        InvalidIndexSet,
+
+        /// Specified partition is empty, contains overlaps, is too long or doesn't match the
         /// market's number of outcomes.
         InvalidPartition,
 
-        /// The specified collection ID is invalid.
+        /// Specified collection ID is invalid.
         InvalidCollectionId,
+
+        /// Specified market is not resolved.
+        PayoutVectorNotFound,
+
+        /// Account holds no tokens of this type.
+        NoTokensFound,
+
+        /// Specified token holds no redeemable value.
+        TokenHasNoValue,
+
+        /// Something unexpected happened. You shouldn't see this.
+        UnexpectedError,
     }
 
     #[pallet::call]
@@ -165,6 +184,19 @@ mod pallet {
             let who = ensure_signed(origin)?;
             Self::do_merge_position(who, parent_collection_id, market_id, partition, amount)
         }
+
+        #[pallet::call_index(2)]
+        #[pallet::weight({0})] // TODO
+        #[transactional]
+        pub fn redeem_position(
+            origin: OriginFor<T>,
+            parent_collection_id: Option<CombinatorialIdOf<T>>,
+            market_id: MarketIdOf<T>,
+            index_set: Vec<bool>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::do_redeem_position(who, parent_collection_id, market_id, index_set)
+        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -191,7 +223,7 @@ mod pallet {
                     let position = Asset::CombinatorialToken(position_id);
 
                     // This will fail if the market has a different collateral than the previous
-                    // markets. TODO A cleaner error message would be nice though...
+                    // markets. FIXME A cleaner error message would be nice though...
                     T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                     T::MultiCurrency::withdraw(position, &who, amount)?;
 
@@ -301,11 +333,6 @@ mod pallet {
                 } else {
                     // Merge first-level tokens into collateral. Move collateral from the pallet
                     // account to the user's wallet. This is the legacy `sell_complete_set`.
-                    T::MultiCurrency::ensure_can_withdraw(
-                        collateral_token,
-                        &Self::account_id(),
-                        amount,
-                    )?; // Required because `transfer` throws `Underflow` errors sometimes.
                     T::MultiCurrency::transfer(
                         collateral_token,
                         &Self::account_id(),
@@ -334,6 +361,58 @@ mod pallet {
                 assets_in: positions,
                 amount,
             });
+
+            Ok(())
+        }
+
+        fn do_redeem_position(
+            who: T::AccountId,
+            parent_collection_id: Option<CombinatorialIdOf<T>>,
+            market_id: MarketIdOf<T>,
+            index_set: Vec<bool>,
+        ) -> DispatchResult {
+            let payout_vector =
+                T::Payout::payout_vector(market_id).ok_or(Error::<T>::PayoutVectorNotFound)?;
+
+            let market = T::MarketCommons::market(&market_id)?;
+            let asset_count = market.outcomes() as usize;
+            let collateral_token = market.base_asset;
+
+            ensure!(index_set.len() == asset_count, Error::<T>::InvalidIndexSet);
+            ensure!(index_set.iter().any(|&b| b), Error::<T>::InvalidIndexSet);
+            ensure!(!index_set.iter().all(|&b| b), Error::<T>::InvalidIndexSet);
+
+            // Add up values of each outcome.
+            let mut total_stake: BalanceOf<T> = Zero::zero();
+            for (&index, value) in index_set.iter().zip(payout_vector.iter()) {
+                if index {
+                    total_stake = total_stake.checked_add_res(value)?;
+                }
+            }
+
+            ensure!(!total_stake.is_zero(), Error::<T>::TokenHasNoValue);
+
+            let position =
+                Self::position_from_parent_collection(parent_collection_id, market_id, index_set)?;
+            let amount = T::MultiCurrency::free_balance(position, &who);
+            ensure!(!amount.is_zero(), Error::<T>::NoTokensFound);
+            T::MultiCurrency::withdraw(position, &who, amount)?;
+
+            let total_payout = total_stake.bmul(amount)?;
+
+            if let Some(pci) = parent_collection_id {
+                // Merge combinatorial token into higher level position. Destroy the tokens.
+                let position_id = T::CombinatorialIdManager::get_position_id(collateral_token, pci);
+                let position = Asset::CombinatorialToken(position_id);
+                T::MultiCurrency::deposit(position, &who, total_payout)?;
+            } else {
+                T::MultiCurrency::transfer(
+                    collateral_token,
+                    &Self::account_id(),
+                    &who,
+                    total_payout,
+                )?;
+            }
 
             Ok(())
         }

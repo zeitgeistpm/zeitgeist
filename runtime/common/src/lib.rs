@@ -1157,8 +1157,9 @@ macro_rules! impl_config_traits {
             type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
             type MarketCommons = MarketCommons;
             type MultiCurrency = AssetManager;
-            type PalletId = CombinatorialTokensPalletId;
+            type Payout = PredictionMarkets;
             type RuntimeEvent = RuntimeEvent;
+            type PalletId = CombinatorialTokensPalletId;
         }
 
         impl zrml_court::Config for Runtime {

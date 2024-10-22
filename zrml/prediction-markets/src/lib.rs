@@ -67,7 +67,7 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{
             CompleteSetOperationsApi, DeployPoolApi, DisputeApi, DisputeMaxWeightApi,
-            DisputeResolutionApi, MarketBuilderTrait,
+            DisputeResolutionApi, MarketBuilderTrait, PayoutApi,
         },
         types::{
             Asset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem, Market,
@@ -3050,6 +3050,111 @@ mod pallet {
             amount: Self::Balance,
         ) -> DispatchResult {
             Self::do_sell_complete_set(who, market_id, amount)
+        }
+    }
+
+    impl<T> PayoutApi for Pallet<T> where T: Config {
+        type Balance = BalanceOf<T>;
+        type MarketId = MarketIdOf<T>;
+
+        fn payout_vector(_market_id: Self::MarketId) -> Option<Vec<Self::Balance>> {
+            None
+            // // TODO Abstract into separate function so we don't have to litter this with ok() calls.
+            // let market = <zrml_market_commons::Pallet<T>>::market(&market_id).ok()?;
+            // let market_account = Self::market_account(market_id);
+
+            // ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolved);
+            // ensure!(market.is_redeemable(), Error::<T>::InvalidResolutionMechanism);
+
+            // let winning_assets = match resolved_outcome {
+            //     OutcomeReport::Categorical(category_index) => {
+            //         vec![(winning_currency_id, ZeitgeistBase::get(), ZeitgeistBase::get())],
+            //     }
+            //     OutcomeReport::Scalar(value) => {
+            //         let long_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
+            //         let short_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Short);
+
+            //         let bound = if let MarketType::Scalar(range) = market.market_type {
+            //             range
+            //         } else {
+            //             return None;
+            //         };
+
+            //         let calc_payouts = |final_value: u128,
+            //                             low: u128,
+            //                             high: u128|
+            //          -> (Perbill, Perbill) {
+            //             if final_value <= low {
+            //                 return (Perbill::zero(), Perbill::one());
+            //             }
+            //             if final_value >= high {
+            //                 return (Perbill::one(), Perbill::zero());
+            //             }
+
+            //             let payout_long: Perbill = Perbill::from_rational(
+            //                 final_value.saturating_sub(low),
+            //                 high.saturating_sub(low),
+            //             );
+            //             let payout_short: Perbill = Perbill::from_parts(
+            //                 Perbill::one().deconstruct().saturating_sub(payout_long.deconstruct()),
+            //             );
+            //             (payout_long, payout_short)
+            //         };
+
+            //         let (long_percent, short_percent) =
+            //             calc_payouts(value, *bound.start(), *bound.end());
+
+            //         let long_payout = long_percent.mul_floor(long_balance);
+            //         let short_payout = short_percent.mul_floor(short_balance);
+            //         // Ensure the market account has enough to pay out - if this is
+            //         // ever not true then we have an accounting problem.
+            //         ensure!(
+            //             T::AssetManager::free_balance(market.base_asset, &market_account)
+            //                 >= long_payout.saturating_add(short_payout),
+            //             Error::<T>::InsufficientFundsInMarketAccount,
+            //         );
+
+            //         vec![
+            //             (long_currency_id, long_payout, long_balance),
+            //             (short_currency_id, short_payout, short_balance),
+            //         ]
+            //     }
+            // };
+
+            // for (currency_id, payout, balance) in winning_assets {
+            //     // Destroy the shares.
+            //     let missing = T::AssetManager::slash(currency_id, &sender, balance);
+            //     debug_assert!(
+            //         missing.is_zero(),
+            //         "Could not slash all of the amount. currency_id {:?}, sender: {:?}, balance: \
+            //          {:?}.",
+            //         currency_id,
+            //         &sender,
+            //         balance,
+            //     );
+
+            //     // Pay out the winner.
+            //     let remaining_bal =
+            //         T::AssetManager::free_balance(market.base_asset, &market_account);
+            //     let actual_payout = payout.min(remaining_bal);
+
+            //     T::AssetManager::transfer(
+            //         market.base_asset,
+            //         &market_account,
+            //         &sender,
+            //         actual_payout,
+            //     )?;
+            //     // The if-check prevents scalar markets to emit events even if sender only owns one
+            //     // of the outcome tokens.
+            //     if balance != BalanceOf::<T>::zero() {
+            //         Self::deposit_event(Event::TokensRedeemed(
+            //             market_id,
+            //             currency_id,
+            //             balance,
+            //             actual_payout,
+            //             sender.clone(),
+            //         ));
+            //     }
         }
     }
 }
