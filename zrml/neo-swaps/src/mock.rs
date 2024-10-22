@@ -181,10 +181,11 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
-    type MultiCurrency = AssetManager;
     type CompleteSetOperations = PredictionMarkets;
     type ExternalFees = ExternalFees<Runtime, FeeAccount>;
     type MarketCommons = MarketCommons;
+    type MultiCurrency = AssetManager;
+    type PoolId = MarketId;
     type RuntimeEvent = RuntimeEvent;
     type MaxLiquidityTreeDepth = MaxLiquidityTreeDepth;
     type MaxSwapFee = NeoMaxSwapFee;
