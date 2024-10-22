@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "mock")]
-
-pub(crate) mod consts;
-pub mod ext_builder;
-pub(crate) mod types;
-pub(crate) mod runtime;
+pub trait PayoutApi {
+    type Balance;
+    type MarketId;
+    
+    fn payout_vector(market_id: Self::MarketId) -> Option<Vec<Self::Balance>>;
+}

@@ -56,7 +56,7 @@ mod pallet {
         DispatchError, DispatchResult,
     };
     use zeitgeist_primitives::{
-        traits::MarketCommonsPalletApi,
+        traits::{MarketCommonsPalletApi, PayoutApi},
         types::{Asset, CombinatorialId},
     };
 
@@ -72,10 +72,12 @@ mod pallet {
 
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 
-        #[pallet::constant]
-        type PalletId: Get<PalletId>;
+        type Payout: PayoutApi<Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+
+        #[pallet::constant]
+        type PalletId: Get<PalletId>;
     }
 
     #[pallet::pallet]
@@ -165,6 +167,18 @@ mod pallet {
             let who = ensure_signed(origin)?;
             Self::do_merge_position(who, parent_collection_id, market_id, partition, amount)
         }
+
+        // #[pallet::call_index(2)]
+        // #[pallet::weight({0})] // TODO
+        // #[transactional]
+        // pub fn redeem_position(
+        //     origin: OriginFor<T>,
+        //     parent_collection_id: Option<CombinatorialIdOf<T>>,
+        //     market_id: MarketIdOf<T>,
+        // ) -> DispatchResult {
+        //     let who = ensure_signed(origin)?;
+        //     Self::do_redeem_position(who, parent_collection_id, market_id)
+        // }
     }
 
     impl<T: Config> Pallet<T> {
