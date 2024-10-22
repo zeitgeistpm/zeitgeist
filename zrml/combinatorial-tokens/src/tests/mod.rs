@@ -19,12 +19,14 @@
 
 mod integration;
 mod merge_position;
+mod redeem_position;
 mod split_position;
 
 use crate::{
     mock::{
         ext_builder::ExtBuilder,
         runtime::{CombinatorialTokens, Currencies, MarketCommons, Runtime, RuntimeOrigin, System},
+        types::MockPayout,
     },
     Error, Event, Pallet,
 };
