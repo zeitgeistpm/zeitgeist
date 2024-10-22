@@ -21,8 +21,8 @@ impl MockPayout {
             return false;
         }
 
-        let actual = PAYOUT_VECTOR_CALL_DATA
-            .with(|value| value.borrow().first().expect("can't be empty").clone());
+        let actual =
+            PAYOUT_VECTOR_CALL_DATA.with(|value| *value.borrow().first().expect("can't be empty"));
 
         actual == expected
     }
