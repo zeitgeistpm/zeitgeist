@@ -52,10 +52,11 @@ mod pallet {
     };
     use orml_traits::MultiCurrency;
     use sp_runtime::{
-        traits::{AccountIdConversion, Get},
+        traits::{AccountIdConversion, Get, Zero},
         DispatchError, DispatchResult,
     };
     use zeitgeist_primitives::{
+        math::checked_ops_res::{CheckedAddRes, CheckedMulRes},
         traits::{MarketCommonsPalletApi, PayoutApi},
         types::{Asset, CombinatorialId},
     };
@@ -129,12 +130,27 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// The specified partition is empty, contains overlaps, is too long or doesn't match the
+        /// Specified index set is trival, empty, or doesn't match the market's number of outcomes.
+        InvalidIndexSet,
+
+        /// Specified partition is empty, contains overlaps, is too long or doesn't match the
         /// market's number of outcomes.
         InvalidPartition,
 
-        /// The specified collection ID is invalid.
+        /// Specified collection ID is invalid.
         InvalidCollectionId,
+
+        /// Specified market is not resolved.
+        MarketNotResolved,
+
+        /// Account holds no tokens of this type.
+        NoTokensFound,
+
+        /// Specified token holds no redeemable value.
+        TokenHasNoValue,
+
+        /// Something unexpected happened. You shouldn't see this.
+        UnexpectedError,
     }
 
     #[pallet::call]
@@ -168,17 +184,18 @@ mod pallet {
             Self::do_merge_position(who, parent_collection_id, market_id, partition, amount)
         }
 
-        // #[pallet::call_index(2)]
-        // #[pallet::weight({0})] // TODO
-        // #[transactional]
-        // pub fn redeem_position(
-        //     origin: OriginFor<T>,
-        //     parent_collection_id: Option<CombinatorialIdOf<T>>,
-        //     market_id: MarketIdOf<T>,
-        // ) -> DispatchResult {
-        //     let who = ensure_signed(origin)?;
-        //     Self::do_redeem_position(who, parent_collection_id, market_id)
-        // }
+        #[pallet::call_index(2)]
+        #[pallet::weight({0})] // TODO
+        #[transactional]
+        pub fn redeem_positions(
+            origin: OriginFor<T>,
+            parent_collection_id: Option<CombinatorialIdOf<T>>,
+            market_id: MarketIdOf<T>,
+            index_set: Vec<bool>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            Self::do_redeem_positions(who, parent_collection_id, market_id, index_set)
+        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -348,6 +365,63 @@ mod pallet {
                 assets_in: positions,
                 amount,
             });
+
+            Ok(())
+        }
+
+        fn do_redeem_positions(
+            who: T::AccountId,
+            parent_collection_id: Option<CombinatorialIdOf<T>>,
+            market_id: MarketIdOf<T>,
+            index_set: Vec<bool>,
+        ) -> DispatchResult {
+            let payout_vector =
+                T::Payout::payout_vector(market_id).ok_or(Error::<T>::MarketNotResolved)?;
+
+            let market = T::MarketCommons::market(&market_id)?;
+            let asset_count = market.outcomes() as usize;
+            let collateral_token = market.base_asset;
+
+            ensure!(index_set.len() == asset_count, Error::<T>::InvalidIndexSet);
+            ensure!(index_set.iter().any(|&b| b), Error::<T>::InvalidIndexSet);
+            ensure!(!index_set.iter().all(|&b| b), Error::<T>::InvalidIndexSet);
+
+            // Add up values of each outcome.
+            let mut total_stake: BalanceOf<T> = Zero::zero();
+            for (&index, value) in index_set.iter().zip(payout_vector.iter()) {
+                if index {
+                    total_stake = total_stake.checked_add_res(value)?;
+                }
+            }
+
+            let position =
+                Self::position_from_parent_collection(parent_collection_id, market_id, index_set)?;
+            let amount = T::MultiCurrency::free_balance(position, &who);
+            ensure!(!amount.is_zero(), Error::<T>::NoTokensFound);
+            T::MultiCurrency::withdraw(position, &who, amount)?;
+
+            ensure!(!total_stake.is_zero(), Error::<T>::TokenHasNoValue);
+
+            let total_payout = total_stake.checked_mul_res(&amount)?;
+
+            if let Some(pci) = parent_collection_id {
+                // Merge combinatorial token into higher level position. Destroy the tokens.
+                let position_id = T::CombinatorialIdManager::get_position_id(collateral_token, pci);
+                let position = Asset::CombinatorialToken(position_id);
+                T::MultiCurrency::deposit(position, &who, total_payout)?;
+            } else {
+                T::MultiCurrency::ensure_can_withdraw(
+                    collateral_token,
+                    &Self::account_id(),
+                    amount,
+                )?; // Required because `transfer` throws `Underflow` errors sometimes.
+                T::MultiCurrency::transfer(
+                    collateral_token,
+                    &Self::account_id(),
+                    &who,
+                    total_payout,
+                )?;
+            }
 
             Ok(())
         }
