@@ -1296,6 +1296,7 @@ macro_rules! impl_config_traits {
             type ExternalFees = MarketCreatorFee;
             type MarketCommons = MarketCommons;
             type MultiCurrency = AssetManager;
+            type PoolId = MarketId;
             type RuntimeEvent = RuntimeEvent;
             type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
             type MaxLiquidityTreeDepth = MaxLiquidityTreeDepth;

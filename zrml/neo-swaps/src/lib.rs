@@ -58,17 +58,20 @@ mod pallet {
         pallet_prelude::StorageMap,
         require_transactional,
         traits::{Get, IsType, StorageVersion},
-        transactional, PalletError, PalletId, Twox64Concat,
+        transactional, PalletError, PalletId, Parameter, Twox64Concat,
     };
     use frame_system::{
         ensure_signed,
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
     use orml_traits::MultiCurrency;
-    use parity_scale_codec::{Decode, Encode};
+    use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
     use scale_info::TypeInfo;
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
+        traits::{
+            AccountIdConversion, AtLeast32Bit, CheckedSub, MaybeSerializeDeserialize, Member,
+            Saturating, Zero,
+        },
         DispatchError, DispatchResult, Perbill, RuntimeDebug, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -113,6 +116,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
     pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>, MaxAssets>;
+    pub(crate) type PoolIdOf<T> = <T as Config>::PoolId;
     pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
 
     #[pallet::config]
@@ -136,9 +140,18 @@ mod pallet {
                 AccountId = Self::AccountId,
                 BlockNumber = BlockNumberFor<Self>,
                 Balance = BalanceOf<Self>,
+                MarketId = Self::PoolId,
             >;
 
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
+
+        type PoolId: AtLeast32Bit
+            + Copy
+            + Default
+            + MaxEncodedLen
+            + MaybeSerializeDeserialize
+            + Member
+            + Parameter;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -161,7 +174,7 @@ mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
-    pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, MarketIdOf<T>, PoolOf<T>>;
+    pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, PoolIdOf<T>, PoolOf<T>>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
