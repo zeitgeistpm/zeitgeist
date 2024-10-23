@@ -3053,7 +3053,10 @@ mod pallet {
         }
     }
 
-    impl<T> PayoutApi for Pallet<T> where T: Config {
+    impl<T> PayoutApi for Pallet<T>
+    where
+        T: Config,
+    {
         type Balance = BalanceOf<T>;
         type MarketId = MarketIdOf<T>;
 
