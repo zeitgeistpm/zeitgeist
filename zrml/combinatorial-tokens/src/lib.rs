@@ -103,8 +103,9 @@ mod pallet {
         /// User `who` has split `amount` units of token `asset_in` into the same amount of each
         /// token in `assets_out` using `partition`. The ith element of `partition` matches the ith
         /// element of `assets_out`, so `assets_out[i]` is the outcome represented by the specified
-        /// `parent_collection_id` together with `partition` in `market_id`.
-        /// TODO The second sentence is confusing.
+        /// `parent_collection_id` when split using `partition[i]` in `market_id`. The same goes for
+        /// the `collection_ids` vector, the ith element of which specifies the collection ID of
+        /// `assets_out[i]`.
         TokenSplit {
             who: AccountIdOf<T>,
             parent_collection_id: Option<CombinatorialId>,
@@ -117,12 +118,23 @@ mod pallet {
         },
 
         /// User `who` has merged `amount` units of each of the tokens in `assets_in` into the same
-        /// amount of `asset_out`.
+        /// amount of `asset_out`. The ith element of the `partition` matches the ith element of
+        /// `assets_in`, so `assets_in[i]` is the outcome represented by the specified
+        /// `parent_collection_id` when split using `partition[i]` in `market_id`. Note that the
+        /// `parent_collection_id` is equal to the collection ID of the position `asset_out`; if
+        /// `asset_out` is the collateral token, then `parent_collection_id` is `None`.
         TokenMerged {
             who: AccountIdOf<T>,
+            parent_collection_id: Option<CombinatorialId>,
+            market_id: MarketIdOf<T>,
+            partition: Vec<Vec<bool>>,
             asset_out: AssetOf<T>,
             assets_in: Vec<AssetOf<T>>,
             amount: BalanceOf<T>,
+        },
+
+        TokenRedeemed {
+
         },
     }
 
@@ -387,6 +399,9 @@ mod pallet {
 
             Self::deposit_event(Event::<T>::TokenMerged {
                 who,
+                parent_collection_id,
+                market_id,
+                partition,
                 asset_out: merged_token,
                 assets_in: positions,
                 amount,
