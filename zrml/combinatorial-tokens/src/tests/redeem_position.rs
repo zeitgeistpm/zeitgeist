@@ -93,23 +93,41 @@ fn redeem_position_works_sans_parent() {
             225, 102, 57, 241, 199, 18, 226, 137, 68, 3, 219, 131,
         ]);
         let alice = Account::new(0).deposit(ct_110, _3).unwrap();
-        let pallet = Account::new(Pallet::<Runtime>::account_id()).deposit(Asset::Ztg, _3).unwrap();
+        let amount_in = _3;
+        let pallet =
+            Account::new(Pallet::<Runtime>::account_id()).deposit(Asset::Ztg, amount_in).unwrap();
 
         MockPayout::set_return_value(Some(vec![_1_4, _1_2, _1_4]));
 
+        let parent_collection_id = None;
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
         let index_set = vec![B1, B1, B0];
         assert_ok!(CombinatorialTokens::redeem_position(
             alice.signed(),
-            None,
+            parent_collection_id,
             market_id,
-            index_set,
+            index_set.clone(),
             false,
         ));
 
         assert_eq!(alice.free_balance(ct_110), 0);
-        assert_eq!(alice.free_balance(Asset::Ztg), _2 + _1_4);
+        let amount_out = _2 + _1_4;
+        assert_eq!(alice.free_balance(Asset::Ztg), amount_out);
         assert_eq!(pallet.free_balance(Asset::Ztg), _3_4);
+
+        System::assert_last_event(
+            Event::<Runtime>::TokenRedeemed {
+                who: alice.id,
+                parent_collection_id,
+                market_id,
+                index_set,
+                asset_in: ct_110,
+                amount_in,
+                asset_out: Asset::Ztg,
+                amount_out,
+            }
+            .into(),
+        );
     });
 }
 
@@ -125,28 +143,44 @@ fn redeem_position_works_with_parent() {
             225, 211, 72, 142, 210, 98, 202, 168, 193, 245, 217, 239, 28,
         ]);
 
-        let alice = Account::new(0).deposit(ct_001_0101, _7).unwrap();
+        let amount_in = _7;
+        let alice = Account::new(0).deposit(ct_001_0101, amount_in).unwrap();
 
         MockPayout::set_return_value(Some(vec![_1_4, 0, _1_2, _1_4]));
 
         let _ = create_market(Asset::Ztg, MarketType::Categorical(3));
-        let child_market_id = create_market(Asset::Ztg, MarketType::Categorical(4));
+        let market_id = create_market(Asset::Ztg, MarketType::Categorical(4));
 
         // Collection ID of [0, 0, 1].
-        let parent_collection_id = [
+        let parent_collection_id = Some([
             6, 44, 173, 50, 122, 106, 144, 185, 253, 19, 252, 218, 215, 241, 218, 37, 196, 112, 45,
             133, 165, 48, 231, 189, 87, 123, 131, 18, 190, 5, 110, 93,
-        ];
+        ]);
         let index_set = vec![B0, B1, B0, B1];
         assert_ok!(CombinatorialTokens::redeem_position(
             alice.signed(),
-            Some(parent_collection_id),
-            child_market_id,
-            index_set,
+            parent_collection_id,
+            market_id,
+            index_set.clone(),
             false,
         ));
 
         assert_eq!(alice.free_balance(ct_001_0101), 0);
-        assert_eq!(alice.free_balance(ct_001), _1 + _3_4);
+        let amount_out = _1 + _3_4;
+        assert_eq!(alice.free_balance(ct_001), amount_out);
+
+        System::assert_last_event(
+            Event::<Runtime>::TokenRedeemed {
+                who: alice.id,
+                parent_collection_id,
+                market_id,
+                index_set,
+                asset_in: ct_001_0101,
+                amount_in,
+                asset_out: ct_001,
+                amount_out,
+            }
+            .into(),
+        );
     });
 }
