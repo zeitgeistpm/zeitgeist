@@ -295,6 +295,8 @@ mod pallet {
                 .cloned()
                 .map(|collection_id| Self::position_from_collection_id(market_id, collection_id))
                 .collect::<Result<Vec<_>, _>>()?;
+            // Security note: Safe as iterations are limited to the number of assets in the market
+            // thanks to the `ensure!` invocations in `Self::free_index_set`.
             for &position in positions.iter() {
                 T::MultiCurrency::deposit(position, &who, amount)?;
             }
@@ -327,7 +329,7 @@ mod pallet {
 
             let free_index_set = Self::free_index_set(market_id, &partition)?;
 
-            // Destory the old tokens.
+            // Destroy the old tokens.
             let positions = partition
                 .iter()
                 .cloned()
@@ -340,6 +342,8 @@ mod pallet {
                     )
                 })
                 .collect::<Result<Vec<_>, _>>()?;
+            // Security note: Safe as iterations are limited to the number of assets in the market
+            // thanks to the `ensure!` invocations in `Self::free_index_set`.
             for &position in positions.iter() {
                 T::MultiCurrency::withdraw(position, &who, amount)?;
             }
@@ -411,6 +415,8 @@ mod pallet {
 
             // Add up values of each outcome.
             let mut total_stake: BalanceOf<T> = Zero::zero();
+            // Security note: Safe because `zip` will limit this loop to `payout_vector.len()`
+            // iterations.
             for (&index, value) in index_set.iter().zip(payout_vector.iter()) {
                 if index {
                     total_stake = total_stake.checked_add_res(value)?;
