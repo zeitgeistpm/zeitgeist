@@ -24,7 +24,7 @@ fn redeem_position_fails_on_no_payout_vector() {
         let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
         MockPayout::set_return_value(None);
         assert_noop!(
-            CombinatorialTokens::redeem_position(alice.signed(), None, 0, vec![]),
+            CombinatorialTokens::redeem_position(alice.signed(), None, 0, vec![], false),
             Error::<Runtime>::PayoutVectorNotFound
         );
     });
@@ -36,7 +36,7 @@ fn redeem_position_fails_on_market_not_found() {
         let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
         MockPayout::set_return_value(Some(vec![_1_2, _1_2]));
         assert_noop!(
-            CombinatorialTokens::redeem_position(alice.signed(), None, 0, vec![]),
+            CombinatorialTokens::redeem_position(alice.signed(), None, 0, vec![], false),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
         );
     });
@@ -51,7 +51,7 @@ fn redeem_position_fails_on_incorrect_index_set(index_set: Vec<bool>) {
         MockPayout::set_return_value(Some(vec![_1_3, _1_3, _1_3]));
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
         assert_noop!(
-            CombinatorialTokens::redeem_position(alice.signed(), None, market_id, index_set),
+            CombinatorialTokens::redeem_position(alice.signed(), None, market_id, index_set, false),
             Error::<Runtime>::InvalidIndexSet
         );
     });
@@ -65,7 +65,7 @@ fn redeem_position_fails_if_tokens_have_to_value() {
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(4));
         let index_set = vec![B1, B0, B0, B1];
         assert_noop!(
-            CombinatorialTokens::redeem_position(alice.signed(), None, market_id, index_set),
+            CombinatorialTokens::redeem_position(alice.signed(), None, market_id, index_set, false),
             Error::<Runtime>::TokenHasNoValue
         );
     });
@@ -79,7 +79,7 @@ fn redeem_position_fails_if_user_holds_no_winning_tokens() {
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(4));
         let index_set = vec![B0, B1, B0, B1];
         assert_noop!(
-            CombinatorialTokens::redeem_position(alice.signed(), None, market_id, index_set),
+            CombinatorialTokens::redeem_position(alice.signed(), None, market_id, index_set, false),
             Error::<Runtime>::NoTokensFound,
         );
     });
@@ -103,7 +103,8 @@ fn redeem_position_works_sans_parent() {
             alice.signed(),
             None,
             market_id,
-            index_set
+            index_set,
+            false,
         ));
 
         assert_eq!(alice.free_balance(ct_110), 0);
@@ -141,7 +142,8 @@ fn redeem_position_works_with_parent() {
             alice.signed(),
             Some(parent_collection_id),
             child_market_id,
-            index_set
+            index_set,
+            false,
         ));
 
         assert_eq!(alice.free_balance(ct_001_0101), 0);

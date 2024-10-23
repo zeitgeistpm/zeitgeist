@@ -163,9 +163,17 @@ mod pallet {
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
+            force_max_work: bool,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            Self::do_split_position(who, parent_collection_id, market_id, partition, amount)
+            Self::do_split_position(
+                who,
+                parent_collection_id,
+                market_id,
+                partition,
+                amount,
+                force_max_work,
+            )
         }
 
         #[pallet::call_index(1)]
@@ -177,9 +185,17 @@ mod pallet {
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
+            force_max_work: bool,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            Self::do_merge_position(who, parent_collection_id, market_id, partition, amount)
+            Self::do_merge_position(
+                who,
+                parent_collection_id,
+                market_id,
+                partition,
+                amount,
+                force_max_work,
+            )
         }
 
         #[pallet::call_index(2)]
@@ -190,9 +206,16 @@ mod pallet {
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
+            force_max_work: bool,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            Self::do_redeem_position(who, parent_collection_id, market_id, index_set)
+            Self::do_redeem_position(
+                who,
+                parent_collection_id,
+                market_id,
+                index_set,
+                force_max_work,
+            )
         }
     }
 
@@ -204,6 +227,7 @@ mod pallet {
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
+            force_max_work: bool,
         ) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
             let collateral_token = market.base_asset;
@@ -245,6 +269,7 @@ mod pallet {
                     parent_collection_id,
                     market_id,
                     remaining_index_set,
+                    force_max_work,
                 )?;
                 T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                 T::MultiCurrency::withdraw(position, &who, amount)?;
@@ -261,6 +286,7 @@ mod pallet {
                         parent_collection_id,
                         market_id,
                         index_set,
+                        force_max_work,
                     )
                 })
                 .collect::<Result<Vec<_>, _>>()?;
@@ -294,6 +320,7 @@ mod pallet {
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
+            force_max_work: bool,
         ) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
             let collateral_token = market.base_asset;
@@ -309,6 +336,7 @@ mod pallet {
                         parent_collection_id,
                         market_id,
                         index_set,
+                        force_max_work,
                     )
                 })
                 .collect::<Result<Vec<_>, _>>()?;
@@ -346,6 +374,7 @@ mod pallet {
                     parent_collection_id,
                     market_id,
                     remaining_index_set,
+                    force_max_work,
                 )?;
                 T::MultiCurrency::deposit(position, &who, amount)?;
 
@@ -367,6 +396,7 @@ mod pallet {
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
+            force_max_work: bool,
         ) -> DispatchResult {
             let payout_vector =
                 T::Payout::payout_vector(market_id).ok_or(Error::<T>::PayoutVectorNotFound)?;
@@ -389,8 +419,12 @@ mod pallet {
 
             ensure!(!total_stake.is_zero(), Error::<T>::TokenHasNoValue);
 
-            let position =
-                Self::position_from_parent_collection(parent_collection_id, market_id, index_set)?;
+            let position = Self::position_from_parent_collection(
+                parent_collection_id,
+                market_id,
+                index_set,
+                force_max_work,
+            )?;
             let amount = T::MultiCurrency::free_balance(position, &who);
             ensure!(!amount.is_zero(), Error::<T>::NoTokensFound);
             T::MultiCurrency::withdraw(position, &who, amount)?;
@@ -451,12 +485,13 @@ mod pallet {
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
+            force_max_work: bool,
         ) -> Result<CombinatorialIdOf<T>, DispatchError> {
             T::CombinatorialIdManager::get_collection_id(
                 parent_collection_id,
                 market_id,
                 index_set,
-                false, // TODO Expose this parameter!
+                force_max_work,
             )
             .ok_or(Error::<T>::InvalidCollectionId.into())
         }
@@ -479,11 +514,13 @@ mod pallet {
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
+            force_max_work: bool,
         ) -> Result<AssetOf<T>, DispatchError> {
             let collection_id = Self::collection_id_from_parent_collection(
                 parent_collection_id,
                 market_id,
                 index_set,
+                force_max_work,
             )?;
 
             Self::position_from_collection_id(market_id, collection_id)
