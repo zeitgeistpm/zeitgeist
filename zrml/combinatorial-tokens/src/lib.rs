@@ -133,8 +133,19 @@ mod pallet {
             amount: BalanceOf<T>,
         },
 
+        /// User `who` has redeemed `amount_in` units of `asset_in` for `amount_out` units of
+        /// `asset_out` using the report for the market specified by `market_id`. The
+        /// `parent_collection_id` specifies the collection ID of the `asset_out`; it is `None` if
+        /// the `asset_out` is the collateral token.
         TokenRedeemed {
-
+            who: AccountIdOf<T>,
+            parent_collection_id: Option<CombinatorialId>,
+            market_id: MarketIdOf<T>,
+            index_set: Vec<bool>,
+            asset_in: AssetOf<T>,
+            amount_in: BalanceOf<T>,
+            asset_out: AssetOf<T>,
+            amount_out: BalanceOf<T>,
         },
     }
 
@@ -443,7 +454,7 @@ mod pallet {
             let position = Self::position_from_parent_collection(
                 parent_collection_id,
                 market_id,
-                index_set,
+                index_set.clone(),
                 force_max_work,
             )?;
             let amount = T::MultiCurrency::free_balance(position, &who);
@@ -452,11 +463,13 @@ mod pallet {
 
             let total_payout = total_stake.bmul(amount)?;
 
-            if let Some(pci) = parent_collection_id {
+            let asset_out = if let Some(pci) = parent_collection_id {
                 // Merge combinatorial token into higher level position. Destroy the tokens.
                 let position_id = T::CombinatorialIdManager::get_position_id(collateral_token, pci);
                 let position = Asset::CombinatorialToken(position_id);
                 T::MultiCurrency::deposit(position, &who, total_payout)?;
+
+                position
             } else {
                 T::MultiCurrency::transfer(
                     collateral_token,
@@ -464,7 +477,20 @@ mod pallet {
                     &who,
                     total_payout,
                 )?;
-            }
+
+                collateral_token
+            };
+
+            Self::deposit_event(Event::<T>::TokenRedeemed {
+                who,
+                parent_collection_id,
+                market_id,
+                index_set,
+                asset_in: position,
+                amount_in: amount,
+                asset_out,
+                amount_out: total_payout,
+            });
 
             Ok(())
         }
