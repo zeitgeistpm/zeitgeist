@@ -54,10 +54,7 @@ mod pallet {
         DispatchError, DispatchResult,
     };
     use zeitgeist_primitives::{
-        math::{
-            checked_ops_res::{CheckedAddRes},
-            fixed::FixedMul,
-        },
+        math::{checked_ops_res::CheckedAddRes, fixed::FixedMul},
         traits::{MarketCommonsPalletApi, PayoutApi},
         types::{Asset, CombinatorialId},
     };
