@@ -33,6 +33,7 @@ mod manually_close_market;
 mod on_initialize;
 mod on_market_close;
 mod on_resolution;
+mod payout_vector;
 mod redeem_shares;
 mod reject_early_close;
 mod reject_market;
