@@ -4,13 +4,16 @@ use crate::{
 };
 use alloc::vec::Vec;
 use zeitgeist_primitives::traits::CombinatorialTokensBenchmarkHelper;
+use sp_runtime::DispatchResult;
 
 pub struct BenchmarkHelper;
 
 impl CombinatorialTokensBenchmarkHelper for BenchmarkHelper {
     type Balance = BalanceOf<Runtime>;
 
-    fn setup_payout_vector(payout: Option<Vec<Self::Balance>>) {
+    fn setup_payout_vector(payout: Option<Vec<Self::Balance>>) -> DispatchResult {
         MockPayout::set_return_value(payout);
+
+        Ok(())
     }
 }

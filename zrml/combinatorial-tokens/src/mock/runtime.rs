@@ -17,7 +17,7 @@
 
 use crate as zrml_combinatorial_tokens;
 use crate::{
-    mock::types::{BenchmarkHelper, MockPayout},
+    mock::types::{MockPayout},
     types::CryptographicIdManager,
 };
 use frame_support::{construct_runtime, traits::Everything, Blake2_256};
@@ -32,6 +32,9 @@ use zeitgeist_primitives::{
         AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CurrencyId, Hash, MarketId, Moment,
     },
 };
+
+#[cfg(feature = "runtime-benchmarks")]
+use crate::mock::types::BenchmarkHelper;
 
 construct_runtime! {
     pub enum Runtime {

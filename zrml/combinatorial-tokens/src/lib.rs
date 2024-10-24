@@ -27,6 +27,7 @@
 
 extern crate alloc;
 
+mod benchmarking;
 pub mod mock;
 mod tests;
 mod traits;
@@ -505,7 +506,7 @@ mod pallet {
             T::PalletId::get().into_account_truncating()
         }
 
-        fn free_index_set(
+        pub(crate) fn free_index_set(
             market_id: MarketIdOf<T>,
             partition: &[Vec<bool>],
         ) -> Result<Vec<bool>, DispatchError> {
@@ -534,7 +535,7 @@ mod pallet {
             Ok(free_index_set)
         }
 
-        fn collection_id_from_parent_collection(
+        pub(crate) fn collection_id_from_parent_collection(
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
@@ -549,7 +550,7 @@ mod pallet {
             .ok_or(Error::<T>::InvalidCollectionId.into())
         }
 
-        fn position_from_collection_id(
+        pub(crate) fn position_from_collection_id(
             market_id: MarketIdOf<T>,
             collection_id: CombinatorialIdOf<T>,
         ) -> Result<AssetOf<T>, DispatchError> {
@@ -563,7 +564,7 @@ mod pallet {
             Ok(asset)
         }
 
-        fn position_from_parent_collection(
+        pub(crate) fn position_from_parent_collection(
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
