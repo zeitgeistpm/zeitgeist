@@ -20,15 +20,11 @@
 use crate::{BalanceOf, Call, Config, Event, MarketIdOf, Pallet};
 use alloc::{vec, vec::Vec};
 use frame_benchmarking::v2::*;
-use frame_support::{
-    dispatch::RawOrigin,
-    traits::{Bounded, Get},
-};
+use frame_support::dispatch::RawOrigin;
 use frame_system::Pallet as System;
 use orml_traits::MultiCurrency;
-use sp_runtime::{traits::Zero, Perbill, SaturatedConversion};
+use sp_runtime::{traits::Zero, Perbill};
 use zeitgeist_primitives::{
-    constants::base_multiples::*,
     math::fixed::{BaseProvider, ZeitgeistBase},
     traits::{CombinatorialTokensBenchmarkHelper, MarketCommonsPalletApi},
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
@@ -128,6 +124,76 @@ mod benchmarks {
     }
 
     #[benchmark]
+    fn merge_position_vertical_with_parent(n: Linear<2, 32>) {
+        let alice: T::AccountId = whitelisted_caller();
+
+        let position_count: usize = n.try_into().unwrap();
+
+        let parent_collection_id = None;
+        let parent_market_id = create_market::<T>(alice.clone(), 2);
+
+        // The collection/position that we're merging into.
+        let cid_01 = Pallet::<T>::collection_id_from_parent_collection(
+            parent_collection_id,
+            parent_market_id,
+            vec![false, true],
+            false,
+        )
+        .unwrap();
+        let pos_01 = Pallet::<T>::position_from_collection_id(parent_market_id, cid_01).unwrap();
+
+        let child_market_id = create_market::<T>(alice.clone(), position_count.try_into().unwrap());
+        let partition: Vec<_> = (0..position_count)
+            .map(|index| {
+                let mut index_set = vec![false; position_count];
+                index_set[index] = true;
+
+                index_set
+            })
+            .collect();
+        let amount = ZeitgeistBase::get().unwrap();
+
+        let assets_in: Vec<_> = partition
+            .iter()
+            .cloned()
+            .map(|index_set| {
+                Pallet::<T>::position_from_parent_collection(
+                    Some(cid_01),
+                    child_market_id,
+                    index_set,
+                    false,
+                )
+                .unwrap()
+            })
+            .collect();
+
+        for &asset in assets_in.iter() {
+            T::MultiCurrency::deposit(asset, &alice, amount).unwrap();
+        }
+
+        #[extrinsic_call]
+        merge_position(
+            RawOrigin::Signed(alice.clone()),
+            Some(cid_01),
+            child_market_id,
+            partition.clone(),
+            amount,
+            true,
+        );
+
+        let expected_event = <T as Config>::RuntimeEvent::from(Event::<T>::TokenMerged {
+            who: alice,
+            parent_collection_id: Some(cid_01),
+            market_id: child_market_id,
+            partition,
+            asset_out: pos_01,
+            assets_in,
+            amount,
+        });
+        System::<T>::assert_last_event(expected_event.into());
+    }
+
+    #[benchmark]
     fn merge_position_horizontal(n: Linear<2, 32>) {
         let alice: T::AccountId = whitelisted_caller();
 
@@ -164,7 +230,6 @@ mod benchmarks {
         for &asset in assets_in.iter() {
             T::MultiCurrency::deposit(asset, &alice, amount).unwrap();
         }
-        T::MultiCurrency::deposit(Asset::Ztg, &Pallet::<T>::account_id(), amount).unwrap();
 
         #[extrinsic_call]
         merge_position(
