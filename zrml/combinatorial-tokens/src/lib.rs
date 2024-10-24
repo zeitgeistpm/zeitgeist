@@ -32,7 +32,7 @@ pub mod mock;
 mod tests;
 mod traits;
 pub mod types;
-mod weights;
+pub mod weights;
 
 pub use pallet::*;
 

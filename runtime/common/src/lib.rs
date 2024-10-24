@@ -1165,6 +1165,7 @@ macro_rules! impl_config_traits {
             type Payout = PredictionMarkets;
             type RuntimeEvent = RuntimeEvent;
             type PalletId = CombinatorialTokensPalletId;
+            type WeightInfo = zrml_combinatorial_tokens::weights::WeightInfo<Runtime>;
         }
 
         impl zrml_court::Config for Runtime {
