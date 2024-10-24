@@ -1458,6 +1458,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, pallet_vesting, Vesting);
                     list_benchmark!(list, extra, zrml_swaps, Swaps);
                     list_benchmark!(list, extra, zrml_authorized, Authorized);
+                    list_benchmark!(list, extra, zrml_combinatorial_tokens, CombinatorialTokens);
                     list_benchmark!(list, extra, zrml_court, Court);
                     list_benchmark!(list, extra, zrml_futarchy, Futarchy);
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
@@ -1548,6 +1549,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, pallet_vesting, Vesting);
                     add_benchmark!(params, batches, zrml_swaps, Swaps);
                     add_benchmark!(params, batches, zrml_authorized, Authorized);
+                    add_benchmark!(params, batches, zrml_combinatorial_tokens, CombinatorialTokens);
                     add_benchmark!(params, batches, zrml_court, Court);
                     add_benchmark!(params, batches, zrml_futarchy, Futarchy);
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
