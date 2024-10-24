@@ -49,14 +49,14 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_combinatorial_tokens (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn split_position_vertical_sans_parent(n: u32, ) -> Weight;
-    fn split_position_vertical_with_parent(n: u32, ) -> Weight;
-    fn split_position_horizontal(n: u32, ) -> Weight;
-    fn merge_position_vertical_sans_parent(n: u32, ) -> Weight;
-    fn merge_position_vertical_with_parent(n: u32, ) -> Weight;
-    fn merge_position_horizontal(n: u32, ) -> Weight;
-    fn redeem_position_sans_parent(n: u32, ) -> Weight;
-    fn redeem_position_with_parent(n: u32, ) -> Weight;
+    fn split_position_vertical_sans_parent(n: u32) -> Weight;
+    fn split_position_vertical_with_parent(n: u32) -> Weight;
+    fn split_position_horizontal(n: u32) -> Weight;
+    fn merge_position_vertical_sans_parent(n: u32) -> Weight;
+    fn merge_position_vertical_with_parent(n: u32) -> Weight;
+    fn merge_position_horizontal(n: u32) -> Weight;
+    fn redeem_position_sans_parent(n: u32) -> Weight;
+    fn redeem_position_with_parent(n: u32) -> Weight;
 }
 
 /// Weight functions for zrml_combinatorial_tokens (automatically generated)
@@ -71,7 +71,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: `Tokens::TotalIssuance` (r:32 w:32)
     /// Proof: `Tokens::TotalIssuance` (`max_values`: None, `max_size`: Some(57), added: 2532, mode: `MaxEncodedLen`)
     /// The range of component `n` is `[2, 32]`.
-    fn split_position_vertical_sans_parent(_n: u32, ) -> Weight {
+    fn split_position_vertical_sans_parent(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `441`
         //  Estimated: `84574`
@@ -87,7 +87,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: `Tokens::TotalIssuance` (r:33 w:33)
     /// Proof: `Tokens::TotalIssuance` (`max_values`: None, `max_size`: Some(57), added: 2532, mode: `MaxEncodedLen`)
     /// The range of component `n` is `[2, 32]`.
-    fn split_position_vertical_with_parent(_n: u32, ) -> Weight {
+    fn split_position_vertical_with_parent(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `671`
         //  Estimated: `87186`
@@ -103,7 +103,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: `Tokens::TotalIssuance` (r:33 w:33)
     /// Proof: `Tokens::TotalIssuance` (`max_values`: None, `max_size`: Some(57), added: 2532, mode: `MaxEncodedLen`)
     /// The range of component `n` is `[2, 32]`.
-    fn split_position_horizontal(_n: u32, ) -> Weight {
+    fn split_position_horizontal(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `633`
         //  Estimated: `87186`
@@ -121,7 +121,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: `System::Account` (r:1 w:1)
     /// Proof: `System::Account` (`max_values`: None, `max_size`: Some(132), added: 2607, mode: `MaxEncodedLen`)
     /// The range of component `n` is `[2, 32]`.
-    fn merge_position_vertical_sans_parent(_n: u32, ) -> Weight {
+    fn merge_position_vertical_sans_parent(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `624 + n * (160 ±0)`
         //  Estimated: `84574`
@@ -137,7 +137,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: `Tokens::TotalIssuance` (r:33 w:33)
     /// Proof: `Tokens::TotalIssuance` (`max_values`: None, `max_size`: Some(57), added: 2532, mode: `MaxEncodedLen`)
     /// The range of component `n` is `[2, 32]`.
-    fn merge_position_vertical_with_parent(_n: u32, ) -> Weight {
+    fn merge_position_vertical_with_parent(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `518 + n * (160 ±0)`
         //  Estimated: `87186`
@@ -153,7 +153,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: `Tokens::TotalIssuance` (r:33 w:33)
     /// Proof: `Tokens::TotalIssuance` (`max_values`: None, `max_size`: Some(57), added: 2532, mode: `MaxEncodedLen`)
     /// The range of component `n` is `[2, 32]`.
-    fn merge_position_horizontal(_n: u32, ) -> Weight {
+    fn merge_position_horizontal(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `480 + n * (160 ±0)`
         //  Estimated: `87186`
@@ -171,7 +171,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: `System::Account` (r:1 w:1)
     /// Proof: `System::Account` (`max_values`: None, `max_size`: Some(132), added: 2607, mode: `MaxEncodedLen`)
     /// The range of component `n` is `[2, 32]`.
-    fn redeem_position_sans_parent(_n: u32, ) -> Weight {
+    fn redeem_position_sans_parent(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `780`
         //  Estimated: `4173`
@@ -187,7 +187,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     /// Storage: `Tokens::TotalIssuance` (r:2 w:2)
     /// Proof: `Tokens::TotalIssuance` (`max_values`: None, `max_size`: Some(57), added: 2532, mode: `MaxEncodedLen`)
     /// The range of component `n` is `[2, 32]`.
-    fn redeem_position_with_parent(_n: u32, ) -> Weight {
+    fn redeem_position_with_parent(_n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `674`
         //  Estimated: `6214`
