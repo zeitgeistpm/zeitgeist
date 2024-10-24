@@ -129,6 +129,81 @@ mod benchmarks {
     }
 
     #[benchmark]
+    fn split_position_vertical_with_parent(n: Linear<2, 32>) {
+        let alice: T::AccountId = whitelisted_caller();
+
+        let position_count: usize = n.try_into().unwrap();
+
+        let parent_collection_id = None;
+        let parent_market_id = create_market::<T>(alice.clone(), 2);
+
+        // The collection/position that we're merging into.
+        let cid_01 = Pallet::<T>::collection_id_from_parent_collection(
+            parent_collection_id,
+            parent_market_id,
+            vec![false, true],
+            false,
+        )
+        .unwrap();
+        let pos_01 = Pallet::<T>::position_from_collection_id(parent_market_id, cid_01).unwrap();
+
+        let child_market_id = create_market::<T>(alice.clone(), position_count.try_into().unwrap());
+        let partition: Vec<_> = (0..position_count)
+            .map(|index| {
+                let mut index_set = vec![false; position_count];
+                index_set[index] = true;
+
+                index_set
+            })
+            .collect();
+        let amount = ZeitgeistBase::get().unwrap();
+
+        T::MultiCurrency::deposit(pos_01, &alice, amount).unwrap();
+
+        #[extrinsic_call]
+        split_position(
+            RawOrigin::Signed(alice.clone()),
+            Some(cid_01),
+            child_market_id,
+            partition.clone(),
+            amount,
+            true,
+        );
+
+        let collection_ids: Vec<_> = partition
+            .iter()
+            .cloned()
+            .map(|index_set| {
+                Pallet::<T>::collection_id_from_parent_collection(
+                    Some(cid_01),
+                    child_market_id,
+                    index_set,
+                    false,
+                )
+                .unwrap()
+            })
+            .collect();
+        let assets_out: Vec<_> = collection_ids
+            .iter()
+            .cloned()
+            .map(|collection_id| {
+                Pallet::<T>::position_from_collection_id(child_market_id, collection_id).unwrap()
+            })
+            .collect();
+        let expected_event = <T as Config>::RuntimeEvent::from(Event::<T>::TokenSplit {
+            who: alice,
+            parent_collection_id: Some(cid_01),
+            market_id: child_market_id,
+            partition,
+            asset_in: pos_01,
+            assets_out,
+            collection_ids,
+            amount,
+        });
+        System::<T>::assert_last_event(expected_event.into());
+    }
+
+    #[benchmark]
     fn split_position_horizontal(n: Linear<2, 32>) {
         let alice: T::AccountId = whitelisted_caller();
 
