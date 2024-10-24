@@ -69,7 +69,136 @@ mod benchmarks {
     use super::*;
 
     #[benchmark]
-    fn redeem_position_sans_parent(n: Linear<2, 128>) {
+    fn merge_position_vertical_sans_parent(n: Linear<2, 32>) {
+        let alice: T::AccountId = whitelisted_caller();
+
+        let position_count: usize = n.try_into().unwrap();
+
+        let parent_collection_id = None;
+        let market_id = create_market::<T>(alice.clone(), position_count.try_into().unwrap());
+        let partition: Vec<_> = (0..position_count)
+            .map(|index| {
+                let mut index_set = vec![false; position_count];
+                index_set[index] = true;
+
+                index_set
+            })
+            .collect();
+        let amount = ZeitgeistBase::get().unwrap();
+
+        let assets_in: Vec<_> = partition
+            .iter()
+            .cloned()
+            .map(|index_set| {
+                Pallet::<T>::position_from_parent_collection(
+                    parent_collection_id,
+                    market_id,
+                    index_set,
+                    false,
+                )
+                .unwrap()
+            })
+            .collect();
+
+        for &asset in assets_in.iter() {
+            T::MultiCurrency::deposit(asset, &alice, amount).unwrap();
+        }
+        T::MultiCurrency::deposit(Asset::Ztg, &Pallet::<T>::account_id(), amount).unwrap();
+
+        #[extrinsic_call]
+        merge_position(
+            RawOrigin::Signed(alice.clone()),
+            parent_collection_id,
+            market_id,
+            partition.clone(),
+            amount,
+            true,
+        );
+
+        let expected_event = <T as Config>::RuntimeEvent::from(Event::<T>::TokenMerged {
+            who: alice,
+            parent_collection_id,
+            market_id,
+            partition,
+            asset_out: Asset::Ztg,
+            assets_in,
+            amount,
+        });
+        System::<T>::assert_last_event(expected_event.into());
+    }
+
+    #[benchmark]
+    fn merge_position_horizontal(n: Linear<2, 32>) {
+        let alice: T::AccountId = whitelisted_caller();
+
+        let position_count: usize = n.try_into().unwrap();
+        let asset_count = position_count + 1;
+
+        let parent_collection_id = None;
+        let market_id = create_market::<T>(alice.clone(), asset_count.try_into().unwrap());
+        // Partition is 10...0, 010...0, ..., 0...010. Doesn't contain 0...01.
+        let partition: Vec<_> = (0..position_count)
+            .map(|index| {
+                let mut index_set = vec![false; asset_count];
+                index_set[index] = true;
+
+                index_set
+            })
+            .collect();
+        let amount = ZeitgeistBase::get().unwrap();
+
+        let assets_in: Vec<_> = partition
+            .iter()
+            .cloned()
+            .map(|index_set| {
+                Pallet::<T>::position_from_parent_collection(
+                    parent_collection_id,
+                    market_id,
+                    index_set,
+                    false,
+                )
+                .unwrap()
+            })
+            .collect();
+
+        for &asset in assets_in.iter() {
+            T::MultiCurrency::deposit(asset, &alice, amount).unwrap();
+        }
+        T::MultiCurrency::deposit(Asset::Ztg, &Pallet::<T>::account_id(), amount).unwrap();
+
+        #[extrinsic_call]
+        merge_position(
+            RawOrigin::Signed(alice.clone()),
+            parent_collection_id,
+            market_id,
+            partition.clone(),
+            amount,
+            true,
+        );
+
+        let mut asset_out_index_set = vec![true; asset_count];
+        *asset_out_index_set.last_mut().unwrap() = false;
+        let asset_out = Pallet::<T>::position_from_parent_collection(
+            parent_collection_id,
+            market_id,
+            asset_out_index_set,
+            false,
+        )
+        .unwrap();
+        let expected_event = <T as Config>::RuntimeEvent::from(Event::<T>::TokenMerged {
+            who: alice,
+            parent_collection_id,
+            market_id,
+            partition,
+            asset_out,
+            assets_in,
+            amount,
+        });
+        System::<T>::assert_last_event(expected_event.into());
+    }
+
+    #[benchmark]
+    fn redeem_position_sans_parent(n: Linear<2, 32>) {
         let alice: T::AccountId = whitelisted_caller();
 
         let n_u16: u16 = n.try_into().unwrap();
@@ -121,7 +250,7 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn redeem_position_with_parent(n: Linear<2, 128>) {
+    fn redeem_position_with_parent(n: Linear<2, 32>) {
         let alice: T::AccountId = whitelisted_caller();
 
         let n_u16: u16 = n.try_into().unwrap();

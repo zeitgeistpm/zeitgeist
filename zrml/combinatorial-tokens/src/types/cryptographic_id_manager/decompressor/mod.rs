@@ -57,15 +57,14 @@ pub(crate) fn get_collection_id(
     Some(bytes)
 }
 
-const DECOMPRESS_HASH_MAX_ITERS: usize = 1_000;
+const DECOMPRESS_HASH_MAX_ITERS: usize = 32;
 
 /// Decompresses a collection ID `hash` to a point of `alt_bn128`. The amount of work done can be
 /// forced to be independent of the input by setting the `force_max_work` flag.
 ///
 /// We don't have mathematical proof that the points of `alt_bn128` are distributed so that the
 /// required number of iterations is below the specified limit of iterations, but there's good
-/// evidence that input hash requires more than `log_2(P) = 507.19338271000436` iterations. We
-/// will use `1_000` iterations as maximum for now.
+/// evidence that input hash requires more than `log_2(P) = 507.19338271000436` iterations.
 ///
 /// Provided the assumption above is correct, this function cannot return `None`.
 fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affine> {
@@ -107,7 +106,7 @@ fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affi
     }
     core::hint::black_box(dummy_x); // Ensure that the dummies are considered "read" by rustc.
     core::hint::black_box(dummy_y);
-    let mut y = y_opt?; // This **should** be infallible.
+    let mut y = y_opt?; // This **should** be infallible if `DECOMPRESS_HASH_MAX_ITERS` is large.
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
     // `odd` is set but `y` isn't odd, we switch to the other option.
