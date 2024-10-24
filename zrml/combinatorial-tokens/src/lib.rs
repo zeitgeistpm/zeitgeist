@@ -53,7 +53,7 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{AccountIdConversion, Get, Zero},
-        DispatchError, DispatchResult, SaturatedConversion,
+        DispatchError, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         math::{checked_ops_res::CheckedAddRes, fixed::FixedMul},
@@ -279,7 +279,7 @@ mod pallet {
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
             force_max_work: bool,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let market = T::MarketCommons::market(&market_id)?;
             let collateral_token = market.base_asset;
 
