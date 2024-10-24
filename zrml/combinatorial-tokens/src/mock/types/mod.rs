@@ -15,6 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmark_helper;
 mod payout;
 
-pub use payout::MockPayout;
+#[cfg(feature = "runtime-benchmarks")]
+pub(crate) use benchmark_helper::BenchmarkHelper;
+pub(crate) use payout::MockPayout;

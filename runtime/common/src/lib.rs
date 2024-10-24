@@ -93,6 +93,9 @@ macro_rules! decl_common_types {
         #[cfg(feature = "runtime-benchmarks")]
         use zrml_neo_swaps::types::DecisionMarketBenchmarkHelper;
 
+        #[cfg(feature = "runtime-benchmarks")]
+        use zrml_prediction_markets::types::PredictionMarketsCombinatorialTokensBenchmarkHelper;
+
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
@@ -1154,12 +1157,15 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_combinatorial_tokens::Config for Runtime {
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = PredictionMarketsCombinatorialTokensBenchmarkHelper<Runtime>;
             type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
             type MarketCommons = MarketCommons;
             type MultiCurrency = AssetManager;
             type Payout = PredictionMarkets;
             type RuntimeEvent = RuntimeEvent;
             type PalletId = CombinatorialTokensPalletId;
+            type WeightInfo = zrml_combinatorial_tokens::weights::WeightInfo<Runtime>;
         }
 
         impl zrml_court::Config for Runtime {
@@ -1453,6 +1459,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, pallet_vesting, Vesting);
                     list_benchmark!(list, extra, zrml_swaps, Swaps);
                     list_benchmark!(list, extra, zrml_authorized, Authorized);
+                    list_benchmark!(list, extra, zrml_combinatorial_tokens, CombinatorialTokens);
                     list_benchmark!(list, extra, zrml_court, Court);
                     list_benchmark!(list, extra, zrml_futarchy, Futarchy);
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
@@ -1543,6 +1550,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, pallet_vesting, Vesting);
                     add_benchmark!(params, batches, zrml_swaps, Swaps);
                     add_benchmark!(params, batches, zrml_authorized, Authorized);
+                    add_benchmark!(params, batches, zrml_combinatorial_tokens, CombinatorialTokens);
                     add_benchmark!(params, batches, zrml_court, Court);
                     add_benchmark!(params, batches, zrml_futarchy, Futarchy);
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);

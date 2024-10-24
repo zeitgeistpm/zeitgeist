@@ -41,20 +41,35 @@ fn merge_position_works_no_parent(
         let pallet =
             Account::new(Pallet::<Runtime>::account_id()).deposit(collateral, amount).unwrap();
 
+        let parent_collection_id = None;
         let market_id = create_market(collateral, MarketType::Categorical(3));
-
+        let partition = vec![vec![B0, B0, B1], vec![B1, B1, B0]];
         assert_ok!(CombinatorialTokens::merge_position(
             alice.signed(),
-            None,
+            parent_collection_id,
             market_id,
-            vec![vec![B0, B0, B1], vec![B1, B1, B0]],
+            partition.clone(),
             amount,
+            false,
         ));
 
         assert_eq!(alice.free_balance(ct_001), 0);
         assert_eq!(alice.free_balance(ct_110), 0);
         assert_eq!(alice.free_balance(collateral), _100);
         assert_eq!(pallet.free_balance(collateral), 0);
+
+        System::assert_last_event(
+            Event::<Runtime>::TokenMerged {
+                who: alice.id,
+                parent_collection_id,
+                market_id,
+                partition,
+                assets_in: vec![ct_001, ct_110],
+                asset_out: collateral,
+                amount,
+            }
+            .into(),
+        );
     });
 }
 
@@ -82,25 +97,39 @@ fn merge_position_works_parent() {
             .unwrap();
 
         let _ = create_market(Asset::Ztg, MarketType::Categorical(3));
-        let market_id = create_market(Asset::Ztg, MarketType::Categorical(4));
 
         // Collection ID of [0, 0, 1].
-        let parent_collection_id = [
+        let parent_collection_id = Some([
             6, 44, 173, 50, 122, 106, 144, 185, 253, 19, 252, 218, 215, 241, 218, 37, 196, 112, 45,
             133, 165, 48, 231, 189, 87, 123, 131, 18, 190, 5, 110, 93,
-        ];
-
+        ]);
+        let market_id = create_market(Asset::Ztg, MarketType::Categorical(4));
+        let partition = vec![vec![B0, B1, B0, B1], vec![B1, B0, B1, B0]];
         assert_ok!(CombinatorialTokens::merge_position(
             alice.signed(),
-            Some(parent_collection_id),
+            parent_collection_id,
             market_id,
-            vec![vec![B0, B1, B0, B1], vec![B1, B0, B1, B0]],
+            partition.clone(),
             amount,
+            false,
         ));
 
         assert_eq!(alice.free_balance(ct_001), amount);
         assert_eq!(alice.free_balance(ct_001_0101), 0);
         assert_eq!(alice.free_balance(ct_001_1010), 0);
+
+        System::assert_last_event(
+            Event::<Runtime>::TokenMerged {
+                who: alice.id,
+                parent_collection_id,
+                market_id,
+                partition,
+                assets_in: vec![ct_001_0101, ct_001_1010],
+                asset_out: ct_001,
+                amount,
+            }
+            .into(),
+        );
     });
 }
 
@@ -131,6 +160,7 @@ fn merge_position_horizontal_works() {
             market_id,
             vec![vec![B0, B1, B0], vec![B1, B0, B0]],
             amount,
+            false,
         ));
 
         assert_eq!(alice.free_balance(ct_110), amount);
@@ -151,6 +181,7 @@ fn merge_position_fails_if_market_not_found() {
                 0,
                 vec![vec![B0, B0, B1], vec![B1, B1, B0]],
                 1,
+                false,
             ),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
         );
@@ -167,7 +198,14 @@ fn merge_position_fails_on_invalid_partition_length() {
         let partition = vec![vec![B1, B0, B1], vec![B0, B1]];
 
         assert_noop!(
-            CombinatorialTokens::merge_position(alice.signed(), None, market_id, partition, _1,),
+            CombinatorialTokens::merge_position(
+                alice.signed(),
+                None,
+                market_id,
+                partition,
+                _1,
+                false
+            ),
             Error::<Runtime>::InvalidPartition
         );
     });
@@ -183,7 +221,14 @@ fn merge_position_fails_on_trivial_partition_member() {
         let partition = vec![vec![B1, B0, B1], vec![B0, B0, B0]];
 
         assert_noop!(
-            CombinatorialTokens::merge_position(alice.signed(), None, market_id, partition, _1,),
+            CombinatorialTokens::merge_position(
+                alice.signed(),
+                None,
+                market_id,
+                partition,
+                _1,
+                false
+            ),
             Error::<Runtime>::InvalidPartition
         );
     });
@@ -199,7 +244,14 @@ fn merge_position_fails_on_overlapping_partition_members() {
         let partition = vec![vec![B1, B0, B1], vec![B0, B0, B1]];
 
         assert_noop!(
-            CombinatorialTokens::merge_position(alice.signed(), None, market_id, partition, _1,),
+            CombinatorialTokens::merge_position(
+                alice.signed(),
+                None,
+                market_id,
+                partition,
+                _1,
+                false
+            ),
             Error::<Runtime>::InvalidPartition
         );
     });
@@ -220,6 +272,7 @@ fn merge_position_fails_on_insufficient_funds() {
                 market_id,
                 vec![vec![B1, B0, B1], vec![B0, B1, B0]],
                 _100,
+                false,
             ),
             orml_tokens::Error::<Runtime>::BalanceTooLow
         );
@@ -241,6 +294,7 @@ fn merge_position_fails_on_insufficient_funds_foreign_token() {
                 market_id,
                 vec![vec![B1, B0, B1], vec![B0, B1, B0]],
                 _100,
+                false,
             ),
             orml_tokens::Error::<Runtime>::BalanceTooLow
         );
