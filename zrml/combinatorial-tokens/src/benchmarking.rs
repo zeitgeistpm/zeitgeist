@@ -33,7 +33,8 @@ use zeitgeist_primitives::{
     traits::CombinatorialTokensBenchmarkHelper,
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
-use zrml_market_commons::MarketCommonsPalletApi;
+use alloc::vec::Vec;
+use zeitgeist_primitives::traits::MarketCommonsPalletApi;
 
 fn create_market<T: Config>(caller: T::AccountId, asset_count: u16) -> MarketIdOf<T> {
     let market = Market {

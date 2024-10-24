@@ -1158,7 +1158,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_combinatorial_tokens::Config for Runtime {
             #[cfg(feature = "runtime-benchmarks")]
-            type BenchmarkHelper = PredictionMarketsCombinatorialTokensBenchmarkHelper;
+            type BenchmarkHelper = PredictionMarketsCombinatorialTokensBenchmarkHelper<Runtime>;
             type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
             type MarketCommons = MarketCommons;
             type MultiCurrency = AssetManager;
