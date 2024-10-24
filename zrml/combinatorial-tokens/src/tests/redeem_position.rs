@@ -22,11 +22,13 @@ use test_case::test_case;
 fn redeem_position_fails_on_no_payout_vector() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
+        let market_id = 0;
         MockPayout::set_return_value(None);
         assert_noop!(
-            CombinatorialTokens::redeem_position(alice.signed(), None, 0, vec![], false),
+            CombinatorialTokens::redeem_position(alice.signed(), None, market_id, vec![], false),
             Error::<Runtime>::PayoutVectorNotFound
         );
+        assert!(MockPayout::called_once_with(market_id));
     });
 }
 
@@ -128,6 +130,8 @@ fn redeem_position_works_sans_parent() {
             }
             .into(),
         );
+
+        assert!(MockPayout::called_once_with(market_id));
     });
 }
 
@@ -182,5 +186,7 @@ fn redeem_position_works_with_parent() {
             }
             .into(),
         );
+
+        assert!(MockPayout::called_once_with(market_id));
     });
 }
