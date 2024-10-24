@@ -190,7 +190,13 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
-        #[pallet::weight({0})] // TODO
+        #[pallet::weight(
+            T::WeightInfo::split_position_vertical_sans_parent(partition.len().saturated_into())
+                .max(T::WeightInfo::split_position_vertical_with_parent(
+                    partition.len().saturated_into(),
+                ))
+                .max(T::WeightInfo::split_position_horizontal(partition.len().saturated_into()))
+        )]
         #[transactional]
         pub fn split_position(
             origin: OriginFor<T>,
@@ -200,7 +206,7 @@ mod pallet {
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
             force_max_work: bool,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             Self::do_split_position(
                 who,
@@ -280,7 +286,7 @@ mod pallet {
             let free_index_set = Self::free_index_set(market_id, &partition)?;
 
             // Destroy/store the tokens to be split.
-            let split_asset = if !free_index_set.iter().any(|&i| i) {
+            let (weight, split_asset) = if !free_index_set.iter().any(|&i| i) {
                 // Vertical split.
                 if let Some(pci) = parent_collection_id {
                     // Split combinatorial token into higher level position. Destroy the tokens.
@@ -293,7 +299,11 @@ mod pallet {
                     T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                     T::MultiCurrency::withdraw(position, &who, amount)?;
 
-                    position
+                    let weight = T::WeightInfo::split_position_vertical_with_parent(
+                        partition.len().saturated_into(),
+                    );
+
+                    (weight, position)
                 } else {
                     // Split collateral into first level position. Store the collateral in the
                     // pallet account. This is the legacy `buy_complete_set`.
@@ -305,7 +315,11 @@ mod pallet {
                         amount,
                     )?;
 
-                    collateral_token
+                    let weight = T::WeightInfo::split_position_vertical_sans_parent(
+                        partition.len().saturated_into(),
+                    );
+
+                    (weight, collateral_token)
                 }
             } else {
                 // Horizontal split.
@@ -319,7 +333,10 @@ mod pallet {
                 T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                 T::MultiCurrency::withdraw(position, &who, amount)?;
 
-                position
+                let weight =
+                    T::WeightInfo::split_position_horizontal(partition.len().saturated_into());
+
+                (weight, position)
             };
 
             // Deposit the new tokens.
@@ -357,7 +374,7 @@ mod pallet {
                 amount,
             });
 
-            Ok(())
+            Ok(Some(weight).into())
         }
 
         #[require_transactional]
