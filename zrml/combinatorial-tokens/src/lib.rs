@@ -59,8 +59,14 @@ mod pallet {
         types::{Asset, CombinatorialId},
     };
 
+    #[cfg(feature = "runtime-benchmarks")]
+    use zeitgeist_primitives::traits::CombinatorialTokensBenchmarkHelper;
+
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        #[cfg(feature = "runtime-benchmarks")]
+        type BenchmarkHelper: CombinatorialTokensBenchmarkHelper<Balance = BalanceOf<Self>>;
+
         type CombinatorialIdManager: CombinatorialIdManager<
                 Asset = AssetOf<Self>,
                 MarketId = MarketIdOf<Self>,
