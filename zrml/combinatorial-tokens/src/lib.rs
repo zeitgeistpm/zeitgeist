@@ -213,7 +213,13 @@ mod pallet {
         }
 
         #[pallet::call_index(1)]
-        #[pallet::weight({0})] // TODO
+        #[pallet::weight(
+            T::WeightInfo::merge_position_vertical_sans_parent(partition.len().saturated_into())
+                .max(T::WeightInfo::merge_position_vertical_with_parent(
+                    partition.len().saturated_into(),
+                ))
+                .max(T::WeightInfo::merge_position_horizontal(partition.len().saturated_into()))
+        )]
         #[transactional]
         pub fn merge_position(
             origin: OriginFor<T>,
