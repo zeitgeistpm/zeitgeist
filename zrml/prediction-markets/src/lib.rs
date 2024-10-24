@@ -27,6 +27,7 @@ mod benchmarks;
 pub mod migrations;
 pub mod mock;
 mod tests;
+pub mod types;
 pub mod weights;
 
 pub use pallet::*;

@@ -93,6 +93,9 @@ macro_rules! decl_common_types {
         #[cfg(feature = "runtime-benchmarks")]
         use zrml_neo_swaps::types::DecisionMarketBenchmarkHelper;
 
+        #[cfg(feature = "runtime-benchmarks")]
+        use zrml_prediction_markets::types::PredictionMarketsCombinatorialTokensBenchmarkHelper;
+
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
@@ -1154,6 +1157,8 @@ macro_rules! impl_config_traits {
         }
 
         impl zrml_combinatorial_tokens::Config for Runtime {
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = PredictionMarketsCombinatorialTokensBenchmarkHelper;
             type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
             type MarketCommons = MarketCommons;
             type MultiCurrency = AssetManager;

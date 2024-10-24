@@ -66,7 +66,10 @@ mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         #[cfg(feature = "runtime-benchmarks")]
-        type BenchmarkHelper: CombinatorialTokensBenchmarkHelper<Balance = BalanceOf<Self>>;
+        type BenchmarkHelper: CombinatorialTokensBenchmarkHelper<
+                Balance = BalanceOf<Self>,
+                MarketId = MarketIdOf<Self>,
+            >;
 
         type CombinatorialIdManager: CombinatorialIdManager<
                 Asset = AssetOf<Self>,

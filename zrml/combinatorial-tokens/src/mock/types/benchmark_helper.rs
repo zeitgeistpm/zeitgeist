@@ -3,15 +3,23 @@ use crate::{
     BalanceOf,
 };
 use alloc::vec::Vec;
-use zeitgeist_primitives::traits::CombinatorialTokensBenchmarkHelper;
 use sp_runtime::DispatchResult;
+use zeitgeist_primitives::traits::CombinatorialTokensBenchmarkHelper;
+use crate::MarketIdOf;
+
 
 pub struct BenchmarkHelper;
 
 impl CombinatorialTokensBenchmarkHelper for BenchmarkHelper {
     type Balance = BalanceOf<Runtime>;
+    type MarketId = MarketIdOf<Runtime>;
 
-    fn setup_payout_vector(payout: Option<Vec<Self::Balance>>) -> DispatchResult {
+    /// A bit of a messy implementation as this sets the return value of the next `payout_vector`
+    /// call, regardless of what `_market_id` is.
+    fn setup_payout_vector(
+        _market_id: Self::MarketId,
+        payout: Option<Vec<Self::Balance>>,
+    ) -> DispatchResult {
         MockPayout::set_return_value(payout);
 
         Ok(())
