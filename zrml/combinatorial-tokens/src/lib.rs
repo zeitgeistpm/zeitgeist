@@ -32,17 +32,18 @@ pub mod mock;
 mod tests;
 mod traits;
 pub mod types;
+mod weights;
 
 pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::traits::CombinatorialIdManager;
+    use crate::{traits::CombinatorialIdManager, weights::WeightInfoZeitgeist};
     use alloc::{vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
         ensure,
-        pallet_prelude::{IsType, StorageVersion},
+        pallet_prelude::{DispatchResultWithPostInfo, IsType, StorageVersion},
         require_transactional, transactional, PalletId,
     };
     use frame_system::{
@@ -52,7 +53,7 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{AccountIdConversion, Get, Zero},
-        DispatchError, DispatchResult,
+        DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         math::{checked_ops_res::CheckedAddRes, fixed::FixedMul},
@@ -87,6 +88,8 @@ mod pallet {
 
         #[pallet::constant]
         type PalletId: Get<PalletId>;
+
+        type WeightInfo: WeightInfoZeitgeist;
     }
 
     #[pallet::pallet]
@@ -240,7 +243,7 @@ mod pallet {
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
             force_max_work: bool,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             Self::do_redeem_position(
                 who,
@@ -437,7 +440,7 @@ mod pallet {
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
             force_max_work: bool,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let payout_vector =
                 T::Payout::payout_vector(market_id).ok_or(Error::<T>::PayoutVectorNotFound)?;
 
@@ -473,13 +476,16 @@ mod pallet {
 
             let total_payout = total_stake.bmul(amount)?;
 
-            let asset_out = if let Some(pci) = parent_collection_id {
+            let (weight, asset_out) = if let Some(pci) = parent_collection_id {
                 // Merge combinatorial token into higher level position. Destroy the tokens.
                 let position_id = T::CombinatorialIdManager::get_position_id(collateral_token, pci);
                 let position = Asset::CombinatorialToken(position_id);
                 T::MultiCurrency::deposit(position, &who, total_payout)?;
 
-                position
+                let weight =
+                    T::WeightInfo::redeem_position_with_parent(index_set.len().saturated_into());
+
+                (weight, position)
             } else {
                 T::MultiCurrency::transfer(
                     collateral_token,
@@ -488,7 +494,10 @@ mod pallet {
                     total_payout,
                 )?;
 
-                collateral_token
+                let weight =
+                    T::WeightInfo::redeem_position_sans_parent(index_set.len().saturated_into());
+
+                (weight, collateral_token)
             };
 
             Self::deposit_event(Event::<T>::TokenRedeemed {
@@ -502,7 +511,7 @@ mod pallet {
                 amount_out: total_payout,
             });
 
-            Ok(())
+            Ok(Some(weight).into())
         }
 
         pub(crate) fn account_id() -> T::AccountId {

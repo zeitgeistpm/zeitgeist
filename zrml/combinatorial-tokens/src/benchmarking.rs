@@ -138,7 +138,8 @@ mod benchmarks {
             parent_market_id,
             vec![false, true],
             false,
-        ).unwrap();
+        )
+        .unwrap();
         let pos_01 = Pallet::<T>::position_from_collection_id(parent_market_id, cid_01).unwrap();
 
         let child_market_id = create_market::<T>(alice.clone(), asset_count);
@@ -153,7 +154,7 @@ mod benchmarks {
         T::MultiCurrency::deposit(pos_01_10, &alice, amount).unwrap();
 
         let payout_vector = create_payout_vector::<T>(asset_count);
-        T::BenchmarkHelper::setup_payout_vector(parent_market_id, Some(payout_vector)).unwrap();
+        T::BenchmarkHelper::setup_payout_vector(child_market_id, Some(payout_vector)).unwrap();
 
         #[extrinsic_call]
         redeem_position(

@@ -1,12 +1,10 @@
 use crate::{
     mock::{runtime::Runtime, types::MockPayout},
-    BalanceOf,
+    BalanceOf, MarketIdOf,
 };
 use alloc::vec::Vec;
 use sp_runtime::DispatchResult;
 use zeitgeist_primitives::traits::CombinatorialTokensBenchmarkHelper;
-use crate::MarketIdOf;
-
 
 pub struct BenchmarkHelper;
 
