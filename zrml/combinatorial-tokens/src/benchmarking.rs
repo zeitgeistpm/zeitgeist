@@ -65,6 +65,70 @@ mod benchmarks {
     use super::*;
 
     #[benchmark]
+    fn split_position_vertical_sans_parent(n: Linear<2, 32>) {
+        let alice: T::AccountId = whitelisted_caller();
+
+        let position_count: usize = n.try_into().unwrap();
+
+        let parent_collection_id = None;
+        let market_id = create_market::<T>(alice.clone(), position_count.try_into().unwrap());
+        // Partition is 10...0, 010...0, ..., 0...01.
+        let partition: Vec<_> = (0..position_count)
+            .map(|index| {
+                let mut index_set = vec![false; position_count];
+                index_set[index] = true;
+
+                index_set
+            })
+            .collect();
+        let amount = ZeitgeistBase::get().unwrap();
+
+        T::MultiCurrency::deposit(Asset::Ztg, &alice, amount).unwrap();
+
+        #[extrinsic_call]
+        split_position(
+            RawOrigin::Signed(alice.clone()),
+            parent_collection_id,
+            market_id,
+            partition.clone(),
+            amount,
+            true,
+        );
+
+        let collection_ids: Vec<_> = partition
+            .iter()
+            .cloned()
+            .map(|index_set| {
+                Pallet::<T>::collection_id_from_parent_collection(
+                    parent_collection_id,
+                    market_id,
+                    index_set,
+                    false,
+                )
+                .unwrap()
+            })
+            .collect();
+        let assets_out: Vec<_> = collection_ids
+            .iter()
+            .cloned()
+            .map(|collection_id| {
+                Pallet::<T>::position_from_collection_id(market_id, collection_id).unwrap()
+            })
+            .collect();
+        let expected_event = <T as Config>::RuntimeEvent::from(Event::<T>::TokenSplit {
+            who: alice,
+            parent_collection_id,
+            market_id,
+            partition,
+            asset_in: Asset::Ztg,
+            assets_out,
+            collection_ids,
+            amount,
+        });
+        System::<T>::assert_last_event(expected_event.into());
+    }
+
+    #[benchmark]
     fn merge_position_vertical_sans_parent(n: Linear<2, 32>) {
         let alice: T::AccountId = whitelisted_caller();
 
