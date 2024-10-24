@@ -235,7 +235,10 @@ mod pallet {
         }
 
         #[pallet::call_index(2)]
-        #[pallet::weight({0})] // TODO
+        #[pallet::weight(
+            T::WeightInfo::redeem_position_with_parent(index_set.len().saturated_into())
+                .max(T::WeightInfo::redeem_position_sans_parent(index_set.len().saturated_into()))
+        )]
         #[transactional]
         pub fn redeem_position(
             origin: OriginFor<T>,
