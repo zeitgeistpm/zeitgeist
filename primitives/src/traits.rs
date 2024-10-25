@@ -17,6 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 mod combinatorial_tokens_api;
+mod combinatorial_tokens_unsafe_api;
 mod combinatorial_tokens_benchmark_helper;
 mod complete_set_operations_api;
 mod deploy_pool_api;
@@ -34,6 +35,7 @@ mod swaps;
 mod zeitgeist_asset;
 
 pub use combinatorial_tokens_api::*;
+pub use combinatorial_tokens_unsafe_api::*;
 pub use combinatorial_tokens_benchmark_helper::*;
 pub use complete_set_operations_api::*;
 pub use deploy_pool_api::*;

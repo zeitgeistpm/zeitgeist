@@ -38,7 +38,9 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{traits::CombinatorialIdManager, weights::WeightInfoZeitgeist};
+    use crate::{
+        traits::CombinatorialIdManager, types::TransmutationType, weights::WeightInfoZeitgeist,
+    };
     use alloc::{vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
@@ -53,14 +55,15 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{AccountIdConversion, Get, Zero},
-        DispatchError, SaturatedConversion,
+        DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         math::{checked_ops_res::CheckedAddRes, fixed::FixedMul},
-        traits::{CombinatorialTokensApi, MarketCommonsPalletApi, PayoutApi},
+        traits::{
+            CombinatorialTokensApi, CombinatorialTokensUnsafeApi, MarketCommonsPalletApi, PayoutApi,
+        },
         types::{Asset, CombinatorialId},
     };
-
 
     #[cfg(feature = "runtime-benchmarks")]
     use zeitgeist_primitives::traits::CombinatorialTokensBenchmarkHelper;
@@ -281,63 +284,48 @@ mod pallet {
             amount: BalanceOf<T>,
             force_max_work: bool,
         ) -> DispatchResultWithPostInfo {
-            let market = T::MarketCommons::market(&market_id)?;
-            let collateral_token = market.base_asset;
+            let (transmutation_type, position) = Self::transmutation_asset(
+                parent_collection_id,
+                market_id,
+                partition.clone(),
+                force_max_work,
+            )?;
 
-            let free_index_set = Self::free_index_set(market_id, &partition)?;
-
-            // Destroy/store the tokens to be split.
-            let (weight, split_asset) = if !free_index_set.iter().any(|&i| i) {
-                // Vertical split.
-                if let Some(pci) = parent_collection_id {
-                    // Split combinatorial token into higher level position. Destroy the tokens.
-                    let position_id =
-                        T::CombinatorialIdManager::get_position_id(collateral_token, pci);
-                    let position = Asset::CombinatorialToken(position_id);
-
+            // Destroy the token to be split.
+            let weight = match transmutation_type {
+                TransmutationType::VerticalWithParent => {
+                    // Split combinatorial token into higher level position.
                     // This will fail if the market has a different collateral than the previous
                     // markets. FIXME A cleaner error message would be nice though...
                     T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                     T::MultiCurrency::withdraw(position, &who, amount)?;
 
-                    let weight = T::WeightInfo::split_position_vertical_with_parent(
+                    T::WeightInfo::split_position_vertical_with_parent(
                         partition.len().saturated_into(),
-                    );
-
-                    (weight, position)
-                } else {
+                    )
+                }
+                TransmutationType::VerticalSansParent => {
                     // Split collateral into first level position. Store the collateral in the
                     // pallet account. This is the legacy `buy_complete_set`.
-                    T::MultiCurrency::ensure_can_withdraw(collateral_token, &who, amount)?;
+                    T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                     T::MultiCurrency::transfer(
-                        collateral_token,
+                        position,
                         &who,
                         &Self::account_id(),
                         amount,
                     )?;
 
-                    let weight = T::WeightInfo::split_position_vertical_sans_parent(
+                    T::WeightInfo::split_position_vertical_sans_parent(
                         partition.len().saturated_into(),
-                    );
-
-                    (weight, collateral_token)
+                    )
                 }
-            } else {
-                // Horizontal split.
-                let remaining_index_set = free_index_set.into_iter().map(|i| !i).collect();
-                let position = Self::position_from_parent_collection(
-                    parent_collection_id,
-                    market_id,
-                    remaining_index_set,
-                    force_max_work,
-                )?;
-                T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
-                T::MultiCurrency::withdraw(position, &who, amount)?;
+                TransmutationType::Horizontal => {
+                    // Horizontal split.
+                    T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
+                    T::MultiCurrency::withdraw(position, &who, amount)?;
 
-                let weight =
-                    T::WeightInfo::split_position_horizontal(partition.len().saturated_into());
-
-                (weight, position)
+                    T::WeightInfo::split_position_horizontal(partition.len().saturated_into())
+                }
             };
 
             // Deposit the new tokens.
@@ -369,7 +357,7 @@ mod pallet {
                 parent_collection_id,
                 market_id,
                 partition,
-                asset_in: split_asset,
+                asset_in: position,
                 assets_out: positions,
                 collection_ids,
                 amount,
@@ -387,10 +375,12 @@ mod pallet {
             amount: BalanceOf<T>,
             force_max_work: bool,
         ) -> DispatchResultWithPostInfo {
-            let market = T::MarketCommons::market(&market_id)?;
-            let collateral_token = market.base_asset;
-
-            let free_index_set = Self::free_index_set(market_id, &partition)?;
+            let (transmutation_type, position) = Self::transmutation_asset(
+                parent_collection_id,
+                market_id,
+                partition.clone(),
+                force_max_work,
+            )?;
 
             // Destroy the old tokens.
             let positions = partition
@@ -411,52 +401,35 @@ mod pallet {
                 T::MultiCurrency::withdraw(position, &who, amount)?;
             }
 
-            // Destroy/store the tokens to be split.
-            let (weight, merged_token) = if !free_index_set.iter().any(|&i| i) {
-                // Vertical merge.
-                if let Some(pci) = parent_collection_id {
-                    // Merge combinatorial token into higher level position. Destroy the tokens.
-                    let position_id =
-                        T::CombinatorialIdManager::get_position_id(collateral_token, pci);
-                    let position = Asset::CombinatorialToken(position_id);
+            let weight = match transmutation_type {
+                TransmutationType::VerticalWithParent => {
+                    // Merge combinatorial token into higher level position.
                     T::MultiCurrency::deposit(position, &who, amount)?;
 
-                    let weight = T::WeightInfo::merge_position_vertical_with_parent(
+                    T::WeightInfo::merge_position_vertical_with_parent(
                         partition.len().saturated_into(),
-                    );
-
-                    (weight, position)
-                } else {
+                    )
+                }
+                TransmutationType::VerticalSansParent => {
                     // Merge first-level tokens into collateral. Move collateral from the pallet
                     // account to the user's wallet. This is the legacy `sell_complete_set`.
                     T::MultiCurrency::transfer(
-                        collateral_token,
+                        position,
                         &Self::account_id(),
                         &who,
                         amount,
                     )?;
 
-                    let weight = T::WeightInfo::merge_position_vertical_sans_parent(
+                    T::WeightInfo::merge_position_vertical_sans_parent(
                         partition.len().saturated_into(),
-                    );
-
-                    (weight, collateral_token)
+                    )
                 }
-            } else {
-                // Horizontal merge.
-                let remaining_index_set = free_index_set.into_iter().map(|i| !i).collect();
-                let position = Self::position_from_parent_collection(
-                    parent_collection_id,
-                    market_id,
-                    remaining_index_set,
-                    force_max_work,
-                )?;
-                T::MultiCurrency::deposit(position, &who, amount)?;
+                TransmutationType::Horizontal => {
+                    // Horizontal merge.
+                    T::MultiCurrency::deposit(position, &who, amount)?;
 
-                let weight =
-                    T::WeightInfo::merge_position_horizontal(partition.len().saturated_into());
-
-                (weight, position)
+                    T::WeightInfo::merge_position_horizontal(partition.len().saturated_into())
+                }
             };
 
             Self::deposit_event(Event::<T>::TokenMerged {
@@ -464,7 +437,7 @@ mod pallet {
                 parent_collection_id,
                 market_id,
                 partition,
-                asset_out: merged_token,
+                asset_out: position,
                 assets_in: positions,
                 amount,
             });
@@ -585,6 +558,42 @@ mod pallet {
             Ok(free_index_set)
         }
 
+        pub(crate) fn transmutation_asset(
+            parent_collection_id: Option<CombinatorialIdOf<T>>,
+            market_id: MarketIdOf<T>,
+            partition: Vec<Vec<bool>>,
+            force_max_work: bool,
+        ) -> Result<(TransmutationType, AssetOf<T>), DispatchError> {
+            let market = T::MarketCommons::market(&market_id)?;
+            let collateral_token = market.base_asset;
+            let free_index_set = Self::free_index_set(market_id, &partition)?;
+
+            let result = if !free_index_set.iter().any(|&i| i) {
+                // Vertical merge.
+                if let Some(pci) = parent_collection_id {
+                    let position_id =
+                        T::CombinatorialIdManager::get_position_id(collateral_token, pci);
+                    let position = Asset::CombinatorialToken(position_id);
+
+                    (TransmutationType::VerticalWithParent, position)
+                } else {
+                    (TransmutationType::VerticalSansParent, collateral_token)
+                }
+            } else {
+                let remaining_index_set = free_index_set.into_iter().map(|i| !i).collect();
+                let position = Self::position_from_parent_collection(
+                    parent_collection_id,
+                    market_id,
+                    remaining_index_set,
+                    force_max_work,
+                )?;
+
+                (TransmutationType::Horizontal, position)
+            };
+
+            Ok(result)
+        }
+
         pub(crate) fn collection_id_from_parent_collection(
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
@@ -690,6 +699,47 @@ mod pallet {
                 index_set,
                 force_max_work,
             )
+        }
+    }
+
+    impl<T> CombinatorialTokensUnsafeApi for Pallet<T>
+    where
+        T: Config,
+    {
+        type AccountId = T::AccountId;
+        type Balance = BalanceOf<T>;
+        type MarketId = MarketIdOf<T>;
+
+        fn split_position_unsafe(
+            who: Self::AccountId,
+            collateral: Asset<Self::MarketId>,
+            assets: Vec<Asset<Self::MarketId>>,
+            amount: Self::Balance,
+        ) -> DispatchResult {
+            T::MultiCurrency::ensure_can_withdraw(collateral, &who, amount)?;
+            T::MultiCurrency::transfer(collateral, &who, &Pallet::<T>::account_id(), amount)?;
+
+            for &asset in assets.iter() {
+                T::MultiCurrency::deposit(asset, &who, amount)?;
+            }
+
+            Ok(())
+        }
+
+        fn merge_position_unsafe(
+            who: Self::AccountId,
+            collateral: Asset<Self::MarketId>,
+            assets: Vec<Asset<Self::MarketId>>,
+            amount: Self::Balance,
+        ) -> DispatchResult {
+            T::MultiCurrency::transfer(collateral, &Pallet::<T>::account_id(), &who, amount)?;
+
+            for &asset in assets.iter() {
+                T::MultiCurrency::ensure_can_withdraw(asset, &who, amount)?;
+                T::MultiCurrency::withdraw(asset, &who, amount)?;
+            }
+
+            Ok(())
         }
     }
 }

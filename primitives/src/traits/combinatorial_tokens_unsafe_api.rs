@@ -15,38 +15,28 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::types::Asset;
 use alloc::vec::Vec;
-use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+use sp_runtime::DispatchResult;
 
-pub trait CombinatorialTokensApi {
+// Very fast and very unsafe API for splitting and merging combinatorial tokens. Calling the exposed
+// functions with a bad `assets` argument can break the reserve.
+pub trait CombinatorialTokensUnsafeApi {
     type AccountId;
     type Balance;
-    type CombinatorialId;
     type MarketId;
 
-    fn split_position(
+    fn split_position_unsafe(
         who: Self::AccountId,
-        parent_collection_id: Option<Self::CombinatorialId>,
-        market_id: Self::MarketId,
-        partition: Vec<Vec<bool>>,
+        collateral: Asset<Self::MarketId>,
+        assets: Vec<Asset<Self::MarketId>>,
         amount: Self::Balance,
-        force_max_work: bool,
-    ) -> DispatchResultWithPostInfo;
+    ) -> DispatchResult;
 
-    fn merge_position(
+    fn merge_position_unsafe(
         who: Self::AccountId,
-        parent_collection_id: Option<Self::CombinatorialId>,
-        market_id: Self::MarketId,
-        partition: Vec<Vec<bool>>,
+        collateral: Asset<Self::MarketId>,
+        assets: Vec<Asset<Self::MarketId>>,
         amount: Self::Balance,
-        force_max_work: bool,
-    ) -> DispatchResultWithPostInfo;
-
-    fn redeem_position(
-        who: Self::AccountId,
-        parent_collection_id: Option<Self::CombinatorialId>,
-        market_id: Self::MarketId,
-        index_set: Vec<bool>,
-        force_max_work: bool,
-    ) -> DispatchResultWithPostInfo;
+    ) -> DispatchResult;
 }
