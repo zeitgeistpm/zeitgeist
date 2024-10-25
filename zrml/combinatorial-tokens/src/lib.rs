@@ -57,9 +57,10 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         math::{checked_ops_res::CheckedAddRes, fixed::FixedMul},
-        traits::{MarketCommonsPalletApi, PayoutApi},
+        traits::{CombinatorialTokensApi, MarketCommonsPalletApi, PayoutApi},
         types::{Asset, CombinatorialId},
     };
+
 
     #[cfg(feature = "runtime-benchmarks")]
     use zeitgeist_primitives::traits::CombinatorialTokensBenchmarkHelper;
@@ -627,6 +628,68 @@ mod pallet {
             )?;
 
             Self::position_from_collection_id(market_id, collection_id)
+        }
+    }
+
+    impl<T> CombinatorialTokensApi for Pallet<T>
+    where
+        T: Config,
+    {
+        type AccountId = T::AccountId;
+        type Balance = BalanceOf<T>;
+        type CombinatorialId = CombinatorialIdOf<T>;
+        type MarketId = MarketIdOf<T>;
+
+        fn split_position(
+            who: Self::AccountId,
+            parent_collection_id: Option<Self::CombinatorialId>,
+            market_id: Self::MarketId,
+            partition: Vec<Vec<bool>>,
+            amount: Self::Balance,
+            force_max_work: bool,
+        ) -> DispatchResultWithPostInfo {
+            Self::do_split_position(
+                who,
+                parent_collection_id,
+                market_id,
+                partition,
+                amount,
+                force_max_work,
+            )
+        }
+
+        fn merge_position(
+            who: Self::AccountId,
+            parent_collection_id: Option<Self::CombinatorialId>,
+            market_id: Self::MarketId,
+            partition: Vec<Vec<bool>>,
+            amount: Self::Balance,
+            force_max_work: bool,
+        ) -> DispatchResultWithPostInfo {
+            Self::do_merge_position(
+                who,
+                parent_collection_id,
+                market_id,
+                partition,
+                amount,
+                force_max_work,
+            )
+        }
+
+        fn redeem_position(
+            who: Self::AccountId,
+            parent_collection_id: Option<Self::CombinatorialId>,
+            market_id: Self::MarketId,
+            index_set: Vec<bool>,
+            force_max_work: bool,
+        ) -> DispatchResultWithPostInfo {
+            Self::do_redeem_position(
+                who,
+                parent_collection_id,
+                market_id,
+                index_set,
+                force_max_work,
+            )
         }
     }
 }
