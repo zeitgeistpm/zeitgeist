@@ -81,7 +81,10 @@ mod pallet {
             checked_ops_res::{CheckedAddRes, CheckedSubRes},
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
-        traits::{CompleteSetOperationsApi, DeployPoolApi, DistributeFees, HybridRouterAmmApi},
+        traits::{
+            CombinatorialTokensApi, CombinatorialTokensUnsafeApi, CompleteSetOperationsApi,
+            DeployPoolApi, DistributeFees, HybridRouterAmmApi,
+        },
         types::{Asset, MarketStatus, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -121,6 +124,18 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        type CombinatorialTokensApi: CombinatorialTokensApi<
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                MarketId = MarketIdOf<Self>,
+            >;
+
+        type CombinatorialTokensUnsafeApi: CombinatorialTokensUnsafeApi<
+                AccountId = Self::AccountId,
+                Balance = BalanceOf<Self>,
+                MarketId = MarketIdOf<Self>,
+            >;
+
         type CompleteSetOperations: CompleteSetOperationsApi<
                 AccountId = Self::AccountId,
                 Balance = BalanceOf<Self>,
