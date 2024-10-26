@@ -15,14 +15,23 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::types::Asset;
 use alloc::vec::Vec;
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+use sp_runtime::DispatchError;
 
 pub trait CombinatorialTokensApi {
     type AccountId;
     type Balance;
     type CombinatorialId;
     type MarketId;
+
+    fn combinatorial_position(
+        parent_collection_id: Option<Self::CombinatorialId>,
+        market_id: Self::MarketId,
+        partition: Vec<Vec<bool>>,
+        force_max_work: bool,
+    ) -> Result<Asset<Self::MarketId>, DispatchError>;
 
     fn split_position(
         who: Self::AccountId,

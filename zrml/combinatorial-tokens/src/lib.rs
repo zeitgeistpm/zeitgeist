@@ -308,12 +308,7 @@ mod pallet {
                     // Split collateral into first level position. Store the collateral in the
                     // pallet account. This is the legacy `buy_complete_set`.
                     T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
-                    T::MultiCurrency::transfer(
-                        position,
-                        &who,
-                        &Self::account_id(),
-                        amount,
-                    )?;
+                    T::MultiCurrency::transfer(position, &who, &Self::account_id(), amount)?;
 
                     T::WeightInfo::split_position_vertical_sans_parent(
                         partition.len().saturated_into(),
@@ -413,12 +408,7 @@ mod pallet {
                 TransmutationType::VerticalSansParent => {
                     // Merge first-level tokens into collateral. Move collateral from the pallet
                     // account to the user's wallet. This is the legacy `sell_complete_set`.
-                    T::MultiCurrency::transfer(
-                        position,
-                        &Self::account_id(),
-                        &who,
-                        amount,
-                    )?;
+                    T::MultiCurrency::transfer(position, &Self::account_id(), &who, amount)?;
 
                     T::WeightInfo::merge_position_vertical_sans_parent(
                         partition.len().saturated_into(),
@@ -648,6 +638,22 @@ mod pallet {
         type Balance = BalanceOf<T>;
         type CombinatorialId = CombinatorialIdOf<T>;
         type MarketId = MarketIdOf<T>;
+
+        fn combinatorial_position(
+            parent_collection_id: Option<Self::CombinatorialId>,
+            market_id: Self::MarketId,
+            partition: Vec<Vec<bool>>,
+            force_max_work: bool,
+        ) -> Result<Asset<Self::MarketId>, DispatchError> {
+            let (_, position) = Self::transmutation_asset(
+                parent_collection_id,
+                market_id,
+                partition,
+                force_max_work,
+            )?;
+
+            Ok(position)
+        }
 
         fn split_position(
             who: Self::AccountId,
