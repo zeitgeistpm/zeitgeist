@@ -16,20 +16,23 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::traits::CombinatorialTokensBenchmarkHelper;
 pub use crate::{
     asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, proxy_type::*,
     serde_wrapper::*,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result, Unstructured};
+use core::marker::PhantomData;
 use frame_support::weights::Weight;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
     generic,
     traits::{BlakeTwo256, IdentifyAccount, Verify},
-    MultiSignature, OpaqueExtrinsic,
+    DispatchResult, MultiSignature, OpaqueExtrinsic,
 };
+use alloc::vec::Vec;
 
 /// Signed counter-part of Balance
 pub type Amount = i128;
@@ -179,4 +182,22 @@ pub struct XcmMetadata {
     ///
     /// Should be updated regularly.
     pub fee_factor: Option<Balance>,
+}
+
+pub struct NoopCombinatorialTokensBenchmarkHelper<Balance, MarketId>(
+    PhantomData<(Balance, MarketId)>,
+);
+
+impl<Balance, MarketId> CombinatorialTokensBenchmarkHelper
+    for NoopCombinatorialTokensBenchmarkHelper<Balance, MarketId>
+{
+    type Balance = Balance;
+    type MarketId = MarketId;
+
+    fn setup_payout_vector(
+        _market_id: Self::MarketId,
+        _payout: Option<Vec<Self::Balance>>,
+    ) -> DispatchResult {
+        Ok(())
+    }
 }

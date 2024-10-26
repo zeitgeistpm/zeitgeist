@@ -1299,6 +1299,8 @@ macro_rules! impl_config_traits {
         common_runtime::impl_market_creator_fees!();
 
         impl zrml_neo_swaps::Config for Runtime {
+            type CombinatorialTokens = CombinatorialTokens;
+            type CombinatorialTokensUnsafe = CombinatorialTokens;
             type CompleteSetOperations = PredictionMarkets;
             type ExternalFees = MarketCreatorFee;
             type MarketCommons = MarketCommons;

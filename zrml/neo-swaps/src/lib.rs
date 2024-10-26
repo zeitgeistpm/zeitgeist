@@ -55,7 +55,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         ensure,
-        pallet_prelude::StorageMap,
+        pallet_prelude::CountedStorageMap,
         require_transactional,
         traits::{Get, IsType, StorageVersion},
         transactional, PalletError, PalletId, Parameter, Twox64Concat,
@@ -124,13 +124,13 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type CombinatorialTokensApi: CombinatorialTokensApi<
+        type CombinatorialTokens: CombinatorialTokensApi<
                 AccountId = Self::AccountId,
                 Balance = BalanceOf<Self>,
                 MarketId = MarketIdOf<Self>,
             >;
 
-        type CombinatorialTokensUnsafeApi: CombinatorialTokensUnsafeApi<
+        type CombinatorialTokensUnsafe: CombinatorialTokensUnsafeApi<
                 AccountId = Self::AccountId,
                 Balance = BalanceOf<Self>,
                 MarketId = MarketIdOf<Self>,
@@ -189,7 +189,7 @@ mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
-    pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, PoolIdOf<T>, PoolOf<T>>;
+    pub(crate) type Pools<T: Config> = CountedStorageMap<_, Twox64Concat, PoolIdOf<T>, PoolOf<T>>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
