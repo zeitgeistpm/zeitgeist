@@ -62,7 +62,7 @@ mod pallet {
         traits::{
             CombinatorialTokensApi, CombinatorialTokensUnsafeApi, MarketCommonsPalletApi, PayoutApi,
         },
-        types::{Asset, CombinatorialId},
+        types::{Asset, CombinatorialId, SplitPositionDispatchInfo},
     };
 
     #[cfg(feature = "runtime-benchmarks")]
@@ -108,6 +108,7 @@ mod pallet {
         <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::CombinatorialId;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub(crate) type SplitPositionDispatchInfoOf<T> = SplitPositionDispatchInfo<MarketIdOf<T>>;
 
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
@@ -212,14 +213,17 @@ mod pallet {
             force_max_work: bool,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            Self::do_split_position(
+
+            let SplitPositionDispatchInfo { post_dispatch_info, .. } = Self::do_split_position(
                 who,
                 parent_collection_id,
                 market_id,
                 partition,
                 amount,
                 force_max_work,
-            )
+            )?;
+
+            DispatchResultWithPostInfo::Ok(post_dispatch_info)
         }
 
         #[pallet::call_index(1)]
@@ -283,7 +287,7 @@ mod pallet {
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
             force_max_work: bool,
-        ) -> DispatchResultWithPostInfo {
+        ) -> Result<SplitPositionDispatchInfoOf<T>, DispatchError> {
             let (transmutation_type, position) = Self::transmutation_asset(
                 parent_collection_id,
                 market_id,
@@ -353,12 +357,18 @@ mod pallet {
                 market_id,
                 partition,
                 asset_in: position,
-                assets_out: positions,
-                collection_ids,
+                assets_out: positions.clone(),
+                collection_ids: collection_ids.clone(),
                 amount,
             });
 
-            Ok(Some(weight).into())
+            let dispatch_info = SplitPositionDispatchInfo {
+                collection_ids,
+                position_ids: positions,
+                post_dispatch_info: Some(weight).into(),
+            };
+
+            Ok(dispatch_info)
         }
 
         #[require_transactional]
@@ -639,22 +649,6 @@ mod pallet {
         type CombinatorialId = CombinatorialIdOf<T>;
         type MarketId = MarketIdOf<T>;
 
-        fn combinatorial_position(
-            parent_collection_id: Option<Self::CombinatorialId>,
-            market_id: Self::MarketId,
-            partition: Vec<Vec<bool>>,
-            force_max_work: bool,
-        ) -> Result<Asset<Self::MarketId>, DispatchError> {
-            let (_, position) = Self::transmutation_asset(
-                parent_collection_id,
-                market_id,
-                partition,
-                force_max_work,
-            )?;
-
-            Ok(position)
-        }
-
         fn split_position(
             who: Self::AccountId,
             parent_collection_id: Option<Self::CombinatorialId>,
@@ -662,47 +656,13 @@ mod pallet {
             partition: Vec<Vec<bool>>,
             amount: Self::Balance,
             force_max_work: bool,
-        ) -> DispatchResultWithPostInfo {
+        ) -> Result<SplitPositionDispatchInfoOf<T>, DispatchError> {
             Self::do_split_position(
                 who,
                 parent_collection_id,
                 market_id,
                 partition,
                 amount,
-                force_max_work,
-            )
-        }
-
-        fn merge_position(
-            who: Self::AccountId,
-            parent_collection_id: Option<Self::CombinatorialId>,
-            market_id: Self::MarketId,
-            partition: Vec<Vec<bool>>,
-            amount: Self::Balance,
-            force_max_work: bool,
-        ) -> DispatchResultWithPostInfo {
-            Self::do_merge_position(
-                who,
-                parent_collection_id,
-                market_id,
-                partition,
-                amount,
-                force_max_work,
-            )
-        }
-
-        fn redeem_position(
-            who: Self::AccountId,
-            parent_collection_id: Option<Self::CombinatorialId>,
-            market_id: Self::MarketId,
-            index_set: Vec<bool>,
-            force_max_work: bool,
-        ) -> DispatchResultWithPostInfo {
-            Self::do_redeem_position(
-                who,
-                parent_collection_id,
-                market_id,
-                index_set,
                 force_max_work,
             )
         }

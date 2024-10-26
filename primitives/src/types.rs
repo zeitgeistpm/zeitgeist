@@ -21,10 +21,9 @@ pub use crate::{
     asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, proxy_type::*,
     serde_wrapper::*,
 };
-#[cfg(feature = "arbitrary")]
-use arbitrary::{Arbitrary, Result, Unstructured};
+use alloc::vec::Vec;
 use core::marker::PhantomData;
-use frame_support::weights::Weight;
+use frame_support::{dispatch::PostDispatchInfo, weights::Weight};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -32,7 +31,9 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentifyAccount, Verify},
     DispatchResult, MultiSignature, OpaqueExtrinsic,
 };
-use alloc::vec::Vec;
+
+#[cfg(feature = "arbitrary")]
+use arbitrary::{Arbitrary, Result, Unstructured};
 
 /// Signed counter-part of Balance
 pub type Amount = i128;
@@ -200,4 +201,10 @@ impl<Balance, MarketId> CombinatorialTokensBenchmarkHelper
     ) -> DispatchResult {
         Ok(())
     }
+}
+
+pub struct SplitPositionDispatchInfo<MarketId> {
+    pub collection_ids: Vec<CombinatorialId>,
+    pub position_ids: Vec<Asset<MarketId>>,
+    pub post_dispatch_info: PostDispatchInfo,
 }
