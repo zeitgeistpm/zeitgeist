@@ -203,7 +203,7 @@ impl<Balance, MarketId> CombinatorialTokensBenchmarkHelper
     }
 }
 
-pub struct SplitPositionDispatchInfo<MarketId> {
+pub struct SplitPositionDispatchInfo<CombinatorialId, MarketId> {
     pub collection_ids: Vec<CombinatorialId>,
     pub position_ids: Vec<Asset<MarketId>>,
     pub post_dispatch_info: PostDispatchInfo,

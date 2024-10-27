@@ -60,7 +60,8 @@ use zeitgeist_primitives::{
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
     types::{
-        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CurrencyId, Hash, MarketId, Moment,
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CombinatorialId, CurrencyId, Hash,
+        MarketId, Moment,
     },
 };
 use zrml_combinatorial_tokens::types::CryptographicIdManager;
@@ -100,6 +101,7 @@ ord_parameter_types! {
 }
 parameter_types! {
     pub storage NeoMinSwapFee: Balance = 0;
+    pub storage MaxSplits: u16 = 128;
 }
 parameter_types! {
     pub const AdvisoryBond: Balance = 0;
@@ -187,6 +189,7 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
+    type CombinatorialId = CombinatorialId;
     type CombinatorialTokens = CombinatorialTokens;
     type CombinatorialTokensUnsafe = CombinatorialTokens;
     type CompleteSetOperations = PredictionMarkets;
@@ -196,6 +199,7 @@ impl crate::Config for Runtime {
     type PoolId = MarketId;
     type RuntimeEvent = RuntimeEvent;
     type MaxLiquidityTreeDepth = MaxLiquidityTreeDepth;
+    type MaxSplits = MaxSplits;
     type MaxSwapFee = NeoMaxSwapFee;
     type PalletId = NeoSwapsPalletId;
     type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;

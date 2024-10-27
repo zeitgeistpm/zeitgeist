@@ -15,9 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::{Asset, SplitPositionDispatchInfo};
+use crate::types::SplitPositionDispatchInfo;
 use alloc::vec::Vec;
-use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 use sp_runtime::DispatchError;
 
 pub trait CombinatorialTokensApi {
@@ -33,5 +32,5 @@ pub trait CombinatorialTokensApi {
         partition: Vec<Vec<bool>>,
         amount: Self::Balance,
         force_max_work: bool,
-    ) -> Result<SplitPositionDispatchInfo<Self::MarketId>, DispatchError>;
+    ) -> Result<SplitPositionDispatchInfo<Self::CombinatorialId, Self::MarketId>, DispatchError>;
 }

@@ -108,7 +108,8 @@ mod pallet {
         <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::CombinatorialId;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type SplitPositionDispatchInfoOf<T> = SplitPositionDispatchInfo<MarketIdOf<T>>;
+    pub(crate) type SplitPositionDispatchInfoOf<T> =
+        SplitPositionDispatchInfo<CombinatorialIdOf<T>, MarketIdOf<T>>;
 
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 

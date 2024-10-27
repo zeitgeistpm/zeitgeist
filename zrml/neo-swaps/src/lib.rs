@@ -124,9 +124,12 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        type CombinatorialId: Clone;
+
         type CombinatorialTokens: CombinatorialTokensApi<
                 AccountId = Self::AccountId,
                 Balance = BalanceOf<Self>,
+                CombinatorialId = Self::CombinatorialId,
                 MarketId = MarketIdOf<Self>,
             >;
 
@@ -176,6 +179,10 @@ mod pallet {
         /// `2^(depth + 1) - 1` liquidity providers. **Must** be less than 16.
         #[pallet::constant]
         type MaxLiquidityTreeDepth: Get<u32>;
+
+        /// The maximum number of splits allowed when creating a combinatorial pool.
+        #[pallet::constant]
+        type MaxSplits: Get<u16>;
 
         #[pallet::constant]
         type MaxSwapFee: Get<BalanceOf<Self>>;
@@ -345,6 +352,16 @@ mod pallet {
         /// The `amount_keep` parameter must be zero if `keep` is empty and less than `amount_buy`
         /// if `keep` is not empty.
         InvalidAmountKeep,
+
+        /// The number of market IDs specified must be greater than two and no more than the
+        /// maximum.
+        InvalidMarketCount,
+
+        /// Creating a combinatorial pool for these markets will require more splits than allowed.
+        MaxSplitsExceeded,
+
+        /// The specified markets do not all use the same collateral.
+        CollateralMismatch,
     }
 
     #[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
@@ -665,6 +682,29 @@ mod pallet {
                 min_amount_out,
             )?;
             Ok(Some(T::WeightInfo::buy(asset_count.into())).into()) // TODO
+        }
+
+        #[pallet::call_index(8)]
+        #[pallet::weight({0})] // TODO
+        #[transactional]
+        pub fn deploy_combinatorial_pool(
+            origin: OriginFor<T>,
+            market_ids: Vec<MarketIdOf<T>>,
+            amount: BalanceOf<T>,
+            spot_prices: Vec<BalanceOf<T>>,
+            swap_fee: BalanceOf<T>,
+            force_max_work: bool,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            Self::do_deploy_combinatorial_pool(
+                who,
+                market_ids,
+                amount,
+                spot_prices,
+                swap_fee,
+                force_max_work,
+            )
         }
     }
 
@@ -1065,6 +1105,84 @@ mod pallet {
             Ok(())
         }
 
+        #[require_transactional]
+        pub(crate) fn do_deploy_combinatorial_pool(
+            who: T::AccountId,
+            market_ids: Vec<MarketIdOf<T>>,
+            amount: BalanceOf<T>,
+            spot_prices: Vec<BalanceOf<T>>,
+            swap_fee: BalanceOf<T>,
+            force_max_work: bool,
+        ) -> DispatchResult {
+            ensure!(swap_fee >= MIN_SWAP_FEE.saturated_into(), Error::<T>::SwapFeeBelowMin);
+            ensure!(swap_fee <= T::MaxSwapFee::get(), Error::<T>::SwapFeeAboveMax);
+
+            let (collection_ids, position_ids, collateral) =
+                Self::split_markets(who.clone(), market_ids, amount, force_max_work)?;
+
+            ensure!(spot_prices.len() == collection_ids.len(), Error::<T>::InvalidSpotPrices);
+            ensure!(
+                spot_prices
+                    .iter()
+                    .fold(Zero::zero(), |acc: BalanceOf<T>, &val| acc.saturating_add(val))
+                    == BASE.saturated_into(),
+                Error::<T>::InvalidSpotPrices
+            );
+            for &p in spot_prices.iter() {
+                ensure!(
+                    p.saturated_into::<u128>() >= MIN_SPOT_PRICE,
+                    Error::<T>::SpotPriceBelowMin
+                );
+                ensure!(
+                    p.saturated_into::<u128>() <= MAX_SPOT_PRICE,
+                    Error::<T>::SpotPriceAboveMax
+                );
+            }
+
+            // TODO This is where the common code begins!
+            let (liquidity_parameter, amounts_in) =
+                Math::<T>::calculate_reserves_from_spot_prices(amount, spot_prices)?;
+            ensure!(
+                liquidity_parameter >= MIN_LIQUIDITY.saturated_into(),
+                Error::<T>::LiquidityTooLow
+            );
+            let pool_id = Self::next_pool_id();
+            let pool_account_id = Self::pool_account_id(&pool_id);
+            let mut reserves = BTreeMap::new();
+            for (&amount_in, &asset) in amounts_in.iter().zip(position_ids.iter()) {
+                T::MultiCurrency::transfer(asset, &who, &pool_account_id, amount_in)?;
+                let _ = reserves.insert(asset, amount_in);
+            }
+            let pool = Pool {
+                account_id: pool_account_id.clone(),
+                reserves: reserves.clone().try_into().map_err(|_| Error::<T>::Unexpected)?,
+                collateral,
+                liquidity_parameter,
+                liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
+                swap_fee,
+            };
+            // TODO(#1220): Ensure that the existential deposit doesn't kill fees. This is an ugly
+            // hack and system should offer the option to whitelist accounts.
+            T::MultiCurrency::transfer(
+                pool.collateral,
+                &who,
+                &pool.account_id,
+                T::MultiCurrency::minimum_balance(collateral),
+            )?;
+            Pools::<T>::insert(pool_id, pool);
+            Self::deposit_event(Event::<T>::PoolDeployed {
+                who,
+                market_id: pool_id,
+                account_id: pool_account_id,
+                reserves,
+                collateral,
+                liquidity_parameter,
+                pool_shares_amount: amount,
+                swap_fee,
+            });
+            Ok(())
+        }
+
         #[allow(clippy::too_many_arguments)] // TODO Bundle `buy`/`keep`/`sell` into one arg.
         #[require_transactional]
         pub(crate) fn do_combo_buy(
@@ -1344,6 +1462,121 @@ mod pallet {
             Pools::<T>::try_mutate(market_id, |maybe_pool| {
                 maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound.into()).and_then(mutator)
             })
+        }
+
+        pub(crate) fn next_pool_id() -> T::PoolId {
+            Pools::<T>::count().into()
+        }
+
+        /// Takes `amount` units of collateral and splits these tokens into the elementary outcome
+        /// tokens of the combinatorial market comprised of the specified markets (all specified
+        /// markets must have the same collateral). Returns the collateral token type and a list of
+        /// outcome tokens.
+        pub(crate) fn split_markets(
+            who: T::AccountId,
+            market_ids: Vec<MarketIdOf<T>>,
+            amount: BalanceOf<T>,
+            force_max_work: bool,
+        ) -> Result<(Vec<T::CombinatorialId>, Vec<AssetOf<T>>, AssetOf<T>), DispatchError> {
+            let markets = market_ids
+                .iter()
+                .map(|market_id| T::MarketCommons::market(market_id))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            // Calculate the total amount of split opterations required. Note that it's 1 split
+            // operation for the first market. TODO Abstract into separate function.
+            let mut total_splits = 0u16; // Zero indicates first pass.
+            for market in markets.iter() {
+                ensure!(
+                    market.scoring_rule == ScoringRule::AmmCdaHybrid,
+                    Error::<T>::InvalidTradingMechanism
+                );
+
+                if total_splits == 0u16 {
+                    total_splits = 1u16;
+                } else {
+                    total_splits = total_splits.saturating_mul(market.outcomes());
+                }
+            }
+            ensure!(total_splits <= T::MaxSplits::get(), Error::<T>::MaxSplitsExceeded);
+
+            let collateral = Self::try_common_collateral(market_ids.clone())?;
+
+            let mut split_count = 0u16;
+            let mut collection_ids: Vec<T::CombinatorialId> = vec![];
+            let mut position_ids = vec![];
+            for market_id in market_ids.iter() {
+                let asset_count = T::MarketCommons::market(market_id)?.outcomes() as usize;
+                let partition: Vec<Vec<bool>> = (0..asset_count)
+                    .map(|index| {
+                        let mut index_set = vec![false; asset_count];
+                        index_set.get_mut(index).map(|_| true);
+
+                        index_set
+                    })
+                    .collect();
+
+                if split_count == 0 {
+                    let split_position_info = T::CombinatorialTokens::split_position(
+                        who.clone(),
+                        None,
+                        *market_id,
+                        partition.clone(),
+                        amount,
+                        force_max_work,
+                    )?;
+
+                    collection_ids.extend_from_slice(&split_position_info.collection_ids);
+                    position_ids.extend_from_slice(&split_position_info.position_ids);
+
+                    split_count.saturating_inc();
+                } else {
+                    let mut new_collection_ids = vec![];
+                    let mut new_position_ids = vec![];
+
+                    for parent_collection_id in collection_ids.iter() {
+                        if split_count > total_splits {
+                            return Err(Error::<T>::Unexpected.into());
+                        }
+
+                        let split_position_info = T::CombinatorialTokens::split_position(
+                            who.clone(),
+                            Some(parent_collection_id.clone()),
+                            *market_id,
+                            partition.clone(),
+                            amount,
+                            force_max_work,
+                        )?;
+
+                        new_collection_ids.extend_from_slice(&split_position_info.collection_ids);
+                        new_position_ids.extend_from_slice(&split_position_info.position_ids);
+
+                        split_count.saturating_inc();
+                    }
+
+                    collection_ids = new_collection_ids;
+                    position_ids = new_position_ids;
+                }
+            }
+
+            let result = (collection_ids, position_ids, collateral);
+
+            Ok(result)
+        }
+
+        pub(crate) fn try_common_collateral(
+            market_ids: Vec<MarketIdOf<T>>,
+        ) -> Result<AssetOf<T>, DispatchError> {
+            let first_market_id = market_ids.first().ok_or(Error::<T>::InvalidMarketCount)?;
+            let first_market = T::MarketCommons::market(first_market_id)?;
+            let collateral = first_market.base_asset;
+
+            for market_id in market_ids.iter() {
+                let market = T::MarketCommons::market(market_id)?;
+                ensure!(market.base_asset == collateral, Error::<T>::CollateralMismatch);
+            }
+
+            Ok(collateral)
         }
     }
 
