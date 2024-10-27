@@ -78,7 +78,7 @@ fn sell_works() {
         System::assert_last_event(
             Event::SellExecuted {
                 who: BOB,
-                market_id,
+                pool_id: market_id,
                 asset_in,
                 amount_in,
                 amount_out: expected_amount_out_minus_fees,

@@ -208,7 +208,7 @@ mod pallet {
         /// including swap and external fees.
         BuyExecuted {
             who: T::AccountId,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             asset_out: AssetOf<T>,
             amount_in: BalanceOf<T>,
             amount_out: BalanceOf<T>,
@@ -219,7 +219,7 @@ mod pallet {
         /// with swap and external fees already deducted.
         SellExecuted {
             who: T::AccountId,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             asset_in: AssetOf<T>,
             amount_in: BalanceOf<T>,
             amount_out: BalanceOf<T>,
@@ -227,11 +227,11 @@ mod pallet {
             external_fee_amount: BalanceOf<T>,
         },
         /// Liquidity provider withdrew fees.
-        FeesWithdrawn { who: T::AccountId, market_id: MarketIdOf<T>, amount: BalanceOf<T> },
+        FeesWithdrawn { who: T::AccountId, pool_id: T::PoolId, amount: BalanceOf<T> },
         /// Liquidity provider joined the pool.
         JoinExecuted {
             who: T::AccountId,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             pool_shares_amount: BalanceOf<T>,
             amounts_in: Vec<BalanceOf<T>>,
             new_liquidity_parameter: BalanceOf<T>,
@@ -239,7 +239,7 @@ mod pallet {
         /// Liquidity provider left the pool.
         ExitExecuted {
             who: T::AccountId,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             pool_shares_amount: BalanceOf<T>,
             amounts_out: Vec<BalanceOf<T>>,
             new_liquidity_parameter: BalanceOf<T>,
@@ -248,6 +248,7 @@ mod pallet {
         PoolDeployed {
             who: T::AccountId,
             market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             account_id: T::AccountId,
             reserves: BTreeMap<AssetOf<T>, BalanceOf<T>>,
             collateral: AssetOf<T>,
@@ -256,15 +257,11 @@ mod pallet {
             swap_fee: BalanceOf<T>,
         },
         /// Pool was destroyed.
-        PoolDestroyed {
-            who: T::AccountId,
-            market_id: MarketIdOf<T>,
-            amounts_out: Vec<BalanceOf<T>>,
-        },
+        PoolDestroyed { who: T::AccountId, pool_id: T::PoolId, amounts_out: Vec<BalanceOf<T>> },
         /// A combinatorial position was opened.
         ComboBuyExecuted {
             who: AccountIdOf<T>,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             buy: Vec<AssetOf<T>>,
             sell: Vec<AssetOf<T>>,
             amount_in: BalanceOf<T>,
@@ -275,7 +272,7 @@ mod pallet {
         /// A combinatorial position was closed.
         ComboSellExecuted {
             who: AccountIdOf<T>,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             buy: Vec<AssetOf<T>>,
             keep: Vec<AssetOf<T>>,
             sell: Vec<AssetOf<T>>,
@@ -397,7 +394,7 @@ mod pallet {
         /// # Parameters
         ///
         /// - `origin`: The origin account making the purchase.
-        /// - `market_id`: Identifier for the market related to the trade.
+        /// - `pool_id`: Identifier for the pool used to trade on.
         /// - `asset_count`: Number of assets in the pool.
         /// - `asset_out`: Asset to be purchased.
         /// - `amount_in`: Amount of collateral paid by the user.
@@ -408,20 +405,26 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(0)]
-        #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))]
+        #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))] // TODO Use into()
         #[transactional]
         pub fn buy(
             origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
+            #[pallet::compact] pool_id: T::PoolId,
             asset_count: AssetIndexType,
             asset_out: AssetOf<T>,
             #[pallet::compact] amount_in: BalanceOf<T>,
             #[pallet::compact] min_amount_out: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
-            ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
-            let _ = Self::do_buy(who, market_id, asset_out, amount_in, min_amount_out)?;
+
+            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let asset_count_real = pool.assets().len();
+            let asset_count_real_u16: u16 =
+                asset_count_real.try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
+            ensure!(asset_count == asset_count_real_u16, Error::<T>::IncorrectAssetCount);
+
+            let _ = Self::do_buy(who, pool_id, asset_out, amount_in, min_amount_out)?;
+
             Ok(Some(T::WeightInfo::buy(asset_count.into())).into())
         }
 
@@ -441,7 +444,7 @@ mod pallet {
         /// # Parameters
         ///
         /// - `origin`: The origin account making the sale.
-        /// - `market_id`: Identifier for the market related to the trade.
+        /// - `pool_id`: Identifier for the pool used to trade on.
         /// - `asset_count`: Number of assets in the pool.
         /// - `asset_in`: Asset to be sold.
         /// - `amount_in`: Amount of outcome tokens paid by the user.
@@ -452,21 +455,27 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(1)]
-        #[pallet::weight(T::WeightInfo::sell((*asset_count).saturated_into()))]
+        #[pallet::weight(T::WeightInfo::sell((*asset_count).saturated_into()))] // TODO Use `into()`
         #[transactional]
         pub fn sell(
             origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
+            #[pallet::compact] pool_id: T::PoolId,
             asset_count: AssetIndexType,
             asset_in: AssetOf<T>,
             #[pallet::compact] amount_in: BalanceOf<T>,
             #[pallet::compact] min_amount_out: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
-            ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
-            let _ = Self::do_sell(who, market_id, asset_in, amount_in, min_amount_out)?;
-            Ok(Some(T::WeightInfo::sell(asset_count.into())).into())
+
+            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let asset_count_real = pool.assets().len();
+            let asset_count_real_u16: u16 =
+                asset_count_real.try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
+            ensure!(asset_count == asset_count_real_u16, Error::<T>::IncorrectAssetCount);
+
+            let _ = Self::do_sell(who, pool_id, asset_in, amount_in, min_amount_out)?;
+
+            Ok(Some(T::WeightInfo::sell(asset_count_real_u16.into())).into())
         }
 
         /// Join the liquidity pool for the specified market.
@@ -481,7 +490,7 @@ mod pallet {
         ///
         /// # Parameters
         ///
-        /// - `market_id`: Identifier for the market related to the pool.
+        /// - `pool`: Identifier for the pool to add liquidity to.
         /// - `pool_shares_amount`: The number of new pool shares the LP will receive.
         /// - `max_amounts_in`: Vector of the maximum amounts of each outcome token the LP is
         ///   willing to deposit (with outcomes specified in the order of `MarketCommonsApi`).
@@ -500,18 +509,21 @@ mod pallet {
         #[transactional]
         pub fn join(
             origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
+            #[pallet::compact] pool_id: MarketIdOf<T>,
             #[pallet::compact] pool_shares_amount: BalanceOf<T>,
             max_amounts_in: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
-            let asset_count_usize: usize = asset_count.into();
+
             // Ensure that the conversion in the weight calculation doesn't saturate.
             let _: u32 =
                 max_amounts_in.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
-            ensure!(max_amounts_in.len() == asset_count_usize, Error::<T>::IncorrectVecLen);
-            Self::do_join(who, market_id, pool_shares_amount, max_amounts_in)
+
+            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let asset_count_real = pool.assets().len();
+            ensure!(max_amounts_in.len() == asset_count_real, Error::<T>::IncorrectVecLen);
+
+            Self::do_join(who, pool_id, pool_shares_amount, max_amounts_in)
         }
 
         /// Exit the liquidity pool for the specified market.
@@ -536,7 +548,7 @@ mod pallet {
         ///
         /// # Parameters
         ///
-        /// - `market_id`: Identifier for the market related to the pool.
+        /// - `poold_id`: Identifier for the pool to withdraw liquidity from.
         /// - `pool_shares_amount_out`: The number of pool shares the LP will relinquish.
         /// - `min_amounts_out`: Vector of the minimum amounts of each outcome token the LP expects
         ///   to withdraw (with outcomes specified in the order given by `MarketCommonsApi`).
@@ -551,18 +563,24 @@ mod pallet {
         #[transactional]
         pub fn exit(
             origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
+            #[pallet::compact] pool_id: T::PoolId,
             #[pallet::compact] pool_shares_amount_out: BalanceOf<T>,
             min_amounts_out: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
-            let asset_count_u32: u32 = asset_count.into();
-            let min_amounts_out_len: u32 =
-                min_amounts_out.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
-            ensure!(min_amounts_out_len == asset_count_u32, Error::<T>::IncorrectVecLen);
-            Self::do_exit(who, market_id, pool_shares_amount_out, min_amounts_out)?;
-            Ok(Some(T::WeightInfo::exit(min_amounts_out_len)).into())
+
+            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let asset_count_real = pool.assets().len();
+            let min_amounts_out_len = min_amounts_out.len();
+            ensure!(min_amounts_out_len == asset_count_real, Error::<T>::IncorrectVecLen);
+
+            // Ensure that the conversion in the weight calculation doesn't saturate.
+            let min_amounts_out_len_u32: u32 =
+                min_amounts_out_len.try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
+
+            Self::do_exit(who, pool_id, pool_shares_amount_out, min_amounts_out)?;
+
+            Ok(Some(T::WeightInfo::exit(min_amounts_out_len_u32)).into())
         }
 
         /// Withdraw swap fees from the specified market.
@@ -572,7 +590,7 @@ mod pallet {
         ///
         /// # Parameters
         ///
-        /// - `market_id`: Identifier for the market related to the pool.
+        /// - `pool_id`: Identifier for the market related to the pool.
         ///
         /// # Complexity
         ///
@@ -582,10 +600,12 @@ mod pallet {
         #[transactional]
         pub fn withdraw_fees(
             origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
+            #[pallet::compact] pool_id: T::PoolId,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            Self::do_withdraw_fees(who, market_id)?;
+
+            Self::do_withdraw_fees(who, pool_id)?;
+
             Ok(())
         }
 
@@ -624,22 +644,25 @@ mod pallet {
             #[pallet::compact] swap_fee: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
+
             let asset_count = T::MarketCommons::market(&market_id)?.outcomes();
             let asset_count_u32: u32 = asset_count.into();
             let spot_prices_len: u32 =
                 spot_prices.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
             ensure!(spot_prices_len == asset_count_u32, Error::<T>::IncorrectVecLen);
+
             Self::do_deploy_pool(who, market_id, amount, spot_prices, swap_fee)?;
+
             Ok(Some(T::WeightInfo::deploy_pool(spot_prices_len)).into())
         }
 
         #[allow(clippy::too_many_arguments)] // TODO Bundle `buy`/`keep`/`sell` into one arg.
         #[pallet::call_index(6)]
-        #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))] // TODO
+        #[pallet::weight(T::WeightInfo::buy((*asset_count).into()))] // TODO
         #[transactional]
         pub fn combo_buy(
             origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
+            #[pallet::compact] pool_id: T::PoolId,
             asset_count: AssetIndexType,
             buy: Vec<AssetOf<T>>,
             sell: Vec<AssetOf<T>>,
@@ -647,9 +670,15 @@ mod pallet {
             #[pallet::compact] min_amount_out: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
-            ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
-            Self::do_combo_buy(who, market_id, buy, sell, amount_in, min_amount_out)?;
+
+            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let asset_count_real = pool.assets().len();
+            let asset_count_real_u16: u16 =
+                asset_count_real.try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
+            ensure!(asset_count == asset_count_real_u16, Error::<T>::IncorrectAssetCount);
+
+            Self::do_combo_buy(who, pool_id, buy, sell, amount_in, min_amount_out)?;
+
             Ok(Some(T::WeightInfo::buy(asset_count.into())).into()) // TODO
         }
 
@@ -659,7 +688,7 @@ mod pallet {
         #[transactional]
         pub fn combo_sell(
             origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
+            #[pallet::compact] pool_id: MarketIdOf<T>,
             asset_count: AssetIndexType,
             buy: Vec<AssetOf<T>>,
             keep: Vec<AssetOf<T>>,
@@ -669,11 +698,16 @@ mod pallet {
             #[pallet::compact] min_amount_out: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            let asset_count_real = T::MarketCommons::market(&market_id)?.outcomes();
-            ensure!(asset_count == asset_count_real, Error::<T>::IncorrectAssetCount);
+
+            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let asset_count_real = pool.assets().len();
+            let asset_count_real_u16: u16 =
+                asset_count_real.try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
+            ensure!(asset_count == asset_count_real_u16, Error::<T>::IncorrectAssetCount);
+
             Self::do_combo_sell(
                 who,
-                market_id,
+                pool_id,
                 buy,
                 keep,
                 sell,
@@ -681,6 +715,7 @@ mod pallet {
                 amount_keep,
                 min_amount_out,
             )?;
+
             Ok(Some(T::WeightInfo::buy(asset_count.into())).into()) // TODO
         }
 
@@ -712,22 +747,24 @@ mod pallet {
         #[require_transactional]
         pub(crate) fn do_buy(
             who: T::AccountId,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             asset_out: AssetOf<T>,
             amount_in: BalanceOf<T>,
             min_amount_out: BalanceOf<T>,
         ) -> Result<AmmTradeOf<T>, DispatchError> {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
-            let market = T::MarketCommons::market(&market_id)?;
+
+            let market = T::MarketCommons::market(&pool_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-            Self::try_mutate_pool(&market_id, |pool| {
+
+            Self::try_mutate_pool(&pool_id, |pool| {
                 ensure!(pool.contains(&asset_out), Error::<T>::AssetNotFound);
                 T::MultiCurrency::transfer(pool.collateral, &who, &pool.account_id, amount_in)?;
                 let FeeDistribution {
                     remaining: amount_in_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
-                } = Self::distribute_fees(market_id, pool, &pool.account_id.clone(), amount_in)?;
+                } = Self::distribute_fees(pool_id, pool, &pool.account_id.clone(), amount_in)?;
                 ensure!(
                     amount_in_minus_fees <= pool.calculate_numerical_threshold(),
                     Error::<T>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
@@ -748,7 +785,7 @@ mod pallet {
                 // pool account to buy. Note that the fees are already in the pool at this point.
                 T::CompleteSetOperations::buy_complete_set(
                     pool.account_id.clone(),
-                    market_id,
+                    pool_id,
                     amount_in_minus_fees,
                 )?;
                 T::MultiCurrency::transfer(asset_out, &pool.account_id, &who, amount_out)?;
@@ -760,7 +797,7 @@ mod pallet {
                 }
                 Self::deposit_event(Event::<T>::BuyExecuted {
                     who: who.clone(),
-                    market_id,
+                    pool_id,
                     asset_out,
                     amount_in,
                     amount_out,
@@ -774,15 +811,17 @@ mod pallet {
         #[require_transactional]
         pub(crate) fn do_sell(
             who: T::AccountId,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             asset_in: AssetOf<T>,
             amount_in: BalanceOf<T>,
             min_amount_out: BalanceOf<T>,
         ) -> Result<AmmTradeOf<T>, DispatchError> {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
-            let market = T::MarketCommons::market(&market_id)?;
+
+            let market = T::MarketCommons::market(&pool_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-            Self::try_mutate_pool(&market_id, |pool| {
+
+            Self::try_mutate_pool(&pool_id, |pool| {
                 ensure!(pool.contains(&asset_in), Error::<T>::AssetNotFound);
                 // Ensure that the price of `asset_in` is at least `exp(-EXP_NUMERICAL_LIMITS) =
                 // 4.5399...e-05`.
@@ -815,14 +854,14 @@ mod pallet {
                 T::MultiCurrency::transfer(asset_in, &who, &pool.account_id, amount_in)?;
                 T::CompleteSetOperations::sell_complete_set(
                     pool.account_id.clone(),
-                    market_id,
+                    pool_id,
                     amount_out,
                 )?;
                 let FeeDistribution {
                     remaining: amount_out_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
-                } = Self::distribute_fees(market_id, pool, &pool.account_id.clone(), amount_out)?;
+                } = Self::distribute_fees(pool_id, pool, &pool.account_id.clone(), amount_out)?;
                 ensure!(amount_out_minus_fees >= min_amount_out, Error::<T>::AmountOutBelowMin);
                 T::MultiCurrency::transfer(
                     pool.collateral,
@@ -844,7 +883,7 @@ mod pallet {
                 );
                 Self::deposit_event(Event::<T>::SellExecuted {
                     who: who.clone(),
-                    market_id,
+                    pool_id,
                     asset_in,
                     amount_in,
                     amount_out: amount_out_minus_fees,
@@ -863,18 +902,20 @@ mod pallet {
         #[require_transactional]
         pub(crate) fn do_join(
             who: T::AccountId,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             pool_shares_amount: BalanceOf<T>,
             max_amounts_in: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
-            let market = T::MarketCommons::market(&market_id)?;
+
+            let market = T::MarketCommons::market(&pool_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
+
             let asset_count_u16: u16 =
                 max_amounts_in.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
             let asset_count_u32: u32 = asset_count_u16.into();
             ensure!(asset_count_u16 == market.outcomes(), Error::<T>::IncorrectAssetCount);
-            let benchmark_info = Self::try_mutate_pool(&market_id, |pool| {
+            let benchmark_info = Self::try_mutate_pool(&pool_id, |pool| {
                 let ratio =
                     pool_shares_amount.bdiv_ceil(pool.liquidity_shares_manager.total_shares()?)?;
                 // Ensure that new LPs contribute at least MIN_RELATIVE_LP_POSITION_VALUE. Note that
@@ -904,7 +945,7 @@ mod pallet {
                 pool.liquidity_parameter = new_liquidity_parameter;
                 Self::deposit_event(Event::<T>::JoinExecuted {
                     who: who.clone(),
-                    market_id,
+                    pool_id,
                     pool_shares_amount,
                     amounts_in,
                     new_liquidity_parameter,
@@ -922,13 +963,15 @@ mod pallet {
         #[require_transactional]
         pub(crate) fn do_exit(
             who: T::AccountId,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             pool_shares_amount: BalanceOf<T>,
             min_amounts_out: Vec<BalanceOf<T>>,
         ) -> DispatchResult {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
-            let market = T::MarketCommons::market(&market_id)?;
-            Pools::<T>::try_mutate_exists(market_id, |maybe_pool| {
+
+            let market = T::MarketCommons::market(&pool_id)?;
+
+            Pools::<T>::try_mutate_exists(pool_id, |maybe_pool| {
                 let pool =
                     maybe_pool.as_mut().ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
                 let ratio = {
@@ -969,7 +1012,7 @@ mod pallet {
                     *maybe_pool = None; // Delete the storage map entry.
                     Self::deposit_event(Event::<T>::PoolDestroyed {
                         who: who.clone(),
-                        market_id,
+                        pool_id,
                         amounts_out,
                     });
                 } else {
@@ -996,7 +1039,7 @@ mod pallet {
                     pool.liquidity_parameter = new_liquidity_parameter;
                     Self::deposit_event(Event::<T>::ExitExecuted {
                         who: who.clone(),
-                        market_id,
+                        pool_id,
                         pool_shares_amount,
                         amounts_out,
                         new_liquidity_parameter,
@@ -1009,14 +1052,14 @@ mod pallet {
         #[require_transactional]
         pub(crate) fn do_withdraw_fees(
             who: T::AccountId,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
         ) -> DispatchResult {
-            Self::try_mutate_pool(&market_id, |pool| {
+            Self::try_mutate_pool(&pool_id, |pool| {
                 let amount = pool.liquidity_shares_manager.withdraw_fees(&who)?;
                 T::MultiCurrency::transfer(pool.collateral, &pool.account_id, &who, amount)?; // Should never fail.
                 Self::deposit_event(Event::<T>::FeesWithdrawn {
                     who: who.clone(),
-                    market_id,
+                    pool_id,
                     amount,
                 });
                 Ok(())
@@ -1091,10 +1134,13 @@ mod pallet {
                 &pool.account_id,
                 T::MultiCurrency::minimum_balance(collateral),
             )?;
-            Pools::<T>::insert(market_id, pool);
+            // TODO Implement a `PoolInterface`. Beware! count actually is incorrect!
+            let pool_id = Self::next_pool_id();
+            Pools::<T>::insert(pool_id, pool);
             Self::deposit_event(Event::<T>::PoolDeployed {
                 who,
                 market_id,
+                pool_id,
                 account_id: pool_account_id,
                 reserves,
                 collateral,
@@ -1173,6 +1219,7 @@ mod pallet {
             Self::deposit_event(Event::<T>::PoolDeployed {
                 who,
                 market_id: pool_id,
+                pool_id,
                 account_id: pool_account_id,
                 reserves,
                 collateral,
@@ -1187,7 +1234,7 @@ mod pallet {
         #[require_transactional]
         pub(crate) fn do_combo_buy(
             who: T::AccountId,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             // TODO Replace `buy`/`keep`/`sell` with a struct.
             buy: Vec<AssetOf<T>>,
             sell: Vec<AssetOf<T>>,
@@ -1195,9 +1242,11 @@ mod pallet {
             min_amount_out: BalanceOf<T>,
         ) -> DispatchResult {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
-            let market = T::MarketCommons::market(&market_id)?;
+
+            let market = T::MarketCommons::market(&pool_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-            Self::try_mutate_pool(&market_id, |pool| {
+
+            Self::try_mutate_pool(&pool_id, |pool| {
                 // Ensure that `buy` and `sell` partition are disjoint, only contain assets from
                 // the market and don't contain dupliates.
                 ensure!(!buy.is_empty(), Error::<T>::InvalidPartition);
@@ -1218,7 +1267,7 @@ mod pallet {
                     remaining: amount_in_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
-                } = Self::distribute_fees(market_id, pool, &who, amount_in)?;
+                } = Self::distribute_fees(pool_id, pool, &who, amount_in)?;
                 let swap_amount_out = pool.calculate_swap_amount_out_for_buy(
                     buy.clone(),
                     sell.clone(),
@@ -1229,7 +1278,7 @@ mod pallet {
 
                 T::CompleteSetOperations::buy_complete_set(
                     who.clone(),
-                    market_id,
+                    pool_id,
                     amount_in_minus_fees,
                 )?;
 
@@ -1262,7 +1311,7 @@ mod pallet {
 
                 Self::deposit_event(Event::<T>::ComboBuyExecuted {
                     who: who.clone(),
-                    market_id,
+                    pool_id,
                     buy: buy.clone(),
                     sell: sell.clone(),
                     amount_in,
@@ -1280,7 +1329,7 @@ mod pallet {
         #[require_transactional]
         pub(crate) fn do_combo_sell(
             who: T::AccountId,
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             buy: Vec<AssetOf<T>>,
             keep: Vec<AssetOf<T>>,
             sell: Vec<AssetOf<T>>,
@@ -1289,7 +1338,8 @@ mod pallet {
             min_amount_out: BalanceOf<T>,
         ) -> DispatchResult {
             ensure!(amount_buy != Zero::zero(), Error::<T>::ZeroAmount);
-            let market = T::MarketCommons::market(&market_id)?;
+
+            let market = T::MarketCommons::market(&pool_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
 
             if keep.is_empty() {
@@ -1298,7 +1348,7 @@ mod pallet {
                 ensure!(amount_keep < amount_buy, Error::<T>::InvalidAmountKeep);
             }
 
-            Self::try_mutate_pool(&market_id, |pool| {
+            Self::try_mutate_pool(&pool_id, |pool| {
                 // Ensure that `buy` and `sell` partition are disjoint and only contain assets from
                 // the market.
                 ensure!(!buy.is_empty(), Error::<T>::InvalidPartition);
@@ -1355,7 +1405,7 @@ mod pallet {
 
                 T::CompleteSetOperations::sell_complete_set(
                     pool.account_id.clone(),
-                    market_id,
+                    pool_id,
                     amount_out,
                 )?;
 
@@ -1367,7 +1417,7 @@ mod pallet {
                     remaining: amount_out_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
-                } = Self::distribute_fees(market_id, pool, &pool.account_id.clone(), amount_out)?;
+                } = Self::distribute_fees(pool_id, pool, &pool.account_id.clone(), amount_out)?;
 
                 T::MultiCurrency::transfer(
                     pool.collateral,
@@ -1404,7 +1454,7 @@ mod pallet {
 
                 Self::deposit_event(Event::<T>::ComboSellExecuted {
                     who: who.clone(),
-                    market_id,
+                    pool_id,
                     buy: buy.clone(),
                     keep: keep.clone(),
                     sell: sell.clone(),
@@ -1420,15 +1470,15 @@ mod pallet {
         }
 
         #[inline]
-        pub(crate) fn pool_account_id(market_id: &MarketIdOf<T>) -> T::AccountId {
-            T::PalletId::get().into_sub_account_truncating((*market_id).saturated_into::<u128>())
+        pub(crate) fn pool_account_id(pool_id: &MarketIdOf<T>) -> T::AccountId {
+            T::PalletId::get().into_sub_account_truncating((*pool_id).saturated_into::<u128>())
         }
 
         /// Distribute swap fees and external fees and returns the remaining amount.
         ///
         /// # Arguments
         ///
-        /// - `market_id`: The ID of the market to which the pool belongs.
+        /// - `pool_id`: The ID of the pool on which the trade was executed.
         /// - `pool`: The pool on which the trade was executed.
         /// - `account`: The account that the fee is deducted from.
         /// - `amount`: The gross amount from which the fee is deduced.
@@ -1437,7 +1487,7 @@ mod pallet {
         /// function will fail if the external fees exceed the gross amount.
         #[require_transactional]
         fn distribute_fees(
-            market_id: MarketIdOf<T>,
+            pool_id: T::PoolId,
             pool: &mut PoolOf<T>,
             account: &AccountIdOf<T>,
             amount: BalanceOf<T>,
@@ -1446,20 +1496,20 @@ mod pallet {
             T::MultiCurrency::transfer(pool.collateral, account, &pool.account_id, swap_fees)?;
             pool.liquidity_shares_manager.deposit_fees(swap_fees)?; // Should only error unexpectedly!
             let external_fees =
-                T::ExternalFees::distribute(market_id, pool.collateral, account, amount);
+                T::ExternalFees::distribute(pool_id, pool.collateral, account, amount);
             let total_fees = external_fees.saturating_add(swap_fees);
             let remaining = amount.checked_sub(&total_fees).ok_or(Error::<T>::Unexpected)?;
             Ok(FeeDistribution { remaining, swap_fees, external_fees })
         }
 
         pub(crate) fn try_mutate_pool<R, F>(
-            market_id: &MarketIdOf<T>,
+            pool_id: &MarketIdOf<T>,
             mutator: F,
         ) -> Result<R, DispatchError>
         where
             F: FnMut(&mut PoolOf<T>) -> Result<R, DispatchError>,
         {
-            Pools::<T>::try_mutate(market_id, |maybe_pool| {
+            Pools::<T>::try_mutate(pool_id, |maybe_pool| {
                 maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound.into()).and_then(mutator)
             })
         }

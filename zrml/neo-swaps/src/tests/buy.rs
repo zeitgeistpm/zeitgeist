@@ -86,7 +86,7 @@ fn buy_works() {
         System::assert_last_event(
             Event::BuyExecuted {
                 who: BOB,
-                market_id,
+                pool_id: market_id,
                 asset_out,
                 amount_in,
                 amount_out: expected_amount_out,

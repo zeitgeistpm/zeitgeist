@@ -65,7 +65,7 @@ fn join_works(
         System::assert_last_event(
             Event::JoinExecuted {
                 who,
-                market_id,
+                pool_id: market_id,
                 pool_shares_amount,
                 amounts_in,
                 new_liquidity_parameter,

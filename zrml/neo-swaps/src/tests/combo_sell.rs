@@ -85,7 +85,7 @@ fn combo_sell_works() {
         System::assert_last_event(
             Event::ComboSellExecuted {
                 who: BOB,
-                market_id,
+                pool_id: market_id,
                 buy,
                 keep,
                 sell,
