@@ -784,9 +784,12 @@ mod pallet {
                 // Instead of letting `who` buy the complete sets and then transfer almost all of
                 // the outcomes to the pool account, we prevent `(n-1)` storage reads by using the
                 // pool account to buy. Note that the fees are already in the pool at this point.
+                let PoolType::Standard(market_id) = pool.pool_type else {
+                    return Err(Error::<T>::Unexpected.into());
+                };
                 T::CompleteSetOperations::buy_complete_set(
                     pool.account_id.clone(),
-                    pool_id,
+                    market_id,
                     amount_in_minus_fees,
                 )?;
                 T::MultiCurrency::transfer(asset_out, &pool.account_id, &who, amount_out)?;
@@ -851,9 +854,12 @@ mod pallet {
                 // `amount_out_minus_fees` units of collateral to `who`. The fees automatically end
                 // up in the pool.
                 T::MultiCurrency::transfer(asset_in, &who, &pool.account_id, amount_in)?;
+                let PoolType::Standard(market_id) = pool.pool_type else {
+                    return Err(Error::<T>::Unexpected.into());
+                };
                 T::CompleteSetOperations::sell_complete_set(
                     pool.account_id.clone(),
-                    pool_id,
+                    market_id,
                     amount_out,
                 )?;
                 let FeeDistribution {
