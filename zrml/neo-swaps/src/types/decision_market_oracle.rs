@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    traits::pool_operations::PoolOperations, weights::WeightInfoZeitgeist, AssetOf, Config, Error,
+    traits::PoolOperations, weights::WeightInfoZeitgeist, AssetOf, Config, Error,
     MarketIdOf, Pools,
 };
 use frame_support::pallet_prelude::Weight;

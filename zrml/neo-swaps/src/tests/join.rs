@@ -19,7 +19,7 @@ use super::*;
 use crate::{
     helpers::create_spot_prices,
     liquidity_tree::{
-        traits::liquidity_tree_helper::LiquidityTreeHelper, types::LiquidityTreeError,
+        traits::LiquidityTreeHelper, types::LiquidityTreeError,
     },
 };
 use alloc::collections::BTreeMap;

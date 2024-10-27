@@ -29,6 +29,7 @@ mod macros;
 mod math;
 pub mod migration;
 mod mock;
+mod pool_storage;
 mod tests;
 pub mod traits;
 pub mod types;
@@ -42,7 +43,7 @@ mod pallet {
         consts::LN_NUMERICAL_LIMIT,
         liquidity_tree::types::{BenchmarkInfo, LiquidityTree, LiquidityTreeError},
         math::{traits::MathOps, types::Math},
-        traits::{pool_operations::PoolOperations, LiquiditySharesManager},
+        traits::{LiquiditySharesManager, PoolOperations, PoolStorage},
         types::{FeeDistribution, MaxAssets, Pool},
         weights::*,
     };
@@ -55,7 +56,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         ensure,
-        pallet_prelude::CountedStorageMap,
+        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         require_transactional,
         traits::{Get, IsType, StorageVersion},
         transactional, PalletError, PalletId, Parameter, Twox64Concat,
@@ -196,7 +197,10 @@ mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
-    pub(crate) type Pools<T: Config> = CountedStorageMap<_, Twox64Concat, PoolIdOf<T>, PoolOf<T>>;
+    pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, T::PoolId, PoolOf<T>>;
+
+    #[pallet::storage]
+    pub(crate) type PoolCount<T: Config> = StorageValue<_, T::PoolId, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
@@ -417,7 +421,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let pool = <Self as PoolStorage>::get(pool_id)?;
             let asset_count_real = pool.assets().len();
             let asset_count_real_u16: u16 =
                 asset_count_real.try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
@@ -467,7 +471,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let pool = <Self as PoolStorage>::get(pool_id)?;
             let asset_count_real = pool.assets().len();
             let asset_count_real_u16: u16 =
                 asset_count_real.try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
@@ -519,7 +523,7 @@ mod pallet {
             let _: u32 =
                 max_amounts_in.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
 
-            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let pool = <Self as PoolStorage>::get(pool_id)?;
             let asset_count_real = pool.assets().len();
             ensure!(max_amounts_in.len() == asset_count_real, Error::<T>::IncorrectVecLen);
 
@@ -569,7 +573,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let pool = <Self as PoolStorage>::get(pool_id)?;
             let asset_count_real = pool.assets().len();
             let min_amounts_out_len = min_amounts_out.len();
             ensure!(min_amounts_out_len == asset_count_real, Error::<T>::IncorrectVecLen);
@@ -671,7 +675,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let pool = <Self as PoolStorage>::get(pool_id)?;
             let asset_count_real = pool.assets().len();
             let asset_count_real_u16: u16 =
                 asset_count_real.try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
@@ -699,7 +703,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolNotFound)?;
+            let pool = <Self as PoolStorage>::get(pool_id)?;
             let asset_count_real = pool.assets().len();
             let asset_count_real_u16: u16 =
                 asset_count_real.try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
@@ -757,7 +761,7 @@ mod pallet {
             let market = T::MarketCommons::market(&pool_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
 
-            Self::try_mutate_pool(&pool_id, |pool| {
+            <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
                 ensure!(pool.contains(&asset_out), Error::<T>::AssetNotFound);
                 T::MultiCurrency::transfer(pool.collateral, &who, &pool.account_id, amount_in)?;
                 let FeeDistribution {
@@ -821,7 +825,7 @@ mod pallet {
             let market = T::MarketCommons::market(&pool_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
 
-            Self::try_mutate_pool(&pool_id, |pool| {
+            <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
                 ensure!(pool.contains(&asset_in), Error::<T>::AssetNotFound);
                 // Ensure that the price of `asset_in` is at least `exp(-EXP_NUMERICAL_LIMITS) =
                 // 4.5399...e-05`.
@@ -915,7 +919,7 @@ mod pallet {
                 max_amounts_in.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
             let asset_count_u32: u32 = asset_count_u16.into();
             ensure!(asset_count_u16 == market.outcomes(), Error::<T>::IncorrectAssetCount);
-            let benchmark_info = Self::try_mutate_pool(&pool_id, |pool| {
+            let benchmark_info = <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
                 let ratio =
                     pool_shares_amount.bdiv_ceil(pool.liquidity_shares_manager.total_shares()?)?;
                 // Ensure that new LPs contribute at least MIN_RELATIVE_LP_POSITION_VALUE. Note that
@@ -971,6 +975,7 @@ mod pallet {
 
             let market = T::MarketCommons::market(&pool_id)?;
 
+            // FIXME Should this also be made part of the `PoolStorage` interface?
             Pools::<T>::try_mutate_exists(pool_id, |maybe_pool| {
                 let pool =
                     maybe_pool.as_mut().ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
@@ -1050,11 +1055,8 @@ mod pallet {
         }
 
         #[require_transactional]
-        pub(crate) fn do_withdraw_fees(
-            who: T::AccountId,
-            pool_id: T::PoolId,
-        ) -> DispatchResult {
-            Self::try_mutate_pool(&pool_id, |pool| {
+        pub(crate) fn do_withdraw_fees(who: T::AccountId, pool_id: T::PoolId) -> DispatchResult {
+            <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
                 let amount = pool.liquidity_shares_manager.withdraw_fees(&who)?;
                 T::MultiCurrency::transfer(pool.collateral, &pool.account_id, &who, amount)?; // Should never fail.
                 Self::deposit_event(Event::<T>::FeesWithdrawn {
@@ -1135,8 +1137,7 @@ mod pallet {
                 T::MultiCurrency::minimum_balance(collateral),
             )?;
             // TODO Implement a `PoolInterface`. Beware! count actually is incorrect!
-            let pool_id = Self::next_pool_id();
-            Pools::<T>::insert(pool_id, pool);
+            let pool_id = <Self as PoolStorage>::add(pool)?;
             Self::deposit_event(Event::<T>::PoolDeployed {
                 who,
                 market_id,
@@ -1192,7 +1193,7 @@ mod pallet {
                 liquidity_parameter >= MIN_LIQUIDITY.saturated_into(),
                 Error::<T>::LiquidityTooLow
             );
-            let pool_id = Self::next_pool_id();
+            let pool_id = <Self as PoolStorage>::next_pool_id();
             let pool_account_id = Self::pool_account_id(&pool_id);
             let mut reserves = BTreeMap::new();
             for (&amount_in, &asset) in amounts_in.iter().zip(position_ids.iter()) {
@@ -1215,7 +1216,7 @@ mod pallet {
                 &pool.account_id,
                 T::MultiCurrency::minimum_balance(collateral),
             )?;
-            Pools::<T>::insert(pool_id, pool);
+            let _ = <Self as PoolStorage>::add(pool);
             Self::deposit_event(Event::<T>::PoolDeployed {
                 who,
                 market_id: pool_id,
@@ -1246,7 +1247,7 @@ mod pallet {
             let market = T::MarketCommons::market(&pool_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
 
-            Self::try_mutate_pool(&pool_id, |pool| {
+            <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
                 // Ensure that `buy` and `sell` partition are disjoint, only contain assets from
                 // the market and don't contain dupliates.
                 ensure!(!buy.is_empty(), Error::<T>::InvalidPartition);
@@ -1348,7 +1349,7 @@ mod pallet {
                 ensure!(amount_keep < amount_buy, Error::<T>::InvalidAmountKeep);
             }
 
-            Self::try_mutate_pool(&pool_id, |pool| {
+            <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
                 // Ensure that `buy` and `sell` partition are disjoint and only contain assets from
                 // the market.
                 ensure!(!buy.is_empty(), Error::<T>::InvalidPartition);
@@ -1500,22 +1501,6 @@ mod pallet {
             let total_fees = external_fees.saturating_add(swap_fees);
             let remaining = amount.checked_sub(&total_fees).ok_or(Error::<T>::Unexpected)?;
             Ok(FeeDistribution { remaining, swap_fees, external_fees })
-        }
-
-        pub(crate) fn try_mutate_pool<R, F>(
-            pool_id: &MarketIdOf<T>,
-            mutator: F,
-        ) -> Result<R, DispatchError>
-        where
-            F: FnMut(&mut PoolOf<T>) -> Result<R, DispatchError>,
-        {
-            Pools::<T>::try_mutate(pool_id, |maybe_pool| {
-                maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound.into()).and_then(mutator)
-            })
-        }
-
-        pub(crate) fn next_pool_id() -> T::PoolId {
-            Pools::<T>::count().into()
         }
 
         /// Takes `amount` units of collateral and splits these tokens into the elementary outcome
@@ -1694,6 +1679,7 @@ mod pallet {
         type Asset = AssetOf<T>;
 
         fn pool_exists(market_id: Self::MarketId) -> bool {
+            // TODO Add adapter for normal pools
             Pools::<T>::contains_key(market_id)
         }
 
@@ -1701,7 +1687,7 @@ mod pallet {
             market_id: Self::MarketId,
             asset: Self::Asset,
         ) -> Result<Self::Balance, DispatchError> {
-            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            let pool = <Self as PoolStorage>::get(market_id)?;
             pool.calculate_spot_price(asset)
         }
 
@@ -1710,7 +1696,7 @@ mod pallet {
             asset: Self::Asset,
             until: Self::Balance,
         ) -> Result<Self::Balance, DispatchError> {
-            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            let pool = <Self as PoolStorage>::get(market_id)?;
             let buy_amount = pool.calculate_buy_amount_until(asset, until)?;
             let total_fee_fractional = Self::total_fee_fractional(
                 pool.swap_fee,
@@ -1737,7 +1723,7 @@ mod pallet {
             asset: Self::Asset,
             until: Self::Balance,
         ) -> Result<Self::Balance, DispatchError> {
-            let pool = Pools::<T>::get(market_id).ok_or(Error::<T>::PoolNotFound)?;
+            let pool = <Self as PoolStorage>::get(market_id)?;
             pool.calculate_sell_amount_until(asset, until)
         }
 
