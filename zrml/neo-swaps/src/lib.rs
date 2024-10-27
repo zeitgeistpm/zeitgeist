@@ -68,6 +68,7 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
     use scale_info::TypeInfo;
+    use crate::types::PoolType;
     use sp_runtime::{
         traits::{
             AccountIdConversion, AtLeast32Bit, CheckedSub, MaybeSerializeDeserialize, Member,
@@ -1126,6 +1127,7 @@ mod pallet {
                 liquidity_parameter,
                 liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
                 swap_fee,
+                pool_type: PoolType::Standard(market_id),
             };
             // TODO(#1220): Ensure that the existential deposit doesn't kill fees. This is an ugly
             // hack and system should offer the option to whitelist accounts.
@@ -1164,7 +1166,7 @@ mod pallet {
             ensure!(swap_fee <= T::MaxSwapFee::get(), Error::<T>::SwapFeeAboveMax);
 
             let (collection_ids, position_ids, collateral) =
-                Self::split_markets(who.clone(), market_ids, amount, force_max_work)?;
+                Self::split_markets(who.clone(), market_ids.clone(), amount, force_max_work)?;
 
             ensure!(spot_prices.len() == collection_ids.len(), Error::<T>::InvalidSpotPrices);
             ensure!(
@@ -1206,6 +1208,9 @@ mod pallet {
                 liquidity_parameter,
                 liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
                 swap_fee,
+                pool_type: PoolType::Combinatorial(
+                    market_ids.try_into().map_err(|_| Error::<T>::Unexpected)?,
+                ),
             };
             // TODO(#1220): Ensure that the existential deposit doesn't kill fees. This is an ugly
             // hack and system should offer the option to whitelist accounts.

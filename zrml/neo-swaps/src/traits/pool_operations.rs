@@ -37,6 +37,9 @@ pub(crate) trait PoolOperations<T: Config> {
     /// Beware! The reserve need not coincide with the balance in the pool account.
     fn reserves_of(&self, assets: &[AssetOf<T>]) -> Result<Vec<BalanceOf<T>>, DispatchError>;
 
+    /// Checks if the pool can be traded on.
+    fn is_active(&self) -> Result<bool, DispatchError>;
+
     /// Perform a checked addition to the balance of `asset`.
     fn increase_reserve(
         &mut self,
