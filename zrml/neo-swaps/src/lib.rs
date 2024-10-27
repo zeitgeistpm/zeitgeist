@@ -285,6 +285,18 @@ mod pallet {
             swap_fee_amount: BalanceOf<T>,
             external_fee_amount: BalanceOf<T>,
         },
+        /// Pool was createed.
+        CombinatorialPoolDeployed {
+            who: T::AccountId,
+            market_ids: Vec<MarketIdOf<T>>,
+            pool_id: T::PoolId,
+            account_id: T::AccountId,
+            reserves: BTreeMap<AssetOf<T>, BalanceOf<T>>,
+            collateral: AssetOf<T>,
+            liquidity_parameter: BalanceOf<T>,
+            pool_shares_amount: BalanceOf<T>,
+            swap_fee: BalanceOf<T>,
+        },
     }
 
     #[pallet::error]
@@ -512,7 +524,7 @@ mod pallet {
         #[transactional]
         pub fn join(
             origin: OriginFor<T>,
-            #[pallet::compact] pool_id: MarketIdOf<T>,
+            #[pallet::compact] pool_id: T::PoolId,
             #[pallet::compact] pool_shares_amount: BalanceOf<T>,
             max_amounts_in: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
@@ -691,7 +703,7 @@ mod pallet {
         #[transactional]
         pub fn combo_sell(
             origin: OriginFor<T>,
-            #[pallet::compact] pool_id: MarketIdOf<T>,
+            #[pallet::compact] pool_id: T::PoolId,
             asset_count: AssetIndexType,
             buy: Vec<AssetOf<T>>,
             keep: Vec<AssetOf<T>>,
@@ -1208,7 +1220,7 @@ mod pallet {
                 liquidity_shares_manager: LiquidityTree::new(who.clone(), amount)?,
                 swap_fee,
                 pool_type: PoolType::Combinatorial(
-                    market_ids.try_into().map_err(|_| Error::<T>::Unexpected)?,
+                    market_ids.clone().try_into().map_err(|_| Error::<T>::Unexpected)?,
                 ),
             };
             // TODO(#1220): Ensure that the existential deposit doesn't kill fees. This is an ugly
@@ -1220,9 +1232,9 @@ mod pallet {
                 T::MultiCurrency::minimum_balance(collateral),
             )?;
             let _ = <Self as PoolStorage>::add(pool);
-            Self::deposit_event(Event::<T>::PoolDeployed {
+            Self::deposit_event(Event::<T>::CombinatorialPoolDeployed {
                 who,
-                market_id: pool_id,
+                market_ids,
                 pool_id,
                 account_id: pool_account_id,
                 reserves,
@@ -1472,7 +1484,7 @@ mod pallet {
         }
 
         #[inline]
-        pub(crate) fn pool_account_id(pool_id: &MarketIdOf<T>) -> T::AccountId {
+        pub(crate) fn pool_account_id(pool_id: &T::PoolId) -> T::AccountId {
             T::PalletId::get().into_sub_account_truncating((*pool_id).saturated_into::<u128>())
         }
 
