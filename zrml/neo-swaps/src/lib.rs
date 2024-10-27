@@ -44,7 +44,7 @@ mod pallet {
         liquidity_tree::types::{BenchmarkInfo, LiquidityTree, LiquidityTreeError},
         math::{traits::MathOps, types::Math},
         traits::{LiquiditySharesManager, PoolOperations, PoolStorage},
-        types::{FeeDistribution, MaxAssets, Pool},
+        types::{FeeDistribution, MaxAssets, Pool, PoolType},
         weights::*,
     };
     use alloc::{
@@ -68,7 +68,6 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
     use scale_info::TypeInfo;
-    use crate::types::PoolType;
     use sp_runtime::{
         traits::{
             AccountIdConversion, AtLeast32Bit, CheckedSub, MaybeSerializeDeserialize, Member,
@@ -758,10 +757,8 @@ mod pallet {
         ) -> Result<AmmTradeOf<T>, DispatchError> {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
 
-            let market = T::MarketCommons::market(&pool_id)?;
-            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-
             <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
+                ensure!(pool.is_active()?, Error::<T>::MarketNotActive);
                 ensure!(pool.contains(&asset_out), Error::<T>::AssetNotFound);
                 T::MultiCurrency::transfer(pool.collateral, &who, &pool.account_id, amount_in)?;
                 let FeeDistribution {
@@ -822,10 +819,8 @@ mod pallet {
         ) -> Result<AmmTradeOf<T>, DispatchError> {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
 
-            let market = T::MarketCommons::market(&pool_id)?;
-            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-
             <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
+                ensure!(pool.is_active()?, Error::<T>::MarketNotActive);
                 ensure!(pool.contains(&asset_in), Error::<T>::AssetNotFound);
                 // Ensure that the price of `asset_in` is at least `exp(-EXP_NUMERICAL_LIMITS) =
                 // 4.5399...e-05`.
@@ -912,14 +907,14 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
 
-            let market = T::MarketCommons::market(&pool_id)?;
-            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-
-            let asset_count_u16: u16 =
-                max_amounts_in.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
-            let asset_count_u32: u32 = asset_count_u16.into();
-            ensure!(asset_count_u16 == market.outcomes(), Error::<T>::IncorrectAssetCount);
-            let benchmark_info = <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
+            let weight = <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
+                ensure!(pool.is_active()?, Error::<T>::MarketNotActive);
+                ensure!(
+                    max_amounts_in.len() == pool.assets().len(),
+                    Error::<T>::IncorrectAssetCount
+                );
+                let asset_count_u32 =
+                    max_amounts_in.len().try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
                 let ratio =
                     pool_shares_amount.bdiv_ceil(pool.liquidity_shares_manager.total_shares()?)?;
                 // Ensure that new LPs contribute at least MIN_RELATIVE_LP_POSITION_VALUE. Note that
@@ -954,13 +949,13 @@ mod pallet {
                     amounts_in,
                     new_liquidity_parameter,
                 });
-                Ok(benchmark_info)
+                let weight = match benchmark_info {
+                    BenchmarkInfo::InPlace => T::WeightInfo::join_in_place(asset_count_u32),
+                    BenchmarkInfo::Reassigned => T::WeightInfo::join_reassigned(asset_count_u32),
+                    BenchmarkInfo::Leaf => T::WeightInfo::join_leaf(asset_count_u32),
+                };
+                Ok(weight)
             })?;
-            let weight = match benchmark_info {
-                BenchmarkInfo::InPlace => T::WeightInfo::join_in_place(asset_count_u32),
-                BenchmarkInfo::Reassigned => T::WeightInfo::join_reassigned(asset_count_u32),
-                BenchmarkInfo::Leaf => T::WeightInfo::join_leaf(asset_count_u32),
-            };
             Ok((Some(weight)).into())
         }
 
@@ -973,8 +968,6 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
 
-            let market = T::MarketCommons::market(&pool_id)?;
-
             // FIXME Should this also be made part of the `PoolStorage` interface?
             Pools::<T>::try_mutate_exists(pool_id, |maybe_pool| {
                 let pool =
@@ -982,7 +975,7 @@ mod pallet {
                 let ratio = {
                     let mut ratio = pool_shares_amount
                         .bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
-                    if market.status == MarketStatus::Active {
+                    if pool.is_active()? {
                         let multiplier = ZeitgeistBase::<BalanceOf<T>>::get()?
                             .checked_sub_res(&EXIT_FEE.saturated_into())?;
                         ratio = ratio.bmul_floor(multiplier)?;
@@ -1248,10 +1241,9 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(amount_in != Zero::zero(), Error::<T>::ZeroAmount);
 
-            let market = T::MarketCommons::market(&pool_id)?;
-            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-
             <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
+                ensure!(pool.is_active()?, Error::<T>::MarketNotActive);
+
                 // Ensure that `buy` and `sell` partition are disjoint, only contain assets from
                 // the market and don't contain dupliates.
                 ensure!(!buy.is_empty(), Error::<T>::InvalidPartition);
@@ -1344,9 +1336,6 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(amount_buy != Zero::zero(), Error::<T>::ZeroAmount);
 
-            let market = T::MarketCommons::market(&pool_id)?;
-            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-
             if keep.is_empty() {
                 ensure!(amount_keep.is_zero(), Error::<T>::InvalidAmountKeep);
             } else {
@@ -1354,6 +1343,8 @@ mod pallet {
             }
 
             <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
+                ensure!(pool.is_active()?, Error::<T>::MarketNotActive);
+
                 // Ensure that `buy` and `sell` partition are disjoint and only contain assets from
                 // the market.
                 ensure!(!buy.is_empty(), Error::<T>::InvalidPartition);
@@ -1377,7 +1368,7 @@ mod pallet {
                 ensure!(keep_set.len() == keep.len(), Error::<T>::InvalidPartition);
                 ensure!(sell_set.len() == sell.len(), Error::<T>::InvalidPartition);
                 let total_assets = buy.len().saturating_add(keep.len()).saturating_add(sell.len());
-                ensure!(total_assets == market.outcomes() as usize, Error::<T>::InvalidPartition);
+                ensure!(total_assets == pool.assets().len(), Error::<T>::InvalidPartition);
 
                 // This is the amount of collateral the user will receive in the end, or,
                 // equivalently, the amount of each asset in `sell` that the user intermittently
