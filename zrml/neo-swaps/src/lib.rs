@@ -120,7 +120,6 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
     pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>, MaxAssets>;
-    pub(crate) type PoolIdOf<T> = <T as Config>::PoolId;
     pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
 
     #[pallet::config]
