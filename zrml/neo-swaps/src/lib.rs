@@ -201,6 +201,10 @@ mod pallet {
     #[pallet::storage]
     pub(crate) type PoolCount<T: Config> = StorageValue<_, T::PoolId, ValueQuery>;
 
+    #[pallet::storage]
+    pub(crate) type MarketIdToPoolId<T: Config> =
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, T::PoolId>;
+
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T>
@@ -1031,6 +1035,7 @@ mod pallet {
                         pool_id,
                         amounts_out,
                     });
+                    // No need to clear `MarketIdToPoolId`.
                 } else {
                     let old_liquidity_parameter = pool.liquidity_parameter;
                     let new_liquidity_parameter = old_liquidity_parameter
@@ -1087,7 +1092,12 @@ mod pallet {
             spot_prices: Vec<BalanceOf<T>>,
             swap_fee: BalanceOf<T>,
         ) -> DispatchResult {
-            ensure!(!Pools::<T>::contains_key(market_id), Error::<T>::DuplicatePool);
+            // MarketIdToPoolId is not cleared when a pool is destroyed, so checking if
+            // `MarketIdToPoolId` holds a key is not enough.
+            if let Some(pool_id) = MarketIdToPoolId::<T>::get(market_id) {
+                ensure!(!Pools::<T>::contains_key(pool_id), Error::<T>::DuplicatePool);
+            }
+
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
             ensure!(
@@ -1148,8 +1158,8 @@ mod pallet {
                 &pool.account_id,
                 T::MultiCurrency::minimum_balance(collateral),
             )?;
-            // TODO Implement a `PoolInterface`. Beware! count actually is incorrect!
             let pool_id = <Self as PoolStorage>::add(pool)?;
+            MarketIdToPoolId::<T>::insert(market_id, pool_id);
             Self::deposit_event(Event::<T>::PoolDeployed {
                 who,
                 market_id,
@@ -1719,8 +1729,10 @@ mod pallet {
         type Asset = AssetOf<T>;
 
         fn pool_exists(market_id: Self::MarketId) -> bool {
-            // TODO Add adapter for normal pools
-            Pools::<T>::contains_key(market_id)
+            let Some(pool_id) = MarketIdToPoolId::<T>::get(market_id) else {
+                return false;
+            };
+            Pools::<T>::contains_key(pool_id)
         }
 
         fn get_spot_price(
