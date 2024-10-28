@@ -777,7 +777,7 @@ mod pallet {
                     remaining: amount_in_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
-                } = Self::distribute_fees(pool_id, pool, &pool.account_id.clone(), amount_in)?;
+                } = Self::distribute_fees(pool, &pool.account_id.clone(), amount_in)?;
                 ensure!(
                     amount_in_minus_fees <= pool.calculate_numerical_threshold(),
                     Error::<T>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
@@ -878,7 +878,7 @@ mod pallet {
                     remaining: amount_out_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
-                } = Self::distribute_fees(pool_id, pool, &pool.account_id.clone(), amount_out)?;
+                } = Self::distribute_fees(pool, &pool.account_id.clone(), amount_out)?;
                 ensure!(amount_out_minus_fees >= min_amount_out, Error::<T>::AmountOutBelowMin);
                 T::MultiCurrency::transfer(
                     pool.collateral,
@@ -1282,7 +1282,7 @@ mod pallet {
                     remaining: amount_in_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
-                } = Self::distribute_fees(pool_id, pool, &who, amount_in)?;
+                } = Self::distribute_fees(pool, &who, amount_in)?;
                 let swap_amount_out = pool.calculate_swap_amount_out_for_buy(
                     buy.clone(),
                     sell.clone(),
@@ -1431,7 +1431,7 @@ mod pallet {
                     remaining: amount_out_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
-                } = Self::distribute_fees(pool_id, pool, &pool.account_id.clone(), amount_out)?;
+                } = Self::distribute_fees(pool, &pool.account_id.clone(), amount_out)?;
 
                 T::MultiCurrency::transfer(
                     pool.collateral,
@@ -1501,7 +1501,6 @@ mod pallet {
         /// function will fail if the external fees exceed the gross amount.
         #[require_transactional]
         fn distribute_fees(
-            pool_id: T::PoolId,
             pool: &mut PoolOf<T>,
             account: &AccountIdOf<T>,
             amount: BalanceOf<T>,
@@ -1509,8 +1508,13 @@ mod pallet {
             let swap_fees = pool.swap_fee.bmul(amount)?;
             T::MultiCurrency::transfer(pool.collateral, account, &pool.account_id, swap_fees)?;
             pool.liquidity_shares_manager.deposit_fees(swap_fees)?; // Should only error unexpectedly!
-            let external_fees =
-                T::ExternalFees::distribute(pool_id, pool.collateral, account, amount);
+
+            let mut external_fees: BalanceOf<T> = Zero::zero();
+            for &market_id in pool.pool_type.iter_market_ids() {
+                let f = T::ExternalFees::distribute(market_id, pool.collateral, account, amount);
+                external_fees = external_fees.saturating_add(f);
+            }
+
             let total_fees = external_fees.saturating_add(swap_fees);
             let remaining = amount.checked_sub(&total_fees).ok_or(Error::<T>::Unexpected)?;
             Ok(FeeDistribution { remaining, swap_fees, external_fees })

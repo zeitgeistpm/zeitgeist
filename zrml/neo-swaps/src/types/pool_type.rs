@@ -1,4 +1,3 @@
-use crate::MarketIdOf;
 use alloc::fmt::Debug;
 use core::iter;
 use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
@@ -24,7 +23,7 @@ where
     MarketId: Clone + Decode + Debug + Encode + MaxEncodedLen + PartialEq + Eq + TypeInfo,
     MaxMarkets: Get<u32>,
 {
-    pub fn iter(&self) -> Box<dyn Iterator<Item = &MarketId> + '_> {
+    pub fn iter_market_ids(&self) -> Box<dyn Iterator<Item = &MarketId> + '_> {
         match self {
             PoolType::Standard(market_id) => Box::new(iter::once(market_id)),
             PoolType::Combinatorial(market_ids) => Box::new(market_ids.iter()),
