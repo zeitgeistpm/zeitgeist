@@ -86,6 +86,7 @@ where
     fn is_active(&self) -> Result<bool, DispatchError> {
         for market_id in self.pool_type.iter_market_ids() {
             let market = T::MarketCommons::market(&market_id)?;
+            println!("market: {:?}", market.status);
 
             if market.status != MarketStatus::Active {
                 return Ok(false);

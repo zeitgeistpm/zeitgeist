@@ -356,7 +356,7 @@ fn combo_buy_fails_on_insufficient_funds() {
                 amount_in,
                 0,
             ),
-            zrml_prediction_markets::Error::<Runtime>::NotEnoughBalance,
+            orml_currencies::Error::<Runtime>::BalanceTooLow,
         );
     });
 }

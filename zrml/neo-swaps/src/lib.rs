@@ -79,7 +79,7 @@ mod pallet {
         constants::{BASE, CENT},
         hybrid_router_api_types::{AmmSoftFail, AmmTrade, ApiError},
         math::{
-            checked_ops_res::{CheckedAddRes, CheckedSubRes},
+            checked_ops_res::{CheckedAddRes, CheckedMulRes, CheckedSubRes},
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
         traits::{
@@ -1179,7 +1179,7 @@ mod pallet {
             let (collection_ids, position_ids, collateral) =
                 Self::split_markets(who.clone(), market_ids.clone(), amount, force_max_work)?;
 
-            ensure!(spot_prices.len() == collection_ids.len(), Error::<T>::InvalidSpotPrices);
+            ensure!(spot_prices.len() == collection_ids.len(), Error::<T>::IncorrectVecLen);
             ensure!(
                 spot_prices
                     .iter()
@@ -1223,6 +1223,9 @@ mod pallet {
                     market_ids.clone().try_into().map_err(|_| Error::<T>::Unexpected)?,
                 ),
             };
+
+            ensure!(pool.is_active()?, Error::<T>::MarketNotActive);
+
             // TODO(#1220): Ensure that the existential deposit doesn't kill fees. This is an ugly
             // hack and system should offer the option to whitelist accounts.
             T::MultiCurrency::transfer(
@@ -1291,9 +1294,10 @@ mod pallet {
                 let amount_out = swap_amount_out.checked_add_res(&amount_in_minus_fees)?;
                 ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
 
-                T::CompleteSetOperations::buy_complete_set(
+                T::CombinatorialTokensUnsafe::split_position_unsafe(
                     who.clone(),
-                    pool_id,
+                    pool.collateral,
+                    pool.assets(),
                     amount_in_minus_fees,
                 )?;
 
@@ -1417,9 +1421,19 @@ mod pallet {
                     pool.increase_reserve(&asset, &amount_keep)?;
                 }
 
-                T::CompleteSetOperations::sell_complete_set(
+                println!(
+                    "{:?}",
+                    T::MultiCurrency::free_balance(pool.assets()[0], &pool.account_id)
+                );
+                println!(
+                    "{:?}",
+                    T::MultiCurrency::free_balance(pool.assets()[1], &pool.account_id)
+                );
+                println!("{:?}", amount_out);
+                T::CombinatorialTokensUnsafe::merge_position_unsafe(
                     pool.account_id.clone(),
-                    pool_id,
+                    pool.collateral,
+                    pool.assets(),
                     amount_out,
                 )?;
 
@@ -1535,9 +1549,11 @@ mod pallet {
                 .map(|market_id| T::MarketCommons::market(market_id))
                 .collect::<Result<Vec<_>, _>>()?;
 
-            // Calculate the total amount of split opterations required. Note that it's 1 split
-            // operation for the first market. TODO Abstract into separate function.
-            let mut total_splits = 0u16; // Zero indicates first pass.
+            // Calculate the total amount of split operations required. One split for splitting
+            // collateral into the positions of the first market, and then it's one split for each
+            // position created in the previous step.
+            let mut total_splits = 0u16;
+            let mut prev_positions = 0u16;
             for market in markets.iter() {
                 ensure!(
                     market.scoring_rule == ScoringRule::AmmCdaHybrid,
@@ -1546,8 +1562,10 @@ mod pallet {
 
                 if total_splits == 0u16 {
                     total_splits = 1u16;
+                    prev_positions = market.outcomes();
                 } else {
-                    total_splits = total_splits.saturating_mul(market.outcomes());
+                    total_splits = total_splits.checked_add_res(&prev_positions)?;
+                    prev_positions = prev_positions.checked_mul_res(&market.outcomes())?;
                 }
             }
             ensure!(total_splits <= T::MaxSplits::get(), Error::<T>::MaxSplitsExceeded);
@@ -1558,15 +1576,18 @@ mod pallet {
             let mut collection_ids: Vec<T::CombinatorialId> = vec![];
             let mut position_ids = vec![];
             for market_id in market_ids.iter() {
+                println!("market_id: {:?}", market_id);
                 let asset_count = T::MarketCommons::market(market_id)?.outcomes() as usize;
+                println!("asset_count: {:?}", asset_count);
                 let partition: Vec<Vec<bool>> = (0..asset_count)
                     .map(|index| {
                         let mut index_set = vec![false; asset_count];
-                        index_set.get_mut(index).map(|_| true);
+                        index_set.get_mut(index).map(|x| *x = true);
 
                         index_set
                     })
                     .collect();
+                println!("partition: {:?}", partition);
 
                 if split_count == 0 {
                     let split_position_info = T::CombinatorialTokens::split_position(
@@ -1587,9 +1608,11 @@ mod pallet {
                     let mut new_position_ids = vec![];
 
                     for parent_collection_id in collection_ids.iter() {
+                        println!("foo");
                         if split_count > total_splits {
                             return Err(Error::<T>::Unexpected.into());
                         }
+                        println!("ibar");
 
                         let split_position_info = T::CombinatorialTokens::split_position(
                             who.clone(),
