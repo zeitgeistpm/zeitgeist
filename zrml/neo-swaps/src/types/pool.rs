@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use frame_support::BoundedVec;
 use crate::{
     consts::EXP_NUMERICAL_LIMIT,
     math::{
@@ -51,6 +52,7 @@ where
     S: Get<u32>,
 {
     pub account_id: T::AccountId,
+    pub assets: BoundedVec<AssetOf<T>, S>,
     pub reserves: BoundedBTreeMap<AssetOf<T>, BalanceOf<T>, S>,
     pub collateral: AssetOf<T>,
     pub liquidity_parameter: BalanceOf<T>,
@@ -67,7 +69,7 @@ where
     S: Get<u32>,
 {
     fn assets(&self) -> Vec<AssetOf<T>> {
-        self.reserves.keys().cloned().collect()
+        self.assets.to_vec()
     }
 
     fn contains(&self, asset: &AssetOf<T>) -> bool {
@@ -123,6 +125,9 @@ where
     ) -> Result<BalanceOf<T>, DispatchError> {
         let reserves_buy = self.reserves_of(&buy)?;
         let reserves_sell = self.reserves_of(&sell)?;
+
+        println!("reserves_buy: {:?}", reserves_buy);
+        println!("reserves_sell: {:?}", reserves_sell);
 
         ComboMath::<T>::calculate_swap_amount_out_for_buy(
             reserves_buy,

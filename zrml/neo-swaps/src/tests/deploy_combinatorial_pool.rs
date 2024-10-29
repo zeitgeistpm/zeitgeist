@@ -41,7 +41,6 @@ fn deploy_combinatorial_pool_works_with_single_market() {
         let assets = pool.assets();
         let expected_liquidity = 144_269_504_089;
         let buffer = AssetManager::minimum_balance(pool.collateral);
-        assert_eq!(pool.assets(), assets);
         assert_approx!(pool.liquidity_parameter, expected_liquidity, 1);
         assert_eq!(pool.collateral, BASE_ASSET);
         assert_liquidity_tree_state!(
@@ -66,6 +65,73 @@ fn deploy_combinatorial_pool_works_with_single_market() {
             assert_eq!(pool.calculate_spot_price(asset).unwrap(), price);
             assert_balance!(ALICE, asset, 0);
             reserves.insert(asset, amount);
+        }
+        assert_balance!(ALICE, BASE_ASSET, alice_before - amount - buffer);
+
+        System::assert_last_event(
+            Event::CombinatorialPoolDeployed {
+                who: ALICE,
+                market_ids,
+                pool_id,
+                account_id: pool.account_id,
+                reserves,
+                collateral: pool.collateral,
+                liquidity_parameter: pool.liquidity_parameter,
+                pool_shares_amount: amount,
+                swap_fee,
+            }
+            .into(),
+        );
+    });
+}
+
+#[test]
+fn deploy_combinatorial_pool_works_with_single_market_uneven_spot_prices() {
+    ExtBuilder::default().build().execute_with(|| {
+        let alice_before = AssetManager::free_balance(BASE_ASSET, &ALICE);
+        let amount = _10;
+        let asset_count = 2usize;
+        let spot_prices = vec![_1_4, _3_4];
+        let expected_reserves = vec![_10, 20_751_874_964];
+        let swap_fee = CENT;
+        let (market_ids, pool_id) = create_markets_and_deploy_combinatorial_pool(
+            ALICE,
+            BASE_ASSET,
+            vec![MarketType::Categorical(2)],
+            amount,
+            spot_prices.clone(),
+            swap_fee,
+        );
+        let pool = Pools::<Runtime>::get(pool_id).unwrap();
+        let assets = pool.assets();
+        let expected_liquidity = 72_134_752_044;
+        let buffer = AssetManager::minimum_balance(pool.collateral);
+        assert_approx!(pool.liquidity_parameter, expected_liquidity, 1);
+        assert_eq!(pool.collateral, BASE_ASSET);
+        assert_liquidity_tree_state!(
+            pool.liquidity_shares_manager,
+            [Node::<Runtime> {
+                account: Some(ALICE),
+                stake: amount,
+                fees: 0u128,
+                descendant_stake: 0u128,
+                lazy_fees: 0u128,
+            }],
+            create_b_tree_map!({ ALICE => 0 }),
+            Vec::<u32>::new(),
+        );
+        assert_eq!(pool.swap_fee, swap_fee);
+        assert_balance!(pool.account_id, pool.collateral, buffer);
+
+        let mut reserves = BTreeMap::new();
+        for ((&asset, &price), &reserve) in
+            assets.iter().zip(spot_prices.iter()).zip(expected_reserves.iter())
+        {
+            assert_balance!(pool.account_id, asset, reserve);
+            assert_eq!(pool.reserve_of(&asset).unwrap(), reserve);
+            assert_eq!(pool.calculate_spot_price(asset).unwrap(), price);
+            assert_balance!(ALICE, asset, amount - reserve);
+            reserves.insert(asset, reserve);
         }
         assert_balance!(ALICE, BASE_ASSET, alice_before - amount - buffer);
 

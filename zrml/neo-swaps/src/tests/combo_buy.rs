@@ -27,15 +27,15 @@ fn combo_buy_works() {
         let liquidity = _10;
         let spot_prices = vec![_1_2, _1_2];
         let swap_fee = CENT;
-        let market_id = create_market_and_deploy_pool(
+        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Categorical(2),
+            vec![MarketType::Categorical(2)],
             liquidity,
             spot_prices.clone(),
             swap_fee,
         );
-        let pool = Pools::<Runtime>::get(market_id).unwrap();
+        let pool = Pools::<Runtime>::get(pool_id).unwrap();
         let total_fee_percentage = swap_fee + EXTERNAL_FEES;
         let amount_in_minus_fees = _10;
         let amount_in = amount_in_minus_fees.bdiv(_1 - total_fee_percentage).unwrap(); // This is exactly _10 after deducting fees.
@@ -53,14 +53,14 @@ fn combo_buy_works() {
         assert_ok!(AssetManager::deposit(sell[0], &pool.account_id, _100));
         assert_ok!(NeoSwaps::combo_buy(
             RuntimeOrigin::signed(BOB),
-            market_id,
+            pool_id,
             2,
             buy.clone(),
             sell.clone(),
             amount_in,
             0,
         ));
-        let pool = Pools::<Runtime>::get(market_id).unwrap();
+        let pool = Pools::<Runtime>::get(pool_id).unwrap();
         let expected_swap_amount_out = 58496250072;
         let expected_amount_in_minus_fees = _10 + 1; // Note: This is 1 Pennock off of the correct result.
         let expected_reserves = vec![
@@ -68,7 +68,7 @@ fn combo_buy_works() {
             pool_outcomes_before[0] + expected_amount_in_minus_fees,
         ];
         assert_pool_state!(
-            market_id,
+            pool_id,
             expected_reserves,
             vec![_3_4, _1_4],
             liquidity_parameter_before,
@@ -87,7 +87,7 @@ fn combo_buy_works() {
         System::assert_last_event(
             Event::ComboBuyExecuted {
                 who: BOB,
-                pool_id: market_id,
+                pool_id,
                 buy,
                 sell,
                 amount_in,
@@ -101,6 +101,7 @@ fn combo_buy_works() {
 }
 
 #[test_case(
+    vec![MarketType::Categorical(5)],
     333 * _1,
     vec![10 * CENT, 30 * CENT, 25 * CENT, 13 * CENT, 22 * CENT],
     vec![0, 2],
@@ -114,6 +115,7 @@ fn combo_buy_works() {
     1_020_408_163
 )]
 #[test_case(
+    vec![MarketType::Categorical(5)],
     _100,
     vec![80 * CENT, 5 * CENT, 5 * CENT, 5 * CENT, 5 * CENT],
     vec![4],
@@ -127,23 +129,24 @@ fn combo_buy_works() {
     3_367_346_939
 )]
 #[test_case(
+    vec![MarketType::Categorical(2), MarketType::Categorical(2), MarketType::Scalar(0..=1)],
     1000 * _1,
     vec![1_250_000_000; 8],
     vec![0, 2, 5, 6, 7],
     vec![],
     vec![1, 3, 4],
-    5_102_040_816_326,
-    6_576_234_413_776,
+    5_208_333_333_333,
+    6_576_234_413_778,
     5_000_000_000_000,
     vec![
-        8_423_765_586_224,
-        1500 * _1,
-        8_423_765_586_224,
-        1500 * _1,
-        1500 * _1,
-        8_423_765_586_224,
-        8_423_765_586_224,
-        8_423_765_586_224,
+        8_423_765_586_223,
+        1500 * _1 + 1,
+        8_423_765_586_223,
+        1500 * _1 + 1,
+        1500 * _1 + 1,
+        8_423_765_586_223,
+        8_423_765_586_223,
+        8_423_765_586_223,
     ],
     vec![
         1_734_834_957,
@@ -155,9 +158,10 @@ fn combo_buy_works() {
         1_734_834_957,
         1_734_834_957,
     ],
-    51_020_408_163
+    52_083_333_333
 )]
 fn combo_buy_works_multi_market(
+    market_types: Vec<MarketType>,
     liquidity: u128,
     spot_prices: Vec<u128>,
     buy_indices: Vec<u16>,
@@ -168,15 +172,15 @@ fn combo_buy_works_multi_market(
     expected_amount_out_keep: u128,
     expected_reserves: Vec<u128>,
     expected_spot_prices: Vec<u128>,
-    expected_fees: u128,
+    expected_fees: u128, // pool fees, not market fees
 ) {
     ExtBuilder::default().build().execute_with(|| {
         let asset_count = spot_prices.len() as u16;
         let swap_fee = CENT;
-        let market_id = create_market_and_deploy_pool(
+        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Categorical(asset_count),
+            market_types,
             liquidity,
             spot_prices.clone(),
             swap_fee,
@@ -184,18 +188,16 @@ fn combo_buy_works_multi_market(
         let sentinel = 123_456_789;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in + sentinel));
 
-        let pool = Pools::<Runtime>::get(market_id).unwrap();
+        let pool = Pools::<Runtime>::get(pool_id).unwrap();
         let expected_liquidity = pool.liquidity_parameter;
 
-        let buy: Vec<_> =
-            buy_indices.iter().map(|&i| Asset::CategoricalOutcome(market_id, i)).collect();
-        let keep: Vec<_> =
-            keep_indices.iter().map(|&i| Asset::CategoricalOutcome(market_id, i)).collect();
-        let sell: Vec<_> =
-            sell_indices.iter().map(|&i| Asset::CategoricalOutcome(market_id, i)).collect();
+        let buy: Vec<_> = buy_indices.iter().map(|&i| pool.assets()[i as usize]).collect();
+        let keep: Vec<_> = keep_indices.iter().map(|&i| pool.assets()[i as usize]).collect();
+        let sell: Vec<_> = sell_indices.iter().map(|&i| pool.assets()[i as usize]).collect();
+
         assert_ok!(NeoSwaps::combo_buy(
             RuntimeOrigin::signed(BOB),
-            market_id,
+            pool_id,
             asset_count,
             buy.clone(),
             sell.clone(),
@@ -215,7 +217,7 @@ fn combo_buy_works_multi_market(
         }
 
         assert_pool_state!(
-            market_id,
+            pool_id,
             expected_reserves,
             expected_spot_prices,
             expected_liquidity,
