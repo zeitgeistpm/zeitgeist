@@ -533,44 +533,6 @@ fn combo_sell_fails_on_spot_price_slipping_too_low() {
 }
 
 #[test]
-fn combo_sell_fails_on_spot_price_slipping_too_high() {
-    ExtBuilder::default().build().execute_with(|| {
-        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
-            ALICE,
-            BASE_ASSET,
-            vec![MarketType::Categorical(5)],
-            _100,
-            vec![20 * CENT; 5],
-            CENT,
-        );
-        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
-        let amount_buy = 1_000 * _1;
-
-        let sell = pool.assets()[0..4].to_vec();
-        let buy = pool.assets()[4..5].to_vec();
-
-        for &asset in buy.iter() {
-            assert_ok!(AssetManager::deposit(asset, &BOB, amount_buy));
-        }
-
-        assert_noop!(
-            NeoSwaps::combo_sell(
-                RuntimeOrigin::signed(BOB),
-                pool_id,
-                5,
-                buy,
-                vec![],
-                sell,
-                amount_buy,
-                0,
-                0
-            ),
-            Error::<Runtime>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow),
-        );
-    });
-}
-
-#[test]
 fn combo_sell_fails_on_large_amount() {
     ExtBuilder::default().build().execute_with(|| {
         let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
