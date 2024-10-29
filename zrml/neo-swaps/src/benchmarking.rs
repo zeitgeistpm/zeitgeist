@@ -20,7 +20,7 @@
 use super::*;
 use crate::{
     liquidity_tree::{traits::LiquidityTreeHelper, types::LiquidityTree},
-    traits::{liquidity_shares_manager::LiquiditySharesManager, pool_operations::PoolOperations},
+    traits::{LiquiditySharesManager, PoolOperations},
     types::DecisionMarketOracle,
     AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools, MIN_SPOT_PRICE,
 };

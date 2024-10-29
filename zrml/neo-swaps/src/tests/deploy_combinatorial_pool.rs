@@ -208,7 +208,7 @@ fn deploy_combinatorial_pool_fails_on_inactive_market(market_status: MarketStatu
             create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::AmmCdaHybrid),
             create_market(ALICE, BASE_ASSET, MarketType::Categorical(5), ScoringRule::AmmCdaHybrid),
         ];
-        MarketCommons::mutate_market(&market_ids.last().unwrap(), |market| {
+        MarketCommons::mutate_market(market_ids.last().unwrap(), |market| {
             market.status = market_status;
             Ok(())
         })
@@ -267,7 +267,7 @@ fn deploy_combinatorial_pool_fails_on_max_splits_exceeded() {
         }
         let liquidity = 1_000 * BASE;
 
-        let asset_count = 2u128.pow(market_count as u32);
+        let asset_count = 2u128.pow(market_count);
         let mut spot_prices = vec![_1 / asset_count; asset_count as usize - 1];
         spot_prices.push(_1 - spot_prices.iter().sum::<u128>());
 

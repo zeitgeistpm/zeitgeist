@@ -1,4 +1,4 @@
-use alloc::fmt::Debug;
+use alloc::{boxed::Box, fmt::Debug};
 use core::iter;
 use frame_support::{CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};

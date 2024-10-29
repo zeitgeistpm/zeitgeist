@@ -2247,6 +2247,7 @@ mod pallet {
 
             // write last.
             for asset in assets.iter() {
+            println!("before: {:?}", T::AssetManager::total_issuance(*asset));
                 let missing = T::AssetManager::slash(*asset, &who, amount);
                 debug_assert!(
                     missing.is_zero(),
@@ -2255,6 +2256,7 @@ mod pallet {
                     &who,
                     amount,
                 );
+            println!("after: {:?}", T::AssetManager::total_issuance(*asset));
             }
 
             T::AssetManager::transfer(market.base_asset, &market_account, &who, amount)?;

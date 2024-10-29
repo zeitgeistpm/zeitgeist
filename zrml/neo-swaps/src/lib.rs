@@ -18,6 +18,7 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)] // TODO Try to remove this later!
+#![allow(clippy::type_complexity)] // TODO Try to remove this later!
 
 extern crate alloc;
 
@@ -1431,15 +1432,6 @@ mod pallet {
                     pool.increase_reserve(&asset, &amount_keep)?;
                 }
 
-                println!(
-                    "{:?}",
-                    T::MultiCurrency::free_balance(pool.assets()[0], &pool.account_id)
-                );
-                println!(
-                    "{:?}",
-                    T::MultiCurrency::free_balance(pool.assets()[1], &pool.account_id)
-                );
-                println!("{:?}", amount_out);
                 T::CombinatorialTokensUnsafe::merge_position_unsafe(
                     pool.account_id.clone(),
                     pool.collateral,
@@ -1554,10 +1546,8 @@ mod pallet {
             amount: BalanceOf<T>,
             force_max_work: bool,
         ) -> Result<(Vec<T::CombinatorialId>, Vec<AssetOf<T>>, AssetOf<T>), DispatchError> {
-            let markets = market_ids
-                .iter()
-                .map(|market_id| T::MarketCommons::market(market_id))
-                .collect::<Result<Vec<_>, _>>()?;
+            let markets =
+                market_ids.iter().map(T::MarketCommons::market).collect::<Result<Vec<_>, _>>()?;
 
             // Calculate the total amount of split operations required. One split for splitting
             // collateral into the positions of the first market, and then it's one split for each
@@ -1586,18 +1576,17 @@ mod pallet {
             let mut collection_ids: Vec<T::CombinatorialId> = vec![];
             let mut position_ids = vec![];
             for market_id in market_ids.iter() {
-                println!("market_id: {:?}", market_id);
                 let asset_count = T::MarketCommons::market(market_id)?.outcomes() as usize;
-                println!("asset_count: {:?}", asset_count);
                 let partition: Vec<Vec<bool>> = (0..asset_count)
                     .map(|index| {
                         let mut index_set = vec![false; asset_count];
-                        index_set.get_mut(index).map(|x| *x = true);
+                        if let Some(value) = index_set.get_mut(index) {
+                            *value = true;
+                        }
 
                         index_set
                     })
                     .collect();
-                println!("partition: {:?}", partition);
 
                 if split_count == 0 {
                     let split_position_info = T::CombinatorialTokens::split_position(
@@ -1618,11 +1607,9 @@ mod pallet {
                     let mut new_position_ids = vec![];
 
                     for parent_collection_id in collection_ids.iter() {
-                        println!("foo");
                         if split_count > total_splits {
                             return Err(Error::<T>::Unexpected.into());
                         }
-                        println!("ibar");
 
                         let split_position_info = T::CombinatorialTokens::split_position(
                             who.clone(),
