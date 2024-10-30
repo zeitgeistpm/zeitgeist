@@ -110,10 +110,12 @@ fn create_markets_and_deploy_combinatorial_pool(
     swap_fee: BalanceOf<Runtime>,
 ) -> (Vec<MarketId>, <Runtime as Config>::PoolId) {
     let mut market_ids = vec![];
-
+    let mut asset_count = 1u16;
     for market_type in market_types.iter() {
         let market_id =
             create_market(creator, base_asset, market_type.clone(), ScoringRule::AmmCdaHybrid);
+        let market = <Runtime as Config>::MarketCommons::market(&market_id).unwrap();
+        asset_count *= market.outcomes();
 
         market_ids.push(market_id);
     }
@@ -121,6 +123,7 @@ fn create_markets_and_deploy_combinatorial_pool(
     let pool_id = <Pallet<Runtime> as PoolStorage>::next_pool_id();
     assert_ok!(NeoSwaps::deploy_combinatorial_pool(
         RuntimeOrigin::signed(ALICE),
+        asset_count,
         market_ids.clone(),
         amount,
         spot_prices.clone(),
