@@ -82,6 +82,7 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
+    "zrml-combinatorial-tokens/runtime-benchmarks",
 ]
 std = [
     "frame-benchmarking?/std",

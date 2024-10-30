@@ -11,7 +11,7 @@ export LLVM_PROFILE_FILE="cargo-test-%p-%m.profraw"
 rustflags="-Cinstrument-coverage"
 
 test_package_with_feature "primitives" "std" "$rustflags"
-no_runtime_benchmarks=('court' 'market-commons' 'rikiddo')
+no_runtime_benchmarks=('court' 'market-commons')
 
 for package in zrml/*; do
 if [[ " ${no_runtime_benchmarks[*]} " != *" ${package##*/} "* ]]; then
