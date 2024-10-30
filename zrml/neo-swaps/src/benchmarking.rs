@@ -20,7 +20,7 @@
 use super::*;
 use crate::{
     liquidity_tree::{traits::LiquidityTreeHelper, types::LiquidityTree},
-    traits::{LiquiditySharesManager, PoolOperations},
+    traits::{LiquiditySharesManager, PoolOperations, PoolStorage},
     types::DecisionMarketOracle,
     AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools, MIN_SPOT_PRICE,
 };
@@ -490,6 +490,66 @@ mod benchmarks {
             amount,
             create_spot_prices::<T>(asset_count),
             CENT.saturated_into(),
+        );
+    }
+
+    // Remark on benchmarks for combinatorial pools: Combinatorial buying, selling and deploying
+    // pools depends on the number of assets as well as the number of markets. But these parameters
+    // depend on each other (the more markets, the more assets). The benchmark parameter is the
+    // market count and the logarithm of the number of assets. This maximizes the number of markets
+    // per asset.
+
+    #[benchmark]
+    fn combo_buy(n: Linear<1, 7>) {
+        let market_count = n;
+
+        let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = 2u16.pow(market_count);
+
+        let mut market_ids = vec![];
+        for _ in 0..market_count {
+            let market_id = create_market::<T>(alice.clone(), base_asset, 2);
+            market_ids.push(market_id);
+        }
+
+        let amount = _100.saturated_into();
+        let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));
+        assert_ok!(NeoSwaps::<T>::deploy_combinatorial_pool(
+            RawOrigin::Signed(alice).into(),
+            market_ids,
+            amount,
+            create_spot_prices::<T>(asset_count),
+            CENT.saturated_into(),
+            false,
+        ));
+
+        let pool_id = 0u8.into();
+        let pool = <Pallet<T> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
+
+        let amount_in = _1.saturated_into();
+        let min_amount_out = Zero::zero();
+
+        // Work is maximized by having no keep indicies.
+        let middle = asset_count / 2;
+        let buy_arg = (0..middle).map(|i| assets[i as usize]).collect::<Vec<_>>();
+        let sell_arg = (middle..asset_count).map(|i| assets[i as usize]).collect::<Vec<_>>();
+
+        let helper = BenchmarkHelper::<T>::new();
+        let bob = helper.accounts().next().unwrap();
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &bob, amount_in));
+
+        #[extrinsic_call]
+        _(
+            RawOrigin::Signed(bob),
+            pool_id,
+            asset_count,
+            buy_arg,
+            sell_arg,
+            amount_in,
+            min_amount_out,
         );
     }
 
