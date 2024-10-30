@@ -34,6 +34,7 @@ mod pool_storage;
 mod tests;
 pub mod traits;
 pub mod types;
+mod utility;
 pub mod weights;
 
 pub use pallet::*;
@@ -46,6 +47,7 @@ mod pallet {
         math::{traits::MathOps, types::Math},
         traits::{LiquiditySharesManager, PoolOperations, PoolStorage},
         types::{FeeDistribution, MaxAssets, Pool, PoolType},
+        utility::LogCeil,
         weights::*,
     };
     use alloc::{
@@ -681,7 +683,7 @@ mod pallet {
 
         #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(6)]
-        #[pallet::weight(T::WeightInfo::buy((*asset_count).into()))] // TODO
+        #[pallet::weight(T::WeightInfo::combo_buy(asset_count.log_ceil().into()))]
         #[transactional]
         pub fn combo_buy(
             origin: OriginFor<T>,

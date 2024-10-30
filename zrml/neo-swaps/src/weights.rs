@@ -57,6 +57,7 @@ pub trait WeightInfoZeitgeist {
     fn exit(n: u32) -> Weight;
     fn withdraw_fees() -> Weight;
     fn deploy_pool(n: u32) -> Weight;
+    fn combo_buy(n: u32) -> Weight;
     fn decision_market_oracle_evaluate() -> Weight;
 }
 
@@ -240,6 +241,26 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(2))
             .saturating_add(T::DbWeight::get().writes((2_u64).saturating_mul(n.into())))
             .saturating_add(Weight::from_parts(0, 5196).saturating_mul(n.into()))
+    }
+    /// Storage: `NeoSwaps::Pools` (r:1 w:1)
+    /// Proof: `NeoSwaps::Pools` (`max_values`: None, `max_size`: Some(152829), added: 155304, mode: `MaxEncodedLen`)
+    /// Storage: `MarketCommons::Markets` (r:7 w:0)
+    /// Proof: `MarketCommons::Markets` (`max_values`: None, `max_size`: Some(708), added: 3183, mode: `MaxEncodedLen`)
+    /// Storage: `System::Account` (r:3 w:3)
+    /// Proof: `System::Account` (`max_values`: None, `max_size`: Some(132), added: 2607, mode: `MaxEncodedLen`)
+    /// Storage: `Tokens::Accounts` (r:256 w:256)
+    /// Proof: `Tokens::Accounts` (`max_values`: None, `max_size`: Some(137), added: 2612, mode: `MaxEncodedLen`)
+    /// Storage: `Tokens::TotalIssuance` (r:128 w:128)
+    /// Proof: `Tokens::TotalIssuance` (`max_values`: None, `max_size`: Some(57), added: 2532, mode: `MaxEncodedLen`)
+    /// The range of component `n` is `[1, 7]`.
+    fn combo_buy(_n: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `0 + n * (5868 ±0)`
+        //  Estimated: `669662`
+        // Minimum execution time: 271_000 nanoseconds.
+        Weight::from_parts(9_174_000_000, 669662)
+            .saturating_add(T::DbWeight::get().reads(395))
+            .saturating_add(T::DbWeight::get().writes(388))
     }
     /// Storage: `NeoSwaps::Pools` (r:1 w:0)
     /// Proof: `NeoSwaps::Pools` (`max_values`: None, `max_size`: Some(146552), added: 149027, mode: `MaxEncodedLen`)
