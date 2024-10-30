@@ -741,7 +741,7 @@ mod pallet {
         }
 
         #[pallet::call_index(8)]
-        #[pallet::weight({0})] // TODO
+        #[pallet::weight(T::WeightInfo::deploy_combinatorial_pool(asset_count.log_ceil().into()))]
         #[transactional]
         pub fn deploy_combinatorial_pool(
             origin: OriginFor<T>,

@@ -59,6 +59,7 @@ pub trait WeightInfoZeitgeist {
     fn deploy_pool(n: u32) -> Weight;
     fn combo_buy(n: u32) -> Weight;
     fn combo_sell(n: u32) -> Weight;
+    fn deploy_combinatorial_pool(n: u32) -> Weight;
     fn decision_market_oracle_evaluate() -> Weight;
 }
 
@@ -80,8 +81,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `1335 + n * (183 ±0)`
         //  Estimated: `337938`
-        // Minimum execution time: 239_000 nanoseconds.
-        Weight::from_parts(3_850_000_000, 337938)
+        // Minimum execution time: 234_000 nanoseconds.
+        Weight::from_parts(3_918_000_000, 337938)
             .saturating_add(T::DbWeight::get().reads(262))
             .saturating_add(T::DbWeight::get().writes(261))
     }
@@ -100,8 +101,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `1466 + n * (183 ±0)`
         //  Estimated: `337938`
-        // Minimum execution time: 208_000 nanoseconds.
-        Weight::from_parts(4_468_000_000, 337938)
+        // Minimum execution time: 206_000 nanoseconds.
+        Weight::from_parts(4_491_000_000, 337938)
             .saturating_add(T::DbWeight::get().reads(262))
             .saturating_add(T::DbWeight::get().writes(261))
     }
@@ -118,8 +119,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `139361 + n * (217 ±0)`
         //  Estimated: `669662`
-        // Minimum execution time: 245_000 nanoseconds.
-        Weight::from_parts(2_353_000_000, 669662)
+        // Minimum execution time: 247_000 nanoseconds.
+        Weight::from_parts(2_408_000_000, 669662)
             .saturating_add(T::DbWeight::get().reads(259))
             .saturating_add(T::DbWeight::get().writes(257))
     }
@@ -136,8 +137,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `139157 + n * (217 ±0)`
         //  Estimated: `669662`
-        // Minimum execution time: 249_000 nanoseconds.
-        Weight::from_parts(2_393_000_000, 669662)
+        // Minimum execution time: 257_000 nanoseconds.
+        Weight::from_parts(2_458_000_000, 669662)
             .saturating_add(T::DbWeight::get().reads(259))
             .saturating_add(T::DbWeight::get().writes(257))
     }
@@ -154,8 +155,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `138661 + n * (217 ±0)`
         //  Estimated: `669662`
-        // Minimum execution time: 275_000 nanoseconds.
-        Weight::from_parts(3_186_000_000, 669662)
+        // Minimum execution time: 254_000 nanoseconds.
+        Weight::from_parts(3_047_000_000, 669662)
             .saturating_add(T::DbWeight::get().reads(259))
             .saturating_add(T::DbWeight::get().writes(257))
     }
@@ -172,8 +173,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `139258 + n * (217 ±0)`
         //  Estimated: `669662`
-        // Minimum execution time: 261_000 nanoseconds.
-        Weight::from_parts(3_379_000_000, 669662)
+        // Minimum execution time: 264_000 nanoseconds.
+        Weight::from_parts(2_309_000_000, 669662)
             .saturating_add(T::DbWeight::get().reads(259))
             .saturating_add(T::DbWeight::get().writes(257))
     }
@@ -185,8 +186,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `137883`
         //  Estimated: `156294`
-        // Minimum execution time: 197_000 nanoseconds.
-        Weight::from_parts(197_000_000, 156294)
+        // Minimum execution time: 177_000 nanoseconds.
+        Weight::from_parts(177_000_000, 156294)
             .saturating_add(T::DbWeight::get().reads(3))
             .saturating_add(T::DbWeight::get().writes(3))
     }
@@ -207,8 +208,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `593 + n * (81 ±0)`
         //  Estimated: `669662`
-        // Minimum execution time: 108_000 nanoseconds.
-        Weight::from_parts(2_917_000_000, 669662)
+        // Minimum execution time: 105_000 nanoseconds.
+        Weight::from_parts(2_875_000_000, 669662)
             .saturating_add(T::DbWeight::get().reads(260))
             .saturating_add(T::DbWeight::get().writes(260))
     }
@@ -227,8 +228,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `0 + n * (5868 ±0)`
         //  Estimated: `669662`
-        // Minimum execution time: 263_000 nanoseconds.
-        Weight::from_parts(9_084_000_000, 669662)
+        // Minimum execution time: 260_000 nanoseconds.
+        Weight::from_parts(8_787_000_000, 669662)
             .saturating_add(T::DbWeight::get().reads(395))
             .saturating_add(T::DbWeight::get().writes(388))
     }
@@ -247,10 +248,32 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `0 + n * (7895 ±0)`
         //  Estimated: `667050`
-        // Minimum execution time: 312_000 nanoseconds.
-        Weight::from_parts(13_878_000_000, 667050)
+        // Minimum execution time: 274_000 nanoseconds.
+        Weight::from_parts(13_888_000_000, 667050)
             .saturating_add(T::DbWeight::get().reads(394))
             .saturating_add(T::DbWeight::get().writes(387))
+    }
+    /// Storage: `MarketCommons::Markets` (r:7 w:0)
+    /// Proof: `MarketCommons::Markets` (`max_values`: None, `max_size`: Some(708), added: 3183, mode: `MaxEncodedLen`)
+    /// Storage: `System::Account` (r:2 w:2)
+    /// Proof: `System::Account` (`max_values`: None, `max_size`: Some(132), added: 2607, mode: `MaxEncodedLen`)
+    /// Storage: `Tokens::Accounts` (r:382 w:382)
+    /// Proof: `Tokens::Accounts` (`max_values`: None, `max_size`: Some(137), added: 2612, mode: `MaxEncodedLen`)
+    /// Storage: `Tokens::TotalIssuance` (r:254 w:254)
+    /// Proof: `Tokens::TotalIssuance` (`max_values`: None, `max_size`: Some(57), added: 2532, mode: `MaxEncodedLen`)
+    /// Storage: `NeoSwaps::PoolCount` (r:1 w:1)
+    /// Proof: `NeoSwaps::PoolCount` (`max_values`: Some(1), `max_size`: Some(16), added: 511, mode: `MaxEncodedLen`)
+    /// Storage: `NeoSwaps::Pools` (r:0 w:1)
+    /// Proof: `NeoSwaps::Pools` (`max_values`: None, `max_size`: Some(152829), added: 155304, mode: `MaxEncodedLen`)
+    /// The range of component `n` is `[1, 7]`.
+    fn deploy_combinatorial_pool(_n: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `351 + n * (185 ±0)`
+        //  Estimated: `998774`
+        // Minimum execution time: 2_053_000 nanoseconds.
+        Weight::from_parts(310_900_000_000, 998774)
+            .saturating_add(T::DbWeight::get().reads(646))
+            .saturating_add(T::DbWeight::get().writes(640))
     }
     /// Storage: `NeoSwaps::Pools` (r:1 w:0)
     /// Proof: `NeoSwaps::Pools` (`max_values`: None, `max_size`: Some(152829), added: 155304, mode: `MaxEncodedLen`)
@@ -258,7 +281,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         // Proof Size summary in bytes:
         //  Measured:  `492`
         //  Estimated: `156294`
-        // Minimum execution time: 46_000 nanoseconds.
-        Weight::from_parts(46_000_000, 156294).saturating_add(T::DbWeight::get().reads(1))
+        // Minimum execution time: 49_000 nanoseconds.
+        Weight::from_parts(49_000_000, 156294).saturating_add(T::DbWeight::get().reads(1))
     }
 }
