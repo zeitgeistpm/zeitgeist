@@ -518,6 +518,7 @@ mod benchmarks {
         assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));
         assert_ok!(NeoSwaps::<T>::deploy_combinatorial_pool(
             RawOrigin::Signed(alice).into(),
+            asset_count,
             market_ids,
             amount,
             create_spot_prices::<T>(asset_count),
@@ -572,6 +573,7 @@ mod benchmarks {
         assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));
         assert_ok!(NeoSwaps::<T>::deploy_combinatorial_pool(
             RawOrigin::Signed(alice).into(),
+            asset_count,
             market_ids,
             amount,
             create_spot_prices::<T>(asset_count),
@@ -589,7 +591,8 @@ mod benchmarks {
         let keep_arg = (2..asset_count).map(|i| assets[i as usize]).collect::<Vec<_>>();
 
         let amount_buy: BalanceOf<T> = _2.saturated_into();
-        let amount_keep = if keep_arg.is_empty() { // If n = 1;
+        let amount_keep = if keep_arg.is_empty() {
+            // If n = 1;
             Zero::zero()
         } else {
             _1.saturated_into()
@@ -619,72 +622,38 @@ mod benchmarks {
         );
     }
 
-    // #[benchmark]
-    // fn deploy_combinatorial_pool(n: Linear<1, 7>) {
-    //     let market_count = n;
+    #[benchmark]
+    fn deploy_combinatorial_pool(n: Linear<1, 7>) {
+        let market_count = n;
 
-    //     let alice: T::AccountId = whitelisted_caller();
-    //     let base_asset = Asset::Ztg;
-    //     let asset_count = 2u16.pow(market_count);
+        let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = 2u16.pow(market_count);
 
-    //     let mut market_ids = vec![];
-    //     for _ in 0..market_count {
-    //         let market_id = create_market::<T>(alice.clone(), base_asset, 2);
-    //         market_ids.push(market_id);
-    //     }
+        let mut market_ids = vec![];
+        for _ in 0..market_count {
+            let market_id = create_market::<T>(alice.clone(), base_asset, 2);
+            market_ids.push(market_id);
+        }
 
-    //     let amount = _100.saturated_into();
-    //     let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
-    //     assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));
+        let amount = _100.saturated_into();
+        let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));
 
-    //     assert_ok!(NeoSwaps::<T>::deploy_combinatorial_pool(
-    //         RawOrigin::Signed(alice).into(),
-    //         market_ids,
-    //         amount,
-    //         create_spot_prices::<T>(asset_count),
-    //         CENT.saturated_into(),
-    //         false,
-    //     ));
+        let spot_prices = create_spot_prices::<T>(asset_count);
+        let swap_fee = CENT.saturated_into();
 
-    //     let pool_id = 0u8.into();
-    //     let pool = <Pallet<T> as PoolStorage>::get(pool_id).unwrap();
-    //     let assets = pool.assets();
-
-    //     // Work is maximized by having as few sell indices as possible.
-    //     let buy_arg = vec![assets[0]];
-    //     let sell_arg = vec![assets[1]];
-    //     let keep_arg = (2..asset_count).map(|i| assets[i as usize]).collect::<Vec<_>>();
-
-    //     let amount_buy: BalanceOf<T> = _2.saturated_into();
-    //     let amount_keep = if keep_arg.is_empty() { // If n = 1;
-    //         Zero::zero()
-    //     } else {
-    //         _1.saturated_into()
-    //     };
-    //     let min_amount_out = Zero::zero();
-
-    //     let helper = BenchmarkHelper::<T>::new();
-    //     let bob = helper.accounts().next().unwrap();
-
-    //     // We don't care about being precise here and just deposit a huge bunch of tokens for Bob.
-    //     for &asset in assets.iter() {
-    //         let amount_for_bob = amount_buy.max(amount_buy);
-    //         assert_ok!(T::MultiCurrency::deposit(asset, &bob, amount_for_bob));
-    //     }
-
-    //     #[extrinsic_call]
-    //     _(
-    //         RawOrigin::Signed(bob),
-    //         pool_id,
-    //         asset_count,
-    //         buy_arg,
-    //         keep_arg,
-    //         sell_arg,
-    //         amount_buy,
-    //         amount_keep,
-    //         min_amount_out,
-    //     );
-    // }
+        #[extrinsic_call]
+        _(
+            RawOrigin::Signed(alice),
+            asset_count,
+            market_ids,
+            amount,
+            spot_prices,
+            swap_fee,
+            true,
+        );
+    }
 
     #[benchmark]
     fn decision_market_oracle_evaluate() {
