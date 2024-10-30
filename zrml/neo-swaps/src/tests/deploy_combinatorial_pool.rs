@@ -230,6 +230,7 @@ fn deploy_combinatorial_pool_fails_on_incorrect_vec_len() {
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(ALICE),
+                6,
                 market_ids,
                 _10,
                 vec![20 * CENT; 5],
@@ -251,6 +252,7 @@ fn deploy_combinatorial_pool_fails_on_market_not_found() {
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(ALICE),
+                10,
                 vec![0, 2, 1],
                 _10,
                 vec![10 * CENT; 10],
@@ -281,6 +283,7 @@ fn deploy_combinatorial_pool_fails_on_inactive_market(market_status: MarketStatu
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(ALICE),
+                10,
                 market_ids,
                 _100,
                 vec![10 * CENT; 10],
@@ -302,6 +305,7 @@ fn deploy_combinatorial_pool_fails_on_invalid_trading_mechanism() {
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(ALICE),
+                10,
                 market_ids,
                 _100,
                 vec![10 * CENT; 10],
@@ -339,6 +343,7 @@ fn deploy_combinatorial_pool_fails_on_max_splits_exceeded() {
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(ALICE),
+                2u16.pow(market_count),
                 market_ids,
                 liquidity,
                 spot_prices,
@@ -356,14 +361,10 @@ fn deploy_combinatorial_pool_fails_on_swap_fee_below_min() {
         let market_id =
             create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::AmmCdaHybrid);
         let liquidity = _10;
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            liquidity,
-        ));
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(ALICE),
+                2,
                 vec![market_id],
                 liquidity,
                 vec![_1_4, _3_4],
@@ -381,14 +382,10 @@ fn deploy_combinatorial_pool_fails_on_swap_fee_above_max() {
         let market_id =
             create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::AmmCdaHybrid);
         let liquidity = _10;
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            liquidity,
-        ));
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(ALICE),
+                2,
                 vec![market_id],
                 liquidity,
                 vec![_1_4, _3_4],
@@ -410,6 +407,7 @@ fn deploy_combinatorial_pool_fails_on_invalid_spot_prices(spot_prices: Vec<Balan
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(ALICE),
+                2,
                 vec![market_id],
                 liquidity,
                 spot_prices,
@@ -431,6 +429,7 @@ fn deploy_combinatorial_pool_fails_on_spot_price_below_min() {
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(ALICE),
+                2,
                 vec![market_id],
                 liquidity,
                 vec![spot_price, _1 - spot_price],
@@ -448,15 +447,11 @@ fn deploy_combinatorial_pool_fails_on_spot_price_above_max() {
         let market_id =
             create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::AmmCdaHybrid);
         let liquidity = _10;
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            RuntimeOrigin::signed(ALICE),
-            market_id,
-            liquidity,
-        ));
         let spot_price = MAX_SPOT_PRICE + 1;
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(ALICE),
+                2,
                 vec![market_id],
                 liquidity,
                 vec![spot_price, _1 - spot_price],
@@ -483,6 +478,7 @@ fn deploy_combinatorial_pool_fails_on_insufficient_funds() {
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(BOB),
+                2,
                 vec![market_id],
                 liquidity,
                 vec![_3_4, _1_4],
@@ -503,6 +499,7 @@ fn deploy_combinatorial_pool_fails_on_liquidity_too_low() {
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(ALICE),
+                2,
                 vec![market_id],
                 amount,
                 vec![_1_2, _1_2],
@@ -510,6 +507,30 @@ fn deploy_combinatorial_pool_fails_on_liquidity_too_low() {
                 false,
             ),
             Error::<Runtime>::LiquidityTooLow
+        );
+    });
+}
+
+#[test]
+fn deploy_combinatorial_pool_fails_on_incorrect_asset_count() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_ids = vec![
+            create_market(ALICE, BASE_ASSET, MarketType::Categorical(3), ScoringRule::AmmCdaHybrid),
+            create_market(ALICE, BASE_ASSET, MarketType::Categorical(4), ScoringRule::AmmCdaHybrid),
+            create_market(ALICE, BASE_ASSET, MarketType::Categorical(5), ScoringRule::AmmCdaHybrid),
+        ];
+        let amount = _1_2;
+        assert_noop!(
+            NeoSwaps::deploy_combinatorial_pool(
+                RuntimeOrigin::signed(ALICE),
+                61,
+                market_ids,
+                amount,
+                vec![_1_2, _1_2], // Incorrect, but doesn't matter!
+                CENT,
+                false,
+            ),
+            Error::<Runtime>::IncorrectAssetCount,
         );
     });
 }

@@ -34,6 +34,7 @@ mod pool_storage;
 mod tests;
 pub mod traits;
 pub mod types;
+mod utility;
 pub mod weights;
 
 pub use pallet::*;
@@ -46,6 +47,7 @@ mod pallet {
         math::{traits::MathOps, types::Math},
         traits::{LiquiditySharesManager, PoolOperations, PoolStorage},
         types::{FeeDistribution, MaxAssets, Pool, PoolType},
+        utility::LogCeil,
         weights::*,
     };
     use alloc::{
@@ -428,7 +430,7 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(0)]
-        #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))] // TODO Use into()
+        #[pallet::weight(T::WeightInfo::buy((*asset_count).into()))]
         #[transactional]
         pub fn buy(
             origin: OriginFor<T>,
@@ -478,7 +480,7 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(1)]
-        #[pallet::weight(T::WeightInfo::sell((*asset_count).saturated_into()))] // TODO Use `into()`
+        #[pallet::weight(T::WeightInfo::sell((*asset_count).into()))]
         #[transactional]
         pub fn sell(
             origin: OriginFor<T>,
@@ -679,9 +681,9 @@ mod pallet {
             Ok(Some(T::WeightInfo::deploy_pool(spot_prices_len)).into())
         }
 
-        #[allow(clippy::too_many_arguments)] // TODO Bundle `buy`/`keep`/`sell` into one arg.
+        #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(6)]
-        #[pallet::weight(T::WeightInfo::buy((*asset_count).into()))] // TODO
+        #[pallet::weight(T::WeightInfo::combo_buy(asset_count.log_ceil().into()))]
         #[transactional]
         pub fn combo_buy(
             origin: OriginFor<T>,
@@ -691,7 +693,7 @@ mod pallet {
             sell: Vec<AssetOf<T>>,
             #[pallet::compact] amount_in: BalanceOf<T>,
             #[pallet::compact] min_amount_out: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             let pool = <Self as PoolStorage>::get(pool_id)?;
@@ -700,14 +702,12 @@ mod pallet {
                 asset_count_real.try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
             ensure!(asset_count == asset_count_real_u16, Error::<T>::IncorrectAssetCount);
 
-            Self::do_combo_buy(who, pool_id, buy, sell, amount_in, min_amount_out)?;
-
-            Ok(Some(T::WeightInfo::buy(asset_count.into())).into()) // TODO
+            Self::do_combo_buy(who, pool_id, buy, sell, amount_in, min_amount_out)
         }
 
-        #[allow(clippy::too_many_arguments)] // TODO Bundle `buy`/`keep`/`sell` into one arg.
+        #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(7)]
-        #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))] // TODO
+        #[pallet::weight(T::WeightInfo::combo_sell(asset_count.log_ceil().into()))]
         #[transactional]
         pub fn combo_sell(
             origin: OriginFor<T>,
@@ -719,7 +719,7 @@ mod pallet {
             #[pallet::compact] amount_buy: BalanceOf<T>,
             #[pallet::compact] amount_keep: BalanceOf<T>,
             #[pallet::compact] min_amount_out: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             let pool = <Self as PoolStorage>::get(pool_id)?;
@@ -737,16 +737,15 @@ mod pallet {
                 amount_buy,
                 amount_keep,
                 min_amount_out,
-            )?;
-
-            Ok(Some(T::WeightInfo::buy(asset_count.into())).into()) // TODO
+            )
         }
 
         #[pallet::call_index(8)]
-        #[pallet::weight({0})] // TODO
+        #[pallet::weight(T::WeightInfo::deploy_combinatorial_pool(asset_count.log_ceil().into()))]
         #[transactional]
         pub fn deploy_combinatorial_pool(
             origin: OriginFor<T>,
+            asset_count: AssetIndexType,
             market_ids: Vec<MarketIdOf<T>>,
             amount: BalanceOf<T>,
             spot_prices: Vec<BalanceOf<T>>,
@@ -754,6 +753,13 @@ mod pallet {
             force_max_work: bool,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+
+            let mut real_asset_count = 1u16;
+            for market_id in market_ids.iter() {
+                let market = T::MarketCommons::market(market_id)?;
+                real_asset_count = real_asset_count.saturating_mul(market.outcomes());
+            }
+            ensure!(asset_count == real_asset_count, Error::<T>::IncorrectAssetCount);
 
             Self::do_deploy_combinatorial_pool(
                 who,
@@ -1221,7 +1227,6 @@ mod pallet {
                 );
             }
 
-            // TODO This is where the common code begins!
             let (liquidity_parameter, amounts_in) =
                 Math::<T>::calculate_reserves_from_spot_prices(amount, spot_prices)?;
             ensure!(
@@ -1273,12 +1278,11 @@ mod pallet {
             Ok(())
         }
 
-        #[allow(clippy::too_many_arguments)] // TODO Bundle `buy`/`keep`/`sell` into one arg.
+        #[allow(clippy::too_many_arguments)]
         #[require_transactional]
         pub(crate) fn do_combo_buy(
             who: T::AccountId,
             pool_id: T::PoolId,
-            // TODO Replace `buy`/`keep`/`sell` with a struct.
             buy: Vec<AssetOf<T>>,
             sell: Vec<AssetOf<T>>,
             amount_in: BalanceOf<T>,
@@ -1371,7 +1375,6 @@ mod pallet {
             })
         }
 
-        // TODO Replace `buy`/`keep`/`sell` with a struct.
         #[allow(clippy::too_many_arguments)]
         #[require_transactional]
         pub(crate) fn do_combo_sell(
