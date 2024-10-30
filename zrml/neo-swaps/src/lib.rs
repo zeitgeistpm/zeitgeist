@@ -428,7 +428,7 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(0)]
-        #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))] // TODO Use into()
+        #[pallet::weight(T::WeightInfo::buy((*asset_count).into()))]
         #[transactional]
         pub fn buy(
             origin: OriginFor<T>,
@@ -478,7 +478,7 @@ mod pallet {
         /// Depends on the implementation of `CompleteSetOperationsApi` and `ExternalFees`; when
         /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[pallet::call_index(1)]
-        #[pallet::weight(T::WeightInfo::sell((*asset_count).saturated_into()))] // TODO Use `into()`
+        #[pallet::weight(T::WeightInfo::sell((*asset_count).into()))]
         #[transactional]
         pub fn sell(
             origin: OriginFor<T>,
@@ -679,7 +679,7 @@ mod pallet {
             Ok(Some(T::WeightInfo::deploy_pool(spot_prices_len)).into())
         }
 
-        #[allow(clippy::too_many_arguments)] // TODO Bundle `buy`/`keep`/`sell` into one arg.
+        #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(6)]
         #[pallet::weight(T::WeightInfo::buy((*asset_count).into()))] // TODO
         #[transactional]
@@ -705,7 +705,7 @@ mod pallet {
             Ok(Some(T::WeightInfo::buy(asset_count.into())).into()) // TODO
         }
 
-        #[allow(clippy::too_many_arguments)] // TODO Bundle `buy`/`keep`/`sell` into one arg.
+        #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(7)]
         #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))] // TODO
         #[transactional]
@@ -1221,7 +1221,6 @@ mod pallet {
                 );
             }
 
-            // TODO This is where the common code begins!
             let (liquidity_parameter, amounts_in) =
                 Math::<T>::calculate_reserves_from_spot_prices(amount, spot_prices)?;
             ensure!(
@@ -1273,12 +1272,11 @@ mod pallet {
             Ok(())
         }
 
-        #[allow(clippy::too_many_arguments)] // TODO Bundle `buy`/`keep`/`sell` into one arg.
+        #[allow(clippy::too_many_arguments)]
         #[require_transactional]
         pub(crate) fn do_combo_buy(
             who: T::AccountId,
             pool_id: T::PoolId,
-            // TODO Replace `buy`/`keep`/`sell` with a struct.
             buy: Vec<AssetOf<T>>,
             sell: Vec<AssetOf<T>>,
             amount_in: BalanceOf<T>,
@@ -1371,7 +1369,6 @@ mod pallet {
             })
         }
 
-        // TODO Replace `buy`/`keep`/`sell` with a struct.
         #[allow(clippy::too_many_arguments)]
         #[require_transactional]
         pub(crate) fn do_combo_sell(
