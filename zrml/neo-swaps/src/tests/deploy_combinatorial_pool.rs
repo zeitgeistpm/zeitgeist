@@ -475,6 +475,11 @@ fn deploy_combinatorial_pool_fails_on_insufficient_funds() {
             create_market(ALICE, BASE_ASSET, MarketType::Categorical(2), ScoringRule::AmmCdaHybrid);
         let liquidity = _10;
 
+        #[cfg(feature = "parachain")]
+        let expected_error = orml_tokens::Error::<Runtime>::BalanceTooLow;
+        #[cfg(not(feature = "parachain"))]
+        let expected_error = orml_currencies::Error::<Runtime>::BalanceTooLow;
+
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
                 RuntimeOrigin::signed(BOB),
@@ -484,7 +489,7 @@ fn deploy_combinatorial_pool_fails_on_insufficient_funds() {
                 CENT,
                 false,
             ),
-            orml_currencies::Error::<Runtime>::BalanceTooLow
+            expected_error
         );
     });
 }

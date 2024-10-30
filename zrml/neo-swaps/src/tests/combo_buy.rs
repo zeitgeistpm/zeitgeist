@@ -334,6 +334,12 @@ fn combo_buy_fails_on_insufficient_funds() {
         let assets = pool.assets();
         let amount_in = _10;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in - 1));
+
+        #[cfg(feature = "parachain")]
+        let expected_error = orml_tokens::Error::<Runtime>::BalanceTooLow;
+        #[cfg(not(feature = "parachain"))]
+        let expected_error = orml_currencies::Error::<Runtime>::BalanceTooLow;
+
         assert_noop!(
             NeoSwaps::combo_buy(
                 RuntimeOrigin::signed(BOB),
@@ -344,7 +350,7 @@ fn combo_buy_fails_on_insufficient_funds() {
                 amount_in,
                 0,
             ),
-            orml_currencies::Error::<Runtime>::BalanceTooLow,
+            expected_error
         );
     });
 }
