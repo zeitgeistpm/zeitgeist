@@ -17,7 +17,6 @@
 
 use super::*;
 use test_case::test_case;
-use zeitgeist_primitives::types::Asset::CategoricalOutcome;
 
 // Example taken from
 // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr

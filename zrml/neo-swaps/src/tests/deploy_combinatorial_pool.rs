@@ -90,9 +90,8 @@ fn deploy_combinatorial_pool_works_with_single_market_uneven_spot_prices() {
     ExtBuilder::default().build().execute_with(|| {
         let alice_before = AssetManager::free_balance(BASE_ASSET, &ALICE);
         let amount = _10;
-        let asset_count = 2usize;
         let spot_prices = vec![_1_4, _3_4];
-        let expected_reserves = vec![_10, 20_751_874_964];
+        let expected_reserves = [_10, 20_751_874_964];
         let swap_fee = CENT;
         let (market_ids, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,

@@ -126,9 +126,6 @@ where
         let reserves_buy = self.reserves_of(&buy)?;
         let reserves_sell = self.reserves_of(&sell)?;
 
-        println!("reserves_buy: {:?}", reserves_buy);
-        println!("reserves_sell: {:?}", reserves_sell);
-
         ComboMath::<T>::calculate_swap_amount_out_for_buy(
             reserves_buy,
             reserves_sell,

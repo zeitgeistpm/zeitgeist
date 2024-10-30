@@ -1309,25 +1309,17 @@ mod pallet {
                 ensure!(buy_set.len() == buy.len(), Error::<T>::InvalidPartition);
                 ensure!(sell_set.len() == sell.len(), Error::<T>::InvalidPartition);
 
-                println!("buy_set: {:?}", buy_set);
-                println!("sell_set: {:?}", sell_set);
-
                 let FeeDistribution {
                     remaining: amount_in_minus_fees,
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
                 } = Self::distribute_fees(pool, &who, amount_in)?;
-                println!("remaining: {:?}", amount_in_minus_fees);
-                println!("swap_fees: {:?}", swap_fee_amount);
-                println!("external_fees: {:?}", external_fee_amount);
                 let swap_amount_out = pool.calculate_swap_amount_out_for_buy(
                     buy.clone(),
                     sell.clone(),
                     amount_in_minus_fees,
                 )?;
-                println!("swap_amount_out: {:?}", swap_amount_out);
                 let amount_out = swap_amount_out.checked_add_res(&amount_in_minus_fees)?;
-                println!("amount_out: {:?}", amount_out);
                 ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
 
                 T::CombinatorialTokensUnsafe::split_position_unsafe(

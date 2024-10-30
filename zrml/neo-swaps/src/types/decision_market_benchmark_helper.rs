@@ -22,7 +22,7 @@ use crate::{
     types::{DecisionMarketOracle, Pool, PoolType},
     BalanceOf, Config, MarketIdOf, Pallet, Pools,
 };
-use alloc::collections::BTreeMap;
+use alloc::{collections::BTreeMap, vec};
 use core::marker::PhantomData;
 use sp_runtime::{traits::Zero, Saturating};
 use zeitgeist_primitives::{
@@ -61,6 +61,7 @@ where
         let account_id: T::AccountId = Pallet::<T>::pool_account_id(&pool_id);
         let pool = Pool {
             account_id: account_id.clone(),
+            assets: vec![positive_outcome, negative_outcome].try_into().unwrap(),
             reserves: reserves.try_into().unwrap(),
             collateral,
             liquidity_parameter: one,
