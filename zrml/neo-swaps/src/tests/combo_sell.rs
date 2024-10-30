@@ -604,3 +604,41 @@ fn combo_sell_fails_on_invalid_amount_keep(keep_indices: Vec<u16>, amount_in_kee
         );
     });
 }
+
+#[test]
+fn combo_sell_fails_on_invalid_pool_type() {
+    ExtBuilder::default().build().execute_with(|| {
+        let pool_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(5),
+            _10,
+            vec![_1_5, _1_5, _1_5, _1_5, _1_5],
+            CENT,
+        );
+        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
+        let amount_buy = _1;
+
+        let sell = pool.assets()[0..4].to_vec();
+        let buy = pool.assets()[4..5].to_vec();
+
+        for &asset in buy.iter() {
+            assert_ok!(AssetManager::deposit(asset, &BOB, amount_buy));
+        }
+
+        assert_noop!(
+            NeoSwaps::combo_sell(
+                RuntimeOrigin::signed(BOB),
+                pool_id,
+                5,
+                buy,
+                vec![],
+                sell,
+                amount_buy,
+                0,
+                0
+            ),
+            Error::<Runtime>::InvalidPoolType,
+        );
+    });
+}

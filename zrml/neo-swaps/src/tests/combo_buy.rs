@@ -465,3 +465,31 @@ fn combo_buy_fails_on_large_buy() {
         );
     });
 }
+
+#[test]
+fn combo_buy_fails_on_invalid_pool_type() {
+    ExtBuilder::default().build().execute_with(|| {
+        let pool_id = create_market_and_deploy_pool(
+            ALICE,
+            BASE_ASSET,
+            MarketType::Categorical(5),
+            _10,
+            vec![_1_5, _1_5, _1_5, _1_5, _1_5],
+            CENT,
+        );
+
+        let amount_in = _1;
+        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
+
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
+
+        let buy = vec![assets[4]];
+        let sell = assets[0..2].to_vec();
+
+        assert_noop!(
+            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), pool_id, 5, buy, sell, amount_in, 0),
+            Error::<Runtime>::InvalidPoolType,
+        );
+    });
+}

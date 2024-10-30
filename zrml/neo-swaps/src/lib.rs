@@ -379,6 +379,9 @@ mod pallet {
 
         /// The specified markets do not all use the same collateral.
         CollateralMismatch,
+
+        /// This function is not allowed to be called for this type of pool.
+        InvalidPoolType,
     }
 
     #[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
@@ -776,6 +779,10 @@ mod pallet {
 
             <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
                 ensure!(pool.is_active()?, Error::<T>::MarketNotActive);
+                ensure!(
+                    matches!(pool.pool_type, PoolType::Standard(_)),
+                    Error::<T>::InvalidPoolType
+                );
                 ensure!(pool.contains(&asset_out), Error::<T>::AssetNotFound);
                 T::MultiCurrency::transfer(pool.collateral, &who, &pool.account_id, amount_in)?;
                 let FeeDistribution {
@@ -841,6 +848,10 @@ mod pallet {
 
             <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
                 ensure!(pool.is_active()?, Error::<T>::MarketNotActive);
+                ensure!(
+                    matches!(pool.pool_type, PoolType::Standard(_)),
+                    Error::<T>::InvalidPoolType
+                );
                 ensure!(pool.contains(&asset_in), Error::<T>::AssetNotFound);
                 // Ensure that the price of `asset_in` is at least `exp(-EXP_NUMERICAL_LIMITS) =
                 // 4.5399...e-05`.
@@ -1277,6 +1288,10 @@ mod pallet {
 
             <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
                 ensure!(pool.is_active()?, Error::<T>::MarketNotActive);
+                ensure!(
+                    matches!(pool.pool_type, PoolType::Combinatorial(_)),
+                    Error::<T>::InvalidPoolType
+                );
 
                 // Ensure that `buy` and `sell` partition are disjoint, only contain assets from
                 // the market and don't contain dupliates.
@@ -1387,6 +1402,10 @@ mod pallet {
 
             <Self as PoolStorage>::try_mutate_pool(&pool_id, |pool| {
                 ensure!(pool.is_active()?, Error::<T>::MarketNotActive);
+                ensure!(
+                    matches!(pool.pool_type, PoolType::Combinatorial(_)),
+                    Error::<T>::InvalidPoolType
+                );
 
                 // Ensure that `buy` and `sell` partition are disjoint and only contain assets from
                 // the market.
