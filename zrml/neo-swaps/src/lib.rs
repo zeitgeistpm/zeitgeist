@@ -693,7 +693,7 @@ mod pallet {
             sell: Vec<AssetOf<T>>,
             #[pallet::compact] amount_in: BalanceOf<T>,
             #[pallet::compact] min_amount_out: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             let pool = <Self as PoolStorage>::get(pool_id)?;
@@ -702,14 +702,12 @@ mod pallet {
                 asset_count_real.try_into().map_err(|_| Error::<T>::NarrowingConversion)?;
             ensure!(asset_count == asset_count_real_u16, Error::<T>::IncorrectAssetCount);
 
-            Self::do_combo_buy(who, pool_id, buy, sell, amount_in, min_amount_out)?;
-
-            Ok(Some(T::WeightInfo::buy(asset_count.into())).into()) // TODO
+            Self::do_combo_buy(who, pool_id, buy, sell, amount_in, min_amount_out)
         }
 
         #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(7)]
-        #[pallet::weight(T::WeightInfo::buy((*asset_count).saturated_into()))] // TODO
+        #[pallet::weight(T::WeightInfo::combo_sell(asset_count.log_ceil().into()))]
         #[transactional]
         pub fn combo_sell(
             origin: OriginFor<T>,
@@ -721,7 +719,7 @@ mod pallet {
             #[pallet::compact] amount_buy: BalanceOf<T>,
             #[pallet::compact] amount_keep: BalanceOf<T>,
             #[pallet::compact] min_amount_out: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
             let pool = <Self as PoolStorage>::get(pool_id)?;
@@ -739,9 +737,7 @@ mod pallet {
                 amount_buy,
                 amount_keep,
                 min_amount_out,
-            )?;
-
-            Ok(Some(T::WeightInfo::buy(asset_count.into())).into()) // TODO
+            )
         }
 
         #[pallet::call_index(8)]
