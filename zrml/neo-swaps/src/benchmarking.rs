@@ -644,15 +644,7 @@ mod benchmarks {
         let swap_fee = CENT.saturated_into();
 
         #[extrinsic_call]
-        _(
-            RawOrigin::Signed(alice),
-            asset_count,
-            market_ids,
-            amount,
-            spot_prices,
-            swap_fee,
-            true,
-        );
+        _(RawOrigin::Signed(alice), asset_count, market_ids, amount, spot_prices, swap_fee, true);
     }
 
     #[benchmark]

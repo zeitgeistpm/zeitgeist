@@ -753,7 +753,7 @@ mod pallet {
             force_max_work: bool,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            
+
             let mut real_asset_count = 1u16;
             for market_id in market_ids.iter() {
                 let market = T::MarketCommons::market(market_id)?;
