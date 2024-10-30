@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::BoundedVec;
 use crate::{
     consts::EXP_NUMERICAL_LIMIT,
     math::{
@@ -29,7 +28,7 @@ use crate::{
 };
 use alloc::{fmt::Debug, vec::Vec};
 use frame_support::{
-    storage::bounded_btree_map::BoundedBTreeMap, CloneNoBound, PartialEqNoBound,
+    storage::bounded_btree_map::BoundedBTreeMap, BoundedVec, CloneNoBound, PartialEqNoBound,
     RuntimeDebugNoBound,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};

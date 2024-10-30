@@ -363,14 +363,7 @@ fn buy_fails_on_invalid_pool_type() {
         let assets = pool.assets();
 
         assert_noop!(
-            NeoSwaps::buy(
-                RuntimeOrigin::signed(BOB),
-                pool_id,
-                2,
-                assets[0],
-                _1,
-                0
-            ),
+            NeoSwaps::buy(RuntimeOrigin::signed(BOB), pool_id, 2, assets[0], _1, 0),
             Error::<Runtime>::InvalidPoolType,
         );
     });
