@@ -20,11 +20,11 @@
 use crate::{
     assert_liquidity_tree_state, create_b_tree_map,
     liquidity_tree::{
-        traits::liquidity_tree_helper::LiquidityTreeHelper,
+        traits::LiquidityTreeHelper,
         types::{LiquidityTreeError, Node},
     },
     mock::Runtime,
-    traits::liquidity_shares_manager::LiquiditySharesManager,
+    traits::LiquiditySharesManager,
     LiquidityTreeOf,
 };
 use alloc::collections::BTreeMap;

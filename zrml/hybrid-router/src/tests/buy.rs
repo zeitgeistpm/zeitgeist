@@ -69,7 +69,7 @@ fn buy_from_amm_and_then_fill_specified_order() {
         System::assert_has_event(
             NeoSwapsEvent::<Runtime>::BuyExecuted {
                 who: ALICE,
-                market_id,
+                pool_id: market_id,
                 asset_out: asset,
                 amount_in: amm_amount_in,
                 amount_out: 5608094333,
@@ -427,7 +427,7 @@ fn buy_from_amm() {
         System::assert_has_event(
             NeoSwapsEvent::<Runtime>::BuyExecuted {
                 who: ALICE,
-                market_id,
+                pool_id: market_id,
                 asset_out: asset,
                 amount_in: 20000000000,
                 amount_out: 36852900215,
@@ -532,7 +532,7 @@ fn buy_from_amm_but_low_amount() {
         System::assert_has_event(
             NeoSwapsEvent::<Runtime>::BuyExecuted {
                 who: ALICE,
-                market_id,
+                pool_id: market_id,
                 asset_out: asset,
                 amount_in: 30,
                 amount_out: 60,
@@ -595,7 +595,7 @@ fn buy_from_amm_only() {
         System::assert_has_event(
             NeoSwapsEvent::<Runtime>::BuyExecuted {
                 who: ALICE,
-                market_id,
+                pool_id: market_id,
                 asset_out: asset,
                 amount_in: 20000000000,
                 amount_out: 36852900215,

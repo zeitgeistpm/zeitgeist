@@ -78,7 +78,7 @@ fn sell_works() {
         System::assert_last_event(
             Event::SellExecuted {
                 who: BOB,
-                market_id,
+                pool_id: market_id,
                 asset_in,
                 amount_in,
                 amount_out: expected_amount_out_minus_fees,
@@ -378,3 +378,33 @@ fn sell_fails_on_amount_out_below_min() {
         );
     });
 }
+
+#[test]
+fn sell_fails_on_invalid_pool_type() {
+    ExtBuilder::default().build().execute_with(|| {
+        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
+            ALICE,
+            BASE_ASSET,
+            vec![MarketType::Scalar(0..=1)],
+            _10,
+            vec![_1_2, _1_2],
+            CENT,
+        );
+
+        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
+
+        assert_noop!(
+            NeoSwaps::sell(
+                RuntimeOrigin::signed(BOB),
+                pool_id,
+                2,
+                assets[0],
+                _1,
+                0
+            ),
+            Error::<Runtime>::InvalidPoolType,
+        );
+    });
+}
+

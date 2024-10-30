@@ -21,6 +21,7 @@ mod buy;
 mod buy_and_sell;
 mod combo_buy;
 mod combo_sell;
+mod deploy_combinatorial_pool;
 mod deploy_pool;
 mod exit;
 mod join;
@@ -98,6 +99,36 @@ fn create_market_and_deploy_pool(
         swap_fee,
     ));
     market_id
+}
+
+fn create_markets_and_deploy_combinatorial_pool(
+    creator: AccountIdOf<Runtime>,
+    base_asset: Asset<MarketId>,
+    market_types: Vec<MarketType>,
+    amount: BalanceOf<Runtime>,
+    spot_prices: Vec<BalanceOf<Runtime>>,
+    swap_fee: BalanceOf<Runtime>,
+) -> (Vec<MarketId>, <Runtime as Config>::PoolId) {
+    let mut market_ids = vec![];
+
+    for market_type in market_types.iter() {
+        let market_id =
+            create_market(creator, base_asset, market_type.clone(), ScoringRule::AmmCdaHybrid);
+
+        market_ids.push(market_id);
+    }
+
+    let pool_id = <Pallet<Runtime> as PoolStorage>::next_pool_id();
+    assert_ok!(NeoSwaps::deploy_combinatorial_pool(
+        RuntimeOrigin::signed(ALICE),
+        market_ids.clone(),
+        amount,
+        spot_prices.clone(),
+        swap_fee,
+        false,
+    ));
+
+    (market_ids, pool_id)
 }
 
 fn deposit_complete_set(

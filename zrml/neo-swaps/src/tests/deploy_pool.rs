@@ -73,6 +73,7 @@ fn deploy_pool_works_with_binary_markets() {
             Event::PoolDeployed {
                 who: ALICE,
                 market_id,
+                pool_id: market_id,
                 account_id: pool.account_id,
                 reserves,
                 collateral: pool.collateral,
@@ -152,6 +153,7 @@ fn deploy_pool_works_with_scalar_marktes() {
             Event::PoolDeployed {
                 who: ALICE,
                 market_id,
+                pool_id: market_id,
                 account_id: pool.account_id,
                 reserves,
                 collateral: pool.collateral,

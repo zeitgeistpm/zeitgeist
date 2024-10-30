@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use frame_support::BoundedVec;
 use crate::{
     consts::EXP_NUMERICAL_LIMIT,
     math::{
@@ -23,7 +24,8 @@ use crate::{
     },
     pallet::{AssetOf, BalanceOf, Config},
     traits::{LiquiditySharesManager, PoolOperations},
-    Error,
+    types::PoolType,
+    Error, MarketIdOf,
 };
 use alloc::{fmt::Debug, vec::Vec};
 use frame_support::{
@@ -36,6 +38,8 @@ use sp_runtime::{
     traits::{CheckedAdd, CheckedSub, Get},
     DispatchError, DispatchResult, SaturatedConversion, Saturating,
 };
+use zeitgeist_primitives::types::MarketStatus;
+use zrml_market_commons::MarketCommonsPalletApi;
 
 #[derive(
     CloneNoBound, Decode, Encode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
@@ -48,11 +52,13 @@ where
     S: Get<u32>,
 {
     pub account_id: T::AccountId,
+    pub assets: BoundedVec<AssetOf<T>, S>,
     pub reserves: BoundedBTreeMap<AssetOf<T>, BalanceOf<T>, S>,
     pub collateral: AssetOf<T>,
     pub liquidity_parameter: BalanceOf<T>,
     pub liquidity_shares_manager: LSM,
     pub swap_fee: BalanceOf<T>,
+    pub pool_type: PoolType<MarketIdOf<T>, S>,
 }
 
 impl<T, LSM, S> PoolOperations<T> for Pool<T, LSM, S>
@@ -63,7 +69,7 @@ where
     S: Get<u32>,
 {
     fn assets(&self) -> Vec<AssetOf<T>> {
-        self.reserves.keys().cloned().collect()
+        self.assets.to_vec()
     }
 
     fn contains(&self, asset: &AssetOf<T>) -> bool {
@@ -76,6 +82,19 @@ where
 
     fn reserves_of(&self, assets: &[AssetOf<T>]) -> Result<Vec<BalanceOf<T>>, DispatchError> {
         assets.iter().map(|a| self.reserve_of(a)).collect()
+    }
+
+    /// Checks if the pool can be traded on.
+    fn is_active(&self) -> Result<bool, DispatchError> {
+        for market_id in self.pool_type.iter_market_ids() {
+            let market = T::MarketCommons::market(market_id)?;
+
+            if market.status != MarketStatus::Active {
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
     }
 
     fn increase_reserve(

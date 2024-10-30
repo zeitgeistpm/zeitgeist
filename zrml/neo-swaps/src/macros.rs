@@ -61,11 +61,8 @@ macro_rules! assert_pool_state {
         $(,)?
     ) => {
         let pool = Pools::<Runtime>::get($market_id).unwrap();
-        assert_eq!(
-            pool.reserves.values().cloned().collect::<Vec<_>>(),
-            $reserves,
-            "assert_pool_state: Reserves mismatch"
-        );
+        let pool_reserves = pool.assets().iter().map(|a| pool.reserves[a]).collect::<Vec<_>>();
+        assert_eq!(pool_reserves, $reserves, "assert_pool_state: Reserves mismatch");
         let actual_spot_prices = pool
             .assets()
             .iter()

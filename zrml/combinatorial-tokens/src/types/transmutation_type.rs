@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2024 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -14,18 +14,16 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work licensed under the GNU Lesser General
+// Public License 3.0 but published without copyright notice by Gnosis
+// (<https://gnosis.io>, info@gnosis.io) in the
+// conditional-tokens-contracts repository
+// <https://github.com/gnosis/conditional-tokens-contracts>,
+// and has been relicensed under GPL-3.0-or-later in this repository.
 
-mod decision_market_benchmark_helper;
-mod decision_market_oracle;
-mod fee_distribution;
-mod max_assets;
-mod pool;
-mod pool_type;
-
-#[cfg(feature = "runtime-benchmarks")]
-pub use decision_market_benchmark_helper::*;
-pub use decision_market_oracle::*;
-pub(crate) use fee_distribution::*;
-pub(crate) use max_assets::*;
-pub(crate) use pool::*;
-pub(crate) use pool_type::*;
+pub enum TransmutationType {
+    VerticalWithParent,
+    VerticalSansParent,
+    Horizontal,
+}

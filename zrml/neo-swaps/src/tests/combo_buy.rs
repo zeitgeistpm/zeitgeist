@@ -17,7 +17,6 @@
 
 use super::*;
 use test_case::test_case;
-use zeitgeist_primitives::types::Asset::CategoricalOutcome;
 
 // Example taken from
 // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr
@@ -27,15 +26,15 @@ fn combo_buy_works() {
         let liquidity = _10;
         let spot_prices = vec![_1_2, _1_2];
         let swap_fee = CENT;
-        let market_id = create_market_and_deploy_pool(
+        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Categorical(2),
+            vec![MarketType::Categorical(2)],
             liquidity,
             spot_prices.clone(),
             swap_fee,
         );
-        let pool = Pools::<Runtime>::get(market_id).unwrap();
+        let pool = Pools::<Runtime>::get(pool_id).unwrap();
         let total_fee_percentage = swap_fee + EXTERNAL_FEES;
         let amount_in_minus_fees = _10;
         let amount_in = amount_in_minus_fees.bdiv(_1 - total_fee_percentage).unwrap(); // This is exactly _10 after deducting fees.
@@ -53,14 +52,14 @@ fn combo_buy_works() {
         assert_ok!(AssetManager::deposit(sell[0], &pool.account_id, _100));
         assert_ok!(NeoSwaps::combo_buy(
             RuntimeOrigin::signed(BOB),
-            market_id,
+            pool_id,
             2,
             buy.clone(),
             sell.clone(),
             amount_in,
             0,
         ));
-        let pool = Pools::<Runtime>::get(market_id).unwrap();
+        let pool = Pools::<Runtime>::get(pool_id).unwrap();
         let expected_swap_amount_out = 58496250072;
         let expected_amount_in_minus_fees = _10 + 1; // Note: This is 1 Pennock off of the correct result.
         let expected_reserves = vec![
@@ -68,7 +67,7 @@ fn combo_buy_works() {
             pool_outcomes_before[0] + expected_amount_in_minus_fees,
         ];
         assert_pool_state!(
-            market_id,
+            pool_id,
             expected_reserves,
             vec![_3_4, _1_4],
             liquidity_parameter_before,
@@ -87,7 +86,7 @@ fn combo_buy_works() {
         System::assert_last_event(
             Event::ComboBuyExecuted {
                 who: BOB,
-                market_id,
+                pool_id,
                 buy,
                 sell,
                 amount_in,
@@ -101,6 +100,7 @@ fn combo_buy_works() {
 }
 
 #[test_case(
+    vec![MarketType::Categorical(5)],
     333 * _1,
     vec![10 * CENT, 30 * CENT, 25 * CENT, 13 * CENT, 22 * CENT],
     vec![0, 2],
@@ -114,6 +114,7 @@ fn combo_buy_works() {
     1_020_408_163
 )]
 #[test_case(
+    vec![MarketType::Categorical(5)],
     _100,
     vec![80 * CENT, 5 * CENT, 5 * CENT, 5 * CENT, 5 * CENT],
     vec![4],
@@ -127,23 +128,24 @@ fn combo_buy_works() {
     3_367_346_939
 )]
 #[test_case(
+    vec![MarketType::Categorical(2), MarketType::Categorical(2), MarketType::Scalar(0..=1)],
     1000 * _1,
     vec![1_250_000_000; 8],
     vec![0, 2, 5, 6, 7],
     vec![],
     vec![1, 3, 4],
-    5_102_040_816_326,
-    6_576_234_413_776,
+    5_208_333_333_333,
+    6_576_234_413_778,
     5_000_000_000_000,
     vec![
-        8_423_765_586_224,
-        1500 * _1,
-        8_423_765_586_224,
-        1500 * _1,
-        1500 * _1,
-        8_423_765_586_224,
-        8_423_765_586_224,
-        8_423_765_586_224,
+        8_423_765_586_223,
+        1500 * _1 + 1,
+        8_423_765_586_223,
+        1500 * _1 + 1,
+        1500 * _1 + 1,
+        8_423_765_586_223,
+        8_423_765_586_223,
+        8_423_765_586_223,
     ],
     vec![
         1_734_834_957,
@@ -155,9 +157,10 @@ fn combo_buy_works() {
         1_734_834_957,
         1_734_834_957,
     ],
-    51_020_408_163
+    52_083_333_333
 )]
 fn combo_buy_works_multi_market(
+    market_types: Vec<MarketType>,
     liquidity: u128,
     spot_prices: Vec<u128>,
     buy_indices: Vec<u16>,
@@ -168,15 +171,15 @@ fn combo_buy_works_multi_market(
     expected_amount_out_keep: u128,
     expected_reserves: Vec<u128>,
     expected_spot_prices: Vec<u128>,
-    expected_fees: u128,
+    expected_fees: u128, // pool fees, not market fees
 ) {
     ExtBuilder::default().build().execute_with(|| {
         let asset_count = spot_prices.len() as u16;
         let swap_fee = CENT;
-        let market_id = create_market_and_deploy_pool(
+        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Categorical(asset_count),
+            market_types,
             liquidity,
             spot_prices.clone(),
             swap_fee,
@@ -184,18 +187,16 @@ fn combo_buy_works_multi_market(
         let sentinel = 123_456_789;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in + sentinel));
 
-        let pool = Pools::<Runtime>::get(market_id).unwrap();
+        let pool = Pools::<Runtime>::get(pool_id).unwrap();
         let expected_liquidity = pool.liquidity_parameter;
 
-        let buy: Vec<_> =
-            buy_indices.iter().map(|&i| Asset::CategoricalOutcome(market_id, i)).collect();
-        let keep: Vec<_> =
-            keep_indices.iter().map(|&i| Asset::CategoricalOutcome(market_id, i)).collect();
-        let sell: Vec<_> =
-            sell_indices.iter().map(|&i| Asset::CategoricalOutcome(market_id, i)).collect();
+        let buy: Vec<_> = buy_indices.iter().map(|&i| pool.assets()[i as usize]).collect();
+        let keep: Vec<_> = keep_indices.iter().map(|&i| pool.assets()[i as usize]).collect();
+        let sell: Vec<_> = sell_indices.iter().map(|&i| pool.assets()[i as usize]).collect();
+
         assert_ok!(NeoSwaps::combo_buy(
             RuntimeOrigin::signed(BOB),
-            market_id,
+            pool_id,
             asset_count,
             buy.clone(),
             sell.clone(),
@@ -215,7 +216,7 @@ fn combo_buy_works_multi_market(
         }
 
         assert_pool_state!(
-            market_id,
+            pool_id,
             expected_reserves,
             expected_spot_prices,
             expected_liquidity,
@@ -228,21 +229,23 @@ fn combo_buy_works_multi_market(
 #[test]
 fn combo_buy_fails_on_incorrect_asset_count() {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
+        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Scalar(0..=1),
+            vec![MarketType::Categorical(2), MarketType::Scalar(0..=1)],
             _10,
-            vec![_1_2, _1_2],
+            vec![_1_4, _1_4, _1_4, _1_4],
             CENT,
         );
+        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
         assert_noop!(
             NeoSwaps::combo_buy(
                 RuntimeOrigin::signed(BOB),
-                market_id,
-                1,
-                vec![Asset::ScalarOutcome(market_id, ScalarPosition::Long)],
-                vec![Asset::ScalarOutcome(market_id, ScalarPosition::Short)],
+                pool_id,
+                3,
+                vec![assets[0]],
+                vec![assets[1]],
                 _1,
                 0
             ),
@@ -254,26 +257,27 @@ fn combo_buy_fails_on_incorrect_asset_count() {
 #[test]
 fn combo_buy_fails_on_market_not_found() {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
+        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Scalar(0..=1),
+            vec![MarketType::Categorical(2), MarketType::Scalar(0..=1)],
             _10,
-            vec![_1_2, _1_2],
+            vec![_1_4, _1_4, _1_4, _1_4],
             CENT,
         );
-        Markets::<Runtime>::remove(market_id);
+        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
         assert_noop!(
             NeoSwaps::combo_buy(
                 RuntimeOrigin::signed(BOB),
-                market_id,
-                2,
-                vec![Asset::ScalarOutcome(market_id, ScalarPosition::Long)],
-                vec![Asset::ScalarOutcome(market_id, ScalarPosition::Short)],
+                1,
+                4,
+                vec![assets[0]],
+                vec![assets[1]],
                 _1,
                 0
             ),
-            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
+            Error::<Runtime>::PoolNotFound,
         );
     });
 }
@@ -285,15 +289,17 @@ fn combo_buy_fails_on_market_not_found() {
 #[test_case(MarketStatus::Resolved)]
 fn combo_buy_fails_on_inactive_market(market_status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
+        let (market_ids, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Scalar(0..=1),
+            vec![MarketType::Categorical(2), MarketType::Scalar(0..=1)],
             _10,
-            vec![_1_2, _1_2],
+            vec![_1_4, _1_4, _1_4, _1_4],
             CENT,
         );
-        MarketCommons::mutate_market(&market_id, |market| {
+        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
+        MarketCommons::mutate_market(&market_ids[1], |market| {
             market.status = market_status;
             Ok(())
         })
@@ -301,10 +307,10 @@ fn combo_buy_fails_on_inactive_market(market_status: MarketStatus) {
         assert_noop!(
             NeoSwaps::combo_buy(
                 RuntimeOrigin::signed(BOB),
-                market_id,
-                2,
-                vec![Asset::ScalarOutcome(market_id, ScalarPosition::Long)],
-                vec![Asset::ScalarOutcome(market_id, ScalarPosition::Short)],
+                pool_id,
+                4,
+                vec![assets[0]],
+                vec![assets[1]],
                 _1,
                 0
             ),
@@ -314,49 +320,37 @@ fn combo_buy_fails_on_inactive_market(market_status: MarketStatus) {
 }
 
 #[test]
-fn combo_buy_fails_on_pool_not_found() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id =
-            create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::AmmCdaHybrid);
-        assert_noop!(
-            NeoSwaps::combo_buy(
-                RuntimeOrigin::signed(BOB),
-                market_id,
-                2,
-                vec![Asset::ScalarOutcome(market_id, ScalarPosition::Long)],
-                vec![Asset::ScalarOutcome(market_id, ScalarPosition::Short)],
-                _1,
-                0
-            ),
-            Error::<Runtime>::PoolNotFound,
-        );
-    });
-}
-
-#[test]
 fn combo_buy_fails_on_insufficient_funds() {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
+        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Scalar(0..=1),
+            vec![MarketType::Categorical(2), MarketType::Scalar(0..=1)],
             _10,
-            vec![_1_2, _1_2],
+            vec![_1_4, _1_4, _1_4, _1_4],
             CENT,
         );
+        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
         let amount_in = _10;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in - 1));
+
+        #[cfg(feature = "parachain")]
+        let expected_error = orml_tokens::Error::<Runtime>::BalanceTooLow;
+        #[cfg(not(feature = "parachain"))]
+        let expected_error = orml_currencies::Error::<Runtime>::BalanceTooLow;
+
         assert_noop!(
             NeoSwaps::combo_buy(
                 RuntimeOrigin::signed(BOB),
-                market_id,
-                2,
-                vec![Asset::ScalarOutcome(market_id, ScalarPosition::Long)],
-                vec![Asset::ScalarOutcome(market_id, ScalarPosition::Short)],
+                pool_id,
+                4,
+                vec![assets[0]],
+                vec![assets[1]],
                 amount_in,
                 0,
             ),
-            zrml_prediction_markets::Error::<Runtime>::NotEnoughBalance,
+            expected_error
         );
     });
 }
@@ -364,26 +358,28 @@ fn combo_buy_fails_on_insufficient_funds() {
 #[test]
 fn combo_buy_fails_on_amount_out_below_min() {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
+        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Scalar(0..=1),
+            vec![MarketType::Categorical(2), MarketType::Scalar(0..=1)],
             _10,
-            vec![_1_2, _1_2],
+            vec![_1_4, _1_4, _1_4, _1_4],
             CENT,
         );
+        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
         let amount_in = _1;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
-        // Buying 1 at price of .5 will return less than 2 outcomes due to slippage.
+        // Buying 1 at price of .25 will return less than 4 outcomes due to slippage.
         assert_noop!(
             NeoSwaps::combo_buy(
                 RuntimeOrigin::signed(BOB),
-                market_id,
-                2,
-                vec![Asset::ScalarOutcome(market_id, ScalarPosition::Long)],
-                vec![Asset::ScalarOutcome(market_id, ScalarPosition::Short)],
+                pool_id,
+                4,
+                vec![assets[0]],
+                vec![assets[1]],
                 amount_in,
-                _2,
+                _4,
             ),
             Error::<Runtime>::AmountOutBelowMin,
         );
@@ -396,27 +392,26 @@ fn combo_buy_fails_on_amount_out_below_min() {
 #[test_case(vec![0, 2, 3], vec![1, 3, 4]; "overlap2")]
 #[test_case(vec![0, 1, 3, 1], vec![2]; "duplicate_buy")]
 #[test_case(vec![0, 1, 3], vec![4, 2, 4]; "duplicate_sell")]
-#[test_case(vec![999], vec![0, 1, 2, 3, 4]; "out_of_bounds_buy")]
-#[test_case(vec![0, 1, 3], vec![999]; "out_of_bounds_sell")]
-fn combo_buy_fails_on_invalid_partition(indices_buy: Vec<u16>, indices_sell: Vec<u16>) {
+fn combo_buy_fails_on_invalid_partition(buy_indices: Vec<u16>, sell_indices: Vec<u16>) {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
+        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Categorical(5),
+            vec![MarketType::Categorical(5)],
             _10,
             vec![_1_5, _1_5, _1_5, _1_5, _1_5],
             CENT,
         );
+        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
         let amount_in = _1;
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
 
-        let buy = indices_buy.into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
-        let sell = indices_sell.into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+        let buy: Vec<_> = buy_indices.iter().map(|&i| assets[i as usize]).collect();
+        let sell: Vec<_> = sell_indices.iter().map(|&i| assets[i as usize]).collect();
 
-        // Buying 1 at price of .5 will return less than 2 outcomes due to slippage.
         assert_noop!(
-            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), market_id, 5, buy, sell, amount_in, 0),
+            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), pool_id, 5, buy, sell, amount_in, 0),
             Error::<Runtime>::InvalidPartition,
         );
     });
@@ -425,49 +420,26 @@ fn combo_buy_fails_on_invalid_partition(indices_buy: Vec<u16>, indices_sell: Vec
 #[test]
 fn combo_buy_fails_on_spot_price_slipping_too_low() {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
+        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,
             BASE_ASSET,
-            MarketType::Categorical(5),
+            vec![MarketType::Categorical(5)],
             _10,
             vec![_1_5, _1_5, _1_5, _1_5, _1_5],
             CENT,
         );
         let amount_in = _100;
+        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
 
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
 
-        let buy = [0, 1, 2, 3].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
-        let sell = [4].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+        let buy = assets[0..4].to_vec();
+        let sell = vec![assets[4]];
 
         assert_noop!(
-            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), market_id, 5, buy, sell, amount_in, 0),
+            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), pool_id, 5, buy, sell, amount_in, 0),
             Error::<Runtime>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow),
-        );
-    });
-}
-
-#[test]
-fn combo_buy_fails_on_spot_price_slipping_too_high() {
-    ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
-            ALICE,
-            BASE_ASSET,
-            MarketType::Categorical(5),
-            _10,
-            vec![_1_5, _1_5, _1_5, _1_5, _1_5],
-            CENT,
-        );
-        let amount_in = _100;
-
-        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
-
-        let buy = [0].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
-        let sell = [1, 2, 3, 4].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
-
-        assert_noop!(
-            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), market_id, 5, buy, sell, amount_in, 0),
-            Error::<Runtime>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooHigh),
         );
     });
 }
@@ -475,7 +447,34 @@ fn combo_buy_fails_on_spot_price_slipping_too_high() {
 #[test]
 fn combo_buy_fails_on_large_buy() {
     ExtBuilder::default().build().execute_with(|| {
-        let market_id = create_market_and_deploy_pool(
+        let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
+            ALICE,
+            BASE_ASSET,
+            vec![MarketType::Categorical(5)],
+            _10,
+            vec![_1_5, _1_5, _1_5, _1_5, _1_5],
+            CENT,
+        );
+        let amount_in = 100 * _100;
+        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
+
+        assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
+
+        let buy = vec![assets[4]];
+        let sell = assets[0..2].to_vec();
+
+        assert_noop!(
+            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), pool_id, 5, buy, sell, amount_in, 0),
+            Error::<Runtime>::MathError,
+        );
+    });
+}
+
+#[test]
+fn combo_buy_fails_on_invalid_pool_type() {
+    ExtBuilder::default().build().execute_with(|| {
+        let pool_id = create_market_and_deploy_pool(
             ALICE,
             BASE_ASSET,
             MarketType::Categorical(5),
@@ -483,16 +482,19 @@ fn combo_buy_fails_on_large_buy() {
             vec![_1_5, _1_5, _1_5, _1_5, _1_5],
             CENT,
         );
-        let amount_in = 100 * _100;
+
+        let amount_in = _1;
+        let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
 
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
 
-        let buy = [0].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
-        let sell = [1, 2].into_iter().map(|i| CategoricalOutcome(market_id, i)).collect();
+        let buy = vec![assets[4]];
+        let sell = assets[0..2].to_vec();
 
         assert_noop!(
-            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), market_id, 5, buy, sell, amount_in, 0),
-            Error::<Runtime>::MathError,
+            NeoSwaps::combo_buy(RuntimeOrigin::signed(BOB), pool_id, 5, buy, sell, amount_in, 0),
+            Error::<Runtime>::InvalidPoolType,
         );
     });
 }
