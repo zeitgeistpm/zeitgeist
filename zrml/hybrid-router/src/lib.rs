@@ -20,9 +20,7 @@
 
 extern crate alloc;
 
-#[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-#[cfg(test)]
 mod mock;
 mod tests;
 mod types;

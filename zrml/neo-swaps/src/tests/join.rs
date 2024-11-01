@@ -18,9 +18,7 @@
 use super::*;
 use crate::{
     helpers::create_spot_prices,
-    liquidity_tree::{
-        traits::liquidity_tree_helper::LiquidityTreeHelper, types::LiquidityTreeError,
-    },
+    liquidity_tree::{traits::LiquidityTreeHelper, types::LiquidityTreeError},
 };
 use alloc::collections::BTreeMap;
 use test_case::test_case;
@@ -65,7 +63,7 @@ fn join_works(
         System::assert_last_event(
             Event::JoinExecuted {
                 who,
-                market_id,
+                pool_id: market_id,
                 pool_shares_amount,
                 amounts_in,
                 new_liquidity_parameter,

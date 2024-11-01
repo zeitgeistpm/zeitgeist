@@ -89,6 +89,9 @@ parameter_types! {
     pub const TechnicalCommitteeMaxProposals: u32 = 64;
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
+    // CombinatorialTokens
+    pub const CombinatorialTokensPalletId: PalletId = COMBINATORIAL_TOKENS_PALLET_ID;
+
     // Contracts
     pub const ContractsCodeHashLockupDepositPercent: Perbill = Perbill::from_percent(10);
     pub const ContractsDefaultDepositLimit: Balance = deposit(16, 16 * 1024 * 1024);
@@ -164,6 +167,9 @@ parameter_types! {
     /// The maximum number of public proposals that can exist at any time.
     pub const MaxProposals: u32 = 100;
 
+    // Futarchy
+    pub const MinDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
+
     // Hybrid Router parameters
     pub const HybridRouterPalletId: PalletId = HYBRID_ROUTER_PALLET_ID;
     /// Maximum number of orders that can be placed in a single trade transaction.
@@ -197,6 +203,7 @@ parameter_types! {
     pub const NeoSwapsMaxSwapFee: Balance = 10 * CENT;
     pub const NeoSwapsPalletId: PalletId = NS_PALLET_ID;
     pub const MaxLiquidityTreeDepth: u32 = 9u32;
+    pub const MaxSplits: u16 = 128u16;
 
     // ORML
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
@@ -448,7 +455,7 @@ parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
         match currency_id {
             Asset::CategoricalOutcome(_,_) => ExistentialDeposit::get(),
-            Asset::CombinatorialOutcome => ExistentialDeposit::get(),
+            Asset::CombinatorialToken(_) => ExistentialDeposit::get(),
             Asset::PoolShare(_)  => ExistentialDeposit::get(),
             Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]
