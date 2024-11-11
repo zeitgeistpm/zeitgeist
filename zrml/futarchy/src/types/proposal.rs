@@ -21,7 +21,6 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
-// TODO Make config a generic, keeps things simple.
 #[derive(
     CloneNoBound, Decode, Encode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
 )]
@@ -30,7 +29,12 @@ pub struct Proposal<T>
 where
     T: Config,
 {
+    /// The time at which the proposal will be enacted.
     pub when: BlockNumberFor<T>,
+
+    /// The proposed call.
     pub call: BoundedCallOf<T>,
+
+    /// The oracle that evaluates if the proposal should be enacted.
     pub oracle: OracleOf<T>,
 }

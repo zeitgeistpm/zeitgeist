@@ -76,6 +76,7 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
             >;
 
+        /// Interface for calculating collection and position IDs.
         type CombinatorialIdManager: CombinatorialIdManager<
                 Asset = AssetOf<Self>,
                 MarketId = MarketIdOf<Self>,
@@ -86,6 +87,7 @@ mod pallet {
 
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 
+        /// Interface for acquiring the payout vector by market ID.
         type Payout: PayoutApi<Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -195,6 +197,29 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Split `amount` units of the position specified by `parent_collection_id` over the market
+        /// with ID `market_id` according to the given `partition`.
+        ///
+        /// The `partition` is specified as a vector whose elements are equal-length `Vec<bool>`. A
+        /// `true` entry at the `i`th index of a partition element means that the `i`th outcome
+        /// token of the market is contained in this element of the partition.
+        ///
+        /// For each element `b` of the partition, the split mints a new outcome token which is made
+        /// up of the position to be split and the conjunction `(x|...|z)` where `x, ..., z` are the
+        /// items of `b`. The position to be split, in turn, is burned or transferred into the
+        /// pallet account, depending on whether or not it is a true combinatorial token or
+        /// collateral.
+        ///
+        /// If the `parent_collection_id` is `None`, then the position split is the collateral of the
+        /// market given by `market_id`.
+        ///
+        /// If the `parent_collection_id` is `Some(pid)`, then there are two cases: vertical and
+        /// horizontal split. If `partition` is complete (i.e. there is no index `i` so that `b[i]`
+        /// is `false` for all `b` in `partition`), the position split is the position obtained by
+        /// combining `pid` with the collateral of the market given by `market_id`. If `partition`
+        /// is not complete, the position split is the position made up of the
+        /// `parent_collection_id` and the conjunction `(x|...|z)` where `x, ..., z` are the items
+        /// covered by `partition`.
         #[pallet::call_index(0)]
         #[pallet::weight(
             T::WeightInfo::split_position_vertical_sans_parent(partition.len().saturated_into())
@@ -206,7 +231,6 @@ mod pallet {
         #[transactional]
         pub fn split_position(
             origin: OriginFor<T>,
-            // TODO Abstract this into a separate type.
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,

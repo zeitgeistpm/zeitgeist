@@ -18,6 +18,8 @@
 use alloc::vec::Vec;
 use sp_runtime::DispatchResult;
 
+/// Trait used for setting up benchmarks of zrml-combinatorial-tokens. Must not be used in
+/// production.
 pub trait CombinatorialTokensBenchmarkHelper {
     type Balance;
     type MarketId;
