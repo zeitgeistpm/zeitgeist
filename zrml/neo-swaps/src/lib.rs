@@ -127,8 +127,10 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// Type of combinatorial ID used by the combinatorial tokens APIs.
         type CombinatorialId: Clone;
 
+        /// API used for calculating splits of tokens when creating combinatorial pools.
         type CombinatorialTokens: CombinatorialTokensApi<
                 AccountId = Self::AccountId,
                 Balance = BalanceOf<Self>,
@@ -136,6 +138,7 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
             >;
 
+        /// API for fast creation of tokens when buying or selling combinatorial tokens.
         type CombinatorialTokensUnsafe: CombinatorialTokensUnsafeApi<
                 AccountId = Self::AccountId,
                 Balance = BalanceOf<Self>,
@@ -681,6 +684,34 @@ mod pallet {
             Ok(Some(T::WeightInfo::deploy_pool(spot_prices_len)).into())
         }
 
+        /// Make a combinatorial bet on the specified pool.
+        ///
+        /// The `amount_in` is paid in collateral. The transaction fails if the amount of outcome
+        /// tokens received is smaller than `min_amount_out`. The user must correctly specify the
+        /// number of outcomes for benchmarking reasons.
+        ///
+        /// The user's collateral is used to mint complete sets of the combinatorial tokens in the
+        /// pool. The parameters `buy` and `sell` are used to specify which of these tokens the user
+        /// wants and doesn't want: The assets in `sell` are sold to buy more of `buy` from the
+        /// pool. The assets not contained in either of these will remain in the users wallet
+        /// unchanged.
+        ///
+        /// The function will error if certain numerical constraints are violated.
+        ///
+        /// # Parameters
+        ///
+        /// - `origin`: The origin account making the purchase.
+        /// - `pool_id`: Identifier for the pool used to trade on.
+        /// - `asset_count`: Number of assets in the pool.
+        /// - `buy`: The assets that the user want to have more of. Must not be empty.
+        /// - `sell`: The assets that the user doesn't want any of. Must not be empty.
+        /// - `amount_in`: Amount of collateral paid by the user.
+        /// - `min_amount_out`: Minimum number of outcome tokens the user expects to receive.
+        ///
+        /// # Complexity
+        ///
+        /// Depends on the implementation of `CombinatorialTokensUnsafeApi` and `ExternalFees`; when
+        /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(6)]
         #[pallet::weight(T::WeightInfo::combo_buy(asset_count.log_ceil().into()))]
@@ -705,6 +736,36 @@ mod pallet {
             Self::do_combo_buy(who, pool_id, buy, sell, amount_in, min_amount_out)
         }
 
+        /// Cancel a combinatorial bet on the specified pool.
+        ///
+        /// The `buy`, `keep` and `sell` parameters are used to specify the amounts of the bet the
+        /// user wishes to cancel. The user must hold `amount_buy` units of each asset in `buy` and
+        /// `amount_keep` of each asset in `keep` in their wallet. If `keep` is empty, then
+        /// `amount_keep` must be zero.
+        ///
+        /// The transaction fails if the amount of outcome tokens received is smaller than
+        /// `min_amount_out`. The user must correctly specify the number of outcomes for
+        /// benchmarking reasons.
+        ///
+        /// The function will error if certain numerical constraints are violated.
+        ///
+        /// # Parameters
+        ///
+        /// - `origin`: The origin account making the purchase.
+        /// - `pool_id`: Identifier for the pool used to trade on.
+        /// - `asset_count`: Number of assets in the pool.
+        /// - `buy`: The `buy` of the bet that the user wishes to cancel. Must not be empty.
+        /// - `keep`: The tokens not contained in `buy` or `sell` of the bet that the user wishes to
+        ///   cancel. May be empty.
+        /// - `sell`: The `sell` of the bet that the user wishes to cancel. Must not be empty.
+        /// - `amount_buy`: Amount of tokens in `buy` the user wishes to let go.
+        /// - `amount_keep`: Amount of tokens in `keep` the user wishes to let go.
+        /// - `min_amount_out`: Minimum number of outcome tokens the user expects to receive.
+        ///
+        /// # Complexity
+        ///
+        /// Depends on the implementation of `CombinatorialTokensUnsafeApi` and `ExternalFees`; when
+        /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(7)]
         #[pallet::weight(T::WeightInfo::combo_sell(asset_count.log_ceil().into()))]
@@ -740,6 +801,46 @@ mod pallet {
             )
         }
 
+        /// Deploy a combinatorial pool for the specified markets and provide liquidity.
+        ///
+        /// The tokens are split TODO
+        ///
+        /// The pool's assets are ordered by lexicographical order, using the ordering of tokens of
+        /// each individual market provided by the `MarketCommonsApi`. For example, if three markets
+        /// with outcomes `x_1, x_2`, `y_1, y_2` and `z_1, z_2` are involved, the outcomes of the
+        /// pool are (in order):
+        ///
+        /// x_1 & y_1 & z_1
+        /// x_1 & y_1 & z_2
+        /// x_1 & y_2 & z_1
+        /// x_1 & y_2 & z_2
+        /// x_2 & y_1 & z_1
+        /// x_2 & y_1 & z_2
+        /// x_2 & y_2 & z_1
+        /// x_2 & y_2 & z_2
+        ///
+        /// The sender specifies a vector of `spot_prices` for the assets of the new pool, in the
+        /// order as described above.
+        ///
+        /// Depending on the values in the `spot_prices`, the transaction will transfer different
+        /// amounts of each outcome to the pool. The sender specifies a maximum `amount` of outcome
+        /// tokens to spend.
+        ///
+        /// Unlike in the `deploy_pool` extrinsic, the sender need not acquire the outcome tokens
+        /// themselves. Instead, all they need is `amount` units of collateral.
+        ///
+        /// Deploying the pool will cost the signer an additional fee to the tune of the
+        /// collateral's existential deposit. This fee is placed in the pool account and ensures
+        /// that swap fees can be stored in the pool account without triggering dusting or failed
+        /// transfers.
+        ///
+        /// The `force_max_work` parameter can be used to force the `CombinatorialTokensApi` to
+        /// spend the maximum amount of work, independently of the parameters that it is called
+        /// with. This is useful for benchmarking purposes and should not be used in production.
+        ///
+        /// # Complexity
+        ///
+        /// `O(n)` where `n` is the number of splits required to create the pool.
         #[pallet::call_index(8)]
         #[pallet::weight(T::WeightInfo::deploy_combinatorial_pool(asset_count.log_ceil().into()))]
         #[transactional]
@@ -1008,7 +1109,6 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
 
-            // FIXME Should this also be made part of the `PoolStorage` interface?
             Pools::<T>::try_mutate_exists(pool_id, |maybe_pool| {
                 let pool =
                     maybe_pool.as_mut().ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;

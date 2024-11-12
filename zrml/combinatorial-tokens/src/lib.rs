@@ -220,6 +220,9 @@ mod pallet {
         /// is not complete, the position split is the position made up of the
         /// `parent_collection_id` and the conjunction `(x|...|z)` where `x, ..., z` are the items
         /// covered by `partition`.
+        ///
+        /// The `force_max_work` parameter can be used to trigger the maximum amount of allowed work
+        /// for the combinatorial ID manager. Should only be used for benchmarking purposes.
         #[pallet::call_index(0)]
         #[pallet::weight(
             T::WeightInfo::split_position_vertical_sans_parent(partition.len().saturated_into())
@@ -251,6 +254,31 @@ mod pallet {
             DispatchResultWithPostInfo::Ok(post_dispatch_info)
         }
 
+        /// Merge `amount` units of the tokens obtained by splitting `parent_collection_id` using
+        /// `partition` into the position specified by `parent_collection_id` (vertical split) or
+        /// the position obtained by splitting `parent_collection_id` according to `partiton` over
+        /// the market with ID `market_id` (horizontal; see below for details).
+        ///
+        /// The `partition` is specified as a vector whose elements are equal-length `Vec<bool>`. A
+        /// `true` entry at the `i`th index of a partition element means that the `i`th outcome
+        /// token of the market is contained in this element of the partition.
+        ///
+        /// For each element `b` of the partition, the split burns the outcome tokens which are made
+        /// up of the position to be split and the conjunction `(x|...|z)` where `x, ..., z` are the
+        /// items of `b`. The position given by `parent_collection_id` is 
+        ///
+        /// If the `parent_collection_id` is `None`, then the position split is the collateral of the
+        /// market given by `market_id`.
+        ///
+        /// If the `parent_collection_id` is `Some(pid)`, then there are two cases: vertical and
+        /// horizontal merge. If `partition` is complete (i.e. there is no index `i` so that `b[i]`
+        /// is `false` for all `b` in `partition`), the the result of the merge is the position
+        /// defined by `parent_collection_id`. If `partition` is not complete, the result of the
+        /// merge is the position made up of the `parent_collection_id` and the conjunction
+        /// `(x|...|z)` where `x, ..., z` are the items covered by `partition`.
+        ///
+        /// The `force_max_work` parameter can be used to trigger the maximum amount of allowed work
+        /// for the combinatorial ID manager. Should only be used for benchmarking purposes.
         #[pallet::call_index(1)]
         #[pallet::weight(
             T::WeightInfo::merge_position_vertical_sans_parent(partition.len().saturated_into())
@@ -279,6 +307,19 @@ mod pallet {
             )
         }
 
+        /// (Partially) redeems a position if part of it belongs to a resolved market given by
+        /// `market_id`.
+        ///
+        /// The position to be redeemed is the position obtained by combining the position given by
+        /// `parent_collection_id` and `collateral` with the conjunction `(x|...|z)` where `x, ...
+        /// z` are the outcome tokens of the market `market_id` given by `partition`.
+        ///
+        /// The position to be redeemed is completely removed from the origin's wallet. According to
+        /// how much the conjunction `(x|...|z)` is valued, the user is paid in the position defined
+        /// by `parent_collection_id` and `collateral`.
+        ///
+        /// The `force_max_work` parameter can be used to trigger the maximum amount of allowed work
+        /// for the combinatorial ID manager. Should only be used for benchmarking purposes.
         #[pallet::call_index(2)]
         #[pallet::weight(
             T::WeightInfo::redeem_position_with_parent(index_set.len().saturated_into())
