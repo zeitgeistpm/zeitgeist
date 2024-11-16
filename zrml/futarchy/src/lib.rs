@@ -76,9 +76,10 @@ mod pallet {
         #[cfg(feature = "runtime-benchmarks")]
         type BenchmarkHelper: FutarchyBenchmarkHelper<Self::Oracle>;
 
+        /// The minimum allowed duration between the creation of a proposal and its evaluation.
         type MinDuration: Get<BlockNumberFor<Self>>;
 
-        // The type used to define the oracle for each proposal.
+        /// The type used to define the oracle a proposal.
         type Oracle: FutarchyOracle
             + Clone
             + Debug
@@ -152,6 +153,10 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Submits a `proposal` for evaluation in `duration` blocks.
+        ///
+        /// If, after `duration` blocks, the oracle `proposal.oracle` is evaluated positively, the
+        /// proposal is scheduled for execution at `proposal.when`.
         #[pallet::call_index(0)]
         #[transactional]
         #[pallet::weight(T::WeightInfo::submit_proposal())]

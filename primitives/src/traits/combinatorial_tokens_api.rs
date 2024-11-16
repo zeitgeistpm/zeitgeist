@@ -19,6 +19,8 @@ use crate::types::SplitPositionDispatchInfo;
 use alloc::vec::Vec;
 use sp_runtime::DispatchError;
 
+/// Trait that can be used to expose the internal functionality of zrml-combinatorial-tokens to
+/// other pallets.
 pub trait CombinatorialTokensApi {
     type AccountId;
     type Balance;

@@ -24,12 +24,18 @@
 
 use alloc::vec::Vec;
 
+/// Handles calculations of combinatorial IDs.
 pub trait CombinatorialIdManager {
     type Asset;
     type MarketId;
     type CombinatorialId;
 
-    // TODO Replace `Vec<bool>` with a more effective bit mask type.
+    /// Calculate the collection ID obtained when splitting `parent_collection_id` over the market
+    /// given by `market_id` and the `index_set`.
+    ///
+    /// If `force_max_work` parameter is set, the calculation will use up the maximum amount of work
+    /// necessary, independent of the other parameters. Should only be used for benchmarking
+    /// purposes.
     fn get_collection_id(
         parent_collection_id: Option<Self::CombinatorialId>,
         market_id: Self::MarketId,
@@ -37,6 +43,8 @@ pub trait CombinatorialIdManager {
         force_max_work: bool,
     ) -> Option<Self::CombinatorialId>;
 
+    /// Calculate the position ID belonging to the `collection_id` combined with `collateral` as
+    /// collateral.
     fn get_position_id(
         collateral: Self::Asset,
         collection_id: Self::CombinatorialId,

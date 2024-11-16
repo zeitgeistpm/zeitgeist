@@ -26,6 +26,9 @@ pub trait CombinatorialTokensUnsafeApi {
     type Balance;
     type MarketId;
 
+    /// Transfers `amount` units of collateral from the user to the pallet's reserve and mints
+    /// `amount` units of each asset in `assets`. Can break the reserve or result in loss of funds
+    /// if the value of the elements in `assets` don't add up to exactly 1.
     fn split_position_unsafe(
         who: Self::AccountId,
         collateral: Asset<Self::MarketId>,
@@ -33,6 +36,9 @@ pub trait CombinatorialTokensUnsafeApi {
         amount: Self::Balance,
     ) -> DispatchResult;
 
+    /// Transfers `amount` units of collateral from the pallet's reserve to the user and burns
+    /// `amount` units of each asset in `assets`. Can break the reserve or result in loss of funds
+    /// if the value of the elements in `assets` don't add up to exactly 1.
     fn merge_position_unsafe(
         who: Self::AccountId,
         collateral: Asset<Self::MarketId>,
