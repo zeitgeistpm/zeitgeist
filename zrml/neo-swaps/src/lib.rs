@@ -803,7 +803,9 @@ mod pallet {
 
         /// Deploy a combinatorial pool for the specified markets and provide liquidity.
         ///
-        /// The tokens are split TODO
+        /// The tokens of each of the markets specified by `market_ids` are split into atoms. For
+        /// each combination of outcome tokens `x, ..., z` from the markets, there is one
+        /// combinatorial token `x & ... & z` in the pool.
         ///
         /// The pool's assets are ordered by lexicographical order, using the ordering of tokens of
         /// each individual market provided by the `MarketCommonsApi`. For example, if three markets
