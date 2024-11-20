@@ -18,6 +18,6 @@
 #![cfg(feature = "mock")]
 
 pub mod ext_builder;
-pub(crate) mod runtime;
-pub(crate) mod types;
+pub mod runtime;
+pub mod types;
 pub mod utility;

@@ -15246,6 +15246,7 @@ dependencies = [
 name = "zrml-futarchy"
 version = "0.5.5"
 dependencies = [
+ "arbitrary",
  "env_logger 0.10.2",
  "frame-benchmarking",
  "frame-support",
@@ -15253,9 +15254,25 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
+ "sp-core",
  "sp-io",
  "sp-runtime",
  "test-case",
+ "zeitgeist-primitives",
+ "zrml-futarchy",
+]
+
+[[package]]
+name = "zrml-futarchy-fuzz"
+version = "0.5.5"
+dependencies = [
+ "arbitrary",
+ "frame-support",
+ "frame-system",
+ "libfuzzer-sys",
+ "orml-traits",
+ "rand 0.8.5",
+ "sp-runtime",
  "zeitgeist-primitives",
  "zrml-futarchy",
 ]

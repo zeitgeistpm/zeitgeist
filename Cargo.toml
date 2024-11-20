@@ -41,6 +41,7 @@ members = [
     "zrml/combinatorial-tokens",
     "zrml/court",
     "zrml/futarchy",
+    "zrml/futarchy/fuzz",
     "zrml/hybrid-router",
     "zrml/global-disputes",
     "zrml/market-commons",

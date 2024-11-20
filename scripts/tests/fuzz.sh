@@ -57,3 +57,5 @@ cargo fuzz run --release --fuzz-dir zrml/swaps/fuzz pool_exit -- -runs=$(($(($RU
 
 # --- Orderbook-v1 Pallet fuzz tests ---
 cargo fuzz run --release --fuzz-dir zrml/orderbook/fuzz orderbook_v1_full_workflow -- -runs=$RUNS
+
+cargo fuzz run --release --fuzz-dir zrml/futarchy/fuzz futarchy_full_workflow -- -runs=$RUNS
