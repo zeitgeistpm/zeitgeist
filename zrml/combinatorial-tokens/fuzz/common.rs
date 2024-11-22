@@ -1,9 +1,8 @@
-use frame_system::pallet_prelude::BlockNumberFor;
 use zeitgeist_primitives::{
     traits::MarketOf,
-    types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
+    types::{Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
-use zrml_combinatorial_tokens::{AssetOf, BalanceOf, Config, MarketIdOf};
+use zrml_combinatorial_tokens::{AssetOf, Config, MarketIdOf};
 
 pub(crate) fn market<T>(
     market_id: MarketIdOf<T>,

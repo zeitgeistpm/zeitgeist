@@ -4,6 +4,18 @@ name = "split_position"
 path = "split_position.rs"
 test = false
 
+[[bin]]
+doc = false
+name = "merge_position"
+path = "merge_position.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "redeem_position"
+path = "redeem_position.rs"
+test = false
+
 [dependencies]
 arbitrary = { workspace = true, features = ["derive"] }
 frame-support = { workspace = true, features = ["default"] }

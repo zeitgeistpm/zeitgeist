@@ -525,7 +525,7 @@ mod pallet {
             Ok(Some(weight).into())
         }
 
-        pub(crate) fn account_id() -> T::AccountId {
+        pub fn account_id() -> T::AccountId {
             T::PalletId::get().into_account_truncating()
         }
 
@@ -623,7 +623,7 @@ mod pallet {
             Ok(asset)
         }
 
-        pub(crate) fn position_from_parent_collection(
+        pub fn position_from_parent_collection(
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
