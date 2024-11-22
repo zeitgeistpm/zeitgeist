@@ -65,7 +65,7 @@ fuzz_target!(|params: MergePositionFuzzParams| {
         let asset_count = if let Some(member) = params.partition.first() {
             member.len().max(2) as u16
         } else {
-            return;
+            2u16 // In this case the index set doesn't fit the market.
         };
         let market = common::market::<Runtime>(
             params.market_id,
