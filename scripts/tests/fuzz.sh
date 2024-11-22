@@ -61,3 +61,4 @@ cargo fuzz run --release --fuzz-dir zrml/orderbook/fuzz orderbook_v1_full_workfl
 cargo fuzz run --release --fuzz-dir zrml/futarchy/fuzz submit_proposal -- -runs=$RUNS
 
 cargo fuzz run --release --fuzz-dir zrml/combinatorial-tokens/fuzz split_position -- -runs=$RUNS
+cargo fuzz run --release --fuzz-dir zrml/combinatorial-tokens/fuzz merge_position -- -runs=$RUNS

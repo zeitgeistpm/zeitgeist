@@ -32,9 +32,15 @@ impl<'a> Arbitrary<'a> for MergePositionFuzzParams {
         let account_id = u128::arbitrary(u)?;
         let parent_collection_id = Arbitrary::arbitrary(u)?;
         let market_id = 0u8.into();
-        let partition = Arbitrary::arbitrary(u)?;
         let amount = Arbitrary::arbitrary(u)?;
         let force_max_work = Arbitrary::arbitrary(u)?;
+
+        // Note: This might result in members of unequal length, but that's OK.
+        let min_len = 0;
+        let max_len = 10;
+        let len = u.int_in_range(0..=max_len)?;
+        let partition =
+            (min_len..len).map(|_| Arbitrary::arbitrary(u)).collect::<ArbitraryResult<Vec<_>>>()?;
 
         let params = MergePositionFuzzParams {
             account_id,
@@ -56,12 +62,21 @@ fuzz_target!(|params: MergePositionFuzzParams| {
         // We create a market and equip the user with the tokens they require to make the
         // `merge_position` call meaningful, and deposit collateral in the pallet account.
         let collateral = Asset::Ztg;
-        let market =
-            common::market::<Runtime>(params.market_id, collateral, MarketType::Categorical(7));
+        let asset_count = if let Some(member) = params.partition.first() {
+            member.len().max(2) as u16
+        } else {
+            return;
+        };
+        let market = common::market::<Runtime>(
+            params.market_id,
+            collateral,
+            MarketType::Categorical(asset_count),
+        );
         <<Runtime as Config>::MarketCommons as MarketCommonsPalletApi>::push_market(market)
             .unwrap();
 
-        let positions = params.partition
+        let positions = params
+            .partition
             .iter()
             .cloned()
             .map(|index_set| {
@@ -88,7 +103,8 @@ fuzz_target!(|params: MergePositionFuzzParams| {
             collateral,
             &CombinatorialTokens::account_id(),
             params.amount,
-        ).unwrap();
+        )
+        .unwrap();
 
         let _ = CombinatorialTokens::merge_position(
             RuntimeOrigin::signed(params.account_id),
