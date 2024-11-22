@@ -59,3 +59,5 @@ cargo fuzz run --release --fuzz-dir zrml/swaps/fuzz pool_exit -- -runs=$(($(($RU
 cargo fuzz run --release --fuzz-dir zrml/orderbook/fuzz orderbook_v1_full_workflow -- -runs=$RUNS
 
 cargo fuzz run --release --fuzz-dir zrml/futarchy/fuzz submit_proposal -- -runs=$RUNS
+
+cargo fuzz run --release --fuzz-dir zrml/combinatorial-tokens/fuzz split_position -- -runs=$RUNS
