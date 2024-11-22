@@ -15216,6 +15216,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "zrml-combinatorial-tokens-fuzz"
+version = "0.5.5"
+dependencies = [
+ "arbitrary",
+ "frame-support",
+ "frame-system",
+ "libfuzzer-sys",
+ "orml-traits",
+ "rand 0.8.5",
+ "sp-runtime",
+ "zeitgeist-primitives",
+ "zrml-combinatorial-tokens",
+]
+
+[[package]]
 name = "zrml-court"
 version = "0.5.5"
 dependencies = [

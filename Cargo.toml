@@ -39,6 +39,7 @@ members = [
     "runtime/zeitgeist",
     "zrml/authorized",
     "zrml/combinatorial-tokens",
+    "zrml/combinatorial-tokens/fuzz",
     "zrml/court",
     "zrml/futarchy",
     "zrml/futarchy/fuzz",
