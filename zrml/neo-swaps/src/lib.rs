@@ -29,7 +29,7 @@ mod liquidity_tree;
 mod macros;
 mod math;
 pub mod migration;
-mod mock;
+pub mod mock;
 mod pool_storage;
 mod tests;
 pub mod traits;
@@ -99,31 +99,31 @@ mod pallet {
     pub(crate) const EXIT_FEE: u128 = CENT / 10;
     /// The minimum allowed swap fee. Hardcoded to avoid misconfigurations which may lead to
     /// exploits.
-    pub(crate) const MIN_SWAP_FEE: u128 = BASE / 1_000; // 0.1%.
+    pub const MIN_SWAP_FEE: u128 = BASE / 1_000; // 0.1%.
     /// The maximum allowed spot price when creating a pool.
-    pub(crate) const MAX_SPOT_PRICE: u128 = BASE - CENT / 2;
+    pub const MAX_SPOT_PRICE: u128 = BASE - CENT / 2;
     /// The minimum allowed spot price when creating a pool.
-    pub(crate) const MIN_SPOT_PRICE: u128 = CENT / 2;
+    pub const MIN_SPOT_PRICE: u128 = CENT / 2;
     /// The maximum value the spot price is allowed to take in a combinatorial market.
-    pub(crate) const COMBO_MAX_SPOT_PRICE: u128 = BASE - CENT / 10;
+    pub const COMBO_MAX_SPOT_PRICE: u128 = BASE - CENT / 10;
     /// The minimum value the spot price is allowed to take in a combinatorial market.
-    pub(crate) const COMBO_MIN_SPOT_PRICE: u128 = CENT / 10;
+    pub const COMBO_MIN_SPOT_PRICE: u128 = CENT / 10;
     /// The minimum vallowed value of a pool's liquidity parameter.
     pub(crate) const MIN_LIQUIDITY: u128 = BASE;
     /// The minimum percentage each new LP position must increase the liquidity by, represented as
     /// fractional (0.0139098411 represents 1.39098411%).
     pub(crate) const MIN_RELATIVE_LP_POSITION_VALUE: u128 = 139098411; // 1.39098411%
 
-    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
-    pub(crate) type BalanceOf<T> =
+    pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub type AssetOf<T> = Asset<MarketIdOf<T>>;
+    pub type BalanceOf<T> =
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-    pub(crate) type AssetIndexType = u16;
-    pub(crate) type MarketIdOf<T> =
+    pub type AssetIndexType = u16;
+    pub type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
-    pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>, MaxAssets>;
-    pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
+    pub type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
+    pub type PoolOf<T> = Pool<T, LiquidityTreeOf<T>, MaxAssets>;
+    pub type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {

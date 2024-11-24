@@ -15415,6 +15415,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "zrml-neo-swaps-fuzz"
+version = "0.5.5"
+dependencies = [
+ "arbitrary",
+ "frame-support",
+ "frame-system",
+ "libfuzzer-sys",
+ "orml-traits",
+ "rand 0.8.5",
+ "sp-runtime",
+ "zeitgeist-primitives",
+ "zrml-neo-swaps",
+]
+
+[[package]]
 name = "zrml-orderbook"
 version = "0.5.5"
 dependencies = [
