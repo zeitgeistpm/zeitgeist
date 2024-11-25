@@ -30,7 +30,7 @@ extern crate alloc;
 mod benchmarking;
 pub mod mock;
 mod tests;
-mod traits;
+pub mod traits;
 pub mod types;
 pub mod weights;
 
@@ -100,15 +100,14 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
-    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
-    pub(crate) type BalanceOf<T> =
+    pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub type AssetOf<T> = Asset<MarketIdOf<T>>;
+    pub type BalanceOf<T> =
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-    pub(crate) type CombinatorialIdOf<T> =
+    pub type CombinatorialIdOf<T> =
         <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::CombinatorialId;
-    pub(crate) type MarketIdOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type SplitPositionDispatchInfoOf<T> =
+    pub type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub type SplitPositionDispatchInfoOf<T> =
         SplitPositionDispatchInfo<CombinatorialIdOf<T>, MarketIdOf<T>>;
 
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -526,7 +525,7 @@ mod pallet {
             Ok(Some(weight).into())
         }
 
-        pub(crate) fn account_id() -> T::AccountId {
+        pub fn account_id() -> T::AccountId {
             T::PalletId::get().into_account_truncating()
         }
 
@@ -624,7 +623,7 @@ mod pallet {
             Ok(asset)
         }
 
-        pub(crate) fn position_from_parent_collection(
+        pub fn position_from_parent_collection(
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,

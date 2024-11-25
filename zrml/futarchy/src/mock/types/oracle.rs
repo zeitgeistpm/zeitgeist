@@ -21,6 +21,9 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use zeitgeist_primitives::traits::FutarchyOracle;
 
+#[cfg(feature = "fuzzing")]
+use arbitrary::{Arbitrary, Unstructured, Result as ArbitraryResult};
+
 #[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
 pub struct MockOracle {
     weight: Weight,
@@ -42,5 +45,18 @@ impl MockOracle {
 impl FutarchyOracle for MockOracle {
     fn evaluate(&self) -> (Weight, bool) {
         (self.weight, self.value)
+    }
+}
+
+#[cfg(feature = "fuzzing")]
+impl<'a> Arbitrary<'a> for MockOracle {
+    fn arbitrary(u: &mut Unstructured<'a>) -> ArbitraryResult<Self> {
+        let ref_time = u64::arbitrary(u)?;
+        let proof_size = u64::arbitrary(u)?;
+        let weight = Weight::from_parts(ref_time, proof_size);
+
+        let value = bool::arbitrary(u)?;
+
+        Ok(MockOracle::new(weight, value))
     }
 }
