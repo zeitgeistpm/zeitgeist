@@ -10,6 +10,12 @@ name = "combo_buy"
 path = "combo_buy.rs"
 test = false
 
+[[bin]]
+doc = false
+name = "combo_sell"
+path = "combo_sell.rs"
+test = false
+
 [dependencies]
 arbitrary = { workspace = true, features = ["derive"] }
 frame-support = { workspace = true, features = ["default"] }
