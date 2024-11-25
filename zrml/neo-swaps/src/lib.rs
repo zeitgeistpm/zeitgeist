@@ -119,8 +119,7 @@ mod pallet {
     pub type BalanceOf<T> =
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     pub type AssetIndexType = u16;
-    pub type MarketIdOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
     pub type PoolOf<T> = Pool<T, LiquidityTreeOf<T>, MaxAssets>;
     pub type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
@@ -1526,6 +1525,13 @@ mod pallet {
         #[inline]
         pub(crate) fn pool_account_id(pool_id: &T::PoolId) -> T::AccountId {
             T::PalletId::get().into_sub_account_truncating((*pool_id).saturated_into::<u128>())
+        }
+
+        /// Returns the assets contained in the pool given by `pool_id`.
+        pub fn assets(pool_id: T::PoolId) -> Result<Vec<AssetOf<T>>, DispatchError> {
+            let pool = <Self as PoolStorage>::get(pool_id)?;
+
+            Ok(pool.assets.into_inner())
         }
 
         /// Distribute swap fees and external fees and returns the remaining amount.
