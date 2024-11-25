@@ -65,3 +65,4 @@ cargo fuzz run --release --fuzz-dir zrml/combinatorial-tokens/fuzz merge_positio
 cargo fuzz run --release --fuzz-dir zrml/combinatorial-tokens/fuzz redeem_position -- -runs=$RUNS
 
 cargo fuzz run --release --fuzz-dir zrml/neo-swaps/fuzz deploy_combinatorial_pool -- -runs=$RUNS
+cargo fuzz run --release --fuzz-dir zrml/neo-swaps/fuzz combo_buy -- -runs=$RUNS

@@ -13,7 +13,7 @@ use zeitgeist_primitives::{
 };
 use zrml_neo_swaps::{
     mock::{ExtBuilder, NeoSwaps, Runtime, RuntimeOrigin},
-    AccountIdOf, BalanceOf, Config, MarketIdOf, COMBO_MAX_SPOT_PRICE, COMBO_MIN_SPOT_PRICE,
+    AccountIdOf, BalanceOf, Config, MarketIdOf, MAX_SPOT_PRICE, MIN_SPOT_PRICE,
     MIN_SWAP_FEE,
 };
 
@@ -53,11 +53,11 @@ impl<'a> Arbitrary<'a> for ComboBuyFuzzParams {
         // Create arbitrary spot price vector by creating a vector of `MinSpotPrice` and then adding
         // value to them in increments until a total spot price of one is reached. It's possible
         // that this results in invalid spot prices, for example if `total_assets` is too large.
-        let mut spot_prices = vec![COMBO_MIN_SPOT_PRICE; asset_count_usize];
-        let increment = COMBO_MIN_SPOT_PRICE;
+        let mut spot_prices = vec![MIN_SPOT_PRICE; asset_count_usize];
+        let increment = MIN_SPOT_PRICE;
         while spot_prices.iter().sum::<u128>() < _1 {
             let index = u.int_in_range(0..=asset_count_usize - 1)?;
-            if spot_prices[index] < COMBO_MAX_SPOT_PRICE {
+            if spot_prices[index] < MAX_SPOT_PRICE {
                 spot_prices[index] += increment;
             }
         }
@@ -71,11 +71,10 @@ impl<'a> Arbitrary<'a> for ComboBuyFuzzParams {
             indices.swap(i, j);
         }
         let buy_len = u.int_in_range(1..=asset_count_usize - 1)?;
-        let sell_len = asset_count_usize - buy_len;
         let buy = indices[0..buy_len].to_vec();
         let sell = indices[buy_len..asset_count_usize].to_vec();
 
-        let amount_in = Arbitrary::arbitrary(u)?;
+        let amount_in = u.int_in_range(_1..=_100)?;
         let min_amount_out = Arbitrary::arbitrary(u)?;
 
         let params = ComboBuyFuzzParams {
