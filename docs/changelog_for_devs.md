@@ -12,6 +12,16 @@ As of 0.3.9, the changelog's format is based on
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
+## v0.5.6
+
+- Increase existential deposit of all non-foreign assets to `BASE`.
+
+## v0.5.5
+
+- Fix Rikiddo migration (#1363)
+- Fix incorrect documentation of XcmMetadata::fee_factor (#1360)
+- Remove old migrations and clear pallet storage (#1352)
+
 ## v0.5.4
 
 - ⚠️  Remove zrml-liquidity-mining from code base.

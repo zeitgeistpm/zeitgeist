@@ -69,7 +69,7 @@ parameter_types! {
     pub const CorrectionPeriod: BlockNumber = BLOCKS_PER_DAY;
 
     // Balance
-    pub const ExistentialDeposit: u128 = 5 * MILLI;
+    pub const ExistentialDeposit: u128 = BASE;
     pub const MaxHolds: u32 = 1;
     pub const MaxFreezes: u32 = 1;
     pub const MaxLocks: u32 = 50;
@@ -309,7 +309,7 @@ parameter_types! {
     pub const OrderbookPalletId: PalletId = ORDERBOOK_PALLET_ID;
 
     // Parimutuel parameters
-    pub const MinBetSize: Balance = 100 * ExistentialDeposit::get();
+    pub const MinBetSize: Balance = 5 * BASE;
     pub const ParimutuelPalletId: PalletId = PARIMUTUEL_PALLET_ID;
 
     // System
