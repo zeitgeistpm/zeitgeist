@@ -46,7 +46,7 @@ fn redeem_position_fails_on_market_not_found() {
 
 #[test_case(vec![B0, B1, B0, B1]; "incorrect_len")]
 #[test_case(vec![B0, B0, B0]; "all_zero")]
-#[test_case(vec![B0, B0, B0]; "all_one")]
+#[test_case(vec![B1, B1, B1]; "all_one")]
 fn redeem_position_fails_on_incorrect_index_set(index_set: Vec<bool>) {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
