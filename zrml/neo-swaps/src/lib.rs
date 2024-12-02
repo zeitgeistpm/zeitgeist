@@ -1008,10 +1008,7 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
 
-            // FIXME Should this also be made part of the `PoolStorage` interface?
-            Pools::<T>::try_mutate_exists(pool_id, |maybe_pool| {
-                let pool =
-                    maybe_pool.as_mut().ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
+            <Self as PoolStorage>::try_mutate_exists(&pool_id, |pool| {
                 let ratio = {
                     let mut ratio = pool_shares_amount
                         .bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
@@ -1047,13 +1044,14 @@ mod pallet {
                     for asset in pool.assets().iter() {
                         withdraw_remaining(asset)?;
                     }
-                    *maybe_pool = None; // Delete the storage map entry.
                     Self::deposit_event(Event::<T>::PoolDestroyed {
                         who: who.clone(),
                         pool_id,
                         amounts_out,
                     });
-                    // No need to clear `MarketIdToPoolId`.
+
+                    // Delete the pool. No need to clear `MarketIdToPoolId`.
+                    Ok(((), true))
                 } else {
                     let old_liquidity_parameter = pool.liquidity_parameter;
                     let new_liquidity_parameter = old_liquidity_parameter
@@ -1083,8 +1081,9 @@ mod pallet {
                         amounts_out,
                         new_liquidity_parameter,
                     });
+
+                    Ok(((), false))
                 }
-                Ok(())
             })
         }
 

@@ -47,10 +47,26 @@ where
 
     fn try_mutate_pool<R, F>(pool_id: &Self::PoolId, mutator: F) -> Result<R, DispatchError>
     where
-        F: FnMut(&mut PoolOf<T>) -> Result<R, DispatchError>,
+        F: FnMut(&mut Self::Pool) -> Result<R, DispatchError>,
     {
         Pools::<T>::try_mutate(pool_id, |maybe_pool| {
             maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound.into()).and_then(mutator)
+        })
+    }
+
+    fn try_mutate_exists<R, F>(pool_id: &Self::PoolId, mutator: F) -> Result<R, DispatchError>
+    where
+        F: FnMut(&mut Self::Pool) -> Result<(R, bool), DispatchError>,
+    {
+        Pools::<T>::try_mutate_exists(pool_id, |maybe_pool| {
+            let (result, delete) =
+                maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound.into()).and_then(mutator)?;
+
+            if delete {
+                *maybe_pool = None;
+            }
+
+            Ok(result)
         })
     }
 }

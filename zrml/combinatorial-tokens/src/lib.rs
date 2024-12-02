@@ -301,7 +301,7 @@ mod pallet {
                 TransmutationType::VerticalWithParent => {
                     // Split combinatorial token into higher level position.
                     // This will fail if the market has a different collateral than the previous
-                    // markets. FIXME A cleaner error message would be nice though...
+                    // markets.
                     T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                     T::MultiCurrency::withdraw(position, &who, amount)?;
 
