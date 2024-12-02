@@ -15,8 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use sp_runtime::SaturatedConversion;
-use sp_runtime::traits::{One, Zero};
+use sp_runtime::{
+    traits::{One, Zero},
+    SaturatedConversion,
+};
 
 pub(crate) trait LogCeil {
     /// Calculates the ceil of the log with base 2 of `self`.
