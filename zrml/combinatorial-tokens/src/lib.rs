@@ -206,7 +206,6 @@ mod pallet {
         #[transactional]
         pub fn split_position(
             origin: OriginFor<T>,
-            // TODO Abstract this into a separate type.
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
