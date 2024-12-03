@@ -29,7 +29,6 @@ pub trait CombinatorialIdManager {
     type MarketId;
     type CombinatorialId;
 
-    // TODO Replace `Vec<bool>` with a more effective bit mask type.
     fn get_collection_id(
         parent_collection_id: Option<Self::CombinatorialId>,
         market_id: Self::MarketId,
