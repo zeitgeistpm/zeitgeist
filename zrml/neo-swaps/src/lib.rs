@@ -17,8 +17,8 @@
 
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::too_many_arguments)] // TODO Try to remove this later!
-#![allow(clippy::type_complexity)] // TODO Try to remove this later!
+#![allow(clippy::too_many_arguments)] 
+#![allow(clippy::type_complexity)]
 
 extern crate alloc;
 
