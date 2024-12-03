@@ -456,6 +456,7 @@ parameter_type_with_key! {
         match currency_id {
             Asset::CategoricalOutcome(_,_) => ExistentialDeposit::get(),
             Asset::CombinatorialToken(_) => ExistentialDeposit::get(),
+            Asset::CombinatorialOutcomeLegacy => ExistentialDeposit::get(),
             Asset::PoolShare(_)  => ExistentialDeposit::get(),
             Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]
