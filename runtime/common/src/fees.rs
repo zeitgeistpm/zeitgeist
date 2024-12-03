@@ -318,7 +318,7 @@ macro_rules! fee_tests {
         use pallet_asset_tx_payment::OnChargeAssetTransaction;
         use sp_core::H256;
         use sp_runtime::BuildStorage;
-        use zeitgeist_primitives::constants::BASE;
+        use zeitgeist_primitives::constants::{BASE, MILLI};
 
         fn run_with_system_weight<F>(w: Weight, mut assertions: F)
         where
@@ -603,7 +603,7 @@ macro_rules! fee_tests {
                             decimals: 10,
                             name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
                             symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
-                            existential_deposit: 5 * MILLIS,
+                            existential_deposit: 5 * MILLI,
                             location: Some(xcm::VersionedMultiLocation::V3(
                                 xcm::latest::MultiLocation::parent(),
                             )),

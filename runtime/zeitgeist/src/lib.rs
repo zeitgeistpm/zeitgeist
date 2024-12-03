@@ -94,8 +94,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     state_version: 1,
 };
 
-pub type ContractsCallfilter = Nothing;
-
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
@@ -109,10 +107,6 @@ impl Contains<RuntimeCall> for IsCallable {
         use orml_currencies::Call::update_balance;
         use pallet_balances::Call::{force_set_balance, force_transfer};
         use pallet_collective::Call::set_members;
-        use pallet_contracts::Call::{
-            call, call_old_weight, instantiate, instantiate_old_weight, remove_code,
-            set_code as set_code_contracts,
-        };
         use pallet_vesting::Call::force_vested_transfer;
         use zrml_prediction_markets::Call::{
             admin_move_market_to_closed, admin_move_market_to_resolved,
@@ -139,16 +133,6 @@ impl Contains<RuntimeCall> for IsCallable {
                     _ => true,
                 }
             }
-            // Permissioned contracts: Only deployable via utility.dispatch_as(...)
-            RuntimeCall::Contracts(inner_call) => match inner_call {
-                call { .. } => true,
-                call_old_weight { .. } => true,
-                instantiate { .. } => true,
-                instantiate_old_weight { .. } => true,
-                remove_code { .. } => true,
-                set_code_contracts { .. } => true,
-                _ => false,
-            },
             // Membership is managed by the respective Membership instance
             RuntimeCall::Council(set_members { .. }) => false,
             #[cfg(feature = "parachain")]

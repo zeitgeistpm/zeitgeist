@@ -90,16 +90,7 @@ parameter_types! {
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Contracts
-    pub const ContractsCodeHashLockupDepositPercent: Perbill = Perbill::from_percent(10);
-    pub const ContractsDefaultDepositLimit: Balance = deposit(16, 16 * 1024 * 1024);
-    pub const ContractsDepositPerByte: Balance = deposit(0,1);
-    pub const ContractsDepositPerItem: Balance = deposit(1,0);
-    pub const ContractsMaxCodeLen: u32 = 123 * 1024;
-    pub const ContractsMaxDebugBufferLen: u32 = 2 * 1024 * 1024;
     pub const ContractsMaxDelegateDependencies: u32 = 32;
-    pub const ContractsMaxStorageKeyLen: u32 = 128;
-    pub const ContractsUnsafeUnstableInterface: bool = true;
-    pub ContractsSchedule: pallet_contracts::Schedule<Runtime> = Default::default();
 
     // Court
     /// (Slashable) Bond that is provided for overriding the last appeal.
