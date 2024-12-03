@@ -69,7 +69,7 @@ parameter_types! {
     pub const CorrectionPeriod: BlockNumber = BLOCKS_PER_DAY;
 
     // Balance
-    pub const ExistentialDeposit: u128 = BASE;
+    pub const ExistentialDeposit: u128 = BASE / 2;
     pub const MaxHolds: u32 = 1;
     pub const MaxFreezes: u32 = 1;
     pub const MaxLocks: u32 = 50;
