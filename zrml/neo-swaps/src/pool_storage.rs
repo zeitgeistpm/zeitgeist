@@ -17,7 +17,7 @@
 
 use crate::{traits::PoolStorage, Config, Error, Pallet, PoolCount, PoolOf, Pools};
 use sp_runtime::DispatchError;
-use zeitgeist_primitives::math::checked_ops_res::CheckedAddRes;
+use zeitgeist_primitives::math::checked_ops_res::CheckedIncRes;
 
 impl<T> PoolStorage for Pallet<T>
 where
@@ -35,7 +35,7 @@ where
         let pool_id = Self::next_pool_id();
         Pools::<T>::insert(pool_id, pool);
 
-        let pool_count = pool_id.checked_add_res(&1u8.into())?; // TODO Add CheckedInc.
+        let pool_count = pool_id.checked_inc_res()?;
         PoolCount::<T>::set(pool_count);
 
         Ok(pool_id)
