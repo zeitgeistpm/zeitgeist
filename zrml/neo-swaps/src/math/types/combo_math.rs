@@ -272,7 +272,9 @@ mod detail {
     ) -> Option<FixedType> {
         // Ensure that either `keep` is empty and `amount_keep` is zero, or `keep` is non-empty and
         // `amount_keep` is non-zero.
-        if keep.is_empty() && !amount_keep.is_zero() || !keep.is_empty() && amount_keep.is_zero() {
+        if (keep.is_empty() && !amount_keep.is_zero())
+            || (!keep.is_empty() && amount_keep.is_zero())
+        {
             return None;
         }
 
