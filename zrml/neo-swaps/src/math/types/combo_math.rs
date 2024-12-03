@@ -16,23 +16,12 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    math::{
-        traits::ComboMathOps,
-        transcendental::{exp, ln},
-    },
+    math::{traits::ComboMathOps, transcendental::ln, types::common::FixedType},
     BalanceOf, Config, Error,
 };
 use alloc::vec::Vec;
 use core::marker::PhantomData;
-use fixed::FixedU128;
 use sp_runtime::{traits::Zero, DispatchError, SaturatedConversion};
-use typenum::U80;
-
-type Fractional = U80;
-type FixedType = FixedU128<Fractional>;
-
-/// The point at which `exp` values become too large, 32.44892769177272.
-const EXP_NUMERICAL_THRESHOLD: FixedType = FixedType::from_bits(0x20_72EC_ECDA_6EBE_EACC_40C7);
 
 pub(crate) struct ComboMath<T>(PhantomData<T>);
 
@@ -111,32 +100,12 @@ where
 
 mod detail {
     use super::*;
-    use zeitgeist_primitives::{
-        constants::DECIMALS,
-        math::fixed::{IntoFixedDecimal, IntoFixedFromDecimal},
-    };
-
-    fn to_fixed(value: u128) -> Option<FixedType> {
-        value.to_fixed_from_fixed_decimal(DECIMALS).ok()
-    }
+    use crate::math::types::common::{from_fixed, protected_exp, to_fixed};
 
     /// Converts `Vec<u128>` of fixed decimal numbers to a `Vec<FixedType>` of fixed point numbers;
     /// returns `None` if any of them fail.
     fn vec_to_fixed(vec: Vec<u128>) -> Option<Vec<FixedType>> {
         vec.into_iter().map(to_fixed).collect()
-    }
-
-    fn from_fixed<B>(value: FixedType) -> Option<B>
-    where
-        B: Into<u128> + From<u128>,
-    {
-        value.to_fixed_decimal(DECIMALS).ok()
-    }
-
-    /// Calculates `exp(value)` but returns `None` if `value` lies outside of the numerical
-    /// boundaries.
-    fn protected_exp(value: FixedType, neg: bool) -> Option<FixedType> {
-        if value < EXP_NUMERICAL_THRESHOLD { exp(value, neg).ok() } else { None }
     }
 
     /// Returns `\sum_{r \in R} e^{-r/b}`, where `R` denotes `reserves` and `b` denotes `liquidity`.

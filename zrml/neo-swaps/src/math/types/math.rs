@@ -18,24 +18,17 @@
 use crate::{
     math::{
         traits::MathOps,
-        transcendental::{exp, ln},
+        transcendental::ln,
+        types::common::{FixedType, EXP_NUMERICAL_THRESHOLD},
     },
     BalanceOf, Config, Error,
 };
 use alloc::vec::Vec;
 use core::marker::PhantomData;
-use fixed::FixedU128;
 use sp_runtime::{
     traits::{One, Zero},
     DispatchError, SaturatedConversion,
 };
-use typenum::U80;
-
-type Fractional = U80;
-type FixedType = FixedU128<Fractional>;
-
-// 32.44892769177272
-const EXP_NUMERICAL_THRESHOLD: FixedType = FixedType::from_bits(0x20_72EC_ECDA_6EBE_EACC_40C7);
 
 pub(crate) struct Math<T>(PhantomData<T>);
 
@@ -136,10 +129,7 @@ where
 
 mod detail {
     use super::*;
-    use zeitgeist_primitives::{
-        constants::DECIMALS,
-        math::fixed::{IntoFixedDecimal, IntoFixedFromDecimal},
-    };
+    use crate::math::types::common::{from_fixed, protected_exp, to_fixed};
 
     /// Calculate b * ln( e^(x/b) − 1 + e^(−r_i/b) ) + r_i − x.
     pub(super) fn calculate_swap_amount_out_for_buy(
@@ -226,26 +216,6 @@ mod detail {
             to_fixed(spot_price)?,
         )?;
         from_fixed(result_fixed)
-    }
-
-    fn to_fixed<B>(value: B) -> Option<FixedType>
-    where
-        B: Into<u128> + From<u128>,
-    {
-        value.to_fixed_from_fixed_decimal(DECIMALS).ok()
-    }
-
-    fn from_fixed<B>(value: FixedType) -> Option<B>
-    where
-        B: Into<u128> + From<u128>,
-    {
-        value.to_fixed_decimal(DECIMALS).ok()
-    }
-
-    /// Calculates `exp(value)` but returns `None` if `value` lies outside of the numerical
-    /// boundaries.
-    fn protected_exp(value: FixedType, neg: bool) -> Option<FixedType> {
-        if value < EXP_NUMERICAL_THRESHOLD { exp(value, neg).ok() } else { None }
     }
 
     fn calculate_swap_amount_out_for_buy_fixed(
@@ -372,7 +342,9 @@ mod tests {
     #![allow(clippy::duplicated_attributes)]
 
     use super::*;
-    use crate::{mock::Runtime as MockRuntime, MAX_SPOT_PRICE, MIN_SPOT_PRICE};
+    use crate::{
+        math::transcendental::exp, mock::Runtime as MockRuntime, MAX_SPOT_PRICE, MIN_SPOT_PRICE,
+    };
     use alloc::str::FromStr;
     use frame_support::assert_err;
     use test_case::test_case;
