@@ -317,7 +317,7 @@ mod detail {
         let exp_x_over_b: FixedType = protected_exp(amount_in.checked_div(liquidity)?, false)?;
         let r_over_b = reserve.checked_div(liquidity)?;
         let exp_neg_r_over_b = if r_over_b < EXP_NUMERICAL_THRESHOLD {
-            protected_exp(reserve.checked_div(liquidity)?, true)?
+            protected_exp(r_over_b, true)?
         } else {
             FixedType::checked_from_num(0)? // Underflow to zero.
         };
