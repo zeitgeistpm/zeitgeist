@@ -15,6 +15,7 @@ APIs/RPC interface.
 ## v0.5.6
 
 - Increase existential deposit of all non-foreign assets to `BASE`.
+- Remove pallet-contracts from all runtimes.
 
 ## v0.5.5
 
