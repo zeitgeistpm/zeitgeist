@@ -1325,6 +1325,8 @@ mod pallet {
                 let amount_out = swap_amount_out.checked_add_res(&amount_in_minus_fees)?;
                 ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
 
+                // Using unsafe API to avoid doing work. This is perfectly safe as long as
+                // `pool.assets()` returns a "full set" of split tokens.
                 T::CombinatorialTokensUnsafe::split_position_unsafe(
                     who.clone(),
                     pool.collateral,
@@ -1455,6 +1457,8 @@ mod pallet {
                     pool.increase_reserve(&asset, &amount_keep)?;
                 }
 
+                // Using unsafe API to avoid doing work. This is perfectly safe as long as
+                // `pool.assets()` returns a "full set" of split tokens.
                 T::CombinatorialTokensUnsafe::merge_position_unsafe(
                     pool.account_id.clone(),
                     pool.collateral,
