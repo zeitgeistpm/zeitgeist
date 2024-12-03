@@ -3063,7 +3063,6 @@ mod pallet {
         type MarketId = MarketIdOf<T>;
 
         fn payout_vector(market_id: Self::MarketId) -> Option<Vec<Self::Balance>> {
-            // TODO Abstract into separate function so we don't have to litter this with ok() calls.
             let market = <zrml_market_commons::Pallet<T>>::market(&market_id).ok()?;
 
             if market.status != MarketStatus::Resolved || !market.is_redeemable() {
