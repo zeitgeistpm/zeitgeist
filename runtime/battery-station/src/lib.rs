@@ -46,20 +46,12 @@ use frame_support::{
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
 use frame_system::{EnsureRoot, EnsureWithSuccess};
-use orml_currencies::Call::transfer;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
 use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use zeitgeist_primitives::types::*;
-use zrml_prediction_markets::Call::{
-    buy_complete_set, create_market, dispute, edit_market, redeem_shares, report, sell_complete_set,
-};
-use zrml_swaps::Call::{
-    force_pool_exit, pool_exit, pool_exit_with_exact_asset_amount,
-    pool_exit_with_exact_pool_amount, pool_join, pool_join_with_exact_asset_amount,
-    pool_join_with_exact_pool_amount, swap_exact_amount_in, swap_exact_amount_out,
-};
+use zrml_swaps::Call::force_pool_exit;
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
@@ -103,60 +95,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     transaction_version: 31,
     state_version: 1,
 };
-
-#[derive(scale_info::TypeInfo)]
-pub struct ContractsCallfilter;
-
-impl Contains<RuntimeCall> for ContractsCallfilter {
-    fn contains(runtime_call: &RuntimeCall) -> bool {
-        #[allow(clippy::match_like_matches_macro)]
-        match runtime_call {
-            RuntimeCall::System(inner_call) => match inner_call {
-                SystemCall::remark { .. } => true,
-                SystemCall::remark_with_event { .. } => true,
-                _ => false,
-            },
-            RuntimeCall::AssetManager(transfer { .. }) => true,
-            RuntimeCall::PredictionMarkets(inner_call) => {
-                match inner_call {
-                    buy_complete_set { .. } => true,
-                    dispute { .. } => true,
-                    // Only allow markets using Authorized or Court dispute mechanism
-                    create_market {
-                        dispute_mechanism:
-                            Some(MarketDisputeMechanism::Authorized)
-                            | Some(MarketDisputeMechanism::Court),
-                        ..
-                    } => true,
-                    edit_market {
-                        dispute_mechanism:
-                            Some(MarketDisputeMechanism::Authorized)
-                            | Some(MarketDisputeMechanism::Court),
-                        ..
-                    } => true,
-                    redeem_shares { .. } => true,
-                    report { .. } => true,
-                    sell_complete_set { .. } => true,
-                    _ => false,
-                }
-            }
-            RuntimeCall::Swaps(inner_call) => match inner_call {
-                pool_exit { .. } => true,
-                pool_exit_with_exact_asset_amount { .. } => true,
-                pool_exit_with_exact_pool_amount { .. } => true,
-                pool_join { .. } => true,
-                pool_join_with_exact_asset_amount { .. } => true,
-                pool_join_with_exact_pool_amount { .. } => true,
-                swap_exact_amount_in { .. } => true,
-                swap_exact_amount_out { .. } => true,
-                _ => false,
-            },
-            RuntimeCall::Orderbook(_) => true,
-            RuntimeCall::Parimutuel(_) => true,
-            _ => false,
-        }
-    }
-}
 
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;

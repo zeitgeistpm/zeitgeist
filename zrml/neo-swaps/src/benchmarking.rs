@@ -266,7 +266,7 @@ mod benchmarks {
 
     /// TODO(#1221): Replace hardcoded variant with `{ MAX_ASSETS as u32 }` as soon as possible.
     #[benchmark]
-    fn buy(n: Linear<2, 128>) {
+    fn buy(n: Linear<2, 4>) {
         let alice = whitelisted_caller();
         let base_asset = Asset::Ztg;
         let asset_count = n.try_into().unwrap();
@@ -274,10 +274,10 @@ mod benchmarks {
             alice,
             base_asset,
             asset_count,
-            _10.saturated_into(),
+            (100 * _100).saturated_into(),
         );
         let asset_out = Asset::CategoricalOutcome(market_id, 0);
-        let amount_in = _1.saturated_into();
+        let amount_in = _1000.saturated_into();
         let min_amount_out = 0u8.saturated_into();
 
         let helper = BenchmarkHelper::<T>::new();
@@ -297,10 +297,10 @@ mod benchmarks {
             alice,
             base_asset,
             asset_count,
-            _10.saturated_into(),
+            (100 * _100).saturated_into(),
         );
         let asset_in = Asset::CategoricalOutcome(market_id, asset_count - 1);
-        let amount_in = _1.saturated_into();
+        let amount_in = _100.saturated_into();
         let min_amount_out = 0u8.saturated_into();
 
         let helper = BenchmarkHelper::<T>::new();
@@ -322,14 +322,14 @@ mod benchmarks {
             alice.clone(),
             base_asset,
             asset_count,
-            _10.saturated_into(),
+            (100 * _100).saturated_into(),
         );
         let helper = BenchmarkHelper::<T>::new();
         let bob = helper.accounts().next().unwrap();
         helper.populate_liquidity_tree_until_full(market_id, bob.clone());
         let pool_shares_amount = _1.saturated_into();
         // Due to rounding, we need to buy a little more than the pool share amount.
-        let complete_set_amount = _100.saturated_into();
+        let complete_set_amount = _1000.saturated_into();
         helper.set_up_liquidity_benchmark(market_id, bob.clone(), Some(complete_set_amount));
         let max_amounts_in = vec![u128::MAX.saturated_into(); asset_count as usize];
 
@@ -354,7 +354,7 @@ mod benchmarks {
             alice.clone(),
             base_asset,
             asset_count,
-            _10.saturated_into(),
+            (100 * _100).saturated_into(),
         );
         let helper = BenchmarkHelper::<T>::new();
         helper.populate_liquidity_tree_with_abandoned_node(market_id);
@@ -386,7 +386,7 @@ mod benchmarks {
             alice.clone(),
             base_asset,
             asset_count,
-            _10.saturated_into(),
+            (100 * _100).saturated_into(),
         );
         let helper = BenchmarkHelper::<T>::new();
         helper.populate_liquidity_tree_with_free_leaf(market_id);
@@ -424,7 +424,7 @@ mod benchmarks {
             alice.clone(),
             base_asset,
             asset_count,
-            _10.saturated_into(),
+            (100 * _100).saturated_into(),
         );
         let min_amounts_out = vec![0u8.into(); asset_count as usize];
 
@@ -449,7 +449,7 @@ mod benchmarks {
             alice.clone(),
             Asset::Ztg,
             2u16,
-            _10.saturated_into(),
+            (100 * _100).saturated_into(),
         );
         let helper = BenchmarkHelper::<T>::new();
         let bob = helper.accounts().next().unwrap();
@@ -459,7 +459,7 @@ mod benchmarks {
         // Mock up some fees. Needs to be large enough to ensure that Bob's share is not smaller
         // than the existential deposit.
         let max_node_count = LiquidityTreeOf::<T>::max_node_count() as u128;
-        let fee_amount = (max_node_count * _10).saturated_into();
+        let fee_amount = (max_node_count * _1000).saturated_into();
         deposit_fees::<T>(market_id, fee_amount);
 
         #[extrinsic_call]
@@ -472,7 +472,7 @@ mod benchmarks {
         let base_asset = Asset::Ztg;
         let asset_count = n.try_into().unwrap();
         let market_id = create_market::<T>(alice.clone(), base_asset, asset_count);
-        let amount = _10.saturated_into();
+        let amount = (100 * _100).saturated_into();
         let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
 
         assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));

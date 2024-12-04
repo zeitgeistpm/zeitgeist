@@ -12,10 +12,21 @@ As of 0.3.9, the changelog's format is based on
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
+## v0.5.6
+
+- Increase existential deposit of all non-foreign assets to `BASE`.
+- Remove pallet-contracts from all runtimes.
+
+## v0.5.5
+
+- Fix Rikiddo migration (#1363)
+- Fix incorrect documentation of XcmMetadata::fee_factor (#1360)
+- Remove old migrations and clear pallet storage (#1352)
+
 ## v0.5.4
 
-- ⚠️  Remove zrml-liquidity-mining from code base.
-- ⚠️  Remove zrml-rikiddo from the code base.
+- ⚠️ Remove zrml-liquidity-mining from code base.
+- ⚠️ Remove zrml-rikiddo from the code base.
 
 ## v0.5.2
 
@@ -135,20 +146,26 @@ if ztg_supply / campaign_asset_supply >= 100 {
 
 ### Changes
 
-- ⚠️ Move the `zeitgeist_primitives::Pool` struct to `zrml_swaps::types::Pool` and change the following fields ([#1197]):
-    - Remove `market_id`
-    - Make `swap_fee` non-optional
-    - Remove `total_subsidy`
-    - Make `total_weight` non-optional
-    - Make `weights` non-optional
-- ⚠️ Change the type of `liquidity_shares_manager` in `zrml_neo_swaps::types::Pool` from `zrml_neo_swaps::types::SoloLp` to `zrml_neo_swaps::types::LiquidityTree`. Details on the liquidity tree can be found in the `README.md` of zrml-neo-swaps and the documentation of the `LiquidityTree` object ([#1179]).
+- ⚠️ Move the `zeitgeist_primitives::Pool` struct to `zrml_swaps::types::Pool`
+  and change the following fields ([#1197]):
+  - Remove `market_id`
+  - Make `swap_fee` non-optional
+  - Remove `total_subsidy`
+  - Make `total_weight` non-optional
+  - Make `weights` non-optional
+- ⚠️ Change the type of `liquidity_shares_manager` in
+  `zrml_neo_swaps::types::Pool` from `zrml_neo_swaps::types::SoloLp` to
+  `zrml_neo_swaps::types::LiquidityTree`. Details on the liquidity tree can be
+  found in the `README.md` of zrml-neo-swaps and the documentation of the
+  `LiquidityTree` object ([#1179]).
 
 ### Migrations
 
 - Closed all CPMM pools. Withdrawals are still allowed. Creating new pools will
   be impossible until further updates are deployed. ([#1197])
 - Remove all Rikiddo storage elements. ([#1197])
-- Migrate neo-swaps `Pools` storage. The market creator's liquidity position is translated into a position in the liquidity tree of the same value ([#1178]).
+- Migrate neo-swaps `Pools` storage. The market creator's liquidity position is
+  translated into a position in the liquidity tree of the same value ([#1178]).
 
 ### Removed
 
