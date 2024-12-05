@@ -83,8 +83,9 @@ use rstest::rstest;
 fn get_collection_id_works(
     #[case] hash: CombinatorialId,
     #[case] parent_collection_id: Option<CombinatorialId>,
-    #[values(false, true)] force_max_work: bool,
+    #[values(false, true)] consume_all: bool,
     #[case] expected: Option<CombinatorialId>,
 ) {
-    assert_eq!(get_collection_id(hash, parent_collection_id, force_max_work), expected);
+    let actual = get_collection_id(hash, parent_collection_id, Fuel { total: 16, consume_all });
+    assert_eq!(actual, expected);
 }

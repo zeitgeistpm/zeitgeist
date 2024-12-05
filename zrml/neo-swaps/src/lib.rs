@@ -86,8 +86,8 @@ mod pallet {
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
         traits::{
-            CombinatorialTokensApi, CombinatorialTokensUnsafeApi, CompleteSetOperationsApi,
-            DeployPoolApi, DistributeFees, HybridRouterAmmApi,
+            CombinatorialTokensApi, CombinatorialTokensFuel, CombinatorialTokensUnsafeApi,
+            CompleteSetOperationsApi, DeployPoolApi, DistributeFees, HybridRouterAmmApi,
         },
         types::{Asset, MarketStatus, ScoringRule},
     };
@@ -119,6 +119,8 @@ mod pallet {
     pub(crate) type BalanceOf<T> =
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     pub(crate) type AssetIndexType = u16;
+    pub(crate) type FuelOf<T> =
+        <<T as Config>::CombinatorialTokens as CombinatorialTokensApi>::Fuel;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
@@ -741,7 +743,10 @@ mod pallet {
         }
 
         #[pallet::call_index(8)]
-        #[pallet::weight(T::WeightInfo::deploy_combinatorial_pool(asset_count.log_ceil().into()))]
+        #[pallet::weight(T::WeightInfo::deploy_combinatorial_pool(
+            asset_count.log_ceil().into(),
+            fuel.total(),
+        ))]
         #[transactional]
         pub fn deploy_combinatorial_pool(
             origin: OriginFor<T>,
@@ -750,7 +755,7 @@ mod pallet {
             amount: BalanceOf<T>,
             spot_prices: Vec<BalanceOf<T>>,
             swap_fee: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -761,14 +766,7 @@ mod pallet {
             }
             ensure!(asset_count == real_asset_count, Error::<T>::IncorrectAssetCount);
 
-            Self::do_deploy_combinatorial_pool(
-                who,
-                market_ids,
-                amount,
-                spot_prices,
-                swap_fee,
-                force_max_work,
-            )
+            Self::do_deploy_combinatorial_pool(who, market_ids, amount, spot_prices, swap_fee, fuel)
         }
     }
 
@@ -1199,13 +1197,13 @@ mod pallet {
             amount: BalanceOf<T>,
             spot_prices: Vec<BalanceOf<T>>,
             swap_fee: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> DispatchResult {
             ensure!(swap_fee >= MIN_SWAP_FEE.saturated_into(), Error::<T>::SwapFeeBelowMin);
             ensure!(swap_fee <= T::MaxSwapFee::get(), Error::<T>::SwapFeeAboveMax);
 
             let (collection_ids, position_ids, collateral) =
-                Self::split_markets(who.clone(), market_ids.clone(), amount, force_max_work)?;
+                Self::split_markets(who.clone(), market_ids.clone(), amount, fuel)?;
 
             ensure!(spot_prices.len() == collection_ids.len(), Error::<T>::IncorrectVecLen);
             ensure!(
@@ -1571,7 +1569,7 @@ mod pallet {
             who: T::AccountId,
             market_ids: Vec<MarketIdOf<T>>,
             amount: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> Result<(Vec<T::CombinatorialId>, Vec<AssetOf<T>>, AssetOf<T>), DispatchError> {
             let markets =
                 market_ids.iter().map(T::MarketCommons::market).collect::<Result<Vec<_>, _>>()?;
@@ -1622,7 +1620,7 @@ mod pallet {
                         *market_id,
                         partition.clone(),
                         amount,
-                        force_max_work,
+                        fuel.clone(),
                     )?;
 
                     collection_ids.extend_from_slice(&split_position_info.collection_ids);
@@ -1644,7 +1642,7 @@ mod pallet {
                             *market_id,
                             partition.clone(),
                             amount,
-                            force_max_work,
+                            fuel.clone(),
                         )?;
 
                         new_collection_ids.extend_from_slice(&split_position_info.collection_ids);

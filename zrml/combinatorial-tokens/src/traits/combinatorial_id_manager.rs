@@ -28,12 +28,18 @@ pub trait CombinatorialIdManager {
     type Asset;
     type MarketId;
     type CombinatorialId;
+    type Fuel;
 
+    /// Calculate the collection ID obtained when splitting `parent_collection_id` over the market
+    /// given by `market_id` and the `index_set`.
+    ///
+    /// The `fuel` parameter specifies how much work the function will do and can be used for
+    /// benchmarking purposes.
     fn get_collection_id(
         parent_collection_id: Option<Self::CombinatorialId>,
         market_id: Self::MarketId,
         index_set: Vec<bool>,
-        force_max_work: bool,
+        fuel: Self::Fuel,
     ) -> Option<Self::CombinatorialId>;
 
     fn get_position_id(
