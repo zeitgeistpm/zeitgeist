@@ -42,7 +42,7 @@ fn split_followed_by_merge_vertical_no_parent() {
             market_id,
             partition.clone(),
             amount,
-            false,
+            Fuel::new(16, false),
         ));
         assert_eq!(alice.free_balance(Asset::Ztg), _99);
         assert_eq!(alice.free_balance(ct_001), _1);
@@ -55,7 +55,7 @@ fn split_followed_by_merge_vertical_no_parent() {
             market_id,
             partition,
             amount,
-            false,
+            Fuel::new(16, false),
         ));
         assert_eq!(alice.free_balance(Asset::Ztg), _100);
         assert_eq!(alice.free_balance(ct_001), 0);
@@ -96,7 +96,7 @@ fn split_followed_by_merge_vertical_with_parent() {
             parent_market_id,
             parent_partition.clone(),
             parent_amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         let child_market_id = create_market(Asset::Ztg, MarketType::Categorical(4));
@@ -113,7 +113,7 @@ fn split_followed_by_merge_vertical_with_parent() {
             child_market_id,
             child_partition.clone(),
             child_amount,
-            false,
+            Fuel::new(16, false),
         ));
         assert_eq!(alice.free_balance(ct_001), parent_amount - child_amount);
         assert_eq!(alice.free_balance(ct_110), parent_amount);
@@ -128,7 +128,7 @@ fn split_followed_by_merge_vertical_with_parent() {
             child_market_id,
             child_partition,
             child_amount,
-            false,
+            Fuel::new(16, false),
         ));
         assert_eq!(alice.free_balance(ct_001), parent_amount);
         assert_eq!(alice.free_balance(ct_110), parent_amount);
@@ -143,7 +143,7 @@ fn split_followed_by_merge_vertical_with_parent() {
             parent_market_id,
             parent_partition,
             parent_amount,
-            false,
+            Fuel::new(16, false),
         ));
         assert_eq!(alice.free_balance(ct_001), 0);
         assert_eq!(alice.free_balance(ct_110), 0);
@@ -225,7 +225,7 @@ fn split_followed_by_merge_vertical_with_parent_in_opposite_order() {
             market_0,
             partition_0.clone(),
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         // Split C into C&(U|V) and C&(W|X).
@@ -235,7 +235,7 @@ fn split_followed_by_merge_vertical_with_parent_in_opposite_order() {
             market_1,
             partition_1.clone(),
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         // Split A|B into into (A|B)&(U|V) and (A|B)&(W|X).
@@ -245,7 +245,7 @@ fn split_followed_by_merge_vertical_with_parent_in_opposite_order() {
             market_1,
             partition_1.clone(),
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         assert_eq!(alice.free_balance(ct_001), 0);
@@ -265,7 +265,7 @@ fn split_followed_by_merge_vertical_with_parent_in_opposite_order() {
             market_0,
             partition_0.clone(),
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         assert_eq!(alice.free_balance(ct_001), 0);
@@ -285,7 +285,7 @@ fn split_followed_by_merge_vertical_with_parent_in_opposite_order() {
             market_0,
             partition_0,
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         assert_eq!(alice.free_balance(ct_001), 0);
@@ -305,7 +305,7 @@ fn split_followed_by_merge_vertical_with_parent_in_opposite_order() {
             market_1,
             partition_1,
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         assert_eq!(alice.free_balance(ct_001), 0);
@@ -337,7 +337,7 @@ fn split_vertical_followed_by_horizontal_split_no_parent() {
             market_id,
             vec![vec![B0, B0, B1], vec![B1, B1, B0]],
             amount,
-            false,
+            Fuel::new(16, false),
         ));
         assert_ok!(CombinatorialTokens::split_position(
             alice.signed(),
@@ -345,7 +345,7 @@ fn split_vertical_followed_by_horizontal_split_no_parent() {
             market_id,
             vec![vec![B1, B0, B0], vec![B0, B1, B0]],
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         let ct_001 = CombinatorialToken([
@@ -372,7 +372,7 @@ fn split_vertical_followed_by_horizontal_split_no_parent() {
             market_id,
             vec![vec![B1, B0, B0], vec![B0, B1, B0], vec![B0, B0, B1]],
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         assert_eq!(alice.free_balance(ct_001), 2 * amount);
@@ -398,7 +398,7 @@ fn split_vertical_followed_by_horizontal_split_with_parent() {
             parent_market_id,
             vec![vec![B0, B0, B1], vec![B1, B1, B0]],
             parent_amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         let child_market_id = create_market(Asset::Ztg, MarketType::Categorical(4));
@@ -441,7 +441,7 @@ fn split_vertical_followed_by_horizontal_split_with_parent() {
             child_market_id,
             vec![vec![B0, B0, B1, B1], vec![B1, B1, B0, B0]],
             child_amount_first_pass,
-            false,
+            Fuel::new(16, false),
         ));
         assert_ok!(CombinatorialTokens::split_position(
             alice.signed(),
@@ -449,7 +449,7 @@ fn split_vertical_followed_by_horizontal_split_with_parent() {
             child_market_id,
             vec![vec![B1, B0, B0, B0], vec![B0, B1, B0, B0]],
             child_amount_first_pass,
-            false,
+            Fuel::new(16, false),
         ));
 
         assert_eq!(alice.free_balance(ct_001), parent_amount - child_amount_first_pass);
@@ -469,7 +469,7 @@ fn split_vertical_followed_by_horizontal_split_with_parent() {
             child_market_id,
             vec![vec![B1, B0, B0, B0], vec![B0, B1, B0, B0], vec![B0, B0, B1, B1]],
             child_amount_second_pass,
-            false,
+            Fuel::new(16, false),
         ));
 
         let total_child_amount = child_amount_first_pass + child_amount_second_pass;
@@ -507,7 +507,7 @@ fn split_horizontal_followed_by_merge_horizontal() {
             market_id,
             vec![vec![B0, B0, B1], vec![B1, B1, B0]],
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         assert_ok!(CombinatorialTokens::split_position(
@@ -516,7 +516,7 @@ fn split_horizontal_followed_by_merge_horizontal() {
             market_id,
             vec![vec![B1, B0, B0], vec![B0, B1, B0]],
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         assert_ok!(CombinatorialTokens::merge_position(
@@ -525,7 +525,7 @@ fn split_horizontal_followed_by_merge_horizontal() {
             market_id,
             vec![vec![B1, B0, B0], vec![B0, B1, B0]],
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         assert_eq!(alice.free_balance(ct_001), _1);

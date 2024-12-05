@@ -17,8 +17,8 @@
 
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::too_many_arguments)] // TODO Try to remove this later!
-#![allow(clippy::type_complexity)] // TODO Try to remove this later!
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::type_complexity)]
 
 extern crate alloc;
 
@@ -86,8 +86,8 @@ mod pallet {
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
         traits::{
-            CombinatorialTokensApi, CombinatorialTokensUnsafeApi, CompleteSetOperationsApi,
-            DeployPoolApi, DistributeFees, HybridRouterAmmApi,
+            CombinatorialTokensApi, CombinatorialTokensFuel, CombinatorialTokensUnsafeApi,
+            CompleteSetOperationsApi, DeployPoolApi, DistributeFees, HybridRouterAmmApi,
         },
         types::{Asset, MarketStatus, ScoringRule},
     };
@@ -119,6 +119,8 @@ mod pallet {
     pub(crate) type BalanceOf<T> =
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     pub(crate) type AssetIndexType = u16;
+    pub(crate) type FuelOf<T> =
+        <<T as Config>::CombinatorialTokens as CombinatorialTokensApi>::Fuel;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
@@ -741,7 +743,10 @@ mod pallet {
         }
 
         #[pallet::call_index(8)]
-        #[pallet::weight(T::WeightInfo::deploy_combinatorial_pool(asset_count.log_ceil().into()))]
+        #[pallet::weight(T::WeightInfo::deploy_combinatorial_pool(
+            asset_count.log_ceil().into(),
+            fuel.total(),
+        ))]
         #[transactional]
         pub fn deploy_combinatorial_pool(
             origin: OriginFor<T>,
@@ -750,7 +755,7 @@ mod pallet {
             amount: BalanceOf<T>,
             spot_prices: Vec<BalanceOf<T>>,
             swap_fee: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -761,14 +766,7 @@ mod pallet {
             }
             ensure!(asset_count == real_asset_count, Error::<T>::IncorrectAssetCount);
 
-            Self::do_deploy_combinatorial_pool(
-                who,
-                market_ids,
-                amount,
-                spot_prices,
-                swap_fee,
-                force_max_work,
-            )
+            Self::do_deploy_combinatorial_pool(who, market_ids, amount, spot_prices, swap_fee, fuel)
         }
     }
 
@@ -1008,10 +1006,7 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
 
-            // FIXME Should this also be made part of the `PoolStorage` interface?
-            Pools::<T>::try_mutate_exists(pool_id, |maybe_pool| {
-                let pool =
-                    maybe_pool.as_mut().ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
+            <Self as PoolStorage>::try_mutate_exists(&pool_id, |pool| {
                 let ratio = {
                     let mut ratio = pool_shares_amount
                         .bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
@@ -1047,13 +1042,14 @@ mod pallet {
                     for asset in pool.assets().iter() {
                         withdraw_remaining(asset)?;
                     }
-                    *maybe_pool = None; // Delete the storage map entry.
                     Self::deposit_event(Event::<T>::PoolDestroyed {
                         who: who.clone(),
                         pool_id,
                         amounts_out,
                     });
-                    // No need to clear `MarketIdToPoolId`.
+
+                    // Delete the pool. No need to clear `MarketIdToPoolId`.
+                    Ok(((), true))
                 } else {
                     let old_liquidity_parameter = pool.liquidity_parameter;
                     let new_liquidity_parameter = old_liquidity_parameter
@@ -1083,8 +1079,9 @@ mod pallet {
                         amounts_out,
                         new_liquidity_parameter,
                     });
+
+                    Ok(((), false))
                 }
-                Ok(())
             })
         }
 
@@ -1200,13 +1197,13 @@ mod pallet {
             amount: BalanceOf<T>,
             spot_prices: Vec<BalanceOf<T>>,
             swap_fee: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> DispatchResult {
             ensure!(swap_fee >= MIN_SWAP_FEE.saturated_into(), Error::<T>::SwapFeeBelowMin);
             ensure!(swap_fee <= T::MaxSwapFee::get(), Error::<T>::SwapFeeAboveMax);
 
             let (collection_ids, position_ids, collateral) =
-                Self::split_markets(who.clone(), market_ids.clone(), amount, force_max_work)?;
+                Self::split_markets(who.clone(), market_ids.clone(), amount, fuel)?;
 
             ensure!(spot_prices.len() == collection_ids.len(), Error::<T>::IncorrectVecLen);
             ensure!(
@@ -1326,6 +1323,8 @@ mod pallet {
                 let amount_out = swap_amount_out.checked_add_res(&amount_in_minus_fees)?;
                 ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
 
+                // Using unsafe API to avoid doing work. This is perfectly safe as long as
+                // `pool.assets()` returns a "full set" of split tokens.
                 T::CombinatorialTokensUnsafe::split_position_unsafe(
                     who.clone(),
                     pool.collateral,
@@ -1456,6 +1455,8 @@ mod pallet {
                     pool.increase_reserve(&asset, &amount_keep)?;
                 }
 
+                // Using unsafe API to avoid doing work. This is perfectly safe as long as
+                // `pool.assets()` returns a "full set" of split tokens.
                 T::CombinatorialTokensUnsafe::merge_position_unsafe(
                     pool.account_id.clone(),
                     pool.collateral,
@@ -1568,7 +1569,7 @@ mod pallet {
             who: T::AccountId,
             market_ids: Vec<MarketIdOf<T>>,
             amount: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> Result<(Vec<T::CombinatorialId>, Vec<AssetOf<T>>, AssetOf<T>), DispatchError> {
             let markets =
                 market_ids.iter().map(T::MarketCommons::market).collect::<Result<Vec<_>, _>>()?;
@@ -1619,7 +1620,7 @@ mod pallet {
                         *market_id,
                         partition.clone(),
                         amount,
-                        force_max_work,
+                        fuel.clone(),
                     )?;
 
                     collection_ids.extend_from_slice(&split_position_info.collection_ids);
@@ -1641,7 +1642,7 @@ mod pallet {
                             *market_id,
                             partition.clone(),
                             amount,
-                            force_max_work,
+                            fuel.clone(),
                         )?;
 
                         new_collection_ids.extend_from_slice(&split_position_info.collection_ids);

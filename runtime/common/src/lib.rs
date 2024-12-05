@@ -84,7 +84,7 @@ macro_rules! decl_common_types {
             generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
         };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
-        use zrml_combinatorial_tokens::types::CryptographicIdManager;
+        use zrml_combinatorial_tokens::types::{CryptographicIdManager, Fuel};
         use zrml_neo_swaps::types::DecisionMarketOracle;
 
         #[cfg(feature = "try-runtime")]
@@ -1160,6 +1160,7 @@ macro_rules! impl_config_traits {
             #[cfg(feature = "runtime-benchmarks")]
             type BenchmarkHelper = PredictionMarketsCombinatorialTokensBenchmarkHelper<Runtime>;
             type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
+            type Fuel = Fuel;
             type MarketCommons = MarketCommons;
             type MultiCurrency = AssetManager;
             type Payout = PredictionMarkets;

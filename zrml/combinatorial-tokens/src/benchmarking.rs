@@ -26,7 +26,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::{traits::Zero, Perbill};
 use zeitgeist_primitives::{
     math::fixed::{BaseProvider, ZeitgeistBase},
-    traits::{CombinatorialTokensBenchmarkHelper, MarketCommonsPalletApi},
+    traits::{CombinatorialTokensBenchmarkHelper, CombinatorialTokensFuel, MarketCommonsPalletApi},
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
 
@@ -65,10 +65,11 @@ mod benchmarks {
     use super::*;
 
     #[benchmark]
-    fn split_position_vertical_sans_parent(n: Linear<2, 32>) {
+    fn split_position_vertical_sans_parent(n: Linear<2, 32>, m: Linear<32, 64>) {
         let alice: T::AccountId = whitelisted_caller();
 
         let position_count: usize = n.try_into().unwrap();
+        let total = m;
 
         let parent_collection_id = None;
         let market_id = create_market::<T>(alice.clone(), position_count.try_into().unwrap());
@@ -92,7 +93,7 @@ mod benchmarks {
             market_id,
             partition.clone(),
             amount,
-            true,
+            T::Fuel::from_total(total),
         );
 
         let collection_ids: Vec<_> = partition
@@ -103,7 +104,7 @@ mod benchmarks {
                     parent_collection_id,
                     market_id,
                     index_set,
-                    false,
+                    T::Fuel::from_total(total),
                 )
                 .unwrap()
             })
@@ -129,10 +130,11 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn split_position_vertical_with_parent(n: Linear<2, 32>) {
+    fn split_position_vertical_with_parent(n: Linear<2, 32>, m: Linear<32, 64>) {
         let alice: T::AccountId = whitelisted_caller();
 
         let position_count: usize = n.try_into().unwrap();
+        let total = m;
 
         let parent_collection_id = None;
         let parent_market_id = create_market::<T>(alice.clone(), 2);
@@ -142,7 +144,7 @@ mod benchmarks {
             parent_collection_id,
             parent_market_id,
             vec![false, true],
-            false,
+            T::Fuel::from_total(total),
         )
         .unwrap();
         let pos_01 = Pallet::<T>::position_from_collection_id(parent_market_id, cid_01).unwrap();
@@ -167,7 +169,7 @@ mod benchmarks {
             child_market_id,
             partition.clone(),
             amount,
-            true,
+            T::Fuel::from_total(total),
         );
 
         let collection_ids: Vec<_> = partition
@@ -178,7 +180,7 @@ mod benchmarks {
                     Some(cid_01),
                     child_market_id,
                     index_set,
-                    false,
+                    T::Fuel::from_total(total),
                 )
                 .unwrap()
             })
@@ -204,11 +206,12 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn split_position_horizontal(n: Linear<2, 32>) {
+    fn split_position_horizontal(n: Linear<2, 32>, m: Linear<32, 64>) {
         let alice: T::AccountId = whitelisted_caller();
 
         let position_count: usize = n.try_into().unwrap();
         let asset_count = position_count + 1;
+        let total = m;
 
         let parent_collection_id = None;
         let market_id = create_market::<T>(alice.clone(), asset_count.try_into().unwrap());
@@ -230,7 +233,7 @@ mod benchmarks {
             parent_collection_id,
             market_id,
             asset_in_index_set,
-            false,
+            T::Fuel::from_total(total),
         )
         .unwrap();
         T::MultiCurrency::deposit(asset_in, &alice, amount).unwrap();
@@ -242,7 +245,7 @@ mod benchmarks {
             market_id,
             partition.clone(),
             amount,
-            true,
+            T::Fuel::from_total(total),
         );
 
         let collection_ids: Vec<_> = partition
@@ -253,7 +256,7 @@ mod benchmarks {
                     parent_collection_id,
                     market_id,
                     index_set,
-                    false,
+                    T::Fuel::from_total(total),
                 )
                 .unwrap()
             })
@@ -279,10 +282,11 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn merge_position_vertical_sans_parent(n: Linear<2, 32>) {
+    fn merge_position_vertical_sans_parent(n: Linear<2, 32>, m: Linear<32, 64>) {
         let alice: T::AccountId = whitelisted_caller();
 
         let position_count: usize = n.try_into().unwrap();
+        let total = m;
 
         let parent_collection_id = None;
         let market_id = create_market::<T>(alice.clone(), position_count.try_into().unwrap());
@@ -304,7 +308,7 @@ mod benchmarks {
                     parent_collection_id,
                     market_id,
                     index_set,
-                    false,
+                    T::Fuel::from_total(total),
                 )
                 .unwrap()
             })
@@ -322,7 +326,7 @@ mod benchmarks {
             market_id,
             partition.clone(),
             amount,
-            true,
+            T::Fuel::from_total(total),
         );
 
         let expected_event = <T as Config>::RuntimeEvent::from(Event::<T>::TokenMerged {
@@ -338,10 +342,11 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn merge_position_vertical_with_parent(n: Linear<2, 32>) {
+    fn merge_position_vertical_with_parent(n: Linear<2, 32>, m: Linear<32, 64>) {
         let alice: T::AccountId = whitelisted_caller();
 
         let position_count: usize = n.try_into().unwrap();
+        let total = m;
 
         let parent_collection_id = None;
         let parent_market_id = create_market::<T>(alice.clone(), 2);
@@ -351,7 +356,7 @@ mod benchmarks {
             parent_collection_id,
             parent_market_id,
             vec![false, true],
-            false,
+            T::Fuel::from_total(total),
         )
         .unwrap();
         let pos_01 = Pallet::<T>::position_from_collection_id(parent_market_id, cid_01).unwrap();
@@ -375,7 +380,7 @@ mod benchmarks {
                     Some(cid_01),
                     child_market_id,
                     index_set,
-                    false,
+                    T::Fuel::from_total(total),
                 )
                 .unwrap()
             })
@@ -392,7 +397,7 @@ mod benchmarks {
             child_market_id,
             partition.clone(),
             amount,
-            true,
+            T::Fuel::from_total(total),
         );
 
         let expected_event = <T as Config>::RuntimeEvent::from(Event::<T>::TokenMerged {
@@ -408,11 +413,12 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn merge_position_horizontal(n: Linear<2, 32>) {
+    fn merge_position_horizontal(n: Linear<2, 32>, m: Linear<32, 64>) {
         let alice: T::AccountId = whitelisted_caller();
 
         let position_count: usize = n.try_into().unwrap();
         let asset_count = position_count + 1;
+        let total = m;
 
         let parent_collection_id = None;
         let market_id = create_market::<T>(alice.clone(), asset_count.try_into().unwrap());
@@ -435,7 +441,7 @@ mod benchmarks {
                     parent_collection_id,
                     market_id,
                     index_set,
-                    false,
+                    T::Fuel::from_total(total),
                 )
                 .unwrap()
             })
@@ -452,7 +458,7 @@ mod benchmarks {
             market_id,
             partition.clone(),
             amount,
-            true,
+            T::Fuel::from_total(total),
         );
 
         let mut asset_out_index_set = vec![true; asset_count];
@@ -461,7 +467,7 @@ mod benchmarks {
             parent_collection_id,
             market_id,
             asset_out_index_set,
-            false,
+            T::Fuel::from_total(total),
         )
         .unwrap();
         let expected_event = <T as Config>::RuntimeEvent::from(Event::<T>::TokenMerged {
@@ -477,11 +483,12 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn redeem_position_sans_parent(n: Linear<2, 32>) {
+    fn redeem_position_sans_parent(n: Linear<2, 32>, m: Linear<32, 64>) {
         let alice: T::AccountId = whitelisted_caller();
 
         let n_u16: u16 = n.try_into().unwrap();
         let asset_count = n_u16 + 1;
+        let total = m;
 
         // `index_set` has `n` entries that are `true`, which results in `n` iterations in the `for`
         // loop in `redeem_position`.
@@ -499,7 +506,7 @@ mod benchmarks {
             parent_collection_id,
             market_id,
             index_set.clone(),
-            false,
+            T::Fuel::from_total(total),
         )
         .unwrap();
         let amount = ZeitgeistBase::get().unwrap();
@@ -512,7 +519,7 @@ mod benchmarks {
             parent_collection_id,
             market_id,
             index_set.clone(),
-            true,
+            T::Fuel::from_total(total),
         );
 
         let expected_event = <T as Config>::RuntimeEvent::from(Event::<T>::TokenRedeemed {
@@ -529,11 +536,12 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn redeem_position_with_parent(n: Linear<2, 32>) {
+    fn redeem_position_with_parent(n: Linear<2, 32>, m: Linear<32, 64>) {
         let alice: T::AccountId = whitelisted_caller();
 
         let n_u16: u16 = n.try_into().unwrap();
         let asset_count = n_u16 + 1;
+        let total = m;
 
         // `index_set` has `n` entries that are `true`, which results in `n` iterations in the `for`
         // loop in `redeem_position`.
@@ -545,7 +553,7 @@ mod benchmarks {
             None,
             parent_market_id,
             vec![false, true],
-            false,
+            T::Fuel::from_total(total),
         )
         .unwrap();
         let pos_01 = Pallet::<T>::position_from_collection_id(parent_market_id, cid_01).unwrap();
@@ -555,7 +563,7 @@ mod benchmarks {
             Some(cid_01),
             child_market_id,
             index_set.clone(),
-            false,
+            T::Fuel::from_total(total),
         )
         .unwrap();
         let amount = ZeitgeistBase::get().unwrap();
@@ -570,7 +578,7 @@ mod benchmarks {
             Some(cid_01),
             child_market_id,
             index_set.clone(),
-            true,
+            T::Fuel::from_total(total),
         );
 
         let expected_event = <T as Config>::RuntimeEvent::from(Event::<T>::TokenRedeemed {

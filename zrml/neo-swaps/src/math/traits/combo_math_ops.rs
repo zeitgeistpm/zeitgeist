@@ -23,6 +23,9 @@ pub(crate) trait ComboMathOps<T>
 where
     T: Config,
 {
+    /// Calculates the amount swapped out of a pool with liquidity parameter `liquidity` when
+    /// swapping in `amount_in` units of assets whose reserves in the pool are `sell` and swapping
+    /// out assets whose reserves in the pool are `buy`.
     fn calculate_swap_amount_out_for_buy(
         buy: Vec<BalanceOf<T>>,
         sell: Vec<BalanceOf<T>>,
@@ -30,6 +33,7 @@ where
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
+    /// Calculates the amount eventually held by the user after equalizing holdings.
     #[allow(dead_code)]
     fn calculate_equalize_amount(
         buy: Vec<BalanceOf<T>>,
@@ -39,6 +43,10 @@ where
         liquidity: BalanceOf<T>,
     ) -> Result<BalanceOf<T>, DispatchError>;
 
+    /// Calculates the amount of each asset of a pool with liquidity parameter `liquidity` held
+    /// in the user's wallet after equalizing positions whose reserves in the pool are `buy`, `keep`
+    /// and `sell`, resp. The parameters `amount_buy` and `amount_keep` refer to the user's holdings
+    /// of `buy` and `keep`.
     fn calculate_swap_amount_out_for_sell(
         buy: Vec<BalanceOf<T>>,
         keep: Vec<BalanceOf<T>>,

@@ -26,19 +26,20 @@
 
 mod tests;
 
+use crate::types::cryptographic_id_manager::Fuel;
 use ark_bn254::{g1::G1Affine, Fq};
 use ark_ff::{BigInteger, PrimeField};
 use core::ops::Neg;
 use sp_runtime::traits::{One, Zero};
-use zeitgeist_primitives::types::CombinatorialId;
+use zeitgeist_primitives::{traits::CombinatorialTokensFuel, types::CombinatorialId};
 
 /// Will return `None` if and only if `parent_collection_id` is not a valid collection ID.
 pub(crate) fn get_collection_id(
     hash: CombinatorialId,
     parent_collection_id: Option<CombinatorialId>,
-    force_max_work: bool,
+    fuel: Fuel,
 ) -> Option<CombinatorialId> {
-    let mut u = decompress_hash(hash, force_max_work)?;
+    let mut u = decompress_hash(hash, fuel)?;
 
     if let Some(pci) = parent_collection_id {
         let v = decompress_collection_id(pci)?;
@@ -57,17 +58,15 @@ pub(crate) fn get_collection_id(
     Some(bytes)
 }
 
-const DECOMPRESS_HASH_MAX_ITERS: usize = 32;
-
 /// Decompresses a collection ID `hash` to a point of `alt_bn128`. The amount of work done can be
-/// forced to be independent of the input by setting the `force_max_work` flag.
+/// controlled using the `fuel` parameter.
 ///
 /// We don't have mathematical proof that the points of `alt_bn128` are distributed so that the
 /// required number of iterations is below the specified limit of iterations, but there's good
-/// evidence that input hash requires more than `log_2(P) = 507.19338271000436` iterations.
-///
-/// Provided the assumption above is correct, this function cannot return `None`.
-fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affine> {
+/// evidence that input hash requires more than `log_2(P) = 507.19338271000436` iterations. With a
+/// `fuel.total` value of `32`, statistical evidence suggests a 1 in 500_000_000 chance that the
+/// number of iterations will not be enough.
+fn decompress_hash(hash: CombinatorialId, fuel: Fuel) -> Option<G1Affine> {
     // Calculate `odd` first, then get congruent point `x` in `Fq`. As `hash` might represent a
     // larger big endian number than `field_modulus()`, the MSB of `x` might be different from the
     // MSB of `x_u256`.
@@ -77,7 +76,7 @@ fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affi
     let mut y_opt = None;
     let mut dummy_x = Fq::zero(); // Used to prevent rustc from optimizing dummy work away.
     let mut dummy_y = None;
-    for _ in 0..DECOMPRESS_HASH_MAX_ITERS {
+    for _ in 0..fuel.total() {
         // If `y_opt.is_some()` and we're still in the loop, then `force_max_work` is set and we're
         // jus here to spin our wheels for the benchmarks.
         if y_opt.is_some() {
@@ -98,7 +97,7 @@ fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affi
             if matching_y.is_some() {
                 y_opt = matching_y;
 
-                if !force_max_work {
+                if !fuel.consume_all() {
                     break;
                 }
             }
