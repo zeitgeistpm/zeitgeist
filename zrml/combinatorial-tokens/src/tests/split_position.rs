@@ -34,7 +34,7 @@ fn split_position_works_vertical_no_parent() {
             market_id,
             partition.clone(),
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         let ct_001 = CombinatorialToken([
@@ -90,7 +90,7 @@ fn split_position_works_vertical_with_parent() {
             parent_market_id,
             vec![vec![B0, B0, B1], vec![B1, B1, B0]],
             parent_amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         let child_market_id = create_market(Asset::Ztg, MarketType::Categorical(4));
@@ -107,7 +107,7 @@ fn split_position_works_vertical_with_parent() {
             child_market_id,
             partition.clone(),
             child_amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         // Alice is left with 1 unit of [0, 0, 1], 2 units of [1, 1, 0] and one unit of each of the
@@ -183,7 +183,7 @@ fn split_position_fails_if_market_not_found() {
                 0,
                 vec![vec![B0, B0, B1], vec![B1, B1, B0]],
                 1,
-                false,
+                Fuel::new(16, false),
             ),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
         );
@@ -206,7 +206,7 @@ fn split_position_fails_on_invalid_partition_length() {
                 market_id,
                 partition,
                 _1,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::InvalidPartition
         );
@@ -229,7 +229,7 @@ fn split_position_fails_on_empty_partition_member() {
                 market_id,
                 partition,
                 _1,
-                false
+                Fuel::new(16, false)
             ),
             Error::<Runtime>::InvalidPartition
         );
@@ -252,7 +252,7 @@ fn split_position_fails_on_overlapping_partition_members() {
                 market_id,
                 partition,
                 _1,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::InvalidPartition
         );
@@ -274,7 +274,7 @@ fn split_position_fails_on_trivial_partition() {
                 market_id,
                 partition,
                 _1,
-                false
+                Fuel::new(16, false)
             ),
             Error::<Runtime>::InvalidPartition
         );
@@ -296,7 +296,7 @@ fn split_position_fails_on_insufficient_funds_native_token_no_parent() {
                 market_id,
                 vec![vec![B1, B0, B1], vec![B0, B1, B0]],
                 _100,
-                false,
+                Fuel::new(16, false),
             ),
             orml_currencies::Error::<Runtime>::BalanceTooLow
         );
@@ -318,7 +318,7 @@ fn split_position_fails_on_insufficient_funds_foreign_token_no_parent() {
                 market_id,
                 vec![vec![B1, B0, B1], vec![B0, B1, B0]],
                 _100,
-                false,
+                Fuel::new(16, false),
             ),
             orml_currencies::Error::<Runtime>::BalanceTooLow
         );
@@ -351,7 +351,7 @@ fn split_position_vertical_fails_on_insufficient_funds_combinatorial_token() {
                 market_id,
                 vec![vec![B1, B0, B1, B0], vec![B0, B1, B0, B1]],
                 _100,
-                false,
+                Fuel::new(16, false),
             ),
             orml_tokens::Error::<Runtime>::BalanceTooLow
         );
@@ -363,7 +363,7 @@ fn split_position_vertical_fails_on_insufficient_funds_combinatorial_token() {
             market_id,
             vec![vec![B1, B0, B1, B0], vec![B0, B1, B0, B1]],
             _99,
-            false,
+            Fuel::new(16, false),
         ));
     });
 }
@@ -388,7 +388,7 @@ fn split_position_horizontal_fails_on_insufficient_funds_combinatorial_token() {
                 market_id,
                 vec![vec![B1, B0, B0], vec![B0, B1, B0]],
                 _100,
-                false,
+                Fuel::new(16, false),
             ),
             orml_tokens::Error::<Runtime>::BalanceTooLow
         );
@@ -400,7 +400,7 @@ fn split_position_horizontal_fails_on_insufficient_funds_combinatorial_token() {
             market_id,
             vec![vec![B1, B0, B0], vec![B0, B1, B0]],
             _99,
-            false,
+            Fuel::new(16, false),
         ));
     });
 }

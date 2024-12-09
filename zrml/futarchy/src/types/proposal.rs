@@ -21,7 +21,6 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
-// TODO Make config a generic, keeps things simple.
 #[derive(
     CloneNoBound, Decode, Encode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
 )]

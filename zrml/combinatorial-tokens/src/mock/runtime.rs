@@ -16,7 +16,11 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate as zrml_combinatorial_tokens;
-use crate::{mock::types::MockPayout, types::CryptographicIdManager, weights::WeightInfo};
+use crate::{
+    mock::types::MockPayout,
+    types::{cryptographic_id_manager::Fuel, CryptographicIdManager},
+    weights::WeightInfo,
+};
 use frame_support::{construct_runtime, traits::Everything, Blake2_256};
 use frame_system::mocking::MockBlock;
 use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};
@@ -49,6 +53,7 @@ impl zrml_combinatorial_tokens::Config for Runtime {
     #[cfg(feature = "runtime-benchmarks")]
     type BenchmarkHelper = BenchmarkHelper;
     type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
+    type Fuel = Fuel;
     type MarketCommons = MarketCommons;
     type MultiCurrency = Currencies;
     type Payout = MockPayout;

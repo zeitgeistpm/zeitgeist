@@ -55,11 +55,14 @@ mod pallet {
     use alloc::fmt::Debug;
     use core::marker::PhantomData;
     use frame_support::{
-        pallet_prelude::{EnsureOrigin, IsType, StorageMap, StorageVersion, ValueQuery, Weight},
+        pallet_prelude::{IsType, StorageMap, StorageVersion, ValueQuery, Weight},
         traits::{schedule::v3::Anon as ScheduleAnon, Bounded, Hooks, OriginTrait},
         transactional, Blake2_128Concat, BoundedVec,
     };
-    use frame_system::pallet_prelude::{BlockNumberFor, OriginFor};
+    use frame_system::{
+        ensure_root,
+        pallet_prelude::{BlockNumberFor, OriginFor},
+    };
     use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
     use scale_info::TypeInfo;
     use sp_runtime::{
@@ -93,9 +96,6 @@ mod pallet {
 
         /// Scheduler interface for executing proposals.
         type Scheduler: ScheduleAnon<BlockNumberFor<Self>, CallOf<Self>, PalletsOriginOf<Self>>;
-
-        /// The origin that is allowed to submit proposals.
-        type SubmitOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         type WeightInfo: WeightInfoZeitgeist;
     }
@@ -160,7 +160,7 @@ mod pallet {
             duration: BlockNumberFor<T>,
             proposal: Proposal<T>,
         ) -> DispatchResult {
-            T::SubmitOrigin::ensure_origin(origin)?;
+            ensure_root(origin)?;
 
             Self::do_submit_proposal(duration, proposal)
         }

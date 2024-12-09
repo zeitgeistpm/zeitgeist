@@ -17,7 +17,7 @@
 
 use crate::{traits::PoolStorage, Config, Error, Pallet, PoolCount, PoolOf, Pools};
 use sp_runtime::DispatchError;
-use zeitgeist_primitives::math::checked_ops_res::CheckedAddRes;
+use zeitgeist_primitives::math::checked_ops_res::CheckedIncRes;
 
 impl<T> PoolStorage for Pallet<T>
 where
@@ -35,7 +35,7 @@ where
         let pool_id = Self::next_pool_id();
         Pools::<T>::insert(pool_id, pool);
 
-        let pool_count = pool_id.checked_add_res(&1u8.into())?; // TODO Add CheckedInc.
+        let pool_count = pool_id.checked_inc_res()?;
         PoolCount::<T>::set(pool_count);
 
         Ok(pool_id)
@@ -47,10 +47,26 @@ where
 
     fn try_mutate_pool<R, F>(pool_id: &Self::PoolId, mutator: F) -> Result<R, DispatchError>
     where
-        F: FnMut(&mut PoolOf<T>) -> Result<R, DispatchError>,
+        F: FnMut(&mut Self::Pool) -> Result<R, DispatchError>,
     {
         Pools::<T>::try_mutate(pool_id, |maybe_pool| {
             maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound.into()).and_then(mutator)
+        })
+    }
+
+    fn try_mutate_exists<R, F>(pool_id: &Self::PoolId, mutator: F) -> Result<R, DispatchError>
+    where
+        F: FnMut(&mut Self::Pool) -> Result<(R, bool), DispatchError>,
+    {
+        Pools::<T>::try_mutate_exists(pool_id, |maybe_pool| {
+            let (result, delete) =
+                maybe_pool.as_mut().ok_or(Error::<T>::PoolNotFound.into()).and_then(mutator)?;
+
+            if delete {
+                *maybe_pool = None;
+            }
+
+            Ok(result)
         })
     }
 }

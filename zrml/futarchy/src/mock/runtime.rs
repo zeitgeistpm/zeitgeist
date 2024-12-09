@@ -21,7 +21,7 @@ use crate::{
     weights::WeightInfo,
 };
 use frame_support::{construct_runtime, parameter_types, traits::Everything};
-use frame_system::{mocking::MockBlock, EnsureRoot};
+use frame_system::mocking::MockBlock;
 use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};
 use zeitgeist_primitives::{
     constants::mock::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves},
@@ -93,6 +93,5 @@ impl zrml_futarchy::Config for Runtime {
     type Oracle = MockOracle;
     type RuntimeEvent = RuntimeEvent;
     type Scheduler = MockScheduler;
-    type SubmitOrigin = EnsureRoot<<Runtime as frame_system::Config>::AccountId>;
     type WeightInfo = WeightInfo<Runtime>;
 }

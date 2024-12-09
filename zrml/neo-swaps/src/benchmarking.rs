@@ -40,7 +40,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::{base_multiples::*, CENT},
     math::fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
-    traits::{CompleteSetOperationsApi, FutarchyOracle},
+    traits::{CombinatorialTokensFuel, CompleteSetOperationsApi, FutarchyOracle},
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -523,7 +523,7 @@ mod benchmarks {
             amount,
             create_spot_prices::<T>(asset_count),
             CENT.saturated_into(),
-            false,
+            FuelOf::<T>::from_total(16),
         ));
 
         let pool_id = 0u8.into();
@@ -578,7 +578,7 @@ mod benchmarks {
             amount,
             create_spot_prices::<T>(asset_count),
             CENT.saturated_into(),
-            false,
+            FuelOf::<T>::from_total(16),
         ));
 
         let pool_id = 0u8.into();
@@ -623,8 +623,9 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn deploy_combinatorial_pool(n: Linear<1, 7>) {
+    fn deploy_combinatorial_pool(n: Linear<1, 7>, m: Linear<32, 64>) {
         let market_count = n;
+        let total = m;
 
         let alice: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
@@ -644,7 +645,15 @@ mod benchmarks {
         let swap_fee = CENT.saturated_into();
 
         #[extrinsic_call]
-        _(RawOrigin::Signed(alice), asset_count, market_ids, amount, spot_prices, swap_fee, true);
+        _(
+            RawOrigin::Signed(alice),
+            asset_count,
+            market_ids,
+            amount,
+            spot_prices,
+            swap_fee,
+            FuelOf::<T>::from_total(total),
+        );
     }
 
     #[benchmark]

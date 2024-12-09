@@ -235,7 +235,7 @@ fn deploy_combinatorial_pool_fails_on_incorrect_vec_len() {
                 _10,
                 vec![20 * CENT; 5],
                 CENT,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::IncorrectVecLen
         );
@@ -257,7 +257,7 @@ fn deploy_combinatorial_pool_fails_on_market_not_found() {
                 _10,
                 vec![10 * CENT; 10],
                 CENT,
-                false,
+                Fuel::new(16, false),
             ),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
         );
@@ -288,7 +288,7 @@ fn deploy_combinatorial_pool_fails_on_inactive_market(market_status: MarketStatu
                 _100,
                 vec![10 * CENT; 10],
                 CENT,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::MarketNotActive,
         );
@@ -310,7 +310,7 @@ fn deploy_combinatorial_pool_fails_on_invalid_trading_mechanism() {
                 _100,
                 vec![10 * CENT; 10],
                 CENT,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::InvalidTradingMechanism
         );
@@ -348,7 +348,7 @@ fn deploy_combinatorial_pool_fails_on_max_splits_exceeded() {
                 liquidity,
                 spot_prices,
                 CENT,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::MaxSplitsExceeded
         );
@@ -369,7 +369,7 @@ fn deploy_combinatorial_pool_fails_on_swap_fee_below_min() {
                 liquidity,
                 vec![_1_4, _3_4],
                 MIN_SWAP_FEE - 1,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::SwapFeeBelowMin
         );
@@ -390,7 +390,7 @@ fn deploy_combinatorial_pool_fails_on_swap_fee_above_max() {
                 liquidity,
                 vec![_1_4, _3_4],
                 <Runtime as Config>::MaxSwapFee::get() + 1,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::SwapFeeAboveMax
         );
@@ -412,7 +412,7 @@ fn deploy_combinatorial_pool_fails_on_invalid_spot_prices(spot_prices: Vec<Balan
                 liquidity,
                 spot_prices,
                 CENT,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::InvalidSpotPrices
         );
@@ -434,7 +434,7 @@ fn deploy_combinatorial_pool_fails_on_spot_price_below_min() {
                 liquidity,
                 vec![spot_price, _1 - spot_price],
                 CENT,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::SpotPriceBelowMin
         );
@@ -456,7 +456,7 @@ fn deploy_combinatorial_pool_fails_on_spot_price_above_max() {
                 liquidity,
                 vec![spot_price, _1 - spot_price],
                 CENT,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::SpotPriceAboveMax
         );
@@ -483,7 +483,7 @@ fn deploy_combinatorial_pool_fails_on_insufficient_funds() {
                 liquidity,
                 vec![_3_4, _1_4],
                 CENT,
-                false,
+                Fuel::new(16, false),
             ),
             expected_error
         );
@@ -504,7 +504,7 @@ fn deploy_combinatorial_pool_fails_on_liquidity_too_low() {
                 amount,
                 vec![_1_2, _1_2],
                 CENT,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::LiquidityTooLow
         );
@@ -528,7 +528,7 @@ fn deploy_combinatorial_pool_fails_on_incorrect_asset_count() {
                 amount,
                 vec![_1_2, _1_2], // Incorrect, but doesn't matter!
                 CENT,
-                false,
+                Fuel::new(16, false),
             ),
             Error::<Runtime>::IncorrectAssetCount,
         );
