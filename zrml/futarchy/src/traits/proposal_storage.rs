@@ -1,4 +1,4 @@
-use crate::{Config, ProposalsOf, types::Proposal};
+use crate::{types::Proposal, Config, ProposalsOf};
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::DispatchError;
 
@@ -20,6 +20,8 @@ where
     #[allow(dead_code)]
     fn get(block_number: BlockNumberFor<T>) -> ProposalsOf<T>;
 
-    // /// Mutates all scheduled proposals.
-    // fn mutate_all(mutator
+    /// Mutates all scheduled proposals.
+    fn try_mutate_all<F>(mutator: F) -> Result<(), DispatchError>
+    where
+        F: FnMut(&mut Proposal<T>);
 }

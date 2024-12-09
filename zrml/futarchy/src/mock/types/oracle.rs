@@ -41,13 +41,11 @@ impl MockOracle {
 }
 
 impl FutarchyOracle for MockOracle {
-    type Data = ();
-
     fn evaluate(&self) -> (Weight, bool) {
         (self.weight, self.value)
     }
 
-    fn update(&self, _: Self::Data) -> Weight {
+    fn update(&mut self) -> Weight {
         Zero::zero()
     }
 }

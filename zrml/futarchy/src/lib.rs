@@ -147,6 +147,9 @@ mod pallet {
 
         /// The specified duration must be at least equal to `MinDuration`.
         DurationTooShort,
+
+        /// This is a logic error. You shouldn't see this.
+        UnexpectedStorageFailure,
     }
 
     #[pallet::call]
@@ -168,7 +171,14 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(now: BlockNumberFor<T>) -> Weight {
-            let mut total_weight = Weight::zero(); // Add buffer.
+            let mut total_weight = Weight::zero();
+
+            let mutate_all_result = <Pallet<T> as ProposalStorage<T>>::try_mutate_all(|p| {
+                let _ = p.oracle.update();
+            });
+            if mutate_all_result.is_err() {
+                return total_weight;
+            }
 
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
             let proposals = if let Ok(proposals) = <Pallet<T> as ProposalStorage<T>>::take(now) {

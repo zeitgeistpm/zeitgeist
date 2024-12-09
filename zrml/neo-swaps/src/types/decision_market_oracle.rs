@@ -63,8 +63,6 @@ impl<T> FutarchyOracle for DecisionMarketOracle<T>
 where
     T: Config,
 {
-    type Data = ();
-
     fn evaluate(&self) -> (Weight, bool) {
         // Err on the side of caution if the pool is not found or a calculation fails by not
         // enacting the policy.
@@ -73,7 +71,7 @@ where
         (T::WeightInfo::decision_market_oracle_evaluate(), value)
     }
 
-    fn update(&self, _: Self::Data) -> Weight {
+    fn update(&mut self) -> Weight {
         Zero::zero()
     }
 }
