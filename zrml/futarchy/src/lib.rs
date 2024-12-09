@@ -42,6 +42,7 @@ mod benchmarking;
 mod dispatchable_impls;
 pub mod mock;
 mod pallet_impls;
+mod proposal_storage;
 mod tests;
 pub mod traits;
 pub mod types;
@@ -51,11 +52,11 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{types::Proposal, weights::WeightInfoZeitgeist};
+    use crate::{traits::ProposalStorage, types::Proposal, weights::WeightInfoZeitgeist};
     use alloc::fmt::Debug;
     use core::marker::PhantomData;
     use frame_support::{
-        pallet_prelude::{IsType, StorageMap, StorageVersion, ValueQuery, Weight},
+        pallet_prelude::{IsType, StorageMap, StorageValue, StorageVersion, ValueQuery, Weight},
         traits::{schedule::v3::Anon as ScheduleAnon, Bounded, Hooks, OriginTrait},
         transactional, Blake2_128Concat, BoundedVec,
     };
@@ -117,6 +118,9 @@ mod pallet {
     pub type Proposals<T: Config> =
         StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, ProposalsOf<T>, ValueQuery>;
 
+    #[pallet::storage]
+    pub type ProposalCount<T: Config> = StorageValue<_, u32, ValueQuery>;
+
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T>
@@ -166,8 +170,12 @@ mod pallet {
         fn on_initialize(now: BlockNumberFor<T>) -> Weight {
             let mut total_weight = Weight::zero(); // Add buffer.
 
-            let proposals = Proposals::<T>::take(now);
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            let proposals = if let Ok(proposals) = <Pallet<T> as ProposalStorage<T>>::take(now) {
+                proposals
+            } else {
+                return total_weight;
+            };
 
             for proposal in proposals.into_iter() {
                 let weight = Self::maybe_schedule_proposal(proposal);

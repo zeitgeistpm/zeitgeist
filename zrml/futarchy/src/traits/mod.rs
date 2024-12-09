@@ -15,6 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-// mod proposal_storage;
+mod proposal_storage;
 
-// pub(crate) use proposal_storage::ProposalStorage;
+pub(crate) use proposal_storage::ProposalStorage;
