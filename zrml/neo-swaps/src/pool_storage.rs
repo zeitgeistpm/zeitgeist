@@ -26,7 +26,6 @@ where
     type PoolId = T::PoolId;
     type Pool = PoolOf<T>;
 
-    // TODO Make `PoolId` as u32.
     fn next_pool_id() -> T::PoolId {
         PoolCount::<T>::get()
     }

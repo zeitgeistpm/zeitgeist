@@ -33,6 +33,7 @@ use crate::mock::types::MockBenchmarkHelper;
 
 parameter_types! {
     // zrml-futarchy
+    pub const MaxProposals: u32 = 16;
     pub const MinDuration: BlockNumber = 10;
 }
 
@@ -89,6 +90,7 @@ impl pallet_balances::Config for Runtime {
 impl zrml_futarchy::Config for Runtime {
     #[cfg(feature = "runtime-benchmarks")]
     type BenchmarkHelper = MockBenchmarkHelper;
+    type MaxProposals = MaxProposals;
     type MinDuration = MinDuration;
     type Oracle = MockOracle;
     type RuntimeEvent = RuntimeEvent;

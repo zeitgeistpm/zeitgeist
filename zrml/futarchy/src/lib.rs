@@ -65,10 +65,7 @@ mod pallet {
     };
     use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
     use scale_info::TypeInfo;
-    use sp_runtime::{
-        traits::{ConstU32, Get},
-        DispatchResult,
-    };
+    use sp_runtime::{traits::Get, DispatchResult};
     use zeitgeist_primitives::traits::FutarchyOracle;
 
     #[cfg(feature = "runtime-benchmarks")]
@@ -78,6 +75,9 @@ mod pallet {
     pub trait Config: frame_system::Config {
         #[cfg(feature = "runtime-benchmarks")]
         type BenchmarkHelper: FutarchyBenchmarkHelper<Self::Oracle>;
+
+        /// The maximum number of proposals allowed to be in flight simultaneously.
+        type MaxProposals: Get<u32>;
 
         type MinDuration: Get<BlockNumberFor<Self>>;
 
@@ -104,23 +104,18 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
-    pub(crate) type CacheSize = ConstU32<16>;
     pub(crate) type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
     pub(crate) type BoundedCallOf<T> = Bounded<CallOf<T>>;
     pub(crate) type OracleOf<T> = <T as Config>::Oracle;
     pub(crate) type PalletsOriginOf<T> =
         <<T as frame_system::Config>::RuntimeOrigin as OriginTrait>::PalletsOrigin;
+    pub(crate) type ProposalsOf<T> = BoundedVec<Proposal<T>, <T as Config>::MaxProposals>;
 
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
     #[pallet::storage]
-    pub type Proposals<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        BlockNumberFor<T>,
-        BoundedVec<Proposal<T>, CacheSize>,
-        ValueQuery,
-    >;
+    pub type Proposals<T: Config> =
+        StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, ProposalsOf<T>, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]

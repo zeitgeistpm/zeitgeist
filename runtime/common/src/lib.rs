@@ -815,7 +815,7 @@ macro_rules! impl_config_traits {
             type PalletsOrigin = OriginCaller;
             type MaxVotes = MaxVotes;
             type WeightInfo = weights::pallet_democracy::WeightInfo<Runtime>;
-            type MaxProposals = MaxProposals;
+            type MaxProposals = DemocracyMaxProposals;
             type Preimages = Preimage;
             type MaxBlacklisted = ConstU32<100>;
             type MaxDeposits = ConstU32<100>;
@@ -1199,6 +1199,7 @@ macro_rules! impl_config_traits {
         impl zrml_futarchy::Config for Runtime {
             #[cfg(feature = "runtime-benchmarks")]
             type BenchmarkHelper = DecisionMarketBenchmarkHelper<Runtime>;
+            type MaxProposals = FutarchyMaxProposals;
             type MinDuration = MinDuration;
             type Oracle = DecisionMarketOracle<Runtime>;
             type RuntimeEvent = RuntimeEvent;
