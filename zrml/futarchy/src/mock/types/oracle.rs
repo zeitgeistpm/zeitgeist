@@ -21,6 +21,7 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::traits::Zero;
 use zeitgeist_primitives::traits::FutarchyOracle;
+use zeitgeist_primitives::types::BlockNumber;
 
 #[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
 pub struct MockOracle {
@@ -41,11 +42,13 @@ impl MockOracle {
 }
 
 impl FutarchyOracle for MockOracle {
+    type BlockNumber = BlockNumber;
+
     fn evaluate(&self) -> (Weight, bool) {
         (self.weight, self.value)
     }
 
-    fn update(&mut self) -> Weight {
+    fn update(&mut self, _: Self::BlockNumber) -> Weight {
         Zero::zero()
     }
 }

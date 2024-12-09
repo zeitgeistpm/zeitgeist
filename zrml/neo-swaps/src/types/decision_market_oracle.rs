@@ -17,6 +17,7 @@
 
 use crate::{traits::PoolOperations, weights::WeightInfoZeitgeist, AssetOf, Config, Error, Pools};
 use frame_support::pallet_prelude::Weight;
+use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{traits::Zero, DispatchError};
@@ -63,6 +64,8 @@ impl<T> FutarchyOracle for DecisionMarketOracle<T>
 where
     T: Config,
 {
+    type BlockNumber = BlockNumberFor<T>;
+
     fn evaluate(&self) -> (Weight, bool) {
         // Err on the side of caution if the pool is not found or a calculation fails by not
         // enacting the policy.
@@ -71,7 +74,7 @@ where
         (T::WeightInfo::decision_market_oracle_evaluate(), value)
     }
 
-    fn update(&mut self) -> Weight {
+    fn update(&mut self, _: Self::BlockNumber) -> Weight {
         Zero::zero()
     }
 }

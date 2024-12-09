@@ -83,7 +83,7 @@ mod pallet {
         type MinDuration: Get<BlockNumberFor<Self>>;
 
         // The type used to define the oracle for each proposal.
-        type Oracle: FutarchyOracle
+        type Oracle: FutarchyOracle<BlockNumber = BlockNumberFor<Self>>
             + Clone
             + Debug
             + Decode
@@ -175,7 +175,7 @@ mod pallet {
 
             // Update all oracles.
             let mutate_all_result =
-                <Pallet<T> as ProposalStorage<T>>::mutate_all(|p| p.oracle.update());
+                <Pallet<T> as ProposalStorage<T>>::mutate_all(|p| p.oracle.update(now));
             if let Ok(block_to_weights) = mutate_all_result {
                 // We did one storage read per vector cached. Shouldn't saturate, but technically
                 // might.
