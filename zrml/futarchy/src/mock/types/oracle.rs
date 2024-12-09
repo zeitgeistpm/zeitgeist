@@ -19,6 +19,7 @@ use alloc::fmt::Debug;
 use frame_support::pallet_prelude::Weight;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_runtime::traits::Zero;
 use zeitgeist_primitives::traits::FutarchyOracle;
 
 #[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
@@ -40,7 +41,13 @@ impl MockOracle {
 }
 
 impl FutarchyOracle for MockOracle {
+    type Data = ();
+
     fn evaluate(&self) -> (Weight, bool) {
         (self.weight, self.value)
+    }
+
+    fn update(&self, _: Self::Data) -> Weight {
+        Zero::zero()
     }
 }

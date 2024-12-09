@@ -19,7 +19,7 @@ use crate::{traits::PoolOperations, weights::WeightInfoZeitgeist, AssetOf, Confi
 use frame_support::pallet_prelude::Weight;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::DispatchError;
+use sp_runtime::{traits::Zero, DispatchError};
 use zeitgeist_primitives::traits::FutarchyOracle;
 
 #[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
@@ -63,11 +63,17 @@ impl<T> FutarchyOracle for DecisionMarketOracle<T>
 where
     T: Config,
 {
+    type Data = ();
+
     fn evaluate(&self) -> (Weight, bool) {
         // Err on the side of caution if the pool is not found or a calculation fails by not
         // enacting the policy.
         let value = self.try_evaluate().unwrap_or(false);
 
         (T::WeightInfo::decision_market_oracle_evaluate(), value)
+    }
+
+    fn update(&self, _: Self::Data) -> Weight {
+        Zero::zero()
     }
 }
