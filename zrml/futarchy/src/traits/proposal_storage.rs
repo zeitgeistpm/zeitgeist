@@ -1,4 +1,5 @@
 use crate::{types::Proposal, Config, ProposalsOf};
+use alloc::{collections::BTreeMap, vec::Vec};
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::DispatchError;
 
@@ -21,7 +22,7 @@ where
     fn get(block_number: BlockNumberFor<T>) -> ProposalsOf<T>;
 
     /// Mutates all scheduled proposals.
-    fn try_mutate_all<F>(mutator: F) -> Result<(), DispatchError>
+    fn mutate_all<R, F>(mutator: F) -> Result<BTreeMap<BlockNumberFor<T>, Vec<R>>, DispatchError>
     where
-        F: FnMut(&mut Proposal<T>);
+        F: FnMut(&mut Proposal<T>) -> R;
 }

@@ -66,7 +66,7 @@ mod pallet {
     };
     use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
     use scale_info::TypeInfo;
-    use sp_runtime::{traits::Get, DispatchResult};
+    use sp_runtime::{traits::Get, DispatchResult, SaturatedConversion};
     use zeitgeist_primitives::traits::FutarchyOracle;
 
     #[cfg(feature = "runtime-benchmarks")]
@@ -173,13 +173,26 @@ mod pallet {
         fn on_initialize(now: BlockNumberFor<T>) -> Weight {
             let mut total_weight = Weight::zero();
 
-            let mutate_all_result = <Pallet<T> as ProposalStorage<T>>::try_mutate_all(|p| {
-                let _ = p.oracle.update();
-            });
-            if mutate_all_result.is_err() {
+            // Update all oracles.
+            let mutate_all_result =
+                <Pallet<T> as ProposalStorage<T>>::mutate_all(|p| p.oracle.update());
+            if let Ok(block_to_weights) = mutate_all_result {
+                // We did one storage read per vector cached. Shouldn't saturate, but technically
+                // might.
+                let reads: u64 = block_to_weights.len().saturated_into();
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads(reads));
+
+                for weights in block_to_weights.values() {
+                    for &weight in weights.iter() {
+                        total_weight = total_weight.saturating_add(weight);
+                    }
+                }
+            } else {
+                // Unreachable!
                 return total_weight;
             }
 
+            //
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
             let proposals = if let Ok(proposals) = <Pallet<T> as ProposalStorage<T>>::take(now) {
                 proposals
