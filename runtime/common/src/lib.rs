@@ -1203,7 +1203,6 @@ macro_rules! impl_config_traits {
             type Oracle = DecisionMarketOracle<Runtime>;
             type RuntimeEvent = RuntimeEvent;
             type Scheduler = Scheduler;
-            type SubmitOrigin = EnsureRoot<AccountId>;
             type WeightInfo = zrml_futarchy::weights::WeightInfo<Runtime>;
         }
 
