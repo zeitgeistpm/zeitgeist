@@ -21,7 +21,7 @@ use super::*;
 use crate::{
     liquidity_tree::{traits::LiquidityTreeHelper, types::LiquidityTree},
     traits::{LiquiditySharesManager, PoolOperations, PoolStorage},
-    types::DecisionMarketOracle,
+    types::{DecisionMarketOracle, DecisionMarketOracleScoreboard},
     AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools, MIN_SPOT_PRICE,
 };
 use alloc::{vec, vec::Vec};
@@ -40,7 +40,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::{base_multiples::*, CENT},
     math::fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
-    traits::{CompleteSetOperationsApi, FutarchyOracle},
+    traits::{CombinatorialTokensFuel, CompleteSetOperationsApi, FutarchyOracle},
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -523,7 +523,7 @@ mod benchmarks {
             amount,
             create_spot_prices::<T>(asset_count),
             CENT.saturated_into(),
-            false,
+            FuelOf::<T>::from_total(16),
         ));
 
         let pool_id = 0u8.into();
@@ -578,7 +578,7 @@ mod benchmarks {
             amount,
             create_spot_prices::<T>(asset_count),
             CENT.saturated_into(),
-            false,
+            FuelOf::<T>::from_total(16),
         ));
 
         let pool_id = 0u8.into();
@@ -623,8 +623,9 @@ mod benchmarks {
     }
 
     #[benchmark]
-    fn deploy_combinatorial_pool(n: Linear<1, 7>) {
+    fn deploy_combinatorial_pool(n: Linear<1, 7>, m: Linear<32, 64>) {
         let market_count = n;
+        let total = m;
 
         let alice: T::AccountId = whitelisted_caller();
         let base_asset = Asset::Ztg;
@@ -644,7 +645,15 @@ mod benchmarks {
         let swap_fee = CENT.saturated_into();
 
         #[extrinsic_call]
-        _(RawOrigin::Signed(alice), asset_count, market_ids, amount, spot_prices, swap_fee, true);
+        _(
+            RawOrigin::Signed(alice),
+            asset_count,
+            market_ids,
+            amount,
+            spot_prices,
+            swap_fee,
+            FuelOf::<T>::from_total(total),
+        );
     }
 
     #[benchmark]
@@ -662,11 +671,47 @@ mod benchmarks {
         let pool = Pools::<T>::get(market_id).unwrap();
         let assets = pool.assets();
 
-        let oracle = DecisionMarketOracle::<T>::new(market_id, assets[0], assets[1]);
+        let scoreboard = DecisionMarketOracleScoreboard::<T>::new(
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+        );
+        let oracle = DecisionMarketOracle::<T>::new(market_id, assets[0], assets[1], scoreboard);
 
         #[block]
         {
             let _ = oracle.evaluate();
+        }
+    }
+
+    #[benchmark]
+    fn decision_market_oracle_update() {
+        let alice = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = 2;
+        let market_id = create_market_and_deploy_pool::<T>(
+            alice,
+            base_asset,
+            asset_count,
+            _10.saturated_into(),
+        );
+
+        let pool = Pools::<T>::get(market_id).unwrap();
+        let assets = pool.assets();
+
+        let scoreboard = DecisionMarketOracleScoreboard::<T>::new(
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+        );
+        let mut oracle =
+            DecisionMarketOracle::<T>::new(market_id, assets[0], assets[1], scoreboard);
+
+        #[block]
+        {
+            let _ = oracle.update(1u8.into());
         }
     }
 

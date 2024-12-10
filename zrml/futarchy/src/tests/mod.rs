@@ -27,14 +27,14 @@ use crate::{
         utility,
     },
     types::Proposal,
-    CacheSize, Config, Error, Event, Proposals,
+    Config, Error, Event, Proposals, ProposalsOf,
 };
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::RawOrigin,
     traits::{schedule::DispatchTime, Bounded},
 };
-use sp_runtime::{traits::Get, BoundedVec, DispatchError};
+use sp_runtime::DispatchError;
 
 /// Utility struct for managing test accounts.
 pub(crate) struct Account {

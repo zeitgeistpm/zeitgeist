@@ -21,7 +21,7 @@ use crate::{
     weights::WeightInfo,
 };
 use frame_support::{construct_runtime, parameter_types, traits::Everything};
-use frame_system::{mocking::MockBlock, EnsureRoot};
+use frame_system::mocking::MockBlock;
 use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};
 use zeitgeist_primitives::{
     constants::mock::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves},
@@ -33,6 +33,7 @@ use crate::mock::types::MockBenchmarkHelper;
 
 parameter_types! {
     // zrml-futarchy
+    pub const MaxProposals: u32 = 16;
     pub const MinDuration: BlockNumber = 10;
 }
 
@@ -89,10 +90,10 @@ impl pallet_balances::Config for Runtime {
 impl zrml_futarchy::Config for Runtime {
     #[cfg(feature = "runtime-benchmarks")]
     type BenchmarkHelper = MockBenchmarkHelper;
+    type MaxProposals = MaxProposals;
     type MinDuration = MinDuration;
     type Oracle = MockOracle;
     type RuntimeEvent = RuntimeEvent;
     type Scheduler = MockScheduler;
-    type SubmitOrigin = EnsureRoot<<Runtime as frame_system::Config>::AccountId>;
     type WeightInfo = WeightInfo<Runtime>;
 }

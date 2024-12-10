@@ -48,14 +48,14 @@ use serde::{Deserialize, Serialize};
 pub enum Asset<MarketId> {
     CategoricalOutcome(MarketId, CategoryIndex),
     ScalarOutcome(MarketId, ScalarPosition),
-    CombinatorialToken(CombinatorialId),
+    CombinatorialOutcomeLegacy, // Here to avoid having to migrate all holdings on the chain.
     PoolShare(PoolId),
     #[default]
     Ztg,
     ForeignAsset(u32),
     ParimutuelShare(MarketId, CategoryIndex),
+    CombinatorialToken(CombinatorialId),
 }
-// TODO Needs storage migration
 
 #[cfg(feature = "runtime-benchmarks")]
 impl<MarketId: MaxEncodedLen> ZeitgeistAssetEnumerator<MarketId> for Asset<MarketId> {

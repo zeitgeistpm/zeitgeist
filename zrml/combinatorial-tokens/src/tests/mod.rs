@@ -28,6 +28,7 @@ use crate::{
         runtime::{CombinatorialTokens, Currencies, MarketCommons, Runtime, RuntimeOrigin, System},
         types::MockPayout,
     },
+    types::cryptographic_id_manager::Fuel,
     Error, Event, Pallet,
 };
 use frame_support::{assert_noop, assert_ok};

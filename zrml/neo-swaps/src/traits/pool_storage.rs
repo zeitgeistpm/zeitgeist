@@ -17,6 +17,8 @@
 
 use sp_runtime::DispatchError;
 
+/// Slot map interface for pool storage. Undocumented functions behave like their counterparts in
+/// substrate's `StorageMap`.
 pub(crate) trait PoolStorage {
     type PoolId;
     type Pool;
@@ -30,4 +32,11 @@ pub(crate) trait PoolStorage {
     fn try_mutate_pool<R, F>(pool_id: &Self::PoolId, mutator: F) -> Result<R, DispatchError>
     where
         F: FnMut(&mut Self::Pool) -> Result<R, DispatchError>;
+
+    /// Mutate and maybe remove the pool indexed by `pool_id`. Unlike `try_mutate_exists` in
+    /// `StorageMap`, the `mutator` must return a `(R, bool)`. If and only if the pool is positive,
+    /// the pool is removed.
+    fn try_mutate_exists<R, F>(pool_id: &Self::PoolId, mutator: F) -> Result<R, DispatchError>
+    where
+        F: FnMut(&mut Self::Pool) -> Result<(R, bool), DispatchError>;
 }

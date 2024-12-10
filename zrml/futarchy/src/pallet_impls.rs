@@ -23,6 +23,10 @@ use frame_support::{
 };
 use zeitgeist_primitives::traits::FutarchyOracle;
 
+// Following Parity's implementation of pallet-democracy, we're using minimum priority for futarchy
+// proposals.
+const SCHEDULE_PRIORITY: u8 = 63;
+
 impl<T: Config> Pallet<T> {
     /// Evaluates `proposal` using the specified oracle and schedules the contained call if the
     /// oracle approves.
@@ -33,7 +37,7 @@ impl<T: Config> Pallet<T> {
             let result = T::Scheduler::schedule(
                 DispatchTime::At(proposal.when),
                 None,
-                63,
+                SCHEDULE_PRIORITY,
                 RawOrigin::Root.into(),
                 proposal.call.clone(),
             );
