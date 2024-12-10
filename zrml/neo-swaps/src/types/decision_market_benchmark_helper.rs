@@ -19,7 +19,7 @@
 
 use crate::{
     liquidity_tree::types::LiquidityTree,
-    types::{DecisionMarketOracle, Pool, PoolType},
+    types::{DecisionMarketOracle, DecisionMarketOracleScoreboard, Pool, PoolType},
     BalanceOf, Config, MarketIdOf, Pallet, Pools,
 };
 use alloc::{collections::BTreeMap, vec};
@@ -58,6 +58,13 @@ where
             reserves.insert(negative_outcome, one);
         }
 
+        let scoreboard = DecisionMarketOracleScoreboard::new(
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+        );
+
         let account_id: T::AccountId = Pallet::<T>::pool_account_id(&pool_id);
         let pool = Pool {
             account_id: account_id.clone(),
@@ -72,6 +79,6 @@ where
 
         Pools::<T>::insert(pool_id, pool);
 
-        DecisionMarketOracle::new(pool_id, positive_outcome, negative_outcome)
+        DecisionMarketOracle::new(pool_id, positive_outcome, negative_outcome, scoreboard)
     }
 }

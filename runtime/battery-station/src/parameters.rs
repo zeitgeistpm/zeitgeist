@@ -165,9 +165,10 @@ parameter_types! {
     /// can lead to extrinsic with very big weight: see delegate for instance.
     pub const MaxVotes: u32 = 100;
     /// The maximum number of public proposals that can exist at any time.
-    pub const MaxProposals: u32 = 100;
+    pub const DemocracyMaxProposals: u32 = 100;
 
     // Futarchy
+    pub const FutarchyMaxProposals: u32 = 4;
     pub const MinDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Hybrid Router parameters

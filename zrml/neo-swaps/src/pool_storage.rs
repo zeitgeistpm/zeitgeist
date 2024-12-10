@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{traits::PoolStorage, Config, Error, Pallet, PoolCount, PoolOf, Pools};
+use frame_support::require_transactional;
 use sp_runtime::DispatchError;
 use zeitgeist_primitives::math::checked_ops_res::CheckedIncRes;
 
@@ -26,11 +27,11 @@ where
     type PoolId = T::PoolId;
     type Pool = PoolOf<T>;
 
-    // TODO Make `PoolId` as u32.
     fn next_pool_id() -> T::PoolId {
         PoolCount::<T>::get()
     }
 
+    #[require_transactional]
     fn add(pool: Self::Pool) -> Result<Self::PoolId, DispatchError> {
         let pool_id = Self::next_pool_id();
         Pools::<T>::insert(pool_id, pool);
