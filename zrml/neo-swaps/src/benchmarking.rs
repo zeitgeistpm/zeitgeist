@@ -685,6 +685,36 @@ mod benchmarks {
         }
     }
 
+    #[benchmark]
+    fn decision_market_oracle_update() {
+        let alice = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = 2;
+        let market_id = create_market_and_deploy_pool::<T>(
+            alice,
+            base_asset,
+            asset_count,
+            _10.saturated_into(),
+        );
+
+        let pool = Pools::<T>::get(market_id).unwrap();
+        let assets = pool.assets();
+
+        let scoreboard = DecisionMarketOracleScoreboard::<T>::new(
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+        );
+        let mut oracle =
+            DecisionMarketOracle::<T>::new(market_id, assets[0], assets[1], scoreboard);
+
+        #[block]
+        {
+            let _ = oracle.update(1u8.into());
+        }
+    }
+
     impl_benchmark_test_suite!(
         NeoSwaps,
         crate::mock::ExtBuilder::default().build(),

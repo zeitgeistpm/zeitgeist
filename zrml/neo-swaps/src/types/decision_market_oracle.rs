@@ -84,6 +84,6 @@ where
             self.scoreboard.skip_update(now);
         }
 
-        Weight::zero() // TODO
+        T::WeightInfo::decision_market_oracle_update()
     }
 }
