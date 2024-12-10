@@ -2287,7 +2287,7 @@ macro_rules! create_common_tests {
                 };
                 use zrml_futarchy::types::Proposal;
                 use zrml_market_commons::types::MarketBuilder;
-                use zrml_neo_swaps::types::DecisionMarketOracle;
+                use zrml_neo_swaps::types::{DecisionMarketOracle, DecisionMarketOracleScoreboard};
 
                 #[test]
                 fn futarchy_schedules_and_executes_call() {
@@ -2361,10 +2361,13 @@ macro_rules! create_common_tests {
                         };
                         let call =
                             Preimage::bound(RuntimeCall::from(remark_dispatched_as)).unwrap();
+                        let scoreboard =
+                            DecisionMarketOracleScoreboard::new(40_000, 10_000, one / 7, one);
                         let oracle = DecisionMarketOracle::new(
                             market_id,
                             Asset::CategoricalOutcome(market_id, 0),
                             Asset::CategoricalOutcome(market_id, 1),
+                            scoreboard,
                         );
                         let when = duration + 10;
                         let proposal = Proposal { when, call, oracle };

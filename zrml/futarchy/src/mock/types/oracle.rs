@@ -20,8 +20,7 @@ use frame_support::pallet_prelude::Weight;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::traits::Zero;
-use zeitgeist_primitives::traits::FutarchyOracle;
-use zeitgeist_primitives::types::BlockNumber;
+use zeitgeist_primitives::{traits::FutarchyOracle, types::BlockNumber};
 
 #[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
 pub struct MockOracle {

@@ -2,12 +2,11 @@ use crate::{
     traits::ProposalStorage, types::Proposal, Config, Error, Pallet, ProposalCount, Proposals,
     ProposalsOf,
 };
-use alloc::{collections::BTreeMap, vec::Vec};
+use alloc::{collections::BTreeMap, vec, vec::Vec};
 use frame_support::{ensure, require_transactional, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{DispatchError, SaturatedConversion};
 use zeitgeist_primitives::math::checked_ops_res::{CheckedIncRes, CheckedSubRes};
-use alloc::vec;
 
 impl<T> ProposalStorage<T> for Pallet<T>
 where
@@ -51,7 +50,9 @@ where
         Proposals::<T>::get(block_number)
     }
 
-    fn mutate_all<R, F>(mut mutator: F) -> Result<BTreeMap<BlockNumberFor<T>, Vec<R>>, DispatchError>
+    fn mutate_all<R, F>(
+        mut mutator: F,
+    ) -> Result<BTreeMap<BlockNumberFor<T>, Vec<R>>, DispatchError>
     where
         F: FnMut(&mut Proposal<T>) -> R,
     {

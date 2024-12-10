@@ -21,7 +21,7 @@ use super::*;
 use crate::{
     liquidity_tree::{traits::LiquidityTreeHelper, types::LiquidityTree},
     traits::{LiquiditySharesManager, PoolOperations, PoolStorage},
-    types::DecisionMarketOracle,
+    types::{DecisionMarketOracle, DecisionMarketOracleScoreboard},
     AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools, MIN_SPOT_PRICE,
 };
 use alloc::{vec, vec::Vec};
@@ -671,7 +671,13 @@ mod benchmarks {
         let pool = Pools::<T>::get(market_id).unwrap();
         let assets = pool.assets();
 
-        let oracle = DecisionMarketOracle::<T>::new(market_id, assets[0], assets[1]);
+        let scoreboard = DecisionMarketOracleScoreboard::<T>::new(
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+        );
+        let oracle = DecisionMarketOracle::<T>::new(market_id, assets[0], assets[1], scoreboard);
 
         #[block]
         {

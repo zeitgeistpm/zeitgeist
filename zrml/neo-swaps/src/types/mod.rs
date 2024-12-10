@@ -17,6 +17,7 @@
 
 mod decision_market_benchmark_helper;
 mod decision_market_oracle;
+mod decision_market_oracle_scoreboard;
 mod fee_distribution;
 mod max_assets;
 mod pool;
@@ -25,6 +26,7 @@ mod pool_type;
 #[cfg(feature = "runtime-benchmarks")]
 pub use decision_market_benchmark_helper::*;
 pub use decision_market_oracle::*;
+pub use decision_market_oracle_scoreboard::*;
 pub(crate) use fee_distribution::*;
 pub(crate) use max_assets::*;
 pub(crate) use pool::*;
