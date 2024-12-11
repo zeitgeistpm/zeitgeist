@@ -105,7 +105,7 @@ describeSuite({
         await canSendBalanceTransfer(
           context,
           "BatteryStationPara",
-          batteryStationParaApi
+          batteryStationParaApi,
         );
       },
     });

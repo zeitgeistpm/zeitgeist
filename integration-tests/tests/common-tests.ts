@@ -27,14 +27,14 @@ export async function canCreateBlocks(
 export async function canSendBalanceTransfer(
   context: ChopsticksContext,
   providerName: string,
-  paraApi: ApiPromise
+  paraApi: ApiPromise,
 ) {
   const randomAccount = generateKeyringPair("sr25519");
   const keyring = new Keyring({ type: "sr25519" });
   const alice = keyring.addFromUri("//Alice", { name: "Alice default" });
 
   let tries = 0;
-  const amount = BigInt("1000000000");
+  const amount = BigInt("100000000000");
   const balanceBefore = (
     (await paraApi.query.system.account(
       randomAccount.address
@@ -46,15 +46,25 @@ export async function canSendBalanceTransfer(
   /// Chopsticks does not have the notion of tx pool either, so we need to retry
   /// Therefore we just retry at most MAX_BALANCE_TRANSFER_TRIES
   while (tries < MAX_BALANCE_TRANSFER_TRIES) {
-    const tx = await paraApi.tx.balances.transfer(
+    const tx = await paraApi.tx.balances.transferAllowDeath(
       randomAccount.address,
       amount
     );
-    const txHash = tx.signAndSend(alice, { nonce: -1 });
+    const txHash = tx.signAndSend(alice);
     const result = await context.createBlock({
       providerName: providerName,
       count: 1,
+      allowFailures: true,
     });
+    const apiAt = await paraApi.at(result.result);
+    const events = await apiAt.query.system.events();
+
+    // in the case that the transfer fails, it's logged here
+    console.log(
+      `ExtrinsicFailed ${events.find((evt) =>
+        paraApi.events.system.ExtrinsicFailed.is(evt.event)
+      )}`
+    );
 
     const block = await paraApi.rpc.chain.getBlock(result.result);
     const includedTxHashes = block.block.extrinsics.map((x) =>
@@ -67,7 +77,10 @@ export async function canSendBalanceTransfer(
   }
 
   // without this, the xcm transfer `canSendXcmTransfer` test below has a timeout
-  await context.createBlock({ providerName: providerName, count: 1 });
+  await context.createBlock({
+    providerName: providerName,
+    count: 1,
+  });
 
   const balanceAfter = (
     (await paraApi.query.system.account(
