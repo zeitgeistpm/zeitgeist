@@ -27,7 +27,7 @@ export async function canCreateBlocks(
 export async function canSendBalanceTransfer(
   context: ChopsticksContext,
   providerName: string,
-  paraApi: ApiPromise,
+  paraApi: ApiPromise
 ) {
   const randomAccount = generateKeyringPair("sr25519");
   const keyring = new Keyring({ type: "sr25519" });
@@ -60,11 +60,12 @@ export async function canSendBalanceTransfer(
     const events = await apiAt.query.system.events();
 
     // in the case that the transfer fails, it's logged here
-    console.log(
-      `ExtrinsicFailed ${events.find((evt) =>
-        paraApi.events.system.ExtrinsicFailed.is(evt.event)
-      )}`
+    const extrinsicFailedEvent = events.find((evt) =>
+      paraApi.events.system.ExtrinsicFailed.is(evt.event)
     );
+    if (extrinsicFailedEvent) {
+      console.log(`ExtrinsicFailed: ${extrinsicFailedEvent}`);
+    }
 
     const block = await paraApi.rpc.chain.getBlock(result.result);
     const includedTxHashes = block.block.extrinsics.map((x) =>
@@ -96,6 +97,7 @@ export async function canSendXcmTransfer(
   senderProviderName: string,
   senderParaApi: ApiPromise,
   receiverParaApi: ApiPromise,
+  receiverProviderName: string,
   receiverParaId: number,
   tokensIndex: number
 ) {
@@ -116,7 +118,7 @@ export async function canSendXcmTransfer(
   ).free.toBigInt();
 
   const ztg = { Ztg: null };
-  const amount: bigint = BigInt("192913122185847181");
+  const amount: bigint = BigInt("100000000000000000");
   const bobAccountId = senderParaApi
     .createType("AccountId32", bob.address)
     .toHex();
@@ -174,7 +176,7 @@ export async function canSendXcmTransfer(
         jsonrpc: "2.0",
         id: 1,
         method: "dev_newBlock",
-        params: [{ count: 1 }],
+        params: [{ count: 2 }],
       };
 
       ws.send(JSON.stringify(message));
