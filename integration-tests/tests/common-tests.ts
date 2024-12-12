@@ -163,39 +163,9 @@ export async function canSendXcmTransfer(
     "Unexpected balance diff"
   ).toBe(amount + transferFee);
 
-  // RpcError: 1: Block 0x... not found, if using this `await context.createBlock({ providerName: "ReceiverPara", count: 1 });`
-  // Reported Bug here https://github.com/Moonsong-Labs/moonwall/issues/343
-
-  // use a workaround for creating a block
-  const newBlockPromise = new Promise((resolve, reject) => {
-    // ws://127.0.0.1:8001 represents the receiver chain endpoint
-    const ws = new WebSocket("ws://127.0.0.1:8001");
-
-    ws.on("open", function open() {
-      const message = {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "dev_newBlock",
-        params: [{ count: 2 }],
-      };
-
-      ws.send(JSON.stringify(message));
-    });
-
-    ws.on("message", async function message(data) {
-      const dataObj = JSON.parse(data.toString());
-      log("Received message:", dataObj);
-      resolve(dataObj.result);
-    });
-
-    ws.on("error", function error(error) {
-      log("Error:", error.toString());
-      reject(error);
-    });
-  });
+  await context.createBlock({ providerName: receiverProviderName, count: 2, logger: log });
 
   await new Promise((resolve) => setTimeout(resolve, 2000));
-  await newBlockPromise;
   const receiverBalanceAfter: bigint = (
     (await receiverParaApi.query.tokens.accounts(
       bob.address,
