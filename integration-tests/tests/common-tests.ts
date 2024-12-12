@@ -194,6 +194,7 @@ export async function canSendXcmTransfer(
     });
   });
 
+  await new Promise((resolve) => setTimeout(resolve, 2000));
   await newBlockPromise;
   const receiverBalanceAfter: bigint = (
     (await receiverParaApi.query.tokens.accounts(
