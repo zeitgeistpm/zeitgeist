@@ -198,12 +198,17 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
+    // TODO: Pool struct fields changed => storage migration
+    // TODO: key changed from `MarketIdOf<T>` to `T::PoolId` (both u128 in the end) => storage migration ? check with try-runtime if necessary
     #[pallet::storage]
     pub(crate) type Pools<T: Config> = StorageMap<_, Twox64Concat, T::PoolId, PoolOf<T>>;
 
+    // TODO: `PoolCount` storage item was newly added => populate the number of pools in a storage migration 
     #[pallet::storage]
     pub(crate) type PoolCount<T: Config> = StorageValue<_, T::PoolId, ValueQuery>;
 
+    // TODO: `MarketIdToPoolId` storage item was newly added => populate the mapping in a storage migration
+    // TODO: For key-value pair (k, v) of Pool, we need to add { k => k }  to the MarketIdToPoolId map.
     #[pallet::storage]
     pub(crate) type MarketIdToPoolId<T: Config> =
         StorageMap<_, Twox64Concat, MarketIdOf<T>, T::PoolId>;
