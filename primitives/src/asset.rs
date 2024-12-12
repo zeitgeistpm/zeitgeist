@@ -48,7 +48,6 @@ use serde::{Deserialize, Serialize};
 pub enum Asset<MarketId> {
     CategoricalOutcome(MarketId, CategoryIndex),
     ScalarOutcome(MarketId, ScalarPosition),
-    // TODO: changed from `CombinatorialOutcome` to `CombinatorialToken(CombinatorialId)` => storage migration
     CombinatorialToken(CombinatorialId),
     PoolShare(PoolId),
     #[default]
