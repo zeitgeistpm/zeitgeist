@@ -117,6 +117,7 @@ describeSuite({
           "ZeitgeistPara",
           zeitgeistParaApi,
           hydradxParaApi,
+          "HydraDXPara",
           HYDRADX_PARA_ID,
           ZEITGEIST_TOKENS_INDEX
         );
