@@ -102,7 +102,6 @@ where
             let pool_id = market_id;
             max_pool_id = max_pool_id.max(pool_id);
         }
-        // TODO test if pool count is correctly updated to the maximum plus one
         let next_pool_count_id = if let Ok(id) = max_pool_id.checked_add_res(&1u8.into()) {
             id
         } else {
@@ -113,7 +112,6 @@ where
         Pools::<T>::translate::<OldPoolOf<T>, _>(|market_id, pool| {
             translated.saturating_inc();
             let pool_id = market_id;
-            // TODO: test for every pool if the market id to pool id mapping exists
             MarketIdToPoolId::<T>::insert(pool_id, market_id);
             let assets = if let Ok(market) = T::MarketCommons::market(&market_id) {
                 market.outcome_assets().try_into().ok()?
@@ -238,18 +236,24 @@ mod tests {
     }
 
     #[test]
-    fn on_runtime_upgrade_correctly_updates_pools() {
+    fn on_runtime_upgrade_correctly_updates_pool_storages() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            let market_id = create_market();
+            create_markets(3);
             let (old_pools, new_pools) = construct_old_new_tuple();
             populate_test_data::<Twox64Concat, MarketIdOf<Runtime>, OldPoolOf<Runtime>>(
                 NEO_SWAPS, POOLS, old_pools,
             );
             MigratePoolStorageItems::<Runtime>::on_runtime_upgrade();
             let actual = Pools::get(0u128).unwrap();
-            assert_eq!(market_id, 0u128);
             assert_eq!(actual, new_pools[0]);
+            let next_pool_count_id = PoolCount::<Runtime>::get();
+            assert_eq!(next_pool_count_id, 3u128);
+            assert_eq!(MarketIdToPoolId::<Runtime>::get(0u128).unwrap(), 0u128);
+            assert_eq!(MarketIdToPoolId::<Runtime>::get(1u128).unwrap(), 1u128);
+            assert_eq!(MarketIdToPoolId::<Runtime>::get(2u128).unwrap(), 2u128);
+            assert!(MarketIdToPoolId::<Runtime>::get(3u128).is_none());
+            assert!(MarketIdToPoolId::<Runtime>::iter_keys().count() == 3);
         });
     }
 
@@ -257,28 +261,30 @@ mod tests {
         StorageVersion::new(NEO_SWAPS_REQUIRED_STORAGE_VERSION).put::<Pallet<Runtime>>();
     }
 
-    fn create_market() -> MarketIdOf<Runtime> {
-        let base_asset = Asset::Ztg;
-        let market = Market {
-            market_id: 0u8.into(),
-            base_asset,
-            creation: MarketCreation::Permissionless,
-            creator_fee: Perbill::zero(),
-            creator: ALICE,
-            oracle: BOB,
-            metadata: vec![0, 50],
-            market_type: MarketType::Categorical(3),
-            period: MarketPeriod::Block(0u32.into()..1u32.into()),
-            deadlines: Default::default(),
-            scoring_rule: ScoringRule::AmmCdaHybrid,
-            status: MarketStatus::Active,
-            report: None,
-            resolved_outcome: None,
-            dispute_mechanism: None,
-            bonds: Default::default(),
-            early_close: None,
-        };
-        MarketCommons::push_market(market).unwrap()
+    fn create_markets(count: u8) {
+        for _ in 0..count {
+            let base_asset = Asset::Ztg;
+            let market = Market {
+                market_id: 0u8.into(),
+                base_asset,
+                creation: MarketCreation::Permissionless,
+                creator_fee: Perbill::zero(),
+                creator: ALICE,
+                oracle: BOB,
+                metadata: vec![0, 50],
+                market_type: MarketType::Categorical(3),
+                period: MarketPeriod::Block(0u32.into()..1u32.into()),
+                deadlines: Default::default(),
+                scoring_rule: ScoringRule::AmmCdaHybrid,
+                status: MarketStatus::Active,
+                report: None,
+                resolved_outcome: None,
+                dispute_mechanism: None,
+                bonds: Default::default(),
+                early_close: None,
+            };
+            MarketCommons::push_market(market).unwrap();
+        }
     }
 
     fn construct_old_new_tuple() -> (Vec<OldPoolOf<Runtime>>, Vec<PoolOf<Runtime>>) {
@@ -319,7 +325,10 @@ mod tests {
             swap_fee,
             pool_type: PoolType::Standard(0),
         };
-        (vec![old_pool], vec![new_pool])
+        (
+            vec![old_pool.clone(), old_pool.clone(), old_pool.clone()],
+            vec![new_pool.clone(), new_pool.clone(), new_pool.clone()],
+        )
     }
 
     #[allow(unused)]
