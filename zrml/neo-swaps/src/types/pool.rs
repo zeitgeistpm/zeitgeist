@@ -51,16 +51,12 @@ where
     S: Get<u32>,
 {
     pub account_id: T::AccountId,
-    // TODO: `assets` was newly added => storage migration
-    // TODO: One can find the assets in the keys of the reserves map
     pub assets: BoundedVec<AssetOf<T>, S>,
     pub reserves: BoundedBTreeMap<AssetOf<T>, BalanceOf<T>, S>,
     pub collateral: AssetOf<T>,
     pub liquidity_parameter: BalanceOf<T>,
     pub liquidity_shares_manager: LSM,
     pub swap_fee: BalanceOf<T>,
-    // TODO: `pool_type` was newly added => storage migration
-    // TODO: populate `PoolType::Standard(market_id)` for each existing pool, since no combinatorial pools existed before
     pub pool_type: PoolType<MarketIdOf<T>, S>,
 }
 

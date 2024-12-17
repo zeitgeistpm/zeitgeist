@@ -33,6 +33,7 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::Saturating;
 use zeitgeist_primitives::math::checked_ops_res::CheckedAddRes;
+use zrml_market_commons::MarketCommonsPalletApi;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "try-runtime")] {
@@ -91,17 +92,40 @@ where
             return total_weight;
         }
         log::info!("MigratePoolStorageItems: Starting...");
-        let mut translated = 0u64;
         let mut max_pool_id: T::PoolId = Default::default();
+        for market_id in Pools::<T>::iter_keys() {
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
+            if let Err(_) = T::MarketCommons::market(&market_id) {
+                log::error!("MigratePoolStorageItems: Market {:?} not found", market_id);
+                return total_weight;
+            };
+            let pool_id = market_id;
+            max_pool_id = max_pool_id.max(pool_id);
+        }
+        let next_pool_count_id = if let Ok(id) = max_pool_id.checked_add_res(&1u8.into()) {
+            id
+        } else {
+            log::error!("MigratePoolStorageItems: Pool id overflow");
+            return total_weight;
+        };
+        let mut translated = 0u64;
         Pools::<T>::translate::<OldPoolOf<T>, _>(|market_id, pool| {
             translated.saturating_inc();
             let pool_id = market_id;
-            max_pool_id = max_pool_id.max(pool_id);
             MarketIdToPoolId::<T>::insert(pool_id, market_id);
+            let assets = if let Ok(market) = T::MarketCommons::market(&market_id) {
+                market.outcome_assets().try_into().ok()?
+            } else {
+                log::error!(
+                    "MigratePoolStorageItems: Market {:?} not found. This should not happen, \
+                     because it is checked above.",
+                    market_id
+                );
+                pool.reserves.keys().cloned().collect::<Vec<_>>().try_into().ok()?
+            };
             Some(Pool {
                 account_id: pool.account_id,
-                // TODO: rather assets generated from market assets instead of reserves?
-                assets: pool.reserves.keys().cloned().collect::<Vec<_>>().try_into().ok()?,
+                assets,
                 reserves: pool.reserves,
                 collateral: pool.collateral,
                 liquidity_parameter: pool.liquidity_parameter,
@@ -110,7 +134,7 @@ where
                 pool_type: PoolType::Standard(market_id),
             })
         });
-        PoolCount::<T>::set(max_pool_id.checked_add_res(&1u8.into())?);
+        PoolCount::<T>::set(next_pool_count_id);
         log::info!("MigratePoolStorageItems: Upgraded {} pools.", translated);
         total_weight =
             total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
@@ -175,7 +199,7 @@ mod tests {
     use super::*;
     use crate::{
         liquidity_tree::types::LiquidityTree,
-        mock::{ExtBuilder, Runtime},
+        mock::{ExtBuilder, MarketCommons, Runtime, ALICE, BOB},
         MarketIdOf, PoolOf, Pools,
     };
     use alloc::collections::BTreeMap;
@@ -183,8 +207,10 @@ mod tests {
     use frame_support::{migration::put_storage_value, StorageHasher, Twox64Concat};
     use parity_scale_codec::Encode;
     use sp_io::storage::root as storage_root;
-    use sp_runtime::StateVersion;
-    use zeitgeist_primitives::types::Asset;
+    use sp_runtime::{Perbill, StateVersion};
+    use zeitgeist_primitives::types::{
+        Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule,
+    };
 
     #[test]
     fn on_runtime_upgrade_increments_the_storage_version() {
@@ -210,15 +236,17 @@ mod tests {
     }
 
     #[test]
-    fn on_runtime_upgrade_correctly_updates_markets() {
+    fn on_runtime_upgrade_correctly_updates_pools() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
+            let market_id = create_market();
             let (old_pools, new_pools) = construct_old_new_tuple();
             populate_test_data::<Twox64Concat, MarketIdOf<Runtime>, OldPoolOf<Runtime>>(
                 NEO_SWAPS, POOLS, old_pools,
             );
             MigratePoolStorageItems::<Runtime>::on_runtime_upgrade();
             let actual = Pools::get(0u128).unwrap();
+            assert_eq!(market_id, 0u128);
             assert_eq!(actual, new_pools[0]);
         });
     }
@@ -227,11 +255,41 @@ mod tests {
         StorageVersion::new(NEO_SWAPS_REQUIRED_STORAGE_VERSION).put::<Pallet<Runtime>>();
     }
 
+    fn create_market() -> MarketIdOf<Runtime> {
+        let base_asset = Asset::Ztg;
+        let market = Market {
+            market_id: 0u8.into(),
+            base_asset,
+            creation: MarketCreation::Permissionless,
+            creator_fee: Perbill::zero(),
+            creator: ALICE,
+            oracle: BOB,
+            metadata: vec![0, 50],
+            market_type: MarketType::Categorical(3),
+            period: MarketPeriod::Block(0u32.into()..1u32.into()),
+            deadlines: Default::default(),
+            scoring_rule: ScoringRule::AmmCdaHybrid,
+            status: MarketStatus::Active,
+            report: None,
+            resolved_outcome: None,
+            dispute_mechanism: None,
+            bonds: Default::default(),
+            early_close: None,
+        };
+        MarketCommons::push_market(market).unwrap()
+    }
+
     fn construct_old_new_tuple() -> (Vec<OldPoolOf<Runtime>>, Vec<PoolOf<Runtime>>) {
         let account_id = 1;
-        let mut old_reserves = BTreeMap::new();
-        old_reserves.insert(Asset::CategoricalOutcome(2, 3), 4);
-        let new_reserves = old_reserves.clone().try_into().unwrap();
+        let mut reserves = BTreeMap::new();
+        let asset_0 = Asset::CategoricalOutcome(0, 0);
+        let asset_1 = Asset::CategoricalOutcome(0, 1);
+        let asset_2 = Asset::CategoricalOutcome(0, 2);
+        reserves.insert(asset_0, 4);
+        reserves.insert(asset_1, 5);
+        reserves.insert(asset_2, 6);
+        let reserves: BoundedBTreeMap<AssetOf<Runtime>, BalanceOf<Runtime>, MaxAssets> =
+            reserves.clone().try_into().unwrap();
         let collateral = Asset::Ztg;
         let liquidity_parameter = 5;
         let swap_fee = 6;
@@ -243,7 +301,7 @@ mod tests {
 
         let old_pool = OldPoolOf {
             account_id,
-            reserves: old_reserves,
+            reserves: reserves.clone(),
             collateral,
             liquidity_parameter,
             liquidity_shares_manager: liquidity_shares_manager.clone(),
@@ -251,11 +309,13 @@ mod tests {
         };
         let new_pool = Pool {
             account_id,
-            reserves: new_reserves,
+            assets: vec![asset_0, asset_1, asset_2].try_into().unwrap(),
+            reserves,
             collateral,
             liquidity_parameter,
             liquidity_shares_manager,
             swap_fee,
+            pool_type: PoolType::Standard(0),
         };
         (vec![old_pool], vec![new_pool])
     }
