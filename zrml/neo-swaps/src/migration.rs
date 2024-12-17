@@ -102,6 +102,7 @@ where
             let pool_id = market_id;
             max_pool_id = max_pool_id.max(pool_id);
         }
+        // TODO test if pool count is correctly updated to the maximum plus one
         let next_pool_count_id = if let Ok(id) = max_pool_id.checked_add_res(&1u8.into()) {
             id
         } else {
@@ -112,6 +113,7 @@ where
         Pools::<T>::translate::<OldPoolOf<T>, _>(|market_id, pool| {
             translated.saturating_inc();
             let pool_id = market_id;
+            // TODO: test for every pool if the market id to pool id mapping exists
             MarketIdToPoolId::<T>::insert(pool_id, market_id);
             let assets = if let Ok(market) = T::MarketCommons::market(&market_id) {
                 market.outcome_assets().try_into().ok()?
