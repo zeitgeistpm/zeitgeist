@@ -38,7 +38,7 @@ use zrml_market_commons::MarketCommonsPalletApi;
 cfg_if::cfg_if! {
     if #[cfg(feature = "try-runtime")] {
         use crate::{MarketIdOf};
-        use alloc::{format, vec::Vec};
+        use alloc::{format, vec::Vec, collections::BTreeMap};
         use frame_support::{migration::storage_key_iter, pallet_prelude::Twox64Concat};
         use sp_runtime::DispatchError;
     }
@@ -167,8 +167,8 @@ where
             assert_eq!(new_pool.account_id, old_pool.account_id);
             let market = T::MarketCommons::market(&market_id)?;
             let outcome_assets = market.outcome_assets();
-            for asset in outcome_assets {
-                assert!(new_pool.assets.contains(&asset));
+            for asset in &outcome_assets {
+                assert!(new_pool.assets.contains(asset));
             }
             assert_eq!(new_pool.assets.len(), outcome_assets.len());
             assert_eq!(new_pool.reserves, old_pool.reserves);
@@ -186,7 +186,7 @@ where
         let next_pool_count_id = PoolCount::<T>::get();
         assert_eq!(next_pool_count_id, max_pool_id.checked_add_res(&1u8.into())?);
         log::info!(
-            "MigratePoolStorageItems: Post-upgrade next pool count id is {}!",
+            "MigratePoolStorageItems: Post-upgrade next pool count id is {:?}!",
             next_pool_count_id
         );
         log::info!("MigratePoolStorageItems: Post-upgrade pool count is {}!", new_pool_count);
