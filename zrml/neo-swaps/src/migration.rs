@@ -18,11 +18,14 @@
 use crate::{
     traits::LiquiditySharesManager,
     types::{MaxAssets, Pool, PoolType},
-    AssetOf, BalanceOf, Config, LiquidityTreeOf, MarketIdToPoolId, Pallet, PoolCount, Pools,
+    AssetOf, BalanceOf, Config, LiquidityTreeOf, MarketIdOf, MarketIdToPoolId, Pallet, PoolCount,
+    Pools,
 };
 use alloc::fmt::Debug;
 use core::marker::PhantomData;
 use frame_support::{
+    migration::storage_key_iter,
+    pallet_prelude::Twox64Concat,
     storage::bounded_btree_map::BoundedBTreeMap,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
     weights::Weight,
@@ -37,19 +40,13 @@ use zrml_market_commons::MarketCommonsPalletApi;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "try-runtime")] {
-        use crate::{MarketIdOf};
         use alloc::{format, vec::Vec, collections::BTreeMap};
-        use frame_support::{migration::storage_key_iter, pallet_prelude::Twox64Concat};
         use sp_runtime::DispatchError;
     }
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(any(feature = "try-runtime", test))] {
-        const NEO_SWAPS: &[u8] = b"NeoSwaps";
-        const POOLS: &[u8] = b"Pools";
-    }
-}
+const NEO_SWAPS: &[u8] = b"NeoSwaps";
+const POOLS: &[u8] = b"Pools";
 
 const NEO_SWAPS_REQUIRED_STORAGE_VERSION: u16 = 2;
 const NEO_SWAPS_NEXT_STORAGE_VERSION: u16 = NEO_SWAPS_REQUIRED_STORAGE_VERSION + 1;
@@ -93,7 +90,9 @@ where
         }
         log::info!("MigratePoolStorageItems: Starting...");
         let mut max_pool_id: T::PoolId = Default::default();
-        for market_id in Pools::<T>::iter_keys() {
+        for (market_id, _) in
+            storage_key_iter::<MarketIdOf<T>, OldPoolOf<T>, Twox64Concat>(NEO_SWAPS, POOLS)
+        {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
             if let Err(_) = T::MarketCommons::market(&market_id) {
                 log::error!("MigratePoolStorageItems: Market {:?} not found", market_id);
