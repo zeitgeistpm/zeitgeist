@@ -102,7 +102,7 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (MigratePoolStorageItems<Runtime>);
+        type Migrations = (MigratePoolStorageItems<Runtime, RemovableMarketIds>);
 
         pub type Executive = frame_executive::Executive<
             Runtime,

@@ -21,7 +21,7 @@ use crate::{
     AssetOf, BalanceOf, Config, LiquidityTreeOf, MarketIdOf, MarketIdToPoolId, Pallet, PoolCount,
     Pools,
 };
-use alloc::fmt::Debug;
+use alloc::{fmt::Debug, vec};
 use core::marker::PhantomData;
 use frame_support::{
     migration::storage_key_iter,
@@ -34,7 +34,7 @@ use frame_support::{
 use log;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::Saturating;
+use sp_runtime::{SaturatedConversion, Saturating};
 use zeitgeist_primitives::math::checked_ops_res::CheckedAddRes;
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -71,11 +71,16 @@ where
 
 type OldPoolOf<T> = OldPool<T, LiquidityTreeOf<T>, MaxAssets>;
 
-pub struct MigratePoolStorageItems<T>(PhantomData<T>);
+// https://substrate.stackexchange.com/questions/10472/pallet-storage-migration-fails-try-runtime-idempotent-test
+// idempotent test fails, because of the manual storage version increment
+// VersionedMigration is still an experimental feature for the currently used polkadot version
+// that's why the idempotent test is ignored for this migration
+pub struct MigratePoolStorageItems<T, RemovableMarketIds>(PhantomData<T>, RemovableMarketIds);
 
-impl<T> OnRuntimeUpgrade for MigratePoolStorageItems<T>
+impl<T, RemovableMarketIds> OnRuntimeUpgrade for MigratePoolStorageItems<T, RemovableMarketIds>
 where
     T: Config,
+    RemovableMarketIds: Get<Vec<u32>>,
 {
     fn on_runtime_upgrade() -> Weight {
         let mut total_weight = T::DbWeight::get().reads(1);
@@ -89,6 +94,15 @@ where
             return total_weight;
         }
         log::info!("MigratePoolStorageItems: Starting...");
+        // NeoSwaps: 7de9893ad4de67f3510fd09678a13412
+        // Pools: 4c72016d74b63ae83d79b02efdb5528e
+        // failed to decode pool with market id 880: 0x7de9893ad4de67f3510fd09678a134124c72016d74b63ae83d79b02efdb5528e00251b42e33e726f70030000000000000000000000000000
+        // failed to decode pool with market id 878: 0x7de9893ad4de67f3510fd09678a134124c72016d74b63ae83d79b02efdb5528e0f7a0cea0db6ee406e030000000000000000000000000000
+        // failed to decode pool with market id 882: 0x7de9893ad4de67f3510fd09678a134124c72016d74b63ae83d79b02efdb5528eb49736cf4bc6723372030000000000000000000000000000
+        // failed to decode pool with market id 879: 0x7de9893ad4de67f3510fd09678a134124c72016d74b63ae83d79b02efdb5528ed857f1051e4281a76f030000000000000000000000000000
+        // failed to decode pool with market id 877: 0x7de9893ad4de67f3510fd09678a134124c72016d74b63ae83d79b02efdb5528ee0edd4b43beb361f6d030000000000000000000000000000
+        // The decode failure happens, because the old pool used a CampaignAsset as asset, which is not supported anymore, since the asset system overhaul has been reverted.
+
         let mut max_pool_id: T::PoolId = Default::default();
         for (market_id, _) in
             storage_key_iter::<MarketIdOf<T>, OldPoolOf<T>, Twox64Concat>(NEO_SWAPS, POOLS)
@@ -134,9 +148,36 @@ where
             })
         });
         PoolCount::<T>::set(next_pool_count_id);
+        // Write for the PoolCount storage item
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         log::info!("MigratePoolStorageItems: Upgraded {} pools.", translated);
+        // Reads and writes for the Pools storage item
         total_weight =
             total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
+        // Read for the market and write for the MarketIdToPoolId storage item
+        total_weight =
+            total_weight.saturating_add(T::DbWeight::get().reads_writes(translated, translated));
+
+        // remove pools that contain a corrupted campaign asset from the reverted asset system overhaul
+        let mut corrupted_pools = vec![];
+        for &market_id in RemovableMarketIds::get().iter() {
+            let market_id = market_id.saturated_into::<MarketIdOf<T>>();
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
+            let is_corrupted =
+                || Pools::<T>::contains_key(market_id) && Pools::<T>::get(market_id).is_none();
+            if is_corrupted() {
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+                Pools::<T>::remove(market_id);
+                corrupted_pools.push(market_id);
+            } else {
+                log::warn!(
+                    "RemoveMarkets: Pool with market id {:?} was expected to be corrupted, but \
+                     isn't.",
+                    market_id
+                );
+            }
+        }
+        log::info!("RemovePools: Removed pools with market ids: {:?}.", corrupted_pools);
         StorageVersion::new(NEO_SWAPS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         log::info!("MigratePoolStorageItems: Done!");
@@ -188,6 +229,11 @@ where
             "MigratePoolStorageItems: Post-upgrade next pool count id is {:?}!",
             next_pool_count_id
         );
+        for &market_id in RemovableMarketIds::get().iter() {
+            let market_id = market_id.saturated_into::<MarketIdOf<T>>();
+            assert!(!Pools::<T>::contains_key(market_id));
+            assert!(Pools::<T>::try_get(market_id).is_err());
+        }
         log::info!("MigratePoolStorageItems: Post-upgrade pool count is {}!", new_pool_count);
         Ok(())
     }
