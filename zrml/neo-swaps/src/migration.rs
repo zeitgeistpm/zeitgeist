@@ -108,7 +108,7 @@ where
             storage_key_iter::<MarketIdOf<T>, OldPoolOf<T>, Twox64Concat>(NEO_SWAPS, POOLS)
         {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
-            if let Err(_) = T::MarketCommons::market(&market_id) {
+            if T::MarketCommons::market(&market_id).is_err() {
                 log::error!("MigratePoolStorageItems: Market {:?} not found", market_id);
                 return total_weight;
             };
@@ -257,11 +257,18 @@ mod tests {
         Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule,
     };
 
+    struct RemovableMarketIds;
+    impl Get<Vec<u32>> for RemovableMarketIds {
+        fn get() -> Vec<u32> {
+            vec![]
+        }
+    }
+
     #[test]
     fn on_runtime_upgrade_increments_the_storage_version() {
         ExtBuilder::default().build().execute_with(|| {
             set_up_version();
-            MigratePoolStorageItems::<Runtime>::on_runtime_upgrade();
+            MigratePoolStorageItems::<Runtime, RemovableMarketIds>::on_runtime_upgrade();
             assert_eq!(StorageVersion::get::<Pallet<Runtime>>(), NEO_SWAPS_NEXT_STORAGE_VERSION);
         });
     }
@@ -275,7 +282,7 @@ mod tests {
                 NEO_SWAPS, POOLS, new_pools,
             );
             let tmp = storage_root(StateVersion::V1);
-            MigratePoolStorageItems::<Runtime>::on_runtime_upgrade();
+            MigratePoolStorageItems::<Runtime, RemovableMarketIds>::on_runtime_upgrade();
             assert_eq!(tmp, storage_root(StateVersion::V1));
         });
     }
@@ -289,7 +296,7 @@ mod tests {
             populate_test_data::<Twox64Concat, MarketIdOf<Runtime>, OldPoolOf<Runtime>>(
                 NEO_SWAPS, POOLS, old_pools,
             );
-            MigratePoolStorageItems::<Runtime>::on_runtime_upgrade();
+            MigratePoolStorageItems::<Runtime, RemovableMarketIds>::on_runtime_upgrade();
             let actual = Pools::get(0u128).unwrap();
             assert_eq!(actual, new_pools[0]);
             let next_pool_count_id = PoolCount::<Runtime>::get();
