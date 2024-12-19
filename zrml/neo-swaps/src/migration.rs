@@ -21,7 +21,7 @@ use crate::{
     AssetOf, BalanceOf, Config, LiquidityTreeOf, MarketIdOf, MarketIdToPoolId, Pallet, PoolCount,
     Pools,
 };
-use alloc::{fmt::Debug, vec};
+use alloc::{fmt::Debug, vec, vec::Vec};
 use core::marker::PhantomData;
 use frame_support::{
     migration::storage_key_iter,
@@ -40,7 +40,7 @@ use zrml_market_commons::MarketCommonsPalletApi;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "try-runtime")] {
-        use alloc::{format, vec::Vec, collections::BTreeMap};
+        use alloc::{format, collections::BTreeMap};
         use sp_runtime::DispatchError;
     }
 }
