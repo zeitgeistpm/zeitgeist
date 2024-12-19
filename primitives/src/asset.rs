@@ -55,7 +55,6 @@ pub enum Asset<MarketId> {
     ForeignAsset(u32),
     ParimutuelShare(MarketId, CategoryIndex),
 }
-// TODO Needs storage migration
 
 #[cfg(feature = "runtime-benchmarks")]
 impl<MarketId: MaxEncodedLen> ZeitgeistAssetEnumerator<MarketId> for Asset<MarketId> {

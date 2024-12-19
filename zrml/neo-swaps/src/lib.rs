@@ -93,7 +93,7 @@ mod pallet {
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
-    pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
     // These should not be config parameters to avoid misconfigurations.
     pub(crate) const EXIT_FEE: u128 = CENT / 10;
