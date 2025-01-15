@@ -33,7 +33,11 @@ use core::ops::Neg;
 use sp_runtime::traits::{One, Zero};
 use zeitgeist_primitives::{traits::CombinatorialTokensFuel, types::CombinatorialId};
 
-/// Will return `None` if and only if `parent_collection_id` is not a valid collection ID.
+/// Returns a valid collection ID from an `hash` and an optional `parent_collection_id`.
+/// 
+/// Will return `None` if `parent_collection_id` is not a valid collection ID or
+/// the decompression of the hash doesn't return a valid point of `alt_bn128` 
+/// (maybe insufficient `fuel` parameter) or because of a failing bytes conversion.
 pub(crate) fn get_collection_id(
     hash: CombinatorialId,
     parent_collection_id: Option<CombinatorialId>,
@@ -105,7 +109,7 @@ fn decompress_hash(hash: CombinatorialId, fuel: Fuel) -> Option<G1Affine> {
     }
     core::hint::black_box(dummy_x); // Ensure that the dummies are considered "read" by rustc.
     core::hint::black_box(dummy_y);
-    let mut y = y_opt?; // This **should** be infallible if `DECOMPRESS_HASH_MAX_ITERS` is large.
+    let mut y = y_opt?; // This **should** be infallible if `fuel.total()` is large.
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
     // `odd` is set but `y` isn't odd, we switch to the other option.
