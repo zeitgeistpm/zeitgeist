@@ -39,7 +39,9 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        traits::CombinatorialIdManager, types::TransmutationType, weights::WeightInfoZeitgeist,
+        traits::CombinatorialIdManager,
+        types::{CollectionIdError, TransmutationType},
+        weights::WeightInfoZeitgeist,
     };
     use alloc::{vec, vec::Vec};
     use core::{fmt::Debug, marker::PhantomData};
@@ -186,15 +188,15 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// An error for the collection ID generation occured.
+        CollectionIdGenerationFailed(CollectionIdError),
+
         /// Specified index set is trival, empty, or doesn't match the market's number of outcomes.
         InvalidIndexSet,
 
         /// Specified partition is empty, contains overlaps, is too long or doesn't match the
         /// market's number of outcomes.
         InvalidPartition,
-
-        /// Specified collection ID is invalid.
-        InvalidCollectionId,
 
         /// Specified market is not resolved.
         PayoutVectorNotFound,
@@ -643,7 +645,9 @@ mod pallet {
                 index_set,
                 fuel,
             )
-            .ok_or(Error::<T>::InvalidCollectionId.into())
+            .map_err(|collection_id_error| {
+                Error::<T>::CollectionIdGenerationFailed(collection_id_error).into()
+            })
         }
 
         pub(crate) fn position_from_collection_id(

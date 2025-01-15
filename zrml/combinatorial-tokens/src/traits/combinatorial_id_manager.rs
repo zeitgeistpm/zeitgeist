@@ -22,6 +22,7 @@
 // <https://github.com/gnosis/conditional-tokens-contracts>,
 // and has been relicensed under GPL-3.0-or-later in this repository.
 
+use crate::types::CollectionIdError;
 use alloc::vec::Vec;
 
 pub trait CombinatorialIdManager {
@@ -40,7 +41,7 @@ pub trait CombinatorialIdManager {
         market_id: Self::MarketId,
         index_set: Vec<bool>,
         fuel: Self::Fuel,
-    ) -> Option<Self::CombinatorialId>;
+    ) -> Result<Self::CombinatorialId, CollectionIdError>;
 
     fn get_position_id(
         collateral: Self::Asset,

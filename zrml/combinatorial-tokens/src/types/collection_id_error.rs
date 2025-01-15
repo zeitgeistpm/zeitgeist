@@ -14,13 +14,22 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work licensed under the GNU Lesser General
+// Public License 3.0 but published without copyright notice by Gnosis
+// (<https://gnosis.io>, info@gnosis.io) in the
+// conditional-tokens-contracts repository
+// <https://github.com/gnosis/conditional-tokens-contracts>,
+// and has been relicensed under GPL-3.0-or-later in this repository.
 
-pub(crate) mod cryptographic_id_manager;
-pub(crate) mod hash;
-mod transmutation_type;
-mod collection_id_error;
+use frame_support::PalletError;
+use parity_scale_codec::{Decode, Encode};
+use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
 
-pub use cryptographic_id_manager::{CryptographicIdManager, Fuel};
-pub(crate) use hash::Hash256;
-pub use transmutation_type::TransmutationType;
-pub use collection_id_error::CollectionIdError;
+#[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
+pub enum CollectionIdError {
+    InvalidParentCollectionId,
+    EllipticCurvePointNotFoundWithFuel,
+    EllipticCurvePointXToBytesConversionFailed,
+}

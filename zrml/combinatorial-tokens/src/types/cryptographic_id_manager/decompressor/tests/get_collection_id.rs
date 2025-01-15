@@ -86,6 +86,7 @@ fn get_collection_id_works(
     #[values(false, true)] consume_all: bool,
     #[case] expected: Option<CombinatorialId>,
 ) {
-    let actual = get_collection_id(hash, parent_collection_id, Fuel { total: 16, consume_all });
+    let actual =
+        get_collection_id(hash, parent_collection_id, Fuel { total: 16, consume_all }).ok();
     assert_eq!(actual, expected);
 }

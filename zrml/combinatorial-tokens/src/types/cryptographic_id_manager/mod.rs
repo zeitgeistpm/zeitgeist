@@ -1,4 +1,4 @@
-// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -25,6 +25,7 @@
 mod decompressor;
 mod hash_tuple;
 
+use super::CollectionIdError;
 use crate::traits::CombinatorialIdManager;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
@@ -83,7 +84,7 @@ where
         market_id: Self::MarketId,
         index_set: Vec<bool>,
         fuel: Self::Fuel,
-    ) -> Option<Self::CombinatorialId> {
+    ) -> Result<Self::CombinatorialId, CollectionIdError> {
         let input = (market_id, index_set);
         let hash = Hasher::hash_tuple(input);
 
