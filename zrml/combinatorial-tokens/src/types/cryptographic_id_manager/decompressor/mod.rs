@@ -151,7 +151,7 @@ fn decompress_collection_id(collection_id: CombinatorialId) -> Result<G1Affine, 
     Ok(G1Affine::new(x, y))
 }
 
-/// Flips the second highests bit of big-endian `bytes`.
+/// Flips the second highest bit of big-endian `bytes`.
 fn flip_second_highest_bit(bytes: &CombinatorialId) -> CombinatorialId {
     let mut bytes = bytes.clone();
     bytes[0] ^= 0b01000000;
