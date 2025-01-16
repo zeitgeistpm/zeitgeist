@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+mod collection_id_error;
 pub(crate) mod cryptographic_id_manager;
 pub(crate) mod hash;
 mod transmutation_type;
-mod collection_id_error;
 
+pub use collection_id_error::CollectionIdError;
 pub use cryptographic_id_manager::{CryptographicIdManager, Fuel};
 pub(crate) use hash::Hash256;
 pub use transmutation_type::TransmutationType;
-pub use collection_id_error::CollectionIdError;
