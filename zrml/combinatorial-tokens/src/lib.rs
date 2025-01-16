@@ -188,8 +188,8 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// An error for the collection ID generation occured.
-        CollectionIdGenerationFailed(CollectionIdError),
+        /// An error for the collection ID retrieval occured.
+        CollectionIdRetrievalFailed(CollectionIdError),
 
         /// Specified index set is trival, empty, or doesn't match the market's number of outcomes.
         InvalidIndexSet,
@@ -646,7 +646,7 @@ mod pallet {
                 fuel,
             )
             .map_err(|collection_id_error| {
-                Error::<T>::CollectionIdGenerationFailed(collection_id_error).into()
+                Error::<T>::CollectionIdRetrievalFailed(collection_id_error).into()
             })
         }
 
