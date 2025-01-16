@@ -53,15 +53,17 @@ pub(crate) fn get_collection_id(
 
     // Convert back to bytes _before_ flipping, as flipping will sometimes result in numbers larger
     // than the base field modulus.
-    let mut bytes: CombinatorialId =
+    let bytes_y_even: CombinatorialId =
         u.x.into_bigint()
             .to_bytes_be()
             .try_into()
             .map_err(|_| CollectionIdError::EllipticCurvePointXToBytesConversionFailed)?;
 
-    if u.y.into_bigint().is_odd() {
-        flip_second_highest_bit(&mut bytes);
-    }
+    let bytes = if u.y.into_bigint().is_odd() {
+        flip_second_highest_bit(&bytes_y_even)
+    } else {
+        bytes_y_even
+    };
 
     Ok(bytes)
 }
@@ -126,16 +128,14 @@ fn decompress_hash(hash: CombinatorialId, fuel: Fuel) -> Result<G1Affine, Collec
     Ok(G1Affine::new(x, y))
 }
 
-fn decompress_collection_id(
-    mut collection_id: CombinatorialId,
-) -> Result<G1Affine, CollectionIdError> {
+fn decompress_collection_id(collection_id: CombinatorialId) -> Result<G1Affine, CollectionIdError> {
     let odd = is_second_msb_set(&collection_id);
-    chop_off_two_highest_bits(&mut collection_id);
-    let x = Fq::from_be_bytes_mod_order(&collection_id);
+    let chopped_collection_id = chop_off_two_highest_bits(&collection_id);
+    let x = Fq::from_be_bytes_mod_order(&chopped_collection_id);
 
     // Ensure that the big-endian integer represented by `collection_id` was less than the field
     // modulus. Otherwise, we consider `collection_id` an invalid ID.
-    if x.into_bigint().to_bytes_be() != collection_id {
+    if x.into_bigint().to_bytes_be() != chopped_collection_id {
         return Err(CollectionIdError::InvalidParentCollectionId);
     }
 
@@ -152,8 +152,10 @@ fn decompress_collection_id(
 }
 
 /// Flips the second highests bit of big-endian `bytes`.
-fn flip_second_highest_bit(bytes: &mut CombinatorialId) {
+fn flip_second_highest_bit(bytes: &CombinatorialId) -> CombinatorialId {
+    let mut bytes = bytes.clone();
     bytes[0] ^= 0b01000000;
+    bytes
 }
 
 /// Checks if the most significant bit of the big-endian `bytes` is set.
@@ -167,8 +169,10 @@ fn is_second_msb_set(bytes: &CombinatorialId) -> bool {
 }
 
 /// Zeroes out the two most significant bits off the big-endian `bytes`.
-fn chop_off_two_highest_bits(bytes: &mut CombinatorialId) {
+fn chop_off_two_highest_bits(bytes: &CombinatorialId) -> CombinatorialId {
+    let mut bytes = bytes.clone();
     bytes[0] &= 0b00111111;
+    bytes
 }
 
 /// Returns a value `y` of `Fq` so that `(x, y)` is a point on `alt_bn128` or `None` if there is no
