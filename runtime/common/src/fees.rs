@@ -65,6 +65,7 @@ macro_rules! impl_fee_types {
 macro_rules! impl_foreign_fees {
     () => {
         use frame_support::{
+            ensure,
             pallet_prelude::InvalidTransaction,
             traits::{
                 fungibles::{Credit, Inspect},
@@ -85,10 +86,14 @@ macro_rules! impl_foreign_fees {
             traits::{Convert, DispatchInfoOf, PostDispatchInfoOf},
             Perbill,
         };
-        use zeitgeist_primitives::{
-            math::fixed::{FixedDiv, FixedMul},
-            types::TxPaymentAssetId,
-        };
+        use zeitgeist_primitives::math::fixed::{FixedDiv, FixedMul};
+
+        /// The asset id specifically used for pallet_assets_tx_payment for
+        /// paying transaction fees in different assets.
+        /// Since the polkadot API extension assumes the same type as on the asset-hubs,
+        /// we use it too.
+        /// https://github.com/polkadot-fellows/runtimes/blob/20ac6ff4dc4c488ad08f507c14b899adc6cb4394/system-parachains/asset-hubs/asset-hub-polkadot/src/lib.rs#L767
+        pub type TxPaymentAssetId = xcm::latest::MultiLocation;
 
         #[repr(u8)]
         pub enum CustomTxError {
@@ -97,6 +102,9 @@ macro_rules! impl_foreign_fees {
             NoAssetMetadata = 2,
             NoFeeFactor = 3,
             NonForeignAssetPaid = 4,
+            InvalidFeeAsset = 5,
+            FeeAssetIsNotAllowed = 6,
+            NonNativeFeeAssetOnStandaloneChain = 7,
         }
 
         // It does calculate foreign fees by extending transactions to include an optional
@@ -140,19 +148,16 @@ macro_rules! impl_foreign_fees {
         }
 
         pub struct TTCBalanceToAssetBalance;
-        impl ConversionToAssetBalance<Balance, TxPaymentAssetId, Balance>
-            for TTCBalanceToAssetBalance
-        {
+        impl ConversionToAssetBalance<Balance, CurrencyId, Balance> for TTCBalanceToAssetBalance {
             type Error = TransactionValidityError;
 
             fn to_asset_balance(
                 native_fee: Balance,
-                asset_id: TxPaymentAssetId,
+                asset_id: CurrencyId,
             ) -> Result<Balance, Self::Error> {
                 #[cfg(feature = "parachain")]
                 {
-                    let currency_id = Asset::ForeignAsset(asset_id);
-                    let fee_factor = get_fee_factor(currency_id)?;
+                    let fee_factor = get_fee_factor(asset_id)?;
                     let converted_fee = calculate_fee(native_fee, fee_factor)?;
                     Ok(converted_fee)
                 }
@@ -173,6 +178,41 @@ macro_rules! impl_foreign_fees {
             }
         }
 
+        use sp_std::convert::TryFrom;
+        pub struct AssetIdToFeeAsset(CurrencyId);
+        impl TryFrom<TxPaymentAssetId> for AssetIdToFeeAsset {
+            type Error = TransactionValidityError;
+
+            fn try_from(value: TxPaymentAssetId) -> Result<Self, Self::Error> {
+                #[cfg(feature = "parachain")]
+                {
+                    let currency_id = AssetRegistry::location_to_asset_id(value).ok_or(
+                        TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                            CustomTxError::InvalidFeeAsset as u8,
+                        )),
+                    )?;
+                    let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&currency_id)
+                        .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                            CustomTxError::NoAssetMetadata as u8,
+                        )))?;
+                    // Use allow_as_base_asset for now to check if it is a valid fee asset.
+                    ensure!(
+                        metadata.additional.allow_as_base_asset,
+                        TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                            CustomTxError::FeeAssetIsNotAllowed as u8,
+                        ))
+                    );
+                    Ok(AssetIdToFeeAsset(currency_id))
+                }
+                #[cfg(not(feature = "parachain"))]
+                {
+                    Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                        CustomTxError::NonNativeFeeAssetOnStandaloneChain as u8,
+                    )))
+                }
+            }
+        }
+
         pub struct TokensTxCharger;
         impl pallet_asset_tx_payment::OnChargeAssetTransaction<Runtime> for TokensTxCharger {
             type AssetId = TxPaymentAssetId;
@@ -187,15 +227,15 @@ macro_rules! impl_foreign_fees {
                 native_fee: Self::Balance,
                 _tip: Self::Balance,
             ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
+                let AssetIdToFeeAsset(currency_id) = AssetIdToFeeAsset::try_from(asset_id)?;
                 // We don't know the precision of the underlying asset. Because the converted fee
                 // could be less than one (e.g. 0.5) but gets rounded down by integer division we
                 // introduce a minimum fee.
                 let min_converted_fee =
                     if native_fee.is_zero() { Zero::zero() } else { One::one() };
                 let converted_fee =
-                    TTCBalanceToAssetBalance::to_asset_balance(native_fee, asset_id)?
+                    TTCBalanceToAssetBalance::to_asset_balance(native_fee, currency_id)?
                         .max(min_converted_fee);
-                let currency_id = Asset::ForeignAsset(asset_id);
                 let can_withdraw =
                     <Tokens as Inspect<AccountId>>::can_withdraw(currency_id, who, converted_fee);
                 if can_withdraw != WithdrawConsequence::Success {
@@ -222,19 +262,11 @@ macro_rules! impl_foreign_fees {
             ) -> Result<(Self::Balance, Self::Balance), TransactionValidityError> {
                 let min_converted_fee =
                     if corrected_native_fee.is_zero() { Zero::zero() } else { One::one() };
-                let asset_id = match paid.asset() {
-                    Asset::ForeignAsset(asset_id) => asset_id,
-                    _ => {
-                        return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                            CustomTxError::NonForeignAssetPaid as u8,
-                        )));
-                    }
-                };
                 // Convert the corrected fee and tip into the asset used for payment.
                 let converted_fee =
-                    TTCBalanceToAssetBalance::to_asset_balance(corrected_native_fee, asset_id)?
+                    TTCBalanceToAssetBalance::to_asset_balance(corrected_native_fee, paid.asset())?
                         .max(min_converted_fee);
-                let converted_tip = TTCBalanceToAssetBalance::to_asset_balance(tip, asset_id)?;
+                let converted_tip = TTCBalanceToAssetBalance::to_asset_balance(tip, paid.asset())?;
 
                 // Calculate how much refund we should return.
                 let (final_fee, refund) = paid.split(converted_fee);
@@ -536,8 +568,7 @@ macro_rules! fee_tests {
                             )),
                             additional: custom_metadata,
                         };
-                    let dot_asset_id = 0u32;
-                    let dot = Asset::ForeignAsset(dot_asset_id);
+                    let dot = Asset::ForeignAsset(0u32);
 
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),
@@ -596,8 +627,9 @@ macro_rules! fee_tests {
                     let fee_factor = 143_120_520;
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: Some(fee_factor) },
-                        ..Default::default()
+                        allow_as_base_asset: true,
                     };
+                    let dot_location = xcm::latest::MultiLocation::parent();
                     let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> =
                         AssetMetadata {
                             decimals: 10,
@@ -605,12 +637,11 @@ macro_rules! fee_tests {
                             symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
                             existential_deposit: ExistentialDeposit::get(),
                             location: Some(xcm::VersionedMultiLocation::V3(
-                                xcm::latest::MultiLocation::parent(),
+                                dot_location,
                             )),
                             additional: custom_metadata,
                         };
-                    let dot_asset_id = 0u32;
-                    let dot = Asset::ForeignAsset(dot_asset_id);
+                    let dot = Asset::ForeignAsset(0u32);
 
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),
@@ -637,7 +668,7 @@ macro_rules! fee_tests {
                             &Treasury::account_id(),
                             &mock_call,
                             &mock_dispatch_info,
-                            dot_asset_id,
+                            dot_location,
                             BASE / 2,
                             0,
                         )
