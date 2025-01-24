@@ -1293,7 +1293,7 @@ benchmarks! {
         let asset_count = n.try_into().unwrap();
         let market_type = MarketType::Categorical(asset_count);
         let (caller, oracle, deadlines, metadata) = create_market_common_parameters::<T>(true)?;
-        let amount = (10u128 * BASE).saturated_into();
+        let amount = (10_000u128 * BASE).saturated_into();
 
         <T as pallet::Config>::AssetManager::deposit(
             base_asset,
