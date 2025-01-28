@@ -153,7 +153,7 @@ fn decompress_collection_id(collection_id: CombinatorialId) -> Result<G1Affine, 
 
 /// Flips the second highest bit of big-endian `bytes`.
 fn flip_second_highest_bit(bytes: &CombinatorialId) -> CombinatorialId {
-    let mut bytes = bytes.clone();
+    let mut bytes = *bytes;
     bytes[0] ^= 0b01000000;
     bytes
 }
@@ -170,7 +170,7 @@ fn is_second_msb_set(bytes: &CombinatorialId) -> bool {
 
 /// Zeroes out the two most significant bits off the big-endian `bytes`.
 fn chop_off_two_highest_bits(bytes: &CombinatorialId) -> CombinatorialId {
-    let mut bytes = bytes.clone();
+    let mut bytes = *bytes;
     bytes[0] &= 0b00111111;
     bytes
 }
