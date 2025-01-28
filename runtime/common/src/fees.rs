@@ -103,8 +103,7 @@ macro_rules! impl_foreign_fees {
             NoFeeFactor = 3,
             NonForeignAssetPaid = 4,
             InvalidFeeAsset = 5,
-            FeeAssetIsNotAllowed = 6,
-            NonNativeFeeAssetOnStandaloneChain = 7,
+            NonNativeFeeAssetOnStandaloneChain = 6,
         }
 
         // It does calculate foreign fees by extending transactions to include an optional
@@ -178,38 +177,24 @@ macro_rules! impl_foreign_fees {
             }
         }
 
-        use sp_std::convert::TryFrom;
-        pub struct AssetIdToFeeAsset(CurrencyId);
-        impl TryFrom<TxPaymentAssetId> for AssetIdToFeeAsset {
-            type Error = TransactionValidityError;
-
-            fn try_from(value: TxPaymentAssetId) -> Result<Self, Self::Error> {
-                #[cfg(feature = "parachain")]
-                {
-                    let currency_id = AssetRegistry::location_to_asset_id(value).ok_or(
-                        TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                            CustomTxError::InvalidFeeAsset as u8,
-                        )),
-                    )?;
-                    let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&currency_id)
-                        .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                            CustomTxError::NoAssetMetadata as u8,
-                        )))?;
-                    // Use allow_as_base_asset for now to check if it is a valid fee asset.
-                    ensure!(
-                        metadata.additional.allow_as_base_asset,
-                        TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                            CustomTxError::FeeAssetIsNotAllowed as u8,
-                        ))
-                    );
-                    Ok(AssetIdToFeeAsset(currency_id))
-                }
-                #[cfg(not(feature = "parachain"))]
-                {
-                    Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                        CustomTxError::NonNativeFeeAssetOnStandaloneChain as u8,
-                    )))
-                }
+        pub(crate) fn convert_asset_to_currency_id(
+            value: TxPaymentAssetId,
+        ) -> Result<CurrencyId, TransactionValidityError> {
+            #[cfg(feature = "parachain")]
+            {
+                // value (TxPaymentAssetId) is a MultiLocation as defined above
+                let currency_id = AssetRegistry::location_to_asset_id(value).ok_or(
+                    TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                        CustomTxError::InvalidFeeAsset as u8,
+                    )),
+                )?;
+                Ok(currency_id)
+            }
+            #[cfg(not(feature = "parachain"))]
+            {
+                Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                    CustomTxError::NonNativeFeeAssetOnStandaloneChain as u8,
+                )))
             }
         }
 
@@ -227,7 +212,7 @@ macro_rules! impl_foreign_fees {
                 native_fee: Self::Balance,
                 _tip: Self::Balance,
             ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
-                let AssetIdToFeeAsset(currency_id) = AssetIdToFeeAsset::try_from(asset_id)?;
+                let currency_id = convert_asset_to_currency_id(asset_id)?;
                 // We don't know the precision of the underlying asset. Because the converted fee
                 // could be less than one (e.g. 0.5) but gets rounded down by integer division we
                 // introduce a minimum fee.
