@@ -29,9 +29,7 @@ pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 pallet-treasury = { workspace = true }
 pallet-utility = { workspace = true }
 pallet-vesting = { workspace = true }
-sp-std = { workspace = true }
 zeitgeist-primitives = { workspace = true }
-xcm = { workspace = true, optional = true }
 
 # Utility
 cfg-if = { workspace = true }
@@ -44,7 +42,6 @@ parachain = [
     "pallet-author-mapping",
     "pallet-author-slot-filter",
     "pallet-parachain-staking",
-    "xcm",
 ]
 std = [
     "cumulus-pallet-xcmp-queue?/std",
@@ -77,7 +74,6 @@ std = [
     "pallet-vesting/std",
     "pallet-parachain-staking?/std",
     "zeitgeist-primitives/std",
-    "xcm?/std",
 ]
 
 [package]
