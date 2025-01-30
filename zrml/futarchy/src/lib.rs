@@ -83,7 +83,7 @@ mod pallet {
         /// The minimum allowed duration between the creation of a proposal and its evaluation.
         type MinDuration: Get<BlockNumberFor<Self>>;
 
-        /// The type used to define the oracle for each proposal.
+        /// The type used to define the oracle for a proposal.
         type Oracle: FutarchyOracle<BlockNumber = BlockNumberFor<Self>>
             + Clone
             + Debug
