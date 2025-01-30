@@ -17,7 +17,7 @@ For example, splitting an `A` token from one categorical market using another ca
 
 In addition to splitting and merging, combinatorial tokens can be redeemed if one of the markets involved in creating them has been resolved. For example, if the `XY` market above resolves to `X`, then every unit of `X & A` redeems for a unit of `A` and `Y & A` is worthless. If the scalar market above resolves so that `Long` is valued at `.4` and `Short` at `.6`, then every unit of `Yes & Long` redeems for `.4` units of `Yes` and every unit of `Yes & Short` redeems for `.6`.
 
-And important distinction which we've so far neglected to make is the distinction between an abstract _collection_ like `X & A` or `Yes & Short` and a concrete _position_, which is a collection together with a collateral token against which it is valued. Collections are purely abstract and used in the implementation. Positions are actual tokens on the chain.
+An important distinction which we've so far neglected to make is the distinction between an abstract _collection_ like `X & A` or `Yes & Short` and a concrete _position_, which is a collection together with a collateral token against which it is valued. Collections are purely abstract and used in the implementation. Positions are actual tokens on the chain.
 
 Collections and position are identified using their IDs. When using the standard combinatorial ID Manager, this ID is a 256 bit value. The position ID of a certain token can be calculated using the collection ID and the collateral.
 
