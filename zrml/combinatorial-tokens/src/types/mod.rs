@@ -1,4 +1,4 @@
-// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -15,10 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+mod collection_id_error;
 pub(crate) mod cryptographic_id_manager;
 pub(crate) mod hash;
 mod transmutation_type;
 
+pub use collection_id_error::CollectionIdError;
 pub use cryptographic_id_manager::{CryptographicIdManager, Fuel};
 pub(crate) use hash::Hash256;
 pub use transmutation_type::TransmutationType;
