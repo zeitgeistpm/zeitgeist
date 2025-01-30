@@ -42,6 +42,7 @@ mod benchmarking;
 mod dispatchable_impls;
 pub mod mock;
 mod pallet_impls;
+mod proposal_storage;
 mod tests;
 pub mod traits;
 pub mod types;
@@ -51,21 +52,21 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{types::Proposal, weights::WeightInfoZeitgeist};
+    use crate::{traits::ProposalStorage, types::Proposal, weights::WeightInfoZeitgeist};
     use alloc::fmt::Debug;
     use core::marker::PhantomData;
     use frame_support::{
-        pallet_prelude::{EnsureOrigin, IsType, StorageMap, StorageVersion, ValueQuery, Weight},
+        pallet_prelude::{IsType, StorageMap, StorageValue, StorageVersion, ValueQuery, Weight},
         traits::{schedule::v3::Anon as ScheduleAnon, Bounded, Hooks, OriginTrait},
         transactional, Blake2_128Concat, BoundedVec,
     };
-    use frame_system::pallet_prelude::{BlockNumberFor, OriginFor};
+    use frame_system::{
+        ensure_root,
+        pallet_prelude::{BlockNumberFor, OriginFor},
+    };
     use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
     use scale_info::TypeInfo;
-    use sp_runtime::{
-        traits::{ConstU32, Get},
-        DispatchResult,
-    };
+    use sp_runtime::{traits::Get, DispatchResult, SaturatedConversion};
     use zeitgeist_primitives::traits::FutarchyOracle;
 
     #[cfg(feature = "runtime-benchmarks")]
@@ -76,10 +77,13 @@ mod pallet {
         #[cfg(feature = "runtime-benchmarks")]
         type BenchmarkHelper: FutarchyBenchmarkHelper<Self::Oracle>;
 
+        /// The maximum number of proposals allowed to be in flight simultaneously.
+        type MaxProposals: Get<u32>;
+
         type MinDuration: Get<BlockNumberFor<Self>>;
 
         // The type used to define the oracle for each proposal.
-        type Oracle: FutarchyOracle
+        type Oracle: FutarchyOracle<BlockNumber = BlockNumberFor<Self>>
             + Clone
             + Debug
             + Decode
@@ -94,9 +98,6 @@ mod pallet {
         /// Scheduler interface for executing proposals.
         type Scheduler: ScheduleAnon<BlockNumberFor<Self>, CallOf<Self>, PalletsOriginOf<Self>>;
 
-        /// The origin that is allowed to submit proposals.
-        type SubmitOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-
         type WeightInfo: WeightInfoZeitgeist;
     }
 
@@ -104,23 +105,21 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
-    pub(crate) type CacheSize = ConstU32<16>;
     pub(crate) type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
     pub(crate) type BoundedCallOf<T> = Bounded<CallOf<T>>;
     pub(crate) type OracleOf<T> = <T as Config>::Oracle;
     pub(crate) type PalletsOriginOf<T> =
         <<T as frame_system::Config>::RuntimeOrigin as OriginTrait>::PalletsOrigin;
+    pub(crate) type ProposalsOf<T> = BoundedVec<Proposal<T>, <T as Config>::MaxProposals>;
 
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
     #[pallet::storage]
-    pub type Proposals<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        BlockNumberFor<T>,
-        BoundedVec<Proposal<T>, CacheSize>,
-        ValueQuery,
-    >;
+    pub type Proposals<T: Config> =
+        StorageMap<_, Blake2_128Concat, BlockNumberFor<T>, ProposalsOf<T>, ValueQuery>;
+
+    #[pallet::storage]
+    pub type ProposalCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
@@ -148,6 +147,9 @@ mod pallet {
 
         /// The specified duration must be at least equal to `MinDuration`.
         DurationTooShort,
+
+        /// This is a logic error. You shouldn't see this.
+        UnexpectedStorageFailure,
     }
 
     #[pallet::call]
@@ -160,7 +162,7 @@ mod pallet {
             duration: BlockNumberFor<T>,
             proposal: Proposal<T>,
         ) -> DispatchResult {
-            T::SubmitOrigin::ensure_origin(origin)?;
+            ensure_root(origin)?;
 
             Self::do_submit_proposal(duration, proposal)
         }
@@ -169,10 +171,34 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(now: BlockNumberFor<T>) -> Weight {
-            let mut total_weight = Weight::zero(); // Add buffer.
+            let mut total_weight = Weight::zero();
 
-            let proposals = Proposals::<T>::take(now);
+            // Update all oracles.
+            let mutate_all_result =
+                <Pallet<T> as ProposalStorage<T>>::mutate_all(|p| p.oracle.update(now));
+            if let Ok(block_to_weights) = mutate_all_result {
+                // We did one storage read per vector cached. Shouldn't saturate, but technically
+                // might.
+                let reads: u64 = block_to_weights.len().saturated_into();
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads(reads));
+
+                for weights in block_to_weights.values() {
+                    for &weight in weights.iter() {
+                        total_weight = total_weight.saturating_add(weight);
+                    }
+                }
+            } else {
+                // Unreachable!
+                return total_weight;
+            }
+
+            //
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            let proposals = if let Ok(proposals) = <Pallet<T> as ProposalStorage<T>>::take(now) {
+                proposals
+            } else {
+                return total_weight;
+            };
 
             for proposal in proposals.into_iter() {
                 let weight = Self::maybe_schedule_proposal(proposal);
