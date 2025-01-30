@@ -239,8 +239,8 @@ mod pallet {
         /// `parent_collection_id` and the conjunction `(x|...|z)` where `x, ..., z` are the items
         /// covered by `partition`.
         ///
-        /// The `force_max_work` parameter can be used to trigger the maximum amount of allowed work
-        /// for the combinatorial ID manager. Should only be used for benchmarking purposes.
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// and can be used for benchmarking purposes.
         #[pallet::call_index(0)]
         #[pallet::weight(
             T::WeightInfo::split_position_vertical_sans_parent(
@@ -290,7 +290,7 @@ mod pallet {
         ///
         /// For each element `b` of the partition, the split burns the outcome tokens which are made
         /// up of the position to be split and the conjunction `(x|...|z)` where `x, ..., z` are the
-        /// items of `b`. The position given by `parent_collection_id` is 
+        /// items of `b`. The position given by `parent_collection_id` is
         ///
         /// If the `parent_collection_id` is `None`, then the position split is the collateral of the
         /// market given by `market_id`.
@@ -302,8 +302,8 @@ mod pallet {
         /// merge is the position made up of the `parent_collection_id` and the conjunction
         /// `(x|...|z)` where `x, ..., z` are the items covered by `partition`.
         ///
-        /// The `force_max_work` parameter can be used to trigger the maximum amount of allowed work
-        /// for the combinatorial ID manager. Should only be used for benchmarking purposes.
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// and can be used for benchmarking purposes.
         #[pallet::call_index(1)]
         #[pallet::weight(
             T::WeightInfo::merge_position_vertical_sans_parent(
@@ -343,8 +343,8 @@ mod pallet {
         /// how much the conjunction `(x|...|z)` is valued, the user is paid in the position defined
         /// by `parent_collection_id` and `collateral`.
         ///
-        /// The `force_max_work` parameter can be used to trigger the maximum amount of allowed work
-        /// for the combinatorial ID manager. Should only be used for benchmarking purposes.
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// and can be used for benchmarking purposes.
         #[pallet::call_index(2)]
         #[pallet::weight(
             T::WeightInfo::redeem_position_with_parent(

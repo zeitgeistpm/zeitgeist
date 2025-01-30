@@ -838,9 +838,8 @@ mod pallet {
         /// that swap fees can be stored in the pool account without triggering dusting or failed
         /// transfers.
         ///
-        /// The `force_max_work` parameter can be used to force the `CombinatorialTokensApi` to
-        /// spend the maximum amount of work, independently of the parameters that it is called
-        /// with. This is useful for benchmarking purposes and should not be used in production.
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// and can be used for benchmarking purposes.
         ///
         /// # Complexity
         ///

@@ -25,7 +25,7 @@ Collections and position are identified using their IDs. When using the standard
 
 - _Combinatorial token_: Any instance of `zeitgeist_primitives::Asset::CombinatorialToken`.
 - _Complete set (of a prediction market)_: An abstract set containing every outcome of a particular prediction market. One unit of a complete set is one unit of each outcome token from the market in question. After the market resolves, a complete set always redeems for exactly one unit of collateral.
-- _Merge_: The prcoess of exchanging multiple tokens for a single token of equal value.
+- _Merge_: The process of exchanging multiple tokens for a single token of equal value.
 - _Split_: The process of exchanging a token for more complicated tokens of equal value.
 
 ### Combinatorial ID Manager
