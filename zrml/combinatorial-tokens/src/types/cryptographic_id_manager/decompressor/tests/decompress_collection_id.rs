@@ -1,4 +1,4 @@
-// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -574,5 +574,5 @@ fn decompress_collection_id_works(collection_id: CombinatorialId, expected: (&st
 )]
 fn decompress_collection_id_fails_on_invalid_collection_id(collection_id: CombinatorialId) {
     let actual = decompress_collection_id(collection_id);
-    assert_eq!(actual, None);
+    assert_eq!(actual, Err(CollectionIdError::InvalidParentCollectionId));
 }

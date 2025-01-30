@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 mod combo_math;
+mod common;
 mod math;
 
 pub(crate) use combo_math::ComboMath;

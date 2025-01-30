@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{types::Proposal, Config, Error, Event, Pallet, Proposals};
+use crate::{traits::ProposalStorage, types::Proposal, Config, Error, Event, Pallet};
 use frame_support::{ensure, require_transactional, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{DispatchResult, Saturating};
@@ -31,12 +31,10 @@ impl<T: Config> Pallet<T> {
         let now = frame_system::Pallet::<T>::block_number();
         let to_be_scheduled_at = now.saturating_add(duration);
 
-        let try_mutate_result = Proposals::<T>::try_mutate(to_be_scheduled_at, |proposals| {
-            proposals.try_push(proposal.clone()).map_err(|_| Error::<T>::CacheFull)
-        });
+        <Pallet<T> as ProposalStorage<T>>::add(to_be_scheduled_at, proposal.clone())?;
 
         Self::deposit_event(Event::<T>::Submitted { duration, proposal });
 
-        Ok(try_mutate_result?)
+        Ok(())
     }
 }

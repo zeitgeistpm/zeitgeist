@@ -15,8 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{traits::PoolOperations, weights::WeightInfoZeitgeist, AssetOf, Config, Error, Pools};
+use crate::{
+    traits::PoolOperations, types::DecisionMarketOracleScoreboard, weights::WeightInfoZeitgeist,
+    AssetOf, BalanceOf, Config, Error, Pools,
+};
 use frame_support::pallet_prelude::Weight;
+use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::DispatchError;
@@ -34,6 +38,7 @@ where
     pool_id: T::PoolId,
     positive_outcome: AssetOf<T>,
     negative_outcome: AssetOf<T>,
+    scoreboard: DecisionMarketOracleScoreboard<T>,
 }
 
 impl<T> DecisionMarketOracle<T>
@@ -44,22 +49,19 @@ where
         pool_id: T::PoolId,
         positive_outcome: AssetOf<T>,
         negative_outcome: AssetOf<T>,
+        scoreboard: DecisionMarketOracleScoreboard<T>,
     ) -> Self {
-        Self { pool_id, positive_outcome, negative_outcome }
+        Self { pool_id, positive_outcome, negative_outcome, scoreboard }
     }
 
-    // Utility implementation that uses the question mark operator to implement a fallible version
-    // of `evaluate`.
-    fn try_evaluate(&self) -> Result<bool, DispatchError> {
+    fn try_get_prices(&self) -> Result<(BalanceOf<T>, BalanceOf<T>), DispatchError> {
         let pool = Pools::<T>::get(self.pool_id)
             .ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
 
         let positive_value = pool.calculate_spot_price(self.positive_outcome)?;
         let negative_value = pool.calculate_spot_price(self.negative_outcome)?;
 
-        let success = positive_value > negative_value;
-
-        Ok(success)
+        Ok((positive_value, negative_value))
     }
 }
 
@@ -67,11 +69,21 @@ impl<T> FutarchyOracle for DecisionMarketOracle<T>
 where
     T: Config,
 {
-    fn evaluate(&self) -> (Weight, bool) {
-        // Err on the side of caution if the pool is not found or a calculation fails by not
-        // enacting the policy.
-        let value = self.try_evaluate().unwrap_or(false);
+    type BlockNumber = BlockNumberFor<T>;
 
-        (T::WeightInfo::decision_market_oracle_evaluate(), value)
+    fn evaluate(&self) -> (Weight, bool) {
+        (T::WeightInfo::decision_market_oracle_evaluate(), self.scoreboard.evaluate())
+    }
+
+    fn update(&mut self, now: Self::BlockNumber) -> Weight {
+        if let Ok((positive_outcome_price, negative_outcome_price)) = self.try_get_prices() {
+            self.scoreboard.update(now, positive_outcome_price, negative_outcome_price);
+        } else {
+            // Err on the side of caution if the pool is not found or a calculation fails by not
+            // enacting the policy.
+            self.scoreboard.skip_update(now);
+        }
+
+        T::WeightInfo::decision_market_oracle_update()
     }
 }

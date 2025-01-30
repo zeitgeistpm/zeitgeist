@@ -22,32 +22,14 @@
 // <https://github.com/gnosis/conditional-tokens-contracts>,
 // and has been relicensed under GPL-3.0-or-later in this repository.
 
-use crate::types::CollectionIdError;
-use alloc::vec::Vec;
+use frame_support::PalletError;
+use parity_scale_codec::{Decode, Encode};
+use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
 
-/// Handles calculations of combinatorial IDs.
-pub trait CombinatorialIdManager {
-    type Asset;
-    type MarketId;
-    type CombinatorialId;
-    type Fuel;
-
-    /// Calculate the collection ID obtained when splitting `parent_collection_id` over the market
-    /// given by `market_id` and the `index_set`.
-    ///
-    /// The `fuel` parameter specifies how much work the function will do and can be used for
-    /// benchmarking purposes.
-    fn get_collection_id(
-        parent_collection_id: Option<Self::CombinatorialId>,
-        market_id: Self::MarketId,
-        index_set: Vec<bool>,
-        fuel: Self::Fuel,
-    ) -> Result<Self::CombinatorialId, CollectionIdError>;
-
-    /// Calculate the position ID belonging to the `collection_id` combined with `collateral` as
-    /// collateral.
-    fn get_position_id(
-        collateral: Self::Asset,
-        collection_id: Self::CombinatorialId,
-    ) -> Self::CombinatorialId;
+#[derive(Decode, Encode, Eq, PartialEq, PalletError, RuntimeDebug, TypeInfo)]
+pub enum CollectionIdError {
+    InvalidParentCollectionId,
+    EllipticCurvePointNotFoundWithFuel,
+    EllipticCurvePointXToBytesConversionFailed,
 }

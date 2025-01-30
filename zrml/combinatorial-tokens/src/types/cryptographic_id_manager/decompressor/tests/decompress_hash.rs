@@ -763,11 +763,12 @@ use rstest::rstest;
 )]
 fn decompress_hash_works(
     #[case] hash: CombinatorialId,
-    #[values(false, true)] force_max_work: bool,
+    #[values(false, true)] consume_all: bool,
     #[case] expected: (&str, &str),
 ) {
     let x = Fq::from_hex_str(expected.0);
     let y = Fq::from_hex_str(expected.1);
     let expected = G1Affine::new(x, y);
-    assert_eq!(decompress_hash(hash, force_max_work).unwrap(), expected);
+    let actual = decompress_hash(hash, Fuel { total: 16, consume_all }).unwrap();
+    assert_eq!(actual, expected);
 }

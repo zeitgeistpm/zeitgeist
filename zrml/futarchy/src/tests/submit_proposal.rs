@@ -134,9 +134,9 @@ fn submit_proposal_fails_if_cache_is_full() {
         // Mock up a full vector of proposals.
         let now = System::block_number();
         let to_be_scheduled_at = now + duration;
-        let cache_size: u32 = <CacheSize as Get<Option<u32>>>::get().unwrap();
-        let proposals_vec = vec![proposal.clone(); cache_size as usize];
-        let proposals: BoundedVec<_, CacheSize> = proposals_vec.try_into().unwrap();
+        let max_proposals: u32 = <Runtime as Config>::MaxProposals::get();
+        let proposals_vec = vec![proposal.clone(); max_proposals as usize];
+        let proposals: ProposalsOf<Runtime> = proposals_vec.try_into().unwrap();
         Proposals::<Runtime>::insert(to_be_scheduled_at, proposals);
 
         assert_noop!(

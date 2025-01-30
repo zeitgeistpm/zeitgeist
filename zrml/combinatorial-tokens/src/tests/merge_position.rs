@@ -50,7 +50,7 @@ fn merge_position_works_no_parent(
             market_id,
             partition.clone(),
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         assert_eq!(alice.free_balance(ct_001), 0);
@@ -111,7 +111,7 @@ fn merge_position_works_parent() {
             market_id,
             partition.clone(),
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         assert_eq!(alice.free_balance(ct_001), amount);
@@ -160,7 +160,7 @@ fn merge_position_horizontal_works() {
             market_id,
             vec![vec![B0, B1, B0], vec![B1, B0, B0]],
             amount,
-            false,
+            Fuel::new(16, false),
         ));
 
         assert_eq!(alice.free_balance(ct_110), amount);
@@ -181,7 +181,7 @@ fn merge_position_fails_if_market_not_found() {
                 0,
                 vec![vec![B0, B0, B1], vec![B1, B1, B0]],
                 1,
-                false,
+                Fuel::new(16, false),
             ),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
         );
@@ -204,7 +204,7 @@ fn merge_position_fails_on_invalid_partition_length() {
                 market_id,
                 partition,
                 _1,
-                false
+                Fuel::new(16, false)
             ),
             Error::<Runtime>::InvalidPartition
         );
@@ -227,7 +227,7 @@ fn merge_position_fails_on_trivial_partition_member() {
                 market_id,
                 partition,
                 _1,
-                false
+                Fuel::new(16, false)
             ),
             Error::<Runtime>::InvalidPartition
         );
@@ -250,7 +250,7 @@ fn merge_position_fails_on_overlapping_partition_members() {
                 market_id,
                 partition,
                 _1,
-                false
+                Fuel::new(16, false)
             ),
             Error::<Runtime>::InvalidPartition
         );
@@ -272,7 +272,7 @@ fn merge_position_fails_on_insufficient_funds() {
                 market_id,
                 vec![vec![B1, B0, B1], vec![B0, B1, B0]],
                 _100,
-                false,
+                Fuel::new(16, false),
             ),
             orml_tokens::Error::<Runtime>::BalanceTooLow
         );
@@ -294,7 +294,7 @@ fn merge_position_fails_on_insufficient_funds_foreign_token() {
                 market_id,
                 vec![vec![B1, B0, B1], vec![B0, B1, B0]],
                 _100,
-                false,
+                Fuel::new(16, false),
             ),
             orml_tokens::Error::<Runtime>::BalanceTooLow
         );
