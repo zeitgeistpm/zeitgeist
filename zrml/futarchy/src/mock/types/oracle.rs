@@ -22,6 +22,9 @@ use scale_info::TypeInfo;
 use sp_runtime::traits::Zero;
 use zeitgeist_primitives::{traits::FutarchyOracle, types::BlockNumber};
 
+#[cfg(feature = "fuzzing")]
+use arbitrary::{Arbitrary, Unstructured, Result as ArbitraryResult};
+
 #[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
 pub struct MockOracle {
     weight: Weight,
@@ -49,5 +52,18 @@ impl FutarchyOracle for MockOracle {
 
     fn update(&mut self, _: Self::BlockNumber) -> Weight {
         Zero::zero()
+    }
+}
+
+#[cfg(feature = "fuzzing")]
+impl<'a> Arbitrary<'a> for MockOracle {
+    fn arbitrary(u: &mut Unstructured<'a>) -> ArbitraryResult<Self> {
+        let ref_time = u64::arbitrary(u)?;
+        let proof_size = u64::arbitrary(u)?;
+        let weight = Weight::from_parts(ref_time, proof_size);
+
+        let value = bool::arbitrary(u)?;
+
+        Ok(MockOracle::new(weight, value))
     }
 }

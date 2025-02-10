@@ -29,7 +29,7 @@ mod liquidity_tree;
 mod macros;
 mod math;
 pub mod migration;
-mod mock;
+pub mod mock;
 mod pool_storage;
 mod tests;
 pub mod traits;
@@ -99,30 +99,28 @@ mod pallet {
     pub(crate) const EXIT_FEE: u128 = CENT / 10;
     /// The minimum allowed swap fee. Hardcoded to avoid misconfigurations which may lead to
     /// exploits.
-    pub(crate) const MIN_SWAP_FEE: u128 = BASE / 1_000; // 0.1%.
+    pub const MIN_SWAP_FEE: u128 = BASE / 1_000; // 0.1%.
     /// The maximum allowed spot price when creating a pool.
-    pub(crate) const MAX_SPOT_PRICE: u128 = BASE - CENT / 2;
+    pub const MAX_SPOT_PRICE: u128 = BASE - CENT / 2;
     /// The minimum allowed spot price when creating a pool.
-    pub(crate) const MIN_SPOT_PRICE: u128 = CENT / 2;
+    pub const MIN_SPOT_PRICE: u128 = CENT / 2;
     /// The maximum value the spot price is allowed to take in a combinatorial market.
-    pub(crate) const COMBO_MAX_SPOT_PRICE: u128 = BASE - CENT / 10;
+    pub const COMBO_MAX_SPOT_PRICE: u128 = BASE - CENT / 10;
     /// The minimum value the spot price is allowed to take in a combinatorial market.
-    pub(crate) const COMBO_MIN_SPOT_PRICE: u128 = CENT / 10;
+    pub const COMBO_MIN_SPOT_PRICE: u128 = CENT / 10;
     /// The minimum vallowed value of a pool's liquidity parameter.
     pub(crate) const MIN_LIQUIDITY: u128 = BASE;
     /// The minimum percentage each new LP position must increase the liquidity by, represented as
     /// fractional (0.0139098411 represents 1.39098411%).
     pub(crate) const MIN_RELATIVE_LP_POSITION_VALUE: u128 = 139098411; // 1.39098411%
 
-    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
-    pub(crate) type BalanceOf<T> =
+    pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub type AssetOf<T> = Asset<MarketIdOf<T>>;
+    pub type BalanceOf<T> =
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+    pub type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub type FuelOf<T> = <<T as Config>::CombinatorialTokens as CombinatorialTokensApi>::Fuel;
     pub(crate) type AssetIndexType = u16;
-    pub(crate) type FuelOf<T> =
-        <<T as Config>::CombinatorialTokens as CombinatorialTokensApi>::Fuel;
-    pub(crate) type MarketIdOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
     pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>, MaxAssets>;
     pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
@@ -838,13 +836,13 @@ mod pallet {
         /// that swap fees can be stored in the pool account without triggering dusting or failed
         /// transfers.
         ///
-        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do
         /// and can be used for benchmarking purposes.
         ///
         /// # Complexity
         ///
         /// `O(n)` where `n` is the number of splits required to create the pool.
-        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do
         /// and can be used for benchmarking purposes.
         #[pallet::call_index(8)]
         #[pallet::weight(T::WeightInfo::deploy_combinatorial_pool(
@@ -1631,6 +1629,13 @@ mod pallet {
         #[inline]
         pub(crate) fn pool_account_id(pool_id: &T::PoolId) -> T::AccountId {
             T::PalletId::get().into_sub_account_truncating((*pool_id).saturated_into::<u128>())
+        }
+
+        /// Returns the assets contained in the pool given by `pool_id`.
+        pub fn assets(pool_id: T::PoolId) -> Result<Vec<AssetOf<T>>, DispatchError> {
+            let pool = <Self as PoolStorage>::get(pool_id)?;
+
+            Ok(pool.assets.into_inner())
         }
 
         /// Distribute swap fees and external fees and returns the remaining amount.

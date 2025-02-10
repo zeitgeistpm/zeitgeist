@@ -21,4 +21,4 @@ mod payout;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub(crate) use benchmark_helper::BenchmarkHelper;
-pub(crate) use payout::MockPayout;
+pub use payout::MockPayout;

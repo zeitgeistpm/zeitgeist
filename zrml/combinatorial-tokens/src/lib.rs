@@ -30,7 +30,7 @@ extern crate alloc;
 mod benchmarking;
 pub mod mock;
 mod tests;
-mod traits;
+pub mod traits;
 pub mod types;
 pub mod weights;
 
@@ -118,16 +118,15 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
-    pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-    pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;
-    pub(crate) type BalanceOf<T> =
+    pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+    pub type AssetOf<T> = Asset<MarketIdOf<T>>;
+    pub type BalanceOf<T> =
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-    pub(crate) type CombinatorialIdOf<T> =
+    pub type CombinatorialIdOf<T> =
         <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::CombinatorialId;
-    pub(crate) type FuelOf<T> =
+    pub type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub type FuelOf<T> =
         <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::Fuel;
-    pub(crate) type MarketIdOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type SplitPositionDispatchInfoOf<T> =
         SplitPositionDispatchInfo<CombinatorialIdOf<T>, MarketIdOf<T>>;
 
@@ -239,7 +238,7 @@ mod pallet {
         /// `parent_collection_id` and the conjunction `(x|...|z)` where `x, ..., z` are the items
         /// covered by `partition`.
         ///
-        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do
         /// and can be used for benchmarking purposes.
         #[pallet::call_index(0)]
         #[pallet::weight(
@@ -302,7 +301,7 @@ mod pallet {
         /// merge is the position made up of the `parent_collection_id` and the conjunction
         /// `(x|...|z)` where `x, ..., z` are the items covered by `partition`.
         ///
-        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do
         /// and can be used for benchmarking purposes.
         #[pallet::call_index(1)]
         #[pallet::weight(
@@ -343,7 +342,7 @@ mod pallet {
         /// how much the conjunction `(x|...|z)` is valued, the user is paid in the position defined
         /// by `parent_collection_id` and `collateral`.
         ///
-        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do
         /// and can be used for benchmarking purposes.
         #[pallet::call_index(2)]
         #[pallet::weight(
@@ -630,7 +629,7 @@ mod pallet {
             Ok(Some(weight).into())
         }
 
-        pub(crate) fn account_id() -> T::AccountId {
+        pub fn account_id() -> T::AccountId {
             T::PalletId::get().into_account_truncating()
         }
 
@@ -730,7 +729,7 @@ mod pallet {
             Ok(asset)
         }
 
-        pub(crate) fn position_from_parent_collection(
+        pub fn position_from_parent_collection(
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,

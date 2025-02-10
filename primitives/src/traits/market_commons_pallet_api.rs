@@ -37,7 +37,7 @@ use sp_runtime::{
 
 // Abstraction of the market type, which is not a part of `MarketCommonsPalletApi` because Rust
 // doesn't support type aliases in traits.
-type MarketOf<T> = Market<
+pub type MarketOf<T> = Market<
     <T as MarketCommonsPalletApi>::AccountId,
     <T as MarketCommonsPalletApi>::Balance,
     <T as MarketCommonsPalletApi>::BlockNumber,
