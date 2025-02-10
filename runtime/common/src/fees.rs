@@ -1,4 +1,4 @@
-// Copyright 2022-2025 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2019-2020 Parity Technologies (UK) Ltd.
 //
@@ -65,7 +65,6 @@ macro_rules! impl_fee_types {
 macro_rules! impl_foreign_fees {
     () => {
         use frame_support::{
-            ensure,
             pallet_prelude::InvalidTransaction,
             traits::{
                 fungibles::{Credit, Inspect},
@@ -86,7 +85,10 @@ macro_rules! impl_foreign_fees {
             traits::{Convert, DispatchInfoOf, PostDispatchInfoOf},
             Perbill,
         };
-        use zeitgeist_primitives::math::fixed::{FixedDiv, FixedMul};
+        use zeitgeist_primitives::{
+            math::fixed::{FixedDiv, FixedMul},
+            types::TxPaymentAssetId,
+        };
 
         #[repr(u8)]
         pub enum CustomTxError {
@@ -95,77 +97,70 @@ macro_rules! impl_foreign_fees {
             NoAssetMetadata = 2,
             NoFeeFactor = 3,
             NonForeignAssetPaid = 4,
-            InvalidFeeAsset = 5,
-            NonNativeFeeAssetOnStandaloneChain = 6,
         }
 
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "parachain")] {
-                /// The asset id specifically used for pallet_assets_tx_payment for
-                /// paying transaction fees in different assets.
-                /// Since the polkadot API extension assumes the same type as on the asset-hubs,
-                /// we use it too.
-                /// https://github.com/polkadot-fellows/runtimes/blob/20ac6ff4dc4c488ad08f507c14b899adc6cb4394/system-parachains/asset-hubs/asset-hub-polkadot/src/lib.rs#L767
-                pub type TxPaymentAssetId = xcm::latest::MultiLocation;
+        // It does calculate foreign fees by extending transactions to include an optional
+        // `AssetId` that specifies the asset to be used for payment (defaulting to the native
+        // token on `None`), such that for each transaction the asset id can be specified.
+        // For real ZTG `None` is used and for DOT `Some(Asset::Foreign(0))` is used.
 
-                pub(crate) fn convert_asset_to_currency_id(
-                    value: TxPaymentAssetId,
-                ) -> Result<CurrencyId, TransactionValidityError> {
-                    // value (TxPaymentAssetId) is a MultiLocation as defined above
-                    let currency_id = AssetRegistry::location_to_asset_id(value).ok_or(
-                        TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                            CustomTxError::InvalidFeeAsset as u8,
-                        )),
-                    )?;
-                    Ok(currency_id)
-                }
+        pub(crate) fn calculate_fee(
+            native_fee: Balance,
+            fee_factor: Balance,
+        ) -> Result<Balance, TransactionValidityError> {
+            // Assume a fee_factor of 143_120_520 for DOT, now divide by
+            // BASE (10^10) = 0.0143120520 DOT per ZTG.
+            // Keep in mind that ZTG BASE is 10_000_000_000, and because fee_factor is below that,
+            // less DOT than ZTG is paid for fees.
+            // Assume a fee_factor of 20_000_000_000, then the fee would result in
+            // 20_000_000_000 / 10_000_000_000 = 2 units per ZTG
+            let converted_fee = native_fee.bmul(fee_factor).map_err(|_| {
+                TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                    CustomTxError::FeeConversionArith as u8,
+                ))
+            })?;
 
-                pub(crate) fn get_fee_factor(
-                    currency_id: CurrencyId,
-                ) -> Result<Balance, TransactionValidityError> {
-                    let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&currency_id).ok_or(
-                        TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                            CustomTxError::NoAssetMetadata as u8,
-                        )),
-                    )?;
-                    let fee_factor =
-                        metadata.additional.xcm.fee_factor.ok_or(TransactionValidityError::Invalid(
-                            InvalidTransaction::Custom(CustomTxError::NoFeeFactor as u8),
-                        ))?;
-                    Ok(fee_factor)
-                }
+            Ok(converted_fee)
+        }
 
-                pub(crate) fn calculate_fee(
-                    native_fee: Balance,
-                    fee_factor: Balance,
-                ) -> Result<Balance, TransactionValidityError> {
-                    // Assume a fee_factor of 143_120_520 for DOT, now divide by
-                    // BASE (10^10) = 0.0143120520 DOT per ZTG.
-                    // Keep in mind that ZTG BASE is 10_000_000_000, and because fee_factor is below that,
-                    // less DOT than ZTG is paid for fees.
-                    // Assume a fee_factor of 20_000_000_000, then the fee would result in
-                    // 20_000_000_000 / 10_000_000_000 = 2 units per ZTG
-                    let converted_fee = native_fee.bmul(fee_factor).map_err(|_| {
-                        TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                            CustomTxError::FeeConversionArith as u8,
-                        ))
-                    })?;
+        #[cfg(feature = "parachain")]
+        pub(crate) fn get_fee_factor(
+            currency_id: CurrencyId,
+        ) -> Result<Balance, TransactionValidityError> {
+            let metadata = <AssetRegistry as AssetRegistryInspect>::metadata(&currency_id).ok_or(
+                TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                    CustomTxError::NoAssetMetadata as u8,
+                )),
+            )?;
+            let fee_factor =
+                metadata.additional.xcm.fee_factor.ok_or(TransactionValidityError::Invalid(
+                    InvalidTransaction::Custom(CustomTxError::NoFeeFactor as u8),
+                ))?;
+            Ok(fee_factor)
+        }
 
+        pub struct TTCBalanceToAssetBalance;
+        impl ConversionToAssetBalance<Balance, TxPaymentAssetId, Balance>
+            for TTCBalanceToAssetBalance
+        {
+            type Error = TransactionValidityError;
+
+            fn to_asset_balance(
+                native_fee: Balance,
+                asset_id: TxPaymentAssetId,
+            ) -> Result<Balance, Self::Error> {
+                #[cfg(feature = "parachain")]
+                {
+                    let currency_id = Asset::ForeignAsset(asset_id);
+                    let fee_factor = get_fee_factor(currency_id)?;
+                    let converted_fee = calculate_fee(native_fee, fee_factor)?;
                     Ok(converted_fee)
                 }
-
-                pub struct TTCBalanceToAssetBalance;
-                impl ConversionToAssetBalance<Balance, CurrencyId, Balance> for TTCBalanceToAssetBalance {
-                    type Error = TransactionValidityError;
-
-                    fn to_asset_balance(
-                        native_fee: Balance,
-                        asset_id: CurrencyId,
-                    ) -> Result<Balance, Self::Error> {
-                        let fee_factor = get_fee_factor(asset_id)?;
-                        let converted_fee = calculate_fee(native_fee, fee_factor)?;
-                        Ok(converted_fee)
-                    }
+                #[cfg(not(feature = "parachain"))]
+                {
+                    Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                        CustomTxError::NoForeignAssetsOnStandaloneChain as u8,
+                    )))
                 }
             }
         }
@@ -178,13 +173,7 @@ macro_rules! impl_foreign_fees {
             }
         }
 
-        // It does calculate foreign fees by extending transactions to include an optional
-        // `AssetId` that specifies the asset to be used for payment (defaulting to the native
-        // token on `None`), such that for each transaction the asset id can be specified.
-        // For real ZTG `None` is used and for DOT `Some(Asset::Foreign(0))` is used.
         pub struct TokensTxCharger;
-
-        #[cfg(feature = "parachain")]
         impl pallet_asset_tx_payment::OnChargeAssetTransaction<Runtime> for TokensTxCharger {
             type AssetId = TxPaymentAssetId;
             type Balance = Balance;
@@ -198,15 +187,15 @@ macro_rules! impl_foreign_fees {
                 native_fee: Self::Balance,
                 _tip: Self::Balance,
             ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
-                let currency_id = convert_asset_to_currency_id(asset_id)?;
                 // We don't know the precision of the underlying asset. Because the converted fee
                 // could be less than one (e.g. 0.5) but gets rounded down by integer division we
                 // introduce a minimum fee.
                 let min_converted_fee =
                     if native_fee.is_zero() { Zero::zero() } else { One::one() };
                 let converted_fee =
-                    TTCBalanceToAssetBalance::to_asset_balance(native_fee, currency_id)?
+                    TTCBalanceToAssetBalance::to_asset_balance(native_fee, asset_id)?
                         .max(min_converted_fee);
+                let currency_id = Asset::ForeignAsset(asset_id);
                 let can_withdraw =
                     <Tokens as Inspect<AccountId>>::can_withdraw(currency_id, who, converted_fee);
                 if can_withdraw != WithdrawConsequence::Success {
@@ -233,11 +222,19 @@ macro_rules! impl_foreign_fees {
             ) -> Result<(Self::Balance, Self::Balance), TransactionValidityError> {
                 let min_converted_fee =
                     if corrected_native_fee.is_zero() { Zero::zero() } else { One::one() };
+                let asset_id = match paid.asset() {
+                    Asset::ForeignAsset(asset_id) => asset_id,
+                    _ => {
+                        return Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
+                            CustomTxError::NonForeignAssetPaid as u8,
+                        )));
+                    }
+                };
                 // Convert the corrected fee and tip into the asset used for payment.
                 let converted_fee =
-                    TTCBalanceToAssetBalance::to_asset_balance(corrected_native_fee, paid.asset())?
+                    TTCBalanceToAssetBalance::to_asset_balance(corrected_native_fee, asset_id)?
                         .max(min_converted_fee);
-                let converted_tip = TTCBalanceToAssetBalance::to_asset_balance(tip, paid.asset())?;
+                let converted_tip = TTCBalanceToAssetBalance::to_asset_balance(tip, asset_id)?;
 
                 // Calculate how much refund we should return.
                 let (final_fee, refund) = paid.split(converted_fee);
@@ -251,41 +248,6 @@ macro_rules! impl_foreign_fees {
                 TTCHandleCredit::handle_credit(final_fee);
 
                 Ok((final_fee_peek, tip))
-            }
-        }
-
-        #[cfg(not(feature = "parachain"))]
-        impl pallet_asset_tx_payment::OnChargeAssetTransaction<Runtime> for TokensTxCharger {
-            // used `u32` since we don't care about decoding in the polkadot API, because it would throw an error anyways
-            // additionally, we don't want to add the `xcm` dependency to the standalone chain (without parachain feature)
-            type AssetId = u32;
-            type Balance = Balance;
-            type LiquidityInfo = Credit<AccountId, Tokens>;
-
-            fn withdraw_fee(
-                _who: &AccountId,
-                _call: &RuntimeCall,
-                _dispatch_info: &DispatchInfoOf<RuntimeCall>,
-                _asset_id: Self::AssetId,
-                _native_fee: Self::Balance,
-                _tip: Self::Balance,
-            ) -> Result<Self::LiquidityInfo, TransactionValidityError> {
-                Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                    CustomTxError::NonNativeFeeAssetOnStandaloneChain as u8,
-                )))
-            }
-
-            fn correct_and_deposit_fee(
-                _who: &AccountId,
-                _dispatch_info: &DispatchInfoOf<RuntimeCall>,
-                _post_info: &PostDispatchInfoOf<RuntimeCall>,
-                _corrected_native_fee: Self::Balance,
-                _tip: Self::Balance,
-                _paid: Self::LiquidityInfo,
-            ) -> Result<(Self::Balance, Self::Balance), TransactionValidityError> {
-                Err(TransactionValidityError::Invalid(InvalidTransaction::Custom(
-                    CustomTxError::NonNativeFeeAssetOnStandaloneChain as u8,
-                )))
             }
         }
     };
@@ -574,7 +536,8 @@ macro_rules! fee_tests {
                             )),
                             additional: custom_metadata,
                         };
-                    let dot = Asset::ForeignAsset(0u32);
+                    let dot_asset_id = 0u32;
+                    let dot = Asset::ForeignAsset(dot_asset_id);
 
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),
@@ -633,9 +596,8 @@ macro_rules! fee_tests {
                     let fee_factor = 143_120_520;
                     let custom_metadata = CustomMetadata {
                         xcm: XcmMetadata { fee_factor: Some(fee_factor) },
-                        allow_as_base_asset: true,
+                        ..Default::default()
                     };
-                    let dot_location = xcm::latest::MultiLocation::parent();
                     let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> =
                         AssetMetadata {
                             decimals: 10,
@@ -643,11 +605,12 @@ macro_rules! fee_tests {
                             symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
                             existential_deposit: 5 * MILLI,
                             location: Some(xcm::VersionedMultiLocation::V3(
-                                dot_location,
+                                xcm::latest::MultiLocation::parent(),
                             )),
                             additional: custom_metadata,
                         };
-                    let dot = Asset::ForeignAsset(0u32);
+                    let dot_asset_id = 0u32;
+                    let dot = Asset::ForeignAsset(dot_asset_id);
 
                     assert_ok!(AssetRegistry::register_asset(
                         RuntimeOrigin::root(),
@@ -674,7 +637,7 @@ macro_rules! fee_tests {
                             &Treasury::account_id(),
                             &mock_call,
                             &mock_dispatch_info,
-                            dot_location,
+                            dot_asset_id,
                             BASE / 2,
                             0,
                         )
