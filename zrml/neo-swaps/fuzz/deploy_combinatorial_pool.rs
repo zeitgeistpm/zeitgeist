@@ -7,12 +7,12 @@ use libfuzzer_sys::fuzz_target;
 use orml_traits::currency::MultiCurrency;
 use zeitgeist_primitives::{
     constants::base_multiples::*,
-    traits::MarketCommonsPalletApi,
+    traits::{CombinatorialTokensFuel, MarketCommonsPalletApi},
     types::{Asset, MarketType},
 };
 use zrml_neo_swaps::{
     mock::{ExtBuilder, NeoSwaps, Runtime, RuntimeOrigin},
-    AccountIdOf, BalanceOf, Config, MarketIdOf, COMBO_MAX_SPOT_PRICE, COMBO_MIN_SPOT_PRICE,
+    AccountIdOf, BalanceOf, Config, FuelOf, MarketIdOf, COMBO_MAX_SPOT_PRICE, COMBO_MIN_SPOT_PRICE,
     MIN_SWAP_FEE,
 };
 
@@ -25,7 +25,7 @@ struct DeployCombinatorialPoolFuzzParams {
     amount: BalanceOf<Runtime>,
     spot_prices: Vec<BalanceOf<Runtime>>,
     swap_fee: BalanceOf<Runtime>,
-    force_max_work: bool,
+    fuel: FuelOf<Runtime>,
 }
 
 impl<'a> Arbitrary<'a> for DeployCombinatorialPoolFuzzParams {
@@ -65,7 +65,7 @@ impl<'a> Arbitrary<'a> for DeployCombinatorialPoolFuzzParams {
 
         let swap_fee = u.int_in_range(MIN_SWAP_FEE..=<Runtime as Config>::MaxSwapFee::get())?;
 
-        let force_max_work = Arbitrary::arbitrary(u)?;
+        let fuel = FuelOf::<Runtime>::from_total(u.int_in_range(1..=100)?);
 
         let params = DeployCombinatorialPoolFuzzParams {
             account_id,
@@ -75,7 +75,7 @@ impl<'a> Arbitrary<'a> for DeployCombinatorialPoolFuzzParams {
             amount,
             spot_prices,
             swap_fee,
-            force_max_work,
+            fuel,
         };
 
         Ok(params)
@@ -113,7 +113,7 @@ fuzz_target!(|params: DeployCombinatorialPoolFuzzParams| {
             params.amount,
             params.spot_prices,
             params.swap_fee,
-            params.force_max_work,
+            params.fuel,
         );
     });
 

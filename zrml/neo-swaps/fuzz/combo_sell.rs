@@ -8,12 +8,12 @@ use orml_traits::currency::MultiCurrency;
 use rand::seq::SliceRandom;
 use zeitgeist_primitives::{
     constants::base_multiples::*,
-    traits::MarketCommonsPalletApi,
+    traits::{CombinatorialTokensFuel, MarketCommonsPalletApi},
     types::{Asset, MarketType},
 };
 use zrml_neo_swaps::{
     mock::{ExtBuilder, NeoSwaps, Runtime, RuntimeOrigin},
-    AccountIdOf, BalanceOf, Config, MarketIdOf, MAX_SPOT_PRICE, MIN_SPOT_PRICE,
+    AccountIdOf, BalanceOf, Config, FuelOf, MarketIdOf, MAX_SPOT_PRICE, MIN_SPOT_PRICE,
     MIN_SWAP_FEE,
 };
 
@@ -125,7 +125,7 @@ fuzz_target!(|params: ComboBuyFuzzParams| {
             10 * params.amount_in,
             params.spot_prices,
             params.swap_fee,
-            false,
+            FuelOf::<Runtime>::from_total(16),
         )
         .unwrap();
 

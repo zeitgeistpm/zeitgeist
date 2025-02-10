@@ -6,18 +6,17 @@ use arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured};
 use libfuzzer_sys::fuzz_target;
 use orml_traits::currency::MultiCurrency;
 use rand::seq::SliceRandom;
+use sp_runtime::traits::Zero;
 use zeitgeist_primitives::{
     constants::base_multiples::*,
-    traits::MarketCommonsPalletApi,
+    traits::{CombinatorialTokensFuel, MarketCommonsPalletApi},
     types::{Asset, MarketType},
 };
 use zrml_neo_swaps::{
     mock::{ExtBuilder, NeoSwaps, Runtime, RuntimeOrigin},
-    AccountIdOf, BalanceOf, Config, MarketIdOf, MAX_SPOT_PRICE, MIN_SPOT_PRICE,
+    AccountIdOf, BalanceOf, Config, FuelOf, MarketIdOf, MAX_SPOT_PRICE, MIN_SPOT_PRICE,
     MIN_SWAP_FEE,
 };
-use sp_runtime::traits::Zero;
-
 
 #[derive(Debug)]
 struct ComboBuyFuzzParams {
@@ -83,11 +82,8 @@ impl<'a> Arbitrary<'a> for ComboBuyFuzzParams {
         let sell = indices[buy_len + keep_len..asset_count_usize].to_vec();
 
         let amount_buy = u.int_in_range(_1..=_100)?;
-        let amount_keep = if keep.is_empty() {
-            Zero::zero()
-        } else {
-            u.int_in_range(_1..=amount_buy)?
-        };
+        let amount_keep =
+            if keep.is_empty() { Zero::zero() } else { u.int_in_range(_1..=amount_buy)? };
 
         let min_amount_out = Arbitrary::arbitrary(u)?;
 
@@ -141,7 +137,7 @@ fuzz_target!(|params: ComboBuyFuzzParams| {
             10 * params.amount_buy,
             params.spot_prices,
             params.swap_fee,
-            false,
+            FuelOf::<Runtime>::from_total(16),
         )
         .unwrap();
 

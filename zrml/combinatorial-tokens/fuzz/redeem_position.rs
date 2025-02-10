@@ -7,7 +7,7 @@ use libfuzzer_sys::fuzz_target;
 use orml_traits::currency::MultiCurrency;
 use zeitgeist_primitives::{
     constants::base_multiples::*,
-    traits::MarketCommonsPalletApi,
+    traits::{CombinatorialTokensFuel, MarketCommonsPalletApi},
     types::{Asset, MarketType},
 };
 use zrml_combinatorial_tokens::{
@@ -17,7 +17,7 @@ use zrml_combinatorial_tokens::{
         types::MockPayout,
     },
     traits::CombinatorialIdManager,
-    AccountIdOf, BalanceOf, CombinatorialIdOf, Config, MarketIdOf,
+    AccountIdOf, BalanceOf, CombinatorialIdOf, Config, FuelOf, MarketIdOf,
 };
 
 #[derive(Debug)]
@@ -26,7 +26,7 @@ struct RedeemPositionFuzzParams {
     parent_collection_id: Option<CombinatorialIdOf<Runtime>>,
     market_id: MarketIdOf<Runtime>,
     index_set: Vec<bool>,
-    force_max_work: bool,
+    fuel: FuelOf<Runtime>,
     payout_vector: Option<Vec<BalanceOf<Runtime>>>,
     amount: BalanceOf<Runtime>,
 }
@@ -37,7 +37,7 @@ impl<'a> Arbitrary<'a> for RedeemPositionFuzzParams {
         let parent_collection_id = Arbitrary::arbitrary(u)?;
         let market_id = 0u8.into();
         let amount = Arbitrary::arbitrary(u)?;
-        let force_max_work = Arbitrary::arbitrary(u)?;
+        let fuel = FuelOf::<Runtime>::from_total(u.int_in_range(1..=100)?);
 
         let min_len = 2;
         let max_len = 1000;
@@ -58,7 +58,7 @@ impl<'a> Arbitrary<'a> for RedeemPositionFuzzParams {
             parent_collection_id,
             market_id,
             index_set,
-            force_max_work,
+            fuel,
             payout_vector,
             amount,
         };
@@ -111,7 +111,7 @@ fuzz_target!(|params: RedeemPositionFuzzParams| {
             params.parent_collection_id,
             params.market_id,
             params.index_set,
-            params.force_max_work,
+            params.fuel,
         );
     });
 

@@ -118,11 +118,9 @@ mod pallet {
     pub type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub type BalanceOf<T> =
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+    pub type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub type FuelOf<T> = <<T as Config>::CombinatorialTokens as CombinatorialTokensApi>::Fuel;
     pub(crate) type AssetIndexType = u16;
-    pub(crate) type FuelOf<T> =
-        <<T as Config>::CombinatorialTokens as CombinatorialTokensApi>::Fuel;
-    pub(crate) type MarketIdOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
     pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>, MaxAssets>;
     pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
@@ -838,13 +836,13 @@ mod pallet {
         /// that swap fees can be stored in the pool account without triggering dusting or failed
         /// transfers.
         ///
-        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do
         /// and can be used for benchmarking purposes.
         ///
         /// # Complexity
         ///
         /// `O(n)` where `n` is the number of splits required to create the pool.
-        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do
         /// and can be used for benchmarking purposes.
         #[pallet::call_index(8)]
         #[pallet::weight(T::WeightInfo::deploy_combinatorial_pool(

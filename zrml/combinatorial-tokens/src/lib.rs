@@ -124,10 +124,9 @@ mod pallet {
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     pub type CombinatorialIdOf<T> =
         <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::CombinatorialId;
-    pub(crate) type FuelOf<T> =
+    pub type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub type FuelOf<T> =
         <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::Fuel;
-    pub(crate) type MarketIdOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type SplitPositionDispatchInfoOf<T> =
         SplitPositionDispatchInfo<CombinatorialIdOf<T>, MarketIdOf<T>>;
 
@@ -239,7 +238,7 @@ mod pallet {
         /// `parent_collection_id` and the conjunction `(x|...|z)` where `x, ..., z` are the items
         /// covered by `partition`.
         ///
-        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do
         /// and can be used for benchmarking purposes.
         #[pallet::call_index(0)]
         #[pallet::weight(
@@ -302,7 +301,7 @@ mod pallet {
         /// merge is the position made up of the `parent_collection_id` and the conjunction
         /// `(x|...|z)` where `x, ..., z` are the items covered by `partition`.
         ///
-        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do
         /// and can be used for benchmarking purposes.
         #[pallet::call_index(1)]
         #[pallet::weight(
@@ -343,7 +342,7 @@ mod pallet {
         /// how much the conjunction `(x|...|z)` is valued, the user is paid in the position defined
         /// by `parent_collection_id` and `collateral`.
         ///
-        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do
         /// and can be used for benchmarking purposes.
         #[pallet::call_index(2)]
         #[pallet::weight(

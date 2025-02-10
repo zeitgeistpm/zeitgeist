@@ -6,7 +6,7 @@ use arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured};
 use libfuzzer_sys::fuzz_target;
 use orml_traits::currency::MultiCurrency;
 use zeitgeist_primitives::{
-    traits::MarketCommonsPalletApi,
+    traits::{CombinatorialTokensFuel, MarketCommonsPalletApi},
     types::{Asset, MarketType},
 };
 use zrml_combinatorial_tokens::{
@@ -14,7 +14,7 @@ use zrml_combinatorial_tokens::{
         ext_builder::ExtBuilder,
         runtime::{CombinatorialTokens, Runtime, RuntimeOrigin},
     },
-    AccountIdOf, BalanceOf, CombinatorialIdOf, Config, MarketIdOf,
+    AccountIdOf, BalanceOf, CombinatorialIdOf, Config, FuelOf, MarketIdOf,
 };
 
 #[derive(Debug)]
@@ -24,7 +24,7 @@ struct MergePositionFuzzParams {
     market_id: MarketIdOf<Runtime>,
     partition: Vec<Vec<bool>>,
     amount: BalanceOf<Runtime>,
-    force_max_work: bool,
+    fuel: FuelOf<Runtime>,
 }
 
 impl<'a> Arbitrary<'a> for MergePositionFuzzParams {
@@ -33,7 +33,7 @@ impl<'a> Arbitrary<'a> for MergePositionFuzzParams {
         let parent_collection_id = Arbitrary::arbitrary(u)?;
         let market_id = 0u8.into();
         let amount = Arbitrary::arbitrary(u)?;
-        let force_max_work = Arbitrary::arbitrary(u)?;
+        let fuel = FuelOf::<Runtime>::from_total(u.int_in_range(1..=100)?);
 
         // Note: This might result in members of unequal length, but that's OK.
         let min_len = 0;
@@ -48,7 +48,7 @@ impl<'a> Arbitrary<'a> for MergePositionFuzzParams {
             market_id,
             partition,
             amount,
-            force_max_work,
+            fuel,
         };
 
         Ok(params)
@@ -84,7 +84,7 @@ fuzz_target!(|params: MergePositionFuzzParams| {
                     params.parent_collection_id,
                     params.market_id,
                     index_set,
-                    false,
+                    FuelOf::<Runtime>::from_total(16),
                 )
             })
             .collect::<Result<Vec<_>, _>>()
@@ -112,7 +112,7 @@ fuzz_target!(|params: MergePositionFuzzParams| {
             params.market_id,
             params.partition,
             params.amount,
-            params.force_max_work,
+            params.fuel,
         );
     });
 
