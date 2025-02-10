@@ -78,7 +78,7 @@ fn redeem_position_fails_on_incorrect_index_set(index_set: Vec<bool>) {
 }
 
 #[test]
-fn redeem_position_fails_if_tokens_have_to_value() {
+fn redeem_position_fails_if_tokens_have_no_value() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
         MockPayout::set_return_value(Some(vec![0, _1_2, _1_2, 0]));
