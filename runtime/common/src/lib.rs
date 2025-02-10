@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2019-2020 Parity Technologies (UK) Ltd.
 //
@@ -83,8 +83,7 @@ macro_rules! decl_common_types {
         use scale_info::TypeInfo;
         use sp_core::storage::ChildInfo;
         use sp_runtime::{
-            generic, BoundedBTreeMap, DispatchError, DispatchResult, RuntimeDebug,
-            SaturatedConversion,
+            generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
         };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
 
@@ -92,70 +91,7 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type TrieId = BoundedVec<u8, ConstU32<128>>;
-        type CodeHash = <Runtime as frame_system::Config>::Hash;
-
-        // `ContractInfo` struct that we need for `ClearContractsChildTries` but pallet-contracts
-        // doesn't expose publicly.
-        #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-        pub struct ContractInfo {
-            pub trie_id: TrieId,
-            pub code_hash: CodeHash,
-            pub storage_bytes: u32,
-            pub storage_items: u32,
-            pub storage_byte_deposit: Balance,
-            pub storage_item_deposit: Balance,
-            pub storage_base_deposit: Balance,
-            pub delegate_dependencies:
-                BoundedBTreeMap<CodeHash, Balance, ContractsMaxDelegateDependencies>,
-        }
-
-        struct ClearContractsChildTries;
-
-        impl OnRuntimeUpgrade for ClearContractsChildTries {
-            fn on_runtime_upgrade() -> frame_support::weights::Weight {
-                log::info!("ClearContractsChildTries: Starting...");
-                let mut total_reads = 0u64;
-                let mut total_writes = 0u64;
-                for (_, contract_info) in storage_key_iter::<AccountId, ContractInfo, Twox64Concat>(
-                    b"Contracts",
-                    b"ContractInfoOf",
-                ) {
-                    let trie_id = contract_info.trie_id;
-                    let inner_trie_id = trie_id.into_inner();
-                    let child_info = ChildInfo::new_default(&inner_trie_id);
-                    let multi_removal_result = child::clear_storage(&child_info, None, None);
-                    let writes = multi_removal_result.loops as u64;
-                    log::info!(
-                        "ClearContractsChildTries: Cleared trie {:?} in {:?} loops",
-                        inner_trie_id,
-                        writes
-                    );
-                    total_reads = total_reads.saturating_add(1);
-                    total_writes = total_writes.saturating_add(writes);
-                }
-                log::info!("ClearContractsChildTries: Done!");
-                <Runtime as frame_system::Config>::DbWeight::get()
-                    .reads_writes(total_reads, total_writes)
-            }
-
-            #[cfg(feature = "try-runtime")]
-            fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
-                Ok(vec![])
-            }
-
-            #[cfg(feature = "try-runtime")]
-            fn post_upgrade(_: Vec<u8>) -> Result<(), DispatchError> {
-                Ok(())
-            }
-        }
-
-        parameter_types! {
-            pub const ContractsPalletStr: &'static str = "Contracts";
-        }
-        type DeleteContracts = RemovePallet<ContractsPalletStr, RocksDbWeight>;
-
-        type Migrations = (ClearContractsChildTries, DeleteContracts);
+        type Migrations = ();
 
         pub type Executive = frame_executive::Executive<
             Runtime,
