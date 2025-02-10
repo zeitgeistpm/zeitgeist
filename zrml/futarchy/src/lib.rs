@@ -80,9 +80,10 @@ mod pallet {
         /// The maximum number of proposals allowed to be in flight simultaneously.
         type MaxProposals: Get<u32>;
 
+        /// The minimum allowed duration between the creation of a proposal and its evaluation.
         type MinDuration: Get<BlockNumberFor<Self>>;
 
-        // The type used to define the oracle for each proposal.
+        /// The type used to define the oracle for a proposal.
         type Oracle: FutarchyOracle<BlockNumber = BlockNumberFor<Self>>
             + Clone
             + Debug
@@ -154,6 +155,10 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Submits a `proposal` for evaluation in `duration` blocks.
+        ///
+        /// If, after `duration` blocks, the oracle `proposal.oracle` is evaluated positively, the
+        /// proposal is scheduled for execution at `proposal.when`.
         #[pallet::call_index(0)]
         #[transactional]
         #[pallet::weight(T::WeightInfo::submit_proposal())]

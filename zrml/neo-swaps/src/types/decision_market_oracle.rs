@@ -29,7 +29,9 @@ use zeitgeist_primitives::traits::FutarchyOracle;
 /// Struct that implements `FutarchyOracle` using price measurements from liquidity pools.
 ///
 /// The oracle evaluates to `true` if and only if the `positive_outcome` is more valuable than the
-/// `negative_outcome` in the liquidity pool specified by `pool_id`.
+/// `negative_outcome` in the liquidity pool specified by `pool_id` over
+/// a period of time for a certain absolute and relative threshold determined by a
+/// [`DecisionMarketOracleScoreboard`].
 #[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
 pub struct DecisionMarketOracle<T>
 where

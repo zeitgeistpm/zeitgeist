@@ -29,7 +29,12 @@ pub struct Proposal<T>
 where
     T: Config,
 {
+    /// The time at which the proposal will be enacted.
     pub when: BlockNumberFor<T>,
+
+    /// The proposed call.
     pub call: BoundedCallOf<T>,
+
+    /// The oracle that evaluates if the proposal should be enacted.
     pub oracle: OracleOf<T>,
 }

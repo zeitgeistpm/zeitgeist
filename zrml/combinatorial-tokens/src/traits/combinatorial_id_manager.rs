@@ -25,6 +25,7 @@
 use crate::types::CollectionIdError;
 use alloc::vec::Vec;
 
+/// Handles calculations of combinatorial IDs.
 pub trait CombinatorialIdManager {
     type Asset;
     type MarketId;
@@ -43,6 +44,8 @@ pub trait CombinatorialIdManager {
         fuel: Self::Fuel,
     ) -> Result<Self::CombinatorialId, CollectionIdError>;
 
+    /// Calculate the position ID belonging to the `collection_id` combined with `collateral` as
+    /// collateral.
     fn get_position_id(
         collateral: Self::Asset,
         collection_id: Self::CombinatorialId,

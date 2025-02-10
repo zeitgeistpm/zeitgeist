@@ -22,6 +22,8 @@ use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::DispatchError;
 
+/// Trait that can be used to expose the internal functionality of zrml-combinatorial-tokens to
+/// other pallets.
 pub trait CombinatorialTokensApi {
     type AccountId;
     type Balance;
