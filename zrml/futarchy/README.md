@@ -22,9 +22,8 @@ a period of time for a certain absolute and relative threshold determined by a
 
 The standard governance flow is the following:
 
-- A hard-coded origin (usually root) submits a proposal to be approved or
-  rejected via futarchy. If the origin is root, this is done by running a
-  governance proposal through
+- The root origin submits a proposal to be approved or rejected via futarchy by
+  running a governance proposal through
   [pallet-democracy](https://github.com/paritytech/polkadot-sdk/tree/master/substrate/frame/democracy)
   and calling into this pallet's sole extrinsic `submit_proposal`. Assuming that
   the thesis of futarchy is correct and the market used to evaluate the proposal
