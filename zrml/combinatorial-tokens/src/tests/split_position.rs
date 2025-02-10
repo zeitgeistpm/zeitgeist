@@ -110,7 +110,7 @@ fn split_position_works_vertical_with_parent() {
             Fuel::new(16, false),
         ));
 
-        // Alice is left with 1 unit of [0, 0, 1], 2 units of [1, 1, 0] and one unit of each of the
+        // Alice is left with 2 units of [0, 0, 1], 3 units of [1, 1, 0] and one unit of each of the
         // two new tokens.
         let ct_001 = CombinatorialToken([
             207, 168, 160, 93, 238, 221, 197, 1, 171, 102, 28, 24, 18, 107, 205, 231, 227, 98, 220,
@@ -286,7 +286,7 @@ fn split_position_fails_on_insufficient_funds_native_token_no_parent() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::Ztg, _99).unwrap();
 
-        // Market has three outcomes, but there's an element in the partition of size two.
+
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
 
         assert_noop!(
@@ -308,7 +308,7 @@ fn split_position_fails_on_insufficient_funds_foreign_token_no_parent() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::ForeignAsset(1), _99).unwrap();
 
-        // Market has three outcomes, but there's an element in the partition of size two.
+
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
 
         assert_noop!(
