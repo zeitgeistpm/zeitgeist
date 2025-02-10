@@ -34,7 +34,7 @@ export async function canSendBalanceTransfer(
   const alice = keyring.addFromUri("//Alice", { name: "Alice default" });
 
   let tries = 0;
-  const amount = BigInt("1000000000");
+  const amount = BigInt("100000000000");
   const balanceBefore = (
     (await paraApi.query.system.account(
       randomAccount.address
@@ -46,15 +46,26 @@ export async function canSendBalanceTransfer(
   /// Chopsticks does not have the notion of tx pool either, so we need to retry
   /// Therefore we just retry at most MAX_BALANCE_TRANSFER_TRIES
   while (tries < MAX_BALANCE_TRANSFER_TRIES) {
-    const tx = await paraApi.tx.balances.transfer(
+    const tx = await paraApi.tx.balances.transferAllowDeath(
       randomAccount.address,
       amount
     );
-    const txHash = tx.signAndSend(alice, { nonce: -1 });
+    const txHash = tx.signAndSend(alice);
     const result = await context.createBlock({
       providerName: providerName,
       count: 1,
+      allowFailures: true,
     });
+    const apiAt = await paraApi.at(result.result);
+    const events = await apiAt.query.system.events();
+
+    // in the case that the transfer fails, it's logged here
+    const extrinsicFailedEvent = events.find((evt) =>
+      paraApi.events.system.ExtrinsicFailed.is(evt.event)
+    );
+    if (extrinsicFailedEvent) {
+      console.log(`ExtrinsicFailed: ${extrinsicFailedEvent}`);
+    }
 
     const block = await paraApi.rpc.chain.getBlock(result.result);
     const includedTxHashes = block.block.extrinsics.map((x) =>
@@ -67,7 +78,10 @@ export async function canSendBalanceTransfer(
   }
 
   // without this, the xcm transfer `canSendXcmTransfer` test below has a timeout
-  await context.createBlock({ providerName: providerName, count: 1 });
+  await context.createBlock({
+    providerName: providerName,
+    count: 1,
+  });
 
   const balanceAfter = (
     (await paraApi.query.system.account(
@@ -83,6 +97,7 @@ export async function canSendXcmTransfer(
   senderProviderName: string,
   senderParaApi: ApiPromise,
   receiverParaApi: ApiPromise,
+  receiverProviderName: string,
   receiverParaId: number,
   tokensIndex: number
 ) {
@@ -103,7 +118,7 @@ export async function canSendXcmTransfer(
   ).free.toBigInt();
 
   const ztg = { Ztg: null };
-  const amount: bigint = BigInt("192913122185847181");
+  const amount: bigint = BigInt("100000000000000000");
   const bobAccountId = senderParaApi
     .createType("AccountId32", bob.address)
     .toHex();
@@ -148,38 +163,9 @@ export async function canSendXcmTransfer(
     "Unexpected balance diff"
   ).toBe(amount + transferFee);
 
-  // RpcError: 1: Block 0x... not found, if using this `await context.createBlock({ providerName: "ReceiverPara", count: 1 });`
-  // Reported Bug here https://github.com/Moonsong-Labs/moonwall/issues/343
+  await context.createBlock({ providerName: receiverProviderName, count: 2, logger: log });
 
-  // use a workaround for creating a block
-  const newBlockPromise = new Promise((resolve, reject) => {
-    // ws://127.0.0.1:8001 represents the receiver chain endpoint
-    const ws = new WebSocket("ws://127.0.0.1:8001");
-
-    ws.on("open", function open() {
-      const message = {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "dev_newBlock",
-        params: [{ count: 1 }],
-      };
-
-      ws.send(JSON.stringify(message));
-    });
-
-    ws.on("message", async function message(data) {
-      const dataObj = JSON.parse(data.toString());
-      log("Received message:", dataObj);
-      resolve(dataObj.result);
-    });
-
-    ws.on("error", function error(error) {
-      log("Error:", error.toString());
-      reject(error);
-    });
-  });
-
-  await newBlockPromise;
+  await new Promise((resolve) => setTimeout(resolve, 2000));
   const receiverBalanceAfter: bigint = (
     (await receiverParaApi.query.tokens.accounts(
       bob.address,
