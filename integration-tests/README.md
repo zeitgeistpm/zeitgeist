@@ -103,3 +103,9 @@ pnpm exec moonwall test chopsticks_zeitgeist_upgrade
 ```bash
 pnpm exec moonwall test chopsticks_battery_station_upgrade
 ```
+
+#### Test XCM functionality on the live main-net fork using chopsticks:
+
+```bash
+pnpm exec moonwall test chopsticks_zeitgeist_xcm
+```
