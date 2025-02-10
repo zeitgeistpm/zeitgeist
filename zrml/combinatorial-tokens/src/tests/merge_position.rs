@@ -216,7 +216,7 @@ fn merge_position_fails_on_trivial_partition_member() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
 
-        // Market has three outcomes, but there's an element in the partition of size two.
+
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
         let partition = vec![vec![B1, B0, B1], vec![B0, B0, B0]];
 
@@ -239,7 +239,7 @@ fn merge_position_fails_on_overlapping_partition_members() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::Ztg, _100).unwrap();
 
-        // Market has three outcomes, but there's an element in the partition of size two.
+
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
         let partition = vec![vec![B1, B0, B1], vec![B0, B0, B1]];
 
@@ -262,7 +262,7 @@ fn merge_position_fails_on_insufficient_funds() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::Ztg, _99).unwrap();
 
-        // Market has three outcomes, but there's an element in the partition of size two.
+
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
 
         assert_noop!(
@@ -284,7 +284,7 @@ fn merge_position_fails_on_insufficient_funds_foreign_token() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::ForeignAsset(1), _99).unwrap();
 
-        // Market has three outcomes, but there's an element in the partition of size two.
+
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
 
         assert_noop!(
