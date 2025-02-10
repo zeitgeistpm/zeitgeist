@@ -844,6 +844,8 @@ mod pallet {
         /// # Complexity
         ///
         /// `O(n)` where `n` is the number of splits required to create the pool.
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// and can be used for benchmarking purposes.
         #[pallet::call_index(8)]
         #[pallet::weight(T::WeightInfo::deploy_combinatorial_pool(
             asset_count.log_ceil().into(),
