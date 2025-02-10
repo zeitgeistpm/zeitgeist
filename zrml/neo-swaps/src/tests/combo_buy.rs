@@ -362,27 +362,45 @@ fn combo_buy_fails_on_amount_out_below_min() {
             ALICE,
             BASE_ASSET,
             vec![MarketType::Categorical(2), MarketType::Scalar(0..=1)],
-            _10,
+            100_000_000 * _100, // Massive liquidity to keep slippage low.
             vec![_1_4, _1_4, _1_4, _1_4],
             CENT,
         );
         let pool = <Pallet<Runtime> as PoolStorage>::get(pool_id).unwrap();
         let assets = pool.assets();
-        let amount_in = _1;
+
+        let asset_count = 4;
+        let buy = assets[0..1].to_vec();
+        let sell = assets[1..4].to_vec();
+        // amount_in is _1 / 0.97 (i.e. _1 after deducting 3% fees - 1% trading fees, 1% external
+        // fees _for each market_)
+        let amount_in = 10_309_278_350;
+
         assert_ok!(AssetManager::deposit(BASE_ASSET, &BOB, amount_in));
-        // Buying 1 at price of .25 will return less than 4 outcomes due to slippage.
+        // Buying for 1 at a price of .25 will return less than 4 outcomes due to slippage.
         assert_noop!(
             NeoSwaps::combo_buy(
                 RuntimeOrigin::signed(BOB),
                 pool_id,
-                4,
-                vec![assets[0]],
-                vec![assets[1]],
+                asset_count,
+                buy.clone(),
+                sell.clone(),
                 amount_in,
                 _4,
             ),
             Error::<Runtime>::AmountOutBelowMin,
         );
+
+        // Post OakSecurity audit: Show that the slippage limit is tight.
+        assert_ok!(NeoSwaps::combo_buy(
+            RuntimeOrigin::signed(BOB),
+            pool_id,
+            asset_count,
+            buy,
+            sell,
+            amount_in,
+            _4 - 33,
+        ));
     });
 }
 

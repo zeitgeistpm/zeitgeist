@@ -19,8 +19,12 @@ decentralized court.
 ## Modules
 
 - [authorized](./zrml/authorized) - Offers authorized resolution of disputes.
+- [combinatorial-tokens](./zrml/combinatorial-tokens) - The module responsible
+  for generating Zeitgeist 2.0 outcome tokens.
 - [court](./zrml/court) - An implementation of a court mechanism used to resolve
   disputes in a decentralized fashion.
+- [futarchy](./zrml/futarchy) - A novel on-chain governance mechanism using
+  prediction markets.
 - [global-disputes](./zrml-global-disputes) - Global disputes sets one out of
   multiple outcomes with the most locked ZTG tokens as the canonical outcome.
   This is the default process if a dispute mechanism fails to resolve.

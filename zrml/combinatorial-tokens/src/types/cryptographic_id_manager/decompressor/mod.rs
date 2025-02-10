@@ -1,4 +1,4 @@
-// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -26,19 +26,24 @@
 
 mod tests;
 
+use crate::types::{cryptographic_id_manager::Fuel, CollectionIdError};
 use ark_bn254::{g1::G1Affine, Fq};
 use ark_ff::{BigInteger, PrimeField};
 use core::ops::Neg;
 use sp_runtime::traits::{One, Zero};
-use zeitgeist_primitives::types::CombinatorialId;
+use zeitgeist_primitives::{traits::CombinatorialTokensFuel, types::CombinatorialId};
 
-/// Will return `None` if and only if `parent_collection_id` is not a valid collection ID.
+/// Returns a valid collection ID from an `hash` and an optional `parent_collection_id`.
+///
+/// Will return `None` if `parent_collection_id` is not a valid collection ID or
+/// the decompression of the hash doesn't return a valid point of `alt_bn128`
+/// (maybe insufficient `fuel` parameter) or because of a failing bytes conversion.
 pub(crate) fn get_collection_id(
     hash: CombinatorialId,
     parent_collection_id: Option<CombinatorialId>,
-    force_max_work: bool,
-) -> Option<CombinatorialId> {
-    let mut u = decompress_hash(hash, force_max_work)?;
+    fuel: Fuel,
+) -> Result<CombinatorialId, CollectionIdError> {
+    let mut u = decompress_hash(hash, fuel)?;
 
     if let Some(pci) = parent_collection_id {
         let v = decompress_collection_id(pci)?;
@@ -48,26 +53,30 @@ pub(crate) fn get_collection_id(
 
     // Convert back to bytes _before_ flipping, as flipping will sometimes result in numbers larger
     // than the base field modulus.
-    let mut bytes: CombinatorialId = u.x.into_bigint().to_bytes_be().try_into().ok()?;
+    let bytes_y_even: CombinatorialId =
+        u.x.into_bigint()
+            .to_bytes_be()
+            .try_into()
+            .map_err(|_| CollectionIdError::EllipticCurvePointXToBytesConversionFailed)?;
 
-    if u.y.into_bigint().is_odd() {
-        flip_second_highest_bit(&mut bytes);
-    }
+    let bytes = if u.y.into_bigint().is_odd() {
+        flip_second_highest_bit(&bytes_y_even)
+    } else {
+        bytes_y_even
+    };
 
-    Some(bytes)
+    Ok(bytes)
 }
 
-const DECOMPRESS_HASH_MAX_ITERS: usize = 32;
-
 /// Decompresses a collection ID `hash` to a point of `alt_bn128`. The amount of work done can be
-/// forced to be independent of the input by setting the `force_max_work` flag.
+/// controlled using the `fuel` parameter.
 ///
 /// We don't have mathematical proof that the points of `alt_bn128` are distributed so that the
 /// required number of iterations is below the specified limit of iterations, but there's good
-/// evidence that input hash requires more than `log_2(P) = 507.19338271000436` iterations.
-///
-/// Provided the assumption above is correct, this function cannot return `None`.
-fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affine> {
+/// evidence that input hash requires more than `log_2(P) = 507.19338271000436` iterations. With a
+/// `fuel.total` value of `32`, statistical evidence suggests a 1 in 500_000_000 chance that the
+/// number of iterations will not be enough.
+fn decompress_hash(hash: CombinatorialId, fuel: Fuel) -> Result<G1Affine, CollectionIdError> {
     // Calculate `odd` first, then get congruent point `x` in `Fq`. As `hash` might represent a
     // larger big endian number than `field_modulus()`, the MSB of `x` might be different from the
     // MSB of `x_u256`.
@@ -77,7 +86,7 @@ fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affi
     let mut y_opt = None;
     let mut dummy_x = Fq::zero(); // Used to prevent rustc from optimizing dummy work away.
     let mut dummy_y = None;
-    for _ in 0..DECOMPRESS_HASH_MAX_ITERS {
+    for _ in 0..fuel.total() {
         // If `y_opt.is_some()` and we're still in the loop, then `force_max_work` is set and we're
         // jus here to spin our wheels for the benchmarks.
         if y_opt.is_some() {
@@ -98,15 +107,17 @@ fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affi
             if matching_y.is_some() {
                 y_opt = matching_y;
 
-                if !force_max_work {
+                if !fuel.consume_all() {
                     break;
                 }
             }
         }
     }
-    core::hint::black_box(dummy_x); // Ensure that the dummies are considered "read" by rustc.
+    // Ensure that the dummies are considered "read" by rustc.
+    core::hint::black_box(dummy_x);
     core::hint::black_box(dummy_y);
-    let mut y = y_opt?; // This **should** be infallible if `DECOMPRESS_HASH_MAX_ITERS` is large.
+    // This **should** be infallible if `fuel.total()` is large.
+    let mut y = y_opt.ok_or(CollectionIdError::EllipticCurvePointNotFoundWithFuel)?;
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
     // `odd` is set but `y` isn't odd, we switch to the other option.
@@ -114,21 +125,22 @@ fn decompress_hash(hash: CombinatorialId, force_max_work: bool) -> Option<G1Affi
         y = y.neg();
     }
 
-    Some(G1Affine::new(x, y))
+    Ok(G1Affine::new(x, y))
 }
 
-fn decompress_collection_id(mut collection_id: CombinatorialId) -> Option<G1Affine> {
+fn decompress_collection_id(collection_id: CombinatorialId) -> Result<G1Affine, CollectionIdError> {
     let odd = is_second_msb_set(&collection_id);
-    chop_off_two_highest_bits(&mut collection_id);
-    let x = Fq::from_be_bytes_mod_order(&collection_id);
+    let chopped_collection_id = chop_off_two_highest_bits(&collection_id);
+    let x = Fq::from_be_bytes_mod_order(&chopped_collection_id);
 
     // Ensure that the big-endian integer represented by `collection_id` was less than the field
     // modulus. Otherwise, we consider `collection_id` an invalid ID.
-    if x.into_bigint().to_bytes_be() != collection_id {
-        return None;
+    if x.into_bigint().to_bytes_be() != chopped_collection_id {
+        return Err(CollectionIdError::InvalidParentCollectionId);
     }
 
-    let mut y = matching_y_coordinate(x)?; // Fails if `collection_id` is not a collection ID.
+    // Fails if `collection_id` is not a collection ID.
+    let mut y = matching_y_coordinate(x).ok_or(CollectionIdError::InvalidParentCollectionId)?;
 
     // We have two options for the y-coordinate of the corresponding point: `y` and `P - y`. If
     // `odd` is set but `y` isn't odd, we switch to the other option.
@@ -136,12 +148,14 @@ fn decompress_collection_id(mut collection_id: CombinatorialId) -> Option<G1Affi
         y = y.neg();
     }
 
-    Some(G1Affine::new(x, y))
+    Ok(G1Affine::new(x, y))
 }
 
-/// Flips the second highests bit of big-endian `bytes`.
-fn flip_second_highest_bit(bytes: &mut CombinatorialId) {
+/// Flips the second highest bit of big-endian `bytes`.
+fn flip_second_highest_bit(bytes: &CombinatorialId) -> CombinatorialId {
+    let mut bytes = *bytes;
     bytes[0] ^= 0b01000000;
+    bytes
 }
 
 /// Checks if the most significant bit of the big-endian `bytes` is set.
@@ -155,8 +169,10 @@ fn is_second_msb_set(bytes: &CombinatorialId) -> bool {
 }
 
 /// Zeroes out the two most significant bits off the big-endian `bytes`.
-fn chop_off_two_highest_bits(bytes: &mut CombinatorialId) {
+fn chop_off_two_highest_bits(bytes: &CombinatorialId) -> CombinatorialId {
+    let mut bytes = *bytes;
     bytes[0] &= 0b00111111;
+    bytes
 }
 
 /// Returns a value `y` of `Fq` so that `(x, y)` is a point on `alt_bn128` or `None` if there is no

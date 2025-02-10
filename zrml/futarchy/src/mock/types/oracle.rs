@@ -19,7 +19,8 @@ use alloc::fmt::Debug;
 use frame_support::pallet_prelude::Weight;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use zeitgeist_primitives::traits::FutarchyOracle;
+use sp_runtime::traits::Zero;
+use zeitgeist_primitives::{traits::FutarchyOracle, types::BlockNumber};
 
 #[cfg(feature = "fuzzing")]
 use arbitrary::{Arbitrary, Unstructured, Result as ArbitraryResult};
@@ -43,8 +44,14 @@ impl MockOracle {
 }
 
 impl FutarchyOracle for MockOracle {
+    type BlockNumber = BlockNumber;
+
     fn evaluate(&self) -> (Weight, bool) {
         (self.weight, self.value)
+    }
+
+    fn update(&mut self, _: Self::BlockNumber) -> Weight {
+        Zero::zero()
     }
 }
 

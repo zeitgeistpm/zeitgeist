@@ -59,7 +59,7 @@ use zeitgeist_primitives::{
         MarketId, Moment,
     },
 };
-use zrml_combinatorial_tokens::types::CryptographicIdManager;
+use zrml_combinatorial_tokens::types::{CryptographicIdManager, Fuel};
 
 #[cfg(feature = "parachain")]
 use {
@@ -281,6 +281,7 @@ impl zrml_combinatorial_tokens::Config for Runtime {
     #[cfg(feature = "runtime-benchmarks")]
     type BenchmarkHelper = NoopCombinatorialTokensBenchmarkHelper<Balance, MarketId>;
     type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
+    type Fuel = Fuel;
     type MarketCommons = MarketCommons;
     type MultiCurrency = AssetManager;
     type Payout = PredictionMarkets;

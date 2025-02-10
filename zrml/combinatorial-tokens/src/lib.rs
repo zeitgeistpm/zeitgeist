@@ -1,4 +1,4 @@
-// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -39,10 +39,12 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        traits::CombinatorialIdManager, types::TransmutationType, weights::WeightInfoZeitgeist,
+        traits::CombinatorialIdManager,
+        types::{CollectionIdError, TransmutationType},
+        weights::WeightInfoZeitgeist,
     };
     use alloc::{vec, vec::Vec};
-    use core::marker::PhantomData;
+    use core::{fmt::Debug, marker::PhantomData};
     use frame_support::{
         ensure,
         pallet_prelude::{DispatchResultWithPostInfo, IsType, StorageVersion},
@@ -53,6 +55,8 @@ mod pallet {
         pallet_prelude::{BlockNumberFor, OriginFor},
     };
     use orml_traits::MultiCurrency;
+    use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+    use scale_info::TypeInfo;
     use sp_runtime::{
         traits::{AccountIdConversion, Get, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
@@ -60,7 +64,8 @@ mod pallet {
     use zeitgeist_primitives::{
         math::{checked_ops_res::CheckedAddRes, fixed::FixedMul},
         traits::{
-            CombinatorialTokensApi, CombinatorialTokensUnsafeApi, MarketCommonsPalletApi, PayoutApi,
+            CombinatorialTokensApi, CombinatorialTokensFuel, CombinatorialTokensUnsafeApi,
+            MarketCommonsPalletApi, PayoutApi,
         },
         types::{Asset, CombinatorialId, SplitPositionDispatchInfo},
     };
@@ -76,16 +81,29 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
             >;
 
+        /// Interface for calculating collection and position IDs.
         type CombinatorialIdManager: CombinatorialIdManager<
                 Asset = AssetOf<Self>,
                 MarketId = MarketIdOf<Self>,
                 CombinatorialId = CombinatorialId,
+                Fuel = Self::Fuel,
             >;
+
+        type Fuel: Clone
+            + CombinatorialTokensFuel
+            + Debug
+            + Decode
+            + Encode
+            + Eq
+            + MaxEncodedLen
+            + PartialEq
+            + TypeInfo;
 
         type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = BlockNumberFor<Self>>;
 
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 
+        /// Interface for acquiring the payout vector by market ID.
         type Payout: PayoutApi<Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -106,8 +124,11 @@ mod pallet {
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
     pub type CombinatorialIdOf<T> =
         <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::CombinatorialId;
-    pub type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub type SplitPositionDispatchInfoOf<T> =
+    pub(crate) type FuelOf<T> =
+        <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::Fuel;
+    pub(crate) type MarketIdOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub(crate) type SplitPositionDispatchInfoOf<T> =
         SplitPositionDispatchInfo<CombinatorialIdOf<T>, MarketIdOf<T>>;
 
     pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -169,15 +190,15 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// An error for the collection ID retrieval occured.
+        CollectionIdRetrievalFailed(CollectionIdError),
+
         /// Specified index set is trival, empty, or doesn't match the market's number of outcomes.
         InvalidIndexSet,
 
         /// Specified partition is empty, contains overlaps, is too long or doesn't match the
         /// market's number of outcomes.
         InvalidPartition,
-
-        /// Specified collection ID is invalid.
-        InvalidCollectionId,
 
         /// Specified market is not resolved.
         PayoutVectorNotFound,
@@ -194,23 +215,55 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Split `amount` units of the position specified by `parent_collection_id` over the market
+        /// with ID `market_id` according to the given `partition`.
+        ///
+        /// The `partition` is specified as a vector whose elements are equal-length `Vec<bool>`. A
+        /// `true` entry at the `i`th index of a partition element means that the `i`th outcome
+        /// token of the market is contained in this element of the partition.
+        ///
+        /// For each element `b` of the partition, the split mints a new outcome token which is made
+        /// up of the position to be split and the conjunction `(x|...|z)` where `x, ..., z` are the
+        /// items of `b`. The position to be split, in turn, is burned or transferred into the
+        /// pallet account, depending on whether or not it is a true combinatorial token or
+        /// collateral.
+        ///
+        /// If the `parent_collection_id` is `None`, then the position split is the collateral of the
+        /// market given by `market_id`.
+        ///
+        /// If the `parent_collection_id` is `Some(pid)`, then there are two cases: vertical and
+        /// horizontal split. If `partition` is complete (i.e. there is no index `i` so that `b[i]`
+        /// is `false` for all `b` in `partition`), the position split is the position obtained by
+        /// combining `pid` with the collateral of the market given by `market_id`. If `partition`
+        /// is not complete, the position split is the position made up of the
+        /// `parent_collection_id` and the conjunction `(x|...|z)` where `x, ..., z` are the items
+        /// covered by `partition`.
+        ///
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// and can be used for benchmarking purposes.
         #[pallet::call_index(0)]
         #[pallet::weight(
-            T::WeightInfo::split_position_vertical_sans_parent(partition.len().saturated_into())
-                .max(T::WeightInfo::split_position_vertical_with_parent(
-                    partition.len().saturated_into(),
-                ))
-                .max(T::WeightInfo::split_position_horizontal(partition.len().saturated_into()))
+            T::WeightInfo::split_position_vertical_sans_parent(
+                partition.len().saturated_into(),
+                fuel.total(),
+            )
+            .max(T::WeightInfo::split_position_vertical_with_parent(
+                partition.len().saturated_into(),
+                fuel.total(),
+            ))
+            .max(T::WeightInfo::split_position_horizontal(
+                partition.len().saturated_into(),
+                fuel.total(),
+            ))
         )]
         #[transactional]
         pub fn split_position(
             origin: OriginFor<T>,
-            // TODO Abstract this into a separate type.
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -220,19 +273,51 @@ mod pallet {
                 market_id,
                 partition,
                 amount,
-                force_max_work,
+                fuel,
             )?;
 
             DispatchResultWithPostInfo::Ok(post_dispatch_info)
         }
 
+        /// Merge `amount` units of the tokens obtained by splitting `parent_collection_id` using
+        /// `partition` into the position specified by `parent_collection_id` (vertical split) or
+        /// the position obtained by splitting `parent_collection_id` according to `partiton` over
+        /// the market with ID `market_id` (horizontal; see below for details).
+        ///
+        /// The `partition` is specified as a vector whose elements are equal-length `Vec<bool>`. A
+        /// `true` entry at the `i`th index of a partition element means that the `i`th outcome
+        /// token of the market is contained in this element of the partition.
+        ///
+        /// For each element `b` of the partition, the split burns the outcome tokens which are made
+        /// up of the position to be split and the conjunction `(x|...|z)` where `x, ..., z` are the
+        /// items of `b`. The position given by `parent_collection_id` is
+        ///
+        /// If the `parent_collection_id` is `None`, then the position split is the collateral of the
+        /// market given by `market_id`.
+        ///
+        /// If the `parent_collection_id` is `Some(pid)`, then there are two cases: vertical and
+        /// horizontal merge. If `partition` is complete (i.e. there is no index `i` so that `b[i]`
+        /// is `false` for all `b` in `partition`), the the result of the merge is the position
+        /// defined by `parent_collection_id`. If `partition` is not complete, the result of the
+        /// merge is the position made up of the `parent_collection_id` and the conjunction
+        /// `(x|...|z)` where `x, ..., z` are the items covered by `partition`.
+        ///
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// and can be used for benchmarking purposes.
         #[pallet::call_index(1)]
         #[pallet::weight(
-            T::WeightInfo::merge_position_vertical_sans_parent(partition.len().saturated_into())
-                .max(T::WeightInfo::merge_position_vertical_with_parent(
-                    partition.len().saturated_into(),
-                ))
-                .max(T::WeightInfo::merge_position_horizontal(partition.len().saturated_into()))
+            T::WeightInfo::merge_position_vertical_sans_parent(
+                partition.len().saturated_into(),
+                fuel.total(),
+            )
+            .max(T::WeightInfo::merge_position_vertical_with_parent(
+                partition.len().saturated_into(),
+                fuel.total(),
+            ))
+            .max(T::WeightInfo::merge_position_horizontal(
+                partition.len().saturated_into(),
+                fuel.total(),
+            ))
         )]
         #[transactional]
         pub fn merge_position(
@@ -241,23 +326,35 @@ mod pallet {
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            Self::do_merge_position(
-                who,
-                parent_collection_id,
-                market_id,
-                partition,
-                amount,
-                force_max_work,
-            )
+            Self::do_merge_position(who, parent_collection_id, market_id, partition, amount, fuel)
         }
 
+        /// (Partially) redeems a position if part of it belongs to a resolved market given by
+        /// `market_id`.
+        ///
+        /// The position to be redeemed is the position obtained by combining the position given by
+        /// `parent_collection_id` and `collateral` with the conjunction `(x|...|z)` where `x, ...
+        /// z` are the outcome tokens of the market `market_id` given by `partition`.
+        ///
+        /// The position to be redeemed is completely removed from the origin's wallet. According to
+        /// how much the conjunction `(x|...|z)` is valued, the user is paid in the position defined
+        /// by `parent_collection_id` and `collateral`.
+        ///
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// and can be used for benchmarking purposes.
         #[pallet::call_index(2)]
         #[pallet::weight(
-            T::WeightInfo::redeem_position_with_parent(index_set.len().saturated_into())
-                .max(T::WeightInfo::redeem_position_sans_parent(index_set.len().saturated_into()))
+            T::WeightInfo::redeem_position_with_parent(
+                index_set.len().saturated_into(),
+                fuel.total(),
+            )
+            .max(T::WeightInfo::redeem_position_sans_parent(
+                index_set.len().saturated_into(),
+                fuel.total()
+            ))
         )]
         #[transactional]
         pub fn redeem_position(
@@ -265,16 +362,10 @@ mod pallet {
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            Self::do_redeem_position(
-                who,
-                parent_collection_id,
-                market_id,
-                index_set,
-                force_max_work,
-            )
+            Self::do_redeem_position(who, parent_collection_id, market_id, index_set, fuel)
         }
     }
 
@@ -286,13 +377,13 @@ mod pallet {
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> Result<SplitPositionDispatchInfoOf<T>, DispatchError> {
             let (transmutation_type, position) = Self::transmutation_asset(
                 parent_collection_id,
                 market_id,
                 partition.clone(),
-                force_max_work,
+                fuel.clone(),
             )?;
 
             // Destroy the token to be split.
@@ -300,12 +391,13 @@ mod pallet {
                 TransmutationType::VerticalWithParent => {
                     // Split combinatorial token into higher level position.
                     // This will fail if the market has a different collateral than the previous
-                    // markets. FIXME A cleaner error message would be nice though...
+                    // markets.
                     T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                     T::MultiCurrency::withdraw(position, &who, amount)?;
 
                     T::WeightInfo::split_position_vertical_with_parent(
                         partition.len().saturated_into(),
+                        fuel.total(),
                     )
                 }
                 TransmutationType::VerticalSansParent => {
@@ -316,6 +408,7 @@ mod pallet {
 
                     T::WeightInfo::split_position_vertical_sans_parent(
                         partition.len().saturated_into(),
+                        fuel.total(),
                     )
                 }
                 TransmutationType::Horizontal => {
@@ -323,7 +416,10 @@ mod pallet {
                     T::MultiCurrency::ensure_can_withdraw(position, &who, amount)?;
                     T::MultiCurrency::withdraw(position, &who, amount)?;
 
-                    T::WeightInfo::split_position_horizontal(partition.len().saturated_into())
+                    T::WeightInfo::split_position_horizontal(
+                        partition.len().saturated_into(),
+                        fuel.total(),
+                    )
                 }
             };
 
@@ -336,7 +432,7 @@ mod pallet {
                         parent_collection_id,
                         market_id,
                         index_set,
-                        force_max_work,
+                        fuel.clone(),
                     )
                 })
                 .collect::<Result<Vec<_>, _>>()?;
@@ -378,13 +474,13 @@ mod pallet {
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
             amount: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> DispatchResultWithPostInfo {
             let (transmutation_type, position) = Self::transmutation_asset(
                 parent_collection_id,
                 market_id,
                 partition.clone(),
-                force_max_work,
+                fuel.clone(),
             )?;
 
             // Destroy the old tokens.
@@ -396,7 +492,7 @@ mod pallet {
                         parent_collection_id,
                         market_id,
                         index_set,
-                        force_max_work,
+                        fuel.clone(),
                     )
                 })
                 .collect::<Result<Vec<_>, _>>()?;
@@ -413,6 +509,7 @@ mod pallet {
 
                     T::WeightInfo::merge_position_vertical_with_parent(
                         partition.len().saturated_into(),
+                        fuel.total(),
                     )
                 }
                 TransmutationType::VerticalSansParent => {
@@ -422,13 +519,17 @@ mod pallet {
 
                     T::WeightInfo::merge_position_vertical_sans_parent(
                         partition.len().saturated_into(),
+                        fuel.total(),
                     )
                 }
                 TransmutationType::Horizontal => {
                     // Horizontal merge.
                     T::MultiCurrency::deposit(position, &who, amount)?;
 
-                    T::WeightInfo::merge_position_horizontal(partition.len().saturated_into())
+                    T::WeightInfo::merge_position_horizontal(
+                        partition.len().saturated_into(),
+                        fuel.total(),
+                    )
                 }
             };
 
@@ -450,7 +551,7 @@ mod pallet {
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> DispatchResultWithPostInfo {
             let payout_vector =
                 T::Payout::payout_vector(market_id).ok_or(Error::<T>::PayoutVectorNotFound)?;
@@ -479,7 +580,7 @@ mod pallet {
                 parent_collection_id,
                 market_id,
                 index_set.clone(),
-                force_max_work,
+                fuel.clone(),
             )?;
             let amount = T::MultiCurrency::free_balance(position, &who);
             ensure!(!amount.is_zero(), Error::<T>::NoTokensFound);
@@ -493,8 +594,10 @@ mod pallet {
                 let position = Asset::CombinatorialToken(position_id);
                 T::MultiCurrency::deposit(position, &who, total_payout)?;
 
-                let weight =
-                    T::WeightInfo::redeem_position_with_parent(index_set.len().saturated_into());
+                let weight = T::WeightInfo::redeem_position_with_parent(
+                    index_set.len().saturated_into(),
+                    fuel.total(),
+                );
 
                 (weight, position)
             } else {
@@ -505,8 +608,10 @@ mod pallet {
                     total_payout,
                 )?;
 
-                let weight =
-                    T::WeightInfo::redeem_position_sans_parent(index_set.len().saturated_into());
+                let weight = T::WeightInfo::redeem_position_sans_parent(
+                    index_set.len().saturated_into(),
+                    fuel.total(),
+                );
 
                 (weight, collateral_token)
             };
@@ -562,7 +667,7 @@ mod pallet {
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             partition: Vec<Vec<bool>>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> Result<(TransmutationType, AssetOf<T>), DispatchError> {
             let market = T::MarketCommons::market(&market_id)?;
             let collateral_token = market.base_asset;
@@ -585,7 +690,7 @@ mod pallet {
                     parent_collection_id,
                     market_id,
                     remaining_index_set,
-                    force_max_work,
+                    fuel,
                 )?;
 
                 (TransmutationType::Horizontal, position)
@@ -598,15 +703,17 @@ mod pallet {
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> Result<CombinatorialIdOf<T>, DispatchError> {
             T::CombinatorialIdManager::get_collection_id(
                 parent_collection_id,
                 market_id,
                 index_set,
-                force_max_work,
+                fuel,
             )
-            .ok_or(Error::<T>::InvalidCollectionId.into())
+            .map_err(|collection_id_error| {
+                Error::<T>::CollectionIdRetrievalFailed(collection_id_error).into()
+            })
         }
 
         pub(crate) fn position_from_collection_id(
@@ -627,13 +734,13 @@ mod pallet {
             parent_collection_id: Option<CombinatorialIdOf<T>>,
             market_id: MarketIdOf<T>,
             index_set: Vec<bool>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> Result<AssetOf<T>, DispatchError> {
             let collection_id = Self::collection_id_from_parent_collection(
                 parent_collection_id,
                 market_id,
                 index_set,
-                force_max_work,
+                fuel,
             )?;
 
             Self::position_from_collection_id(market_id, collection_id)
@@ -648,6 +755,7 @@ mod pallet {
         type Balance = BalanceOf<T>;
         type CombinatorialId = CombinatorialIdOf<T>;
         type MarketId = MarketIdOf<T>;
+        type Fuel = <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::Fuel;
 
         fn split_position(
             who: Self::AccountId,
@@ -655,16 +763,9 @@ mod pallet {
             market_id: Self::MarketId,
             partition: Vec<Vec<bool>>,
             amount: Self::Balance,
-            force_max_work: bool,
+            fuel: Self::Fuel,
         ) -> Result<SplitPositionDispatchInfoOf<T>, DispatchError> {
-            Self::do_split_position(
-                who,
-                parent_collection_id,
-                market_id,
-                partition,
-                amount,
-                force_max_work,
-            )
+            Self::do_split_position(who, parent_collection_id, market_id, partition, amount, fuel)
         }
     }
 

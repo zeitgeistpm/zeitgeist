@@ -17,8 +17,8 @@
 
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::too_many_arguments)] // TODO Try to remove this later!
-#![allow(clippy::type_complexity)] // TODO Try to remove this later!
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::type_complexity)]
 
 extern crate alloc;
 
@@ -86,14 +86,14 @@ mod pallet {
             fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
         },
         traits::{
-            CombinatorialTokensApi, CombinatorialTokensUnsafeApi, CompleteSetOperationsApi,
-            DeployPoolApi, DistributeFees, HybridRouterAmmApi,
+            CombinatorialTokensApi, CombinatorialTokensFuel, CombinatorialTokensUnsafeApi,
+            CompleteSetOperationsApi, DeployPoolApi, DistributeFees, HybridRouterAmmApi,
         },
         types::{Asset, MarketStatus, ScoringRule},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
-    pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    pub(crate) const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
     // These should not be config parameters to avoid misconfigurations.
     pub(crate) const EXIT_FEE: u128 = CENT / 10;
@@ -118,16 +118,21 @@ mod pallet {
     pub type AssetOf<T> = Asset<MarketIdOf<T>>;
     pub type BalanceOf<T> =
         <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-    pub type AssetIndexType = u16;
-    pub type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
-    pub type PoolOf<T> = Pool<T, LiquidityTreeOf<T>, MaxAssets>;
-    pub type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
+    pub(crate) type AssetIndexType = u16;
+    pub(crate) type FuelOf<T> =
+        <<T as Config>::CombinatorialTokens as CombinatorialTokensApi>::Fuel;
+    pub(crate) type MarketIdOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    pub(crate) type LiquidityTreeOf<T> = LiquidityTree<T, <T as Config>::MaxLiquidityTreeDepth>;
+    pub(crate) type PoolOf<T> = Pool<T, LiquidityTreeOf<T>, MaxAssets>;
+    pub(crate) type AmmTradeOf<T> = AmmTrade<BalanceOf<T>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// Type of combinatorial ID used by the combinatorial tokens APIs.
         type CombinatorialId: Clone;
 
+        /// API used for calculating splits of tokens when creating combinatorial pools.
         type CombinatorialTokens: CombinatorialTokensApi<
                 AccountId = Self::AccountId,
                 Balance = BalanceOf<Self>,
@@ -135,6 +140,7 @@ mod pallet {
                 MarketId = MarketIdOf<Self>,
             >;
 
+        /// API for fast creation of tokens when buying or selling combinatorial tokens.
         type CombinatorialTokensUnsafe: CombinatorialTokensUnsafeApi<
                 AccountId = Self::AccountId,
                 Balance = BalanceOf<Self>,
@@ -680,6 +686,34 @@ mod pallet {
             Ok(Some(T::WeightInfo::deploy_pool(spot_prices_len)).into())
         }
 
+        /// Make a combinatorial bet on the specified pool.
+        ///
+        /// The `amount_in` is paid in collateral. The transaction fails if the amount of outcome
+        /// tokens received is smaller than `min_amount_out`. The user must correctly specify the
+        /// number of outcomes for benchmarking reasons.
+        ///
+        /// The user's collateral is used to mint complete sets of the combinatorial tokens in the
+        /// pool. The parameters `buy` and `sell` are used to specify which of these tokens the user
+        /// wants and doesn't want: The assets in `sell` are sold to buy more of `buy` from the
+        /// pool. The assets not contained in either of these will remain in the users wallet
+        /// unchanged.
+        ///
+        /// The function will error if certain numerical constraints are violated.
+        ///
+        /// # Parameters
+        ///
+        /// - `origin`: The origin account making the purchase.
+        /// - `pool_id`: Identifier for the pool used to trade on.
+        /// - `asset_count`: Number of assets in the pool.
+        /// - `buy`: The assets that the user want to have more of. Must not be empty.
+        /// - `sell`: The assets that the user doesn't want any of. Must not be empty.
+        /// - `amount_in`: Amount of collateral paid by the user.
+        /// - `min_amount_out`: Minimum number of outcome tokens the user expects to receive.
+        ///
+        /// # Complexity
+        ///
+        /// Depends on the implementation of `CombinatorialTokensUnsafeApi` and `ExternalFees`; when
+        /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(6)]
         #[pallet::weight(T::WeightInfo::combo_buy(asset_count.log_ceil().into()))]
@@ -704,6 +738,36 @@ mod pallet {
             Self::do_combo_buy(who, pool_id, buy, sell, amount_in, min_amount_out)
         }
 
+        /// Cancel a combinatorial bet on the specified pool.
+        ///
+        /// The `buy`, `keep` and `sell` parameters are used to specify the amounts of the bet the
+        /// user wishes to cancel. The user must hold `amount_buy` units of each asset in `buy` and
+        /// `amount_keep` of each asset in `keep` in their wallet. If `keep` is empty, then
+        /// `amount_keep` must be zero.
+        ///
+        /// The transaction fails if the amount of outcome tokens received is smaller than
+        /// `min_amount_out`. The user must correctly specify the number of outcomes for
+        /// benchmarking reasons.
+        ///
+        /// The function will error if certain numerical constraints are violated.
+        ///
+        /// # Parameters
+        ///
+        /// - `origin`: The origin account making the purchase.
+        /// - `pool_id`: Identifier for the pool used to trade on.
+        /// - `asset_count`: Number of assets in the pool.
+        /// - `buy`: The `buy` of the bet that the user wishes to cancel. Must not be empty.
+        /// - `keep`: The tokens not contained in `buy` or `sell` of the bet that the user wishes to
+        ///   cancel. May be empty.
+        /// - `sell`: The `sell` of the bet that the user wishes to cancel. Must not be empty.
+        /// - `amount_buy`: Amount of tokens in `buy` the user wishes to let go.
+        /// - `amount_keep`: Amount of tokens in `keep` the user wishes to let go.
+        /// - `min_amount_out`: Minimum number of outcome tokens the user expects to receive.
+        ///
+        /// # Complexity
+        ///
+        /// Depends on the implementation of `CombinatorialTokensUnsafeApi` and `ExternalFees`; when
+        /// using the canonical implementations, the runtime complexity is `O(asset_count)`.
         #[allow(clippy::too_many_arguments)]
         #[pallet::call_index(7)]
         #[pallet::weight(T::WeightInfo::combo_sell(asset_count.log_ceil().into()))]
@@ -739,8 +803,54 @@ mod pallet {
             )
         }
 
+        /// Deploy a combinatorial pool for the specified markets and provide liquidity.
+        ///
+        /// The tokens of each of the markets specified by `market_ids` are split into atoms. For
+        /// each combination of outcome tokens `x, ..., z` from the markets, there is one
+        /// combinatorial token `x & ... & z` in the pool.
+        ///
+        /// The pool's assets are ordered by lexicographical order, using the ordering of tokens of
+        /// each individual market provided by the `MarketCommonsApi`. For example, if three markets
+        /// with outcomes `x_1, x_2`, `y_1, y_2` and `z_1, z_2` are involved, the outcomes of the
+        /// pool are (in order):
+        ///
+        /// x_1 & y_1 & z_1
+        /// x_1 & y_1 & z_2
+        /// x_1 & y_2 & z_1
+        /// x_1 & y_2 & z_2
+        /// x_2 & y_1 & z_1
+        /// x_2 & y_1 & z_2
+        /// x_2 & y_2 & z_1
+        /// x_2 & y_2 & z_2
+        ///
+        /// The sender specifies a vector of `spot_prices` for the assets of the new pool, in the
+        /// order as described above.
+        ///
+        /// Depending on the values in the `spot_prices`, the transaction will transfer different
+        /// amounts of each outcome to the pool. The sender specifies a maximum `amount` of outcome
+        /// tokens to spend.
+        ///
+        /// Unlike in the `deploy_pool` extrinsic, the sender need not acquire the outcome tokens
+        /// themselves. Instead, all they need is `amount` units of collateral.
+        ///
+        /// Deploying the pool will cost the signer an additional fee to the tune of the
+        /// collateral's existential deposit. This fee is placed in the pool account and ensures
+        /// that swap fees can be stored in the pool account without triggering dusting or failed
+        /// transfers.
+        ///
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// and can be used for benchmarking purposes.
+        ///
+        /// # Complexity
+        ///
+        /// `O(n)` where `n` is the number of splits required to create the pool.
+        /// The `fuel` parameter specifies how much work the cryptographic id manager will do 
+        /// and can be used for benchmarking purposes.
         #[pallet::call_index(8)]
-        #[pallet::weight(T::WeightInfo::deploy_combinatorial_pool(asset_count.log_ceil().into()))]
+        #[pallet::weight(T::WeightInfo::deploy_combinatorial_pool(
+            asset_count.log_ceil().into(),
+            fuel.total(),
+        ))]
         #[transactional]
         pub fn deploy_combinatorial_pool(
             origin: OriginFor<T>,
@@ -749,7 +859,7 @@ mod pallet {
             amount: BalanceOf<T>,
             spot_prices: Vec<BalanceOf<T>>,
             swap_fee: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -760,14 +870,7 @@ mod pallet {
             }
             ensure!(asset_count == real_asset_count, Error::<T>::IncorrectAssetCount);
 
-            Self::do_deploy_combinatorial_pool(
-                who,
-                market_ids,
-                amount,
-                spot_prices,
-                swap_fee,
-                force_max_work,
-            )
+            Self::do_deploy_combinatorial_pool(who, market_ids, amount, spot_prices, swap_fee, fuel)
         }
     }
 
@@ -1007,10 +1110,7 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(pool_shares_amount != Zero::zero(), Error::<T>::ZeroAmount);
 
-            // FIXME Should this also be made part of the `PoolStorage` interface?
-            Pools::<T>::try_mutate_exists(pool_id, |maybe_pool| {
-                let pool =
-                    maybe_pool.as_mut().ok_or::<DispatchError>(Error::<T>::PoolNotFound.into())?;
+            <Self as PoolStorage>::try_mutate_exists(&pool_id, |pool| {
                 let ratio = {
                     let mut ratio = pool_shares_amount
                         .bdiv_floor(pool.liquidity_shares_manager.total_shares()?)?;
@@ -1046,13 +1146,14 @@ mod pallet {
                     for asset in pool.assets().iter() {
                         withdraw_remaining(asset)?;
                     }
-                    *maybe_pool = None; // Delete the storage map entry.
                     Self::deposit_event(Event::<T>::PoolDestroyed {
                         who: who.clone(),
                         pool_id,
                         amounts_out,
                     });
-                    // No need to clear `MarketIdToPoolId`.
+
+                    // Delete the pool. No need to clear `MarketIdToPoolId`.
+                    Ok(((), true))
                 } else {
                     let old_liquidity_parameter = pool.liquidity_parameter;
                     let new_liquidity_parameter = old_liquidity_parameter
@@ -1082,8 +1183,9 @@ mod pallet {
                         amounts_out,
                         new_liquidity_parameter,
                     });
+
+                    Ok(((), false))
                 }
-                Ok(())
             })
         }
 
@@ -1199,13 +1301,13 @@ mod pallet {
             amount: BalanceOf<T>,
             spot_prices: Vec<BalanceOf<T>>,
             swap_fee: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> DispatchResult {
             ensure!(swap_fee >= MIN_SWAP_FEE.saturated_into(), Error::<T>::SwapFeeBelowMin);
             ensure!(swap_fee <= T::MaxSwapFee::get(), Error::<T>::SwapFeeAboveMax);
 
             let (collection_ids, position_ids, collateral) =
-                Self::split_markets(who.clone(), market_ids.clone(), amount, force_max_work)?;
+                Self::split_markets(who.clone(), market_ids.clone(), amount, fuel)?;
 
             ensure!(spot_prices.len() == collection_ids.len(), Error::<T>::IncorrectVecLen);
             ensure!(
@@ -1325,6 +1427,8 @@ mod pallet {
                 let amount_out = swap_amount_out.checked_add_res(&amount_in_minus_fees)?;
                 ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
 
+                // Using unsafe API to avoid doing work. This is perfectly safe as long as
+                // `pool.assets()` returns a "full set" of split tokens.
                 T::CombinatorialTokensUnsafe::split_position_unsafe(
                     who.clone(),
                     pool.collateral,
@@ -1455,6 +1559,8 @@ mod pallet {
                     pool.increase_reserve(&asset, &amount_keep)?;
                 }
 
+                // Using unsafe API to avoid doing work. This is perfectly safe as long as
+                // `pool.assets()` returns a "full set" of split tokens.
                 T::CombinatorialTokensUnsafe::merge_position_unsafe(
                     pool.account_id.clone(),
                     pool.collateral,
@@ -1574,7 +1680,7 @@ mod pallet {
             who: T::AccountId,
             market_ids: Vec<MarketIdOf<T>>,
             amount: BalanceOf<T>,
-            force_max_work: bool,
+            fuel: FuelOf<T>,
         ) -> Result<(Vec<T::CombinatorialId>, Vec<AssetOf<T>>, AssetOf<T>), DispatchError> {
             let markets =
                 market_ids.iter().map(T::MarketCommons::market).collect::<Result<Vec<_>, _>>()?;
@@ -1625,7 +1731,7 @@ mod pallet {
                         *market_id,
                         partition.clone(),
                         amount,
-                        force_max_work,
+                        fuel.clone(),
                     )?;
 
                     collection_ids.extend_from_slice(&split_position_info.collection_ids);
@@ -1647,7 +1753,7 @@ mod pallet {
                             *market_id,
                             partition.clone(),
                             amount,
-                            force_max_work,
+                            fuel.clone(),
                         )?;
 
                         new_collection_ids.extend_from_slice(&split_position_info.collection_ids);

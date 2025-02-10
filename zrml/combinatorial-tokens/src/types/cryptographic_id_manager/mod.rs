@@ -1,4 +1,4 @@
-// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -25,12 +25,47 @@
 mod decompressor;
 mod hash_tuple;
 
+use super::CollectionIdError;
 use crate::traits::CombinatorialIdManager;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use hash_tuple::{HashTuple, ToBytes};
-use parity_scale_codec::Encode;
-use zeitgeist_primitives::types::{Asset, CombinatorialId};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
+use zeitgeist_primitives::{
+    traits::CombinatorialTokensFuel,
+    types::{Asset, CombinatorialId},
+};
+
+#[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
+pub struct Fuel {
+    /// The maximum number of iterations to perform in the main loop of `get_collection_id`.
+    total: u32,
+
+    /// Perform `self.total` of iterations in the main loop of `get_collection_id`. Useful for
+    /// benchmarking purposes and should probably not be used in production.
+    consume_all: bool,
+}
+
+impl Fuel {
+    pub fn new(total: u32, consume_all: bool) -> Self {
+        Fuel { total, consume_all }
+    }
+
+    pub fn consume_all(&self) -> bool {
+        self.consume_all
+    }
+}
+
+impl CombinatorialTokensFuel for Fuel {
+    fn from_total(total: u32) -> Fuel {
+        Fuel { total, consume_all: true }
+    }
+
+    fn total(&self) -> u32 {
+        self.total
+    }
+}
 
 pub struct CryptographicIdManager<MarketId, Hasher>(PhantomData<(MarketId, Hasher)>);
 
@@ -42,16 +77,18 @@ where
     type Asset = Asset<MarketId>;
     type CombinatorialId = CombinatorialId;
     type MarketId = MarketId;
+    type Fuel = Fuel;
 
     fn get_collection_id(
         parent_collection_id: Option<Self::CombinatorialId>,
         market_id: Self::MarketId,
         index_set: Vec<bool>,
-        force_max_work: bool,
-    ) -> Option<Self::CombinatorialId> {
+        fuel: Self::Fuel,
+    ) -> Result<Self::CombinatorialId, CollectionIdError> {
         let input = (market_id, index_set);
         let hash = Hasher::hash_tuple(input);
-        decompressor::get_collection_id(hash, parent_collection_id, force_max_work)
+
+        decompressor::get_collection_id(hash, parent_collection_id, fuel)
     }
 
     fn get_position_id(
@@ -59,6 +96,7 @@ where
         collection_id: Self::CombinatorialId,
     ) -> Self::CombinatorialId {
         let input = (collateral, collection_id);
+
         Hasher::hash_tuple(input)
     }
 }

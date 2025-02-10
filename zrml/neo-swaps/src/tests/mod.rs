@@ -41,6 +41,7 @@ use zeitgeist_primitives::{
         MarketType, MultiHash, ScalarPosition, ScoringRule,
     },
 };
+use zrml_combinatorial_tokens::types::Fuel;
 use zrml_market_commons::{MarketCommonsPalletApi, Markets};
 
 #[cfg(not(feature = "parachain"))]
@@ -128,7 +129,7 @@ fn create_markets_and_deploy_combinatorial_pool(
         amount,
         spot_prices.clone(),
         swap_fee,
-        false,
+        Fuel::new(16, false),
     ));
 
     (market_ids, pool_id)

@@ -84,7 +84,7 @@ macro_rules! decl_common_types {
             generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
         };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
-        use zrml_combinatorial_tokens::types::CryptographicIdManager;
+        use zrml_combinatorial_tokens::types::{CryptographicIdManager, Fuel};
         use zrml_neo_swaps::types::DecisionMarketOracle;
 
         #[cfg(feature = "try-runtime")]
@@ -96,11 +96,13 @@ macro_rules! decl_common_types {
         #[cfg(feature = "runtime-benchmarks")]
         use zrml_prediction_markets::types::PredictionMarketsCombinatorialTokensBenchmarkHelper;
 
+        use zrml_neo_swaps::migration::MigratePoolStorageItems;
+
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = ();
+        type Migrations = (MigratePoolStorageItems<Runtime, RemovableMarketIds>);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -815,7 +817,7 @@ macro_rules! impl_config_traits {
             type PalletsOrigin = OriginCaller;
             type MaxVotes = MaxVotes;
             type WeightInfo = weights::pallet_democracy::WeightInfo<Runtime>;
-            type MaxProposals = MaxProposals;
+            type MaxProposals = DemocracyMaxProposals;
             type Preimages = Preimage;
             type MaxBlacklisted = ConstU32<100>;
             type MaxDeposits = ConstU32<100>;
@@ -1160,6 +1162,7 @@ macro_rules! impl_config_traits {
             #[cfg(feature = "runtime-benchmarks")]
             type BenchmarkHelper = PredictionMarketsCombinatorialTokensBenchmarkHelper<Runtime>;
             type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
+            type Fuel = Fuel;
             type MarketCommons = MarketCommons;
             type MultiCurrency = AssetManager;
             type Payout = PredictionMarkets;
@@ -1198,11 +1201,11 @@ macro_rules! impl_config_traits {
         impl zrml_futarchy::Config for Runtime {
             #[cfg(feature = "runtime-benchmarks")]
             type BenchmarkHelper = DecisionMarketBenchmarkHelper<Runtime>;
+            type MaxProposals = FutarchyMaxProposals;
             type MinDuration = MinDuration;
             type Oracle = DecisionMarketOracle<Runtime>;
             type RuntimeEvent = RuntimeEvent;
             type Scheduler = Scheduler;
-            type SubmitOrigin = EnsureRoot<AccountId>;
             type WeightInfo = zrml_futarchy::weights::WeightInfo<Runtime>;
         }
 
@@ -2286,7 +2289,7 @@ macro_rules! create_common_tests {
                 };
                 use zrml_futarchy::types::Proposal;
                 use zrml_market_commons::types::MarketBuilder;
-                use zrml_neo_swaps::types::DecisionMarketOracle;
+                use zrml_neo_swaps::types::{DecisionMarketOracle, DecisionMarketOracleScoreboard};
 
                 #[test]
                 fn futarchy_schedules_and_executes_call() {
@@ -2360,10 +2363,13 @@ macro_rules! create_common_tests {
                         };
                         let call =
                             Preimage::bound(RuntimeCall::from(remark_dispatched_as)).unwrap();
+                        let scoreboard =
+                            DecisionMarketOracleScoreboard::new(40_000, 10_000, one / 7, one);
                         let oracle = DecisionMarketOracle::new(
                             market_id,
                             Asset::CategoricalOutcome(market_id, 0),
                             Asset::CategoricalOutcome(market_id, 1),
+                            scoreboard,
                         );
                         let when = duration + 10;
                         let proposal = Proposal { when, call, oracle };
