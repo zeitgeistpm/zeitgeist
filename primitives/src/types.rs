@@ -1,4 +1,4 @@
-// Copyright 2022-2025 Forecasting Technologies LTD.
+// Copyright 2022-2024 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -82,6 +82,12 @@ impl<'a> Arbitrary<'a> for MultiHash {
 pub type BasicCurrencyAdapter<R, B> = orml_currencies::BasicCurrencyAdapter<R, B, Amount, Balance>;
 
 pub type CurrencyId = Asset<MarketId>;
+
+/// The asset id specifically used for pallet_assets_tx_payment for
+/// paying transaction fees in different assets.
+/// Since the polkadot extension and wallets can't handle custom asset ids other than just u32,
+/// we are using a u32 as on the asset-hubs here.
+pub type TxPaymentAssetId = u32;
 
 /// Index of a transaction in the chain.
 pub type Nonce = u64;
