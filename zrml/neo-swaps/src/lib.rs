@@ -1604,19 +1604,6 @@ mod pallet {
                     );
                 }
 
-                // Ensure that numerical limits of all prices are respected.
-                for &asset in pool.assets().iter() {
-                    let spot_price = pool.calculate_spot_price(asset)?;
-                    ensure!(
-                        spot_price >= COMBO_MIN_SPOT_PRICE.saturated_into(),
-                        Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooLow)
-                    );
-                    ensure!(
-                        spot_price <= COMBO_MAX_SPOT_PRICE.saturated_into(),
-                        Error::<T>::NumericalLimits(NumericalLimitsError::SpotPriceSlippedTooHigh)
-                    );
-                }
-
                 Self::deposit_event(Event::<T>::ComboSellExecuted {
                     who: who.clone(),
                     pool_id,
