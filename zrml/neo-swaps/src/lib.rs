@@ -518,7 +518,7 @@ mod pallet {
         ///
         /// # Parameters
         ///
-        /// - `pool`: Identifier for the pool to add liquidity to.
+        /// - `pool_id`: Identifier for the pool to add liquidity to.
         /// - `pool_shares_amount`: The number of new pool shares the LP will receive.
         /// - `max_amounts_in`: Vector of the maximum amounts of each outcome token the LP is
         ///   willing to deposit (with outcomes specified in the order of `MarketCommonsApi`).
@@ -576,7 +576,7 @@ mod pallet {
         ///
         /// # Parameters
         ///
-        /// - `poold_id`: Identifier for the pool to withdraw liquidity from.
+        /// - `pool_id`: Identifier for the pool to withdraw liquidity from.
         /// - `pool_shares_amount_out`: The number of pool shares the LP will relinquish.
         /// - `min_amounts_out`: Vector of the minimum amounts of each outcome token the LP expects
         ///   to withdraw (with outcomes specified in the order given by `MarketCommonsApi`).
@@ -907,8 +907,12 @@ mod pallet {
                 );
                 let buy = vec![asset_out];
                 let sell = pool.assets_complement(&buy);
+                // `swap_amount_out` is the amount of assets in sell (S) that are sold for more
+                // assets of buy (B). In the reference documentation it's called `y(x)`
                 let swap_amount_out =
                     pool.calculate_swap_amount_out_for_buy(buy, sell, amount_in_minus_fees)?;
+                // The following is the buy complete set amount plus the additional amount
+                // that was received through the sale of the unwanted outcomes in the sell.
                 let amount_out = swap_amount_out.checked_add_res(&amount_in_minus_fees)?;
                 ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
                 // Instead of letting `who` buy the complete sets and then transfer almost all of
@@ -970,6 +974,10 @@ mod pallet {
                     Error::<T>::NumericalLimits(NumericalLimitsError::MaxAmountExceeded),
                 );
 
+                // `asset_in` is sold in order to get the amount of full sets of all possible
+                // outcomes, the `amount_out` is calculated in which all other assets are sold to
+                // get an equal amount of each possible asset back, 
+                // which can then be burned for collateral
                 let buy = vec![asset_in];
                 let keep = vec![];
                 let sell = pool.assets_complement(&buy);
