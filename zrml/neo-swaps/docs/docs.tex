@@ -36,7 +36,7 @@
 
 \section{Introduction}
 
-This document provides the mathematical and technical details for zrml-neo-swaps. The automatic market maker (AMM) implemented by zrml-neo-swaps is a variant of the Logarithmic Market Scoring Rule (LMSR; \cite{hanson_2003}) which was first developed by Gnosis (see \url{https://docs.gnosis.io/conditionaltokens/docs/introduction3/}). We often refer to it as AMM 2.0.
+This document provides the mathematical and technical details for zrml-neo-swaps. The automatic market maker (AMM) implemented by zrml-neo-swaps is a variant of the Logarithmic Market Scoring Rule (LMSR; \cite{hanson_2003}) which was first developed by Gnosis (see \url{https://gnosis-conditional-tokens.readthedocs.io/en/latest/developer-guide.html#}). We often refer to it as AMM 2.0.
 
 Unlike the typical implementation using a cost function (see \cite{chen_vaughan_2010}), this implementation of LMSR is a \emph{constant-function market maker} (CFMM), similar to the classical constant product market maker, which allows us to implement \emph{dynamic liquidity}. In other words, liquidity providers (LPs) can come and go as they please, allowing the market to self-regulate how much price resistance the AMM should provide.
 

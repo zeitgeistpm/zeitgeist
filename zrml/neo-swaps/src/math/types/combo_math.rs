@@ -310,7 +310,7 @@ mod tests {
     type MockMath = ComboMath<MockRuntime>;
 
     // Example taken from
-    // https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr
+    // https://github.com/gnosis/conditional-tokens-docs/blob/e73aa18ab82446049bca61df31fc88efd3cdc5cc/docs/intro3.md?plain=1#L78-L88
     #[test_case(vec![_10], vec![_10], _10, 144_269_504_088, 58_496_250_072)]
     #[test_case(vec![_1], vec![4_586_751_453], _1, _1, 7_353_256_641)]
     #[test_case(vec![_2], vec![9_173_502_907], _2, _2, 14_706_513_281; "positive ln")]

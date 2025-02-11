@@ -19,7 +19,7 @@ use super::*;
 use test_case::test_case;
 
 // Example taken from
-// https://docs.gnosis.io/conditionaltokens/docs/introduction3/#an-example-with-lmsr
+// https://github.com/gnosis/conditional-tokens-docs/blob/e73aa18ab82446049bca61df31fc88efd3cdc5cc/docs/intro3.md?plain=1#L78-L88
 #[test]
 fn combo_buy_works() {
     ExtBuilder::default().build().execute_with(|| {
