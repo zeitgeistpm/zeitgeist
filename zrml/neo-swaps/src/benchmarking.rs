@@ -604,7 +604,7 @@ mod benchmarks {
 
         // We don't care about being precise here and just deposit a huge bunch of tokens for Bob.
         for &asset in assets.iter() {
-            let amount_for_bob = amount_buy.max(amount_buy);
+            let amount_for_bob = amount_buy;
             assert_ok!(T::MultiCurrency::deposit(asset, &bob, amount_for_bob));
         }
 
