@@ -223,6 +223,7 @@ fn deploy_combinatorial_pool_works_with_multiple_markets() {
 #[test]
 fn deploy_combinatorial_pool_fails_on_incorrect_vec_len() {
     ExtBuilder::default().build().execute_with(|| {
+        // The following markets will produce 6 collections: LONG & 0, LONG & 1, LONG & 2, SHORT & 0, SHORT & 1, SHORT & 2
         let market_ids = vec![
             create_market(ALICE, BASE_ASSET, MarketType::Scalar(0..=1), ScoringRule::AmmCdaHybrid),
             create_market(ALICE, BASE_ASSET, MarketType::Categorical(3), ScoringRule::AmmCdaHybrid),
@@ -233,6 +234,7 @@ fn deploy_combinatorial_pool_fails_on_incorrect_vec_len() {
                 6,
                 market_ids,
                 _10,
+                // Here it's five spot prices although the above market ids will have 6 spot prices.
                 vec![20 * CENT; 5],
                 CENT,
                 Fuel::new(16, false),
