@@ -199,6 +199,7 @@ mod detail {
         let exp_of_minus_amount_in: FixedType = protected_exp(amount_in_div_liquidity, true)?;
         let exp_of_minus_amount_in_times_exp_sum_sell =
             exp_of_minus_amount_in.checked_mul(exp_sum_sell)?;
+        // Reminder from the documentation: `exp_sum_buy + exp_sum_sell = 1 - exp_sum_keep`
         let numerator = exp_sum_buy
             .checked_add(exp_sum_sell)?
             .checked_sub(exp_of_minus_amount_in_times_exp_sum_sell)?;
