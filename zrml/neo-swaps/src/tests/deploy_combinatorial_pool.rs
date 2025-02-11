@@ -479,6 +479,7 @@ fn deploy_combinatorial_pool_fails_on_insufficient_funds() {
 
         assert_noop!(
             NeoSwaps::deploy_combinatorial_pool(
+                // BOB doesn't have enough funds
                 RuntimeOrigin::signed(BOB),
                 2,
                 vec![market_id],
