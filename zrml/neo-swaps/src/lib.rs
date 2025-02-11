@@ -976,7 +976,7 @@ mod pallet {
 
                 // `asset_in` is sold in order to get the amount of full sets of all possible
                 // outcomes, the `amount_out` is calculated in which all other assets are sold to
-                // get an equal amount of each possible asset back, 
+                // get an equal amount of each possible asset back,
                 // which can then be burned for collateral
                 let buy = vec![asset_in];
                 let keep = vec![];

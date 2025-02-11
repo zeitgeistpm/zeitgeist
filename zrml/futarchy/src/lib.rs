@@ -197,11 +197,14 @@ mod pallet {
                 return total_weight;
             }
 
-            //
-            total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
             let proposals = if let Ok(proposals) = <Pallet<T> as ProposalStorage<T>>::take(now) {
+                total_weight = total_weight
+                    .saturating_add(T::WeightInfo::take_proposals(proposals.len() as u32));
                 proposals
             } else {
+                // assumes the worst case scenario
+                total_weight = total_weight
+                    .saturating_add(T::WeightInfo::take_proposals(T::MaxProposals::get()));
                 return total_weight;
             };
 

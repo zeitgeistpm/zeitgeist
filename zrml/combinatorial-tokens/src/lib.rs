@@ -125,8 +125,7 @@ mod pallet {
     pub type CombinatorialIdOf<T> =
         <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::CombinatorialId;
     pub type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub type FuelOf<T> =
-        <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::Fuel;
+    pub type FuelOf<T> = <<T as Config>::CombinatorialIdManager as CombinatorialIdManager>::Fuel;
     pub(crate) type SplitPositionDispatchInfoOf<T> =
         SplitPositionDispatchInfo<CombinatorialIdOf<T>, MarketIdOf<T>>;
 

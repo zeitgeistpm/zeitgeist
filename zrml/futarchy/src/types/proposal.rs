@@ -24,7 +24,7 @@ use scale_info::TypeInfo;
 #[cfg(feature = "fuzzing")]
 use {
     arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured},
-    frame_support::traits::{Bounded},
+    frame_support::traits::Bounded,
     sp_core::H256,
 };
 

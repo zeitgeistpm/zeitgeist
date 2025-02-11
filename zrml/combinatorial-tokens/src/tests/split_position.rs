@@ -286,7 +286,6 @@ fn split_position_fails_on_insufficient_funds_native_token_no_parent() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::Ztg, _99).unwrap();
 
-
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
 
         assert_noop!(
@@ -307,7 +306,6 @@ fn split_position_fails_on_insufficient_funds_native_token_no_parent() {
 fn split_position_fails_on_insufficient_funds_foreign_token_no_parent() {
     ExtBuilder::build().execute_with(|| {
         let alice = Account::new(0).deposit(Asset::ForeignAsset(1), _99).unwrap();
-
 
         let market_id = create_market(Asset::Ztg, MarketType::Categorical(3));
 

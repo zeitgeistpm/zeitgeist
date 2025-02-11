@@ -23,7 +23,7 @@ use sp_runtime::traits::Zero;
 use zeitgeist_primitives::{traits::FutarchyOracle, types::BlockNumber};
 
 #[cfg(feature = "fuzzing")]
-use arbitrary::{Arbitrary, Unstructured, Result as ArbitraryResult};
+use arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured};
 
 #[derive(Clone, Debug, Decode, Encode, Eq, MaxEncodedLen, PartialEq, TypeInfo)]
 pub struct MockOracle {
