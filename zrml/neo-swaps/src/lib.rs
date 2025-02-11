@@ -1425,11 +1425,15 @@ mod pallet {
                     swap_fees: swap_fee_amount,
                     external_fees: external_fee_amount,
                 } = Self::distribute_fees(pool, &who, amount_in)?;
+                // `swap_amount_out` is the amount of assets in sell (S) that are sold for more
+                // assets of buy (B). In the reference documentation it's called `y(x)`
                 let swap_amount_out = pool.calculate_swap_amount_out_for_buy(
                     buy.clone(),
                     sell.clone(),
                     amount_in_minus_fees,
                 )?;
+                // The following is the buy complete set amount plus the additional amount
+                // that was received through the sale of the unwanted outcomes in the sell.
                 let amount_out = swap_amount_out.checked_add_res(&amount_in_minus_fees)?;
                 ensure!(amount_out >= min_amount_out, Error::<T>::AmountOutBelowMin);
 
