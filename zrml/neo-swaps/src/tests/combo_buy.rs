@@ -256,7 +256,7 @@ fn combo_buy_fails_on_incorrect_asset_count() {
 }
 
 #[test]
-fn combo_buy_fails_on_market_not_found() {
+fn combo_buy_fails_on_pool_not_found() {
     ExtBuilder::default().build().execute_with(|| {
         let (_, pool_id) = create_markets_and_deploy_combinatorial_pool(
             ALICE,
