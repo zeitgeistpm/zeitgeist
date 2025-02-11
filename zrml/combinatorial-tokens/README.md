@@ -35,4 +35,4 @@ Calculating
 alt_bn128
 
 combinatorial tokens, as [defined by
-Gnosis](https://docs.gnosis.io/conditionaltokens/) in Substrate.
+Gnosis](https://gnosis-conditional-tokens.readthedocs.io/en/latest/developer-guide.html#) in Substrate.
