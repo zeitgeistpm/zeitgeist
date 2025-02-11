@@ -136,7 +136,8 @@ fn combo_buy_works() {
     vec![1, 3, 4],
     5_208_333_333_333,
     6_576_234_413_778,
-    5_000_000_000_000,
+    // keep_indices vector is empty anyways, so `expected_amount_out_keep` amount has no effect
+    0,
     vec![
         8_423_765_586_223,
         1500 * _1 + 1,
