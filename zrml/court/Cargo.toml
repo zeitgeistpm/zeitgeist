@@ -49,4 +49,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "zrml-court"
-version = "0.5.5"
+version = "0.5.6"

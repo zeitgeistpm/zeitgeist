@@ -1,21 +1,21 @@
 {
   "author": "Zeitgeist PM <contact@zeitgeist.pm>",
   "dependencies": {
-    "@polkadot/keyring": "^12.6.2",
-    "@polkadot/util-crypto": "^12.6.2",
-    "sqlite3": "^5.1.7",
-    "typescript": "^5.4.5",
-    "ws": "^8.16.0"
+    "sqlite3": "5.1.7",
+    "typescript": "5.4.5",
+    "ws": "8.16.0"
   },
   "devDependencies": {
-    "@acala-network/chopsticks": "0.9.10",
-    "@moonwall/cli": "^5.1.5",
-    "@moonwall/util": "^5.1.5",
-    "@polkadot/api": "^10.13.1",
-    "@polkadot/types": "^10.13.1",
-    "@types/node": "^20.12.7",
+    "@acala-network/chopsticks": "0.9.13",
+    "@moonwall/cli": "5.1.5",
+    "@moonwall/util": "5.1.5",
+    "@polkadot/api": "10.13.1",
+    "@polkadot/keyring": "13.2.3",
+    "@polkadot/types": "10.13.1",
+    "@polkadot/util-crypto": "13.2.3",
+    "@types/node": "22.10.2",
     "debug": "4.3.4",
-    "ts-node": "^10.9.2"
+    "ts-node": "10.9.2"
   },
   "description": "Integration tests",
   "license": "GPL-3.0",
