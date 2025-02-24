@@ -637,7 +637,7 @@ mod benchmarks {
             market_ids.push(market_id);
         }
 
-        let amount = _100.saturated_into();
+        let amount = (100 * _100).saturated_into();
         let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
         assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));
 
