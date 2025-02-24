@@ -513,7 +513,7 @@ mod benchmarks {
             market_ids.push(market_id);
         }
 
-        let amount = _100.saturated_into();
+        let amount = (100 * _100).saturated_into();
         let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
         assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));
         assert_ok!(NeoSwaps::<T>::deploy_combinatorial_pool(
@@ -568,7 +568,7 @@ mod benchmarks {
             market_ids.push(market_id);
         }
 
-        let amount = _100.saturated_into();
+        let amount = (100 * _100).saturated_into();
         let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
         assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));
         assert_ok!(NeoSwaps::<T>::deploy_combinatorial_pool(
@@ -590,7 +590,7 @@ mod benchmarks {
         let sell_arg = vec![assets[1]];
         let keep_arg = (2..asset_count).map(|i| assets[i as usize]).collect::<Vec<_>>();
 
-        let amount_buy: BalanceOf<T> = _2.saturated_into();
+        let amount_buy: BalanceOf<T> = (100 * _2).saturated_into();
         let amount_keep = if keep_arg.is_empty() {
             // If n = 1;
             Zero::zero()
