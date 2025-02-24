@@ -1,4 +1,4 @@
-#![no_main]
+// Copyright 2025 Forecasting Technologies LTD.
 
 mod common;
 

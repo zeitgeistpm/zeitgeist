@@ -1,4 +1,4 @@
-use crate::{types::Proposal, Config, ProposalsOf};
+// Copyright 2025 Forecasting Technologies LTD.
 use alloc::{collections::BTreeMap, vec::Vec};
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::DispatchError;

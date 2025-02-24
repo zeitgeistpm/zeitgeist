@@ -1,4 +1,4 @@
-#![no_main]
+// Copyright 2025 Forecasting Technologies LTD.
 
 use arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured};
 use frame_system::pallet_prelude::{BlockNumberFor, OriginFor};

@@ -1,4 +1,4 @@
-use crate::{
+// Copyright 2025 Forecasting Technologies LTD.
     traits::ProposalStorage, types::Proposal, Config, Error, Pallet, ProposalCount, Proposals,
     ProposalsOf,
 };

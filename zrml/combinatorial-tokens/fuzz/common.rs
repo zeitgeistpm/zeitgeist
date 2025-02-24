@@ -1,4 +1,4 @@
-use zeitgeist_primitives::{
+// Copyright 2025 Forecasting Technologies LTD.
     traits::MarketOf,
     types::{Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };

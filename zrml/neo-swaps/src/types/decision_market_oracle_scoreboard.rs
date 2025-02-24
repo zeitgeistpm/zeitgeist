@@ -1,4 +1,4 @@
-use crate::{BalanceOf, Config};
+// Copyright 2025 Forecasting Technologies LTD.
 use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
