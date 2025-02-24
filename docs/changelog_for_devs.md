@@ -12,6 +12,10 @@ As of 0.3.9, the changelog's format is based on
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
+## v0.5.7
+
+- Update `AssetId` for `pallet_asset_tx_payment` from `u32` to `MultiLocation`
+
 ## v0.5.6
 
 - Increase existential deposit of all non-foreign assets to `BASE`.
