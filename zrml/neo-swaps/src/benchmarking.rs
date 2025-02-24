@@ -665,7 +665,7 @@ mod benchmarks {
             alice,
             base_asset,
             asset_count,
-            _10.saturated_into(),
+            (100 * _100).saturated_into(),
         );
 
         let pool = Pools::<T>::get(market_id).unwrap();
@@ -694,7 +694,7 @@ mod benchmarks {
             alice,
             base_asset,
             asset_count,
-            _10.saturated_into(),
+            (100 * _100).saturated_into(),
         );
 
         let pool = Pools::<T>::get(market_id).unwrap();
