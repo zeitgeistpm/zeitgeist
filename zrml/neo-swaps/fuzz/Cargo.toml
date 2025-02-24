@@ -36,4 +36,3 @@ version = "0.5.5"
 
 [package.metadata]
 cargo-fuzz = true
-
