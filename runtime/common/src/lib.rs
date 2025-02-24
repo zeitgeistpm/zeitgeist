@@ -138,6 +138,12 @@ macro_rules! decl_common_types {
             EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 2>,
         >;
 
+        // At least 60%
+        type EnsureRootOrThreeFifthsCouncil = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionAtLeast<AccountId, CouncilInstance, 3, 5>,
+        >;
+
         // At least 66%
         type EnsureRootOrTwoThirdsCouncil = EitherOfDiverse<
             EnsureRoot<AccountId>,
@@ -162,6 +168,12 @@ macro_rules! decl_common_types {
         type EnsureRootOrHalfTechnicalCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 2>,
+        >;
+
+        // At least 60%
+        type EnsureRootOrThreeFifthsTechnicalCommittee = EitherOfDiverse<
+            EnsureRoot<AccountId>,
+            EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 3, 5>,
         >;
 
         // At least 66%
@@ -419,7 +431,7 @@ macro_rules! impl_config_traits {
         #[cfg(feature = "parachain")]
         impl cumulus_pallet_xcmp_queue::Config for Runtime {
             type ChannelInfo = ParachainSystem;
-            type ControllerOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+            type ControllerOrigin = EnsureRootOrThreeFifthsTechnicalCommittee;
             type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
             type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
             type PriceForSiblingDelivery = ();
@@ -600,7 +612,7 @@ macro_rules! impl_config_traits {
         impl orml_asset_registry::Config for Runtime {
             type AssetId = CurrencyId;
             type AssetProcessor = CustomAssetProcessor;
-            type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrTwoThirdsCouncil>;
+            type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrThreeFifthsCouncil>;
             type Balance = Balance;
             type CustomMetadata = CustomMetadata;
             type RuntimeEvent = RuntimeEvent;
@@ -750,7 +762,7 @@ macro_rules! impl_config_traits {
             type ExternalDefaultOrigin = EnsureRootOrAllCouncil;
             /// Origin that can have an ExternalMajority/ExternalDefault vote
             /// be tabled immediately and with a shorter voting/enactment period.
-            type FastTrackOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+            type FastTrackOrigin = EnsureRootOrThreeFifthsTechnicalCommittee;
             /// Origin from which the next majority-carries (or more permissive) referendum may be tabled
             /// to vote immediately and asynchronously in a similar manner to the emergency origin.
             type InstantOrigin = EnsureRootOrAllTechnicalCommittee;
@@ -794,41 +806,41 @@ macro_rules! impl_config_traits {
         }
 
         impl pallet_membership::Config<AdvisoryCommitteeMembershipInstance> for Runtime {
-            type AddOrigin = EnsureRootOrTwoThirdsCouncil;
+            type AddOrigin = EnsureRootOrThreeFifthsCouncil;
             type RuntimeEvent = RuntimeEvent;
             type MaxMembers = AdvisoryCommitteeMaxMembers;
             type MembershipChanged = AdvisoryCommittee;
             type MembershipInitialized = AdvisoryCommittee;
-            type PrimeOrigin = EnsureRootOrTwoThirdsCouncil;
-            type RemoveOrigin = EnsureRootOrTwoThirdsCouncil;
-            type ResetOrigin = EnsureRootOrTwoThirdsCouncil;
-            type SwapOrigin = EnsureRootOrTwoThirdsCouncil;
+            type PrimeOrigin = EnsureRootOrThreeFifthsCouncil;
+            type RemoveOrigin = EnsureRootOrThreeFifthsCouncil;
+            type ResetOrigin = EnsureRootOrThreeFifthsCouncil;
+            type SwapOrigin = EnsureRootOrThreeFifthsCouncil;
             type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
         }
 
         impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
-            type AddOrigin = EnsureRootOrThreeFourthsCouncil;
+            type AddOrigin = EnsureRootOrThreeFifthsCouncil;
             type RuntimeEvent = RuntimeEvent;
             type MaxMembers = CouncilMaxMembers;
             type MembershipChanged = Council;
             type MembershipInitialized = Council;
-            type PrimeOrigin = EnsureRootOrThreeFourthsCouncil;
-            type RemoveOrigin = EnsureRootOrThreeFourthsCouncil;
-            type ResetOrigin = EnsureRootOrThreeFourthsCouncil;
-            type SwapOrigin = EnsureRootOrThreeFourthsCouncil;
+            type PrimeOrigin = EnsureRootOrThreeFifthsCouncil;
+            type RemoveOrigin = EnsureRootOrThreeFifthsCouncil;
+            type ResetOrigin = EnsureRootOrThreeFifthsCouncil;
+            type SwapOrigin = EnsureRootOrThreeFifthsCouncil;
             type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
         }
 
         impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime {
-            type AddOrigin = EnsureRootOrTwoThirdsCouncil;
+            type AddOrigin = EnsureRootOrThreeFifthsCouncil;
             type RuntimeEvent = RuntimeEvent;
             type MaxMembers = TechnicalCommitteeMaxMembers;
             type MembershipChanged = TechnicalCommittee;
             type MembershipInitialized = TechnicalCommittee;
-            type PrimeOrigin = EnsureRootOrTwoThirdsCouncil;
-            type RemoveOrigin = EnsureRootOrTwoThirdsCouncil;
-            type ResetOrigin = EnsureRootOrTwoThirdsCouncil;
-            type SwapOrigin = EnsureRootOrTwoThirdsCouncil;
+            type PrimeOrigin = EnsureRootOrThreeFifthsCouncil;
+            type RemoveOrigin = EnsureRootOrThreeFifthsCouncil;
+            type ResetOrigin = EnsureRootOrThreeFifthsCouncil;
+            type SwapOrigin = EnsureRootOrThreeFifthsCouncil;
             type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
         }
 
