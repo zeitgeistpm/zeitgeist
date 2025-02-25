@@ -12,9 +12,78 @@ As of 0.3.9, the changelog's format is based on
 components which query the chain's storage, the extrinsics or the runtime
 APIs/RPC interface.
 
-## v0.5.7
+## v0.6.0
+
+[#1364]: https://github.com/zeitgeistpm/zeitgeist/pull/1364
+[#1409]: https://github.com/zeitgeistpm/zeitgeist/pull/1409
+[#1408]: https://github.com/zeitgeistpm/zeitgeist/pull/1408
+
+### Added
+
+- Implement Combinatorial Betting and Futarchy ([#1364])
+
+  Pallet `zrml-combinatorial-tokens`:
+
+  Extrinsics:
+
+  - `split_position`: The process of exchanging a token for more complicated
+    tokens of equal value.
+  - `merge_position`: The process of exchanging multiple tokens for a single
+    token of equal value.
+  - `redeem_position`: The process of burning tokens for a single token of
+    higher order (e. g. collateral).
+
+  Events:
+
+  - `TokenSplit { who, parent_collection_id, market_id, partition, asset_in, assets_out, collection_ids, amount }`:
+    User `who` has split `amount` units of token `asset_in` into the same amount
+    of each token in `assets_out` using `partition`.
+  - `TokenMerged { who, parent_collection_id, market_id, partition, asset_out, assets_in, amount }`:
+    User `who` has merged `amount` units of each of the tokens in `assets_in`
+    into the same amount of `asset_out`.
+  - `TokenRedeemed { who, parent_collection_id, market_id, index_set, asset_in, amount_in, asset_out, amount_out }`:
+    User `who` has redeemed `amount_in` units of `asset_in` for `amount_out`
+    units of `asset_out` using the report for the market specified by
+    `market_id`.
+
+  Pallet `zrml-futarchy`:
+
+  Extrinsics:
+
+  - `submit_proposal`: Submits a proposal. Events:
+  - `Submitted { duration, proposal }`: A proposal has been submitted.
+  - `Rejected { proposal }`: A proposal has been rejected by the oracle.
+  - `Scheduled { proposal }`: A proposal has been scheduled for execution.
+
+    Pallet `zrml-neo-swaps`:
+
+  Pallet `zrml-neo-swaps`:
+
+  Extrinsics:
+
+  - `combo_buy`: Make a combinatorial bet on the specified pool.
+  - `combo_sell`: Cancel a combinatorial bet on the specified pool.
+  - `deploy_combinatorial_pool`: Deploy a combinatorial pool for the specified
+    markets and provide liquidity.
+
+  Events:
+
+  - `ComboBuyExecuted { who, pool_id, buy, sell, amount_in, amount_out, swap_fee_amount, external_fee_amount }`:
+    A combinatorial position was opened.
+  - `ComboSellExecuted { who, pool_id, buy, keep, sell, amount_buy, amount_keep, amount_out, swap_fee_amount, external_fee_amount }`:
+    A combinatorial position was closed.
+  - `CombinatorialPoolDeployed { who, market_ids, pool_id, account_id, reserves, collateral, liquidity_parameter, pool_shares_amount, swap_fee }`:
+    Pool was created.
+
+  For details, please refer to the `README.md` and the in-file documentation.
+
+### Changed
 
 - Update `AssetId` for `pallet_asset_tx_payment` from `u32` to `MultiLocation`
+  ([#1408])
+- Use three out of five membership threshold ([#1409])
+- The extrinsics of `zrml-neo-swaps` now use a `pool_id` instead of a
+  `market_id`, since there can be multiple pools for one market id.
 
 ## v0.5.6
 
