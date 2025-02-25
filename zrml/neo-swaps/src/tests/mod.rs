@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -19,6 +19,9 @@
 
 mod buy;
 mod buy_and_sell;
+mod combo_buy;
+mod combo_sell;
+mod deploy_combinatorial_pool;
 mod deploy_pool;
 mod exit;
 mod join;
@@ -38,6 +41,7 @@ use zeitgeist_primitives::{
         MarketType, MultiHash, ScalarPosition, ScoringRule,
     },
 };
+use zrml_combinatorial_tokens::types::Fuel;
 use zrml_market_commons::{MarketCommonsPalletApi, Markets};
 
 #[cfg(not(feature = "parachain"))]
@@ -96,6 +100,39 @@ fn create_market_and_deploy_pool(
         swap_fee,
     ));
     market_id
+}
+
+fn create_markets_and_deploy_combinatorial_pool(
+    creator: AccountIdOf<Runtime>,
+    base_asset: Asset<MarketId>,
+    market_types: Vec<MarketType>,
+    amount: BalanceOf<Runtime>,
+    spot_prices: Vec<BalanceOf<Runtime>>,
+    swap_fee: BalanceOf<Runtime>,
+) -> (Vec<MarketId>, <Runtime as Config>::PoolId) {
+    let mut market_ids = vec![];
+    let mut asset_count = 1u16;
+    for market_type in market_types.iter() {
+        let market_id =
+            create_market(creator, base_asset, market_type.clone(), ScoringRule::AmmCdaHybrid);
+        let market = <Runtime as Config>::MarketCommons::market(&market_id).unwrap();
+        asset_count *= market.outcomes();
+
+        market_ids.push(market_id);
+    }
+
+    let pool_id = <Pallet<Runtime> as PoolStorage>::next_pool_id();
+    assert_ok!(NeoSwaps::deploy_combinatorial_pool(
+        RuntimeOrigin::signed(ALICE),
+        asset_count,
+        market_ids.clone(),
+        amount,
+        spot_prices.clone(),
+        swap_fee,
+        Fuel::new(16, false),
+    ));
+
+    (market_ids, pool_id)
 }
 
 fn deposit_complete_set(

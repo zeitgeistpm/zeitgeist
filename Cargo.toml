@@ -14,7 +14,9 @@ default-members = [
     "runtime/battery-station",
     "runtime/zeitgeist",
     "zrml/authorized",
+    "zrml/combinatorial-tokens",
     "zrml/court",
+    "zrml/futarchy",
     "zrml/hybrid-router",
     "zrml/global-disputes",
     "zrml/market-commons",
@@ -36,11 +38,16 @@ members = [
     "runtime/battery-station",
     "runtime/zeitgeist",
     "zrml/authorized",
+    "zrml/combinatorial-tokens",
+    "zrml/combinatorial-tokens/fuzz",
     "zrml/court",
+    "zrml/futarchy",
+    "zrml/futarchy/fuzz",
     "zrml/hybrid-router",
     "zrml/global-disputes",
     "zrml/market-commons",
     "zrml/neo-swaps",
+    "zrml/neo-swaps/fuzz",
     "zrml/orderbook",
     "zrml/orderbook/fuzz",
     "zrml/parimutuel",
@@ -244,7 +251,9 @@ common-runtime = { path = "runtime/common", default-features = false }
 zeitgeist-macros = { path = "macros", default-features = false }
 zeitgeist-primitives = { path = "primitives", default-features = false }
 zrml-authorized = { path = "zrml/authorized", default-features = false }
+zrml-combinatorial-tokens = { path = "zrml/combinatorial-tokens", default-features = false }
 zrml-court = { path = "zrml/court", default-features = false }
+zrml-futarchy = { path = "zrml/futarchy", default-features = false }
 zrml-global-disputes = { path = "zrml/global-disputes", default-features = false }
 zrml-hybrid-router = { path = "zrml/hybrid-router", default-features = false }
 zrml-market-commons = { path = "zrml/market-commons", default-features = false }
@@ -264,11 +273,14 @@ futures = "0.3.30"
 jsonrpsee = "0.16.3"
 libfuzzer-sys = "0.4.7"
 more-asserts = "0.3.1"
+rstest = "0.23.0"
 test-case = "3.3.1"
 url = "2.5.0"
 
 # Other (wasm)
 arbitrary = { version = "1.3.2", default-features = false }
+ark-bn254 = { version = "0.5.0", default-features = false, features = ["curve"] }
+ark-ff = { version = "0.5.0", default-features = false }
 arrayvec = { version = "0.7.4", default-features = false }
 cfg-if = { version = "1.0.0" }
 fixed = { version = "=1.15.0", default-features = false, features = ["num-traits"] }
@@ -281,6 +293,15 @@ rand = { version = "0.8.5", default-features = false }
 rand_chacha = { version = "0.3.1", default-features = false }
 serde = { version = "1.0.198", default-features = false }
 typenum = { version = "1.17.0", default-features = false }
+
+[profile.test]
+overflow-checks = true
+
+[profile.test.package."*"]
+overflow-checks = true
+
+[profile.dev]
+overflow-checks = true
 
 [profile.dev.package]
 blake2 = { opt-level = 3 }
@@ -327,16 +348,27 @@ x25519-dalek = { opt-level = 3 }
 yamux = { opt-level = 3 }
 zeroize = { opt-level = 3 }
 
+[profile.dev.package."*"]
+overflow-checks = true
+
 [profile.production]
 codegen-units = 1
 incremental = false
 inherits = "release"
 lto = true
+overflow-checks = true
+
+[profile.production.package."*"]
+overflow-checks = true
 
 [profile.release]
 opt-level = 3
+overflow-checks = true
 # Zeitgeist runtime requires unwinding.
 panic = "unwind"
+
+[profile.release.package."*"]
+overflow-checks = true
 
 
 # xcm-emulator incompatible block number type fixed

@@ -1,4 +1,4 @@
-// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2024-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -28,6 +28,7 @@ use core::marker::PhantomData;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
     traits::{Contains, Everything, NeverEnsureOrigin},
+    Blake2_256,
 };
 use frame_system::{mocking::MockBlock, EnsureRoot, EnsureSignedBy};
 use orml_traits::MultiCurrency;
@@ -40,29 +41,35 @@ use zeitgeist_primitives::{
         AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
         BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
         CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
-        CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
-        ExistentialDeposit, ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId,
-        GlobalDisputeLockId, GlobalDisputesPalletId, HybridRouterPalletId, InflationPeriod, LockId,
-        MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations,
-        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
-        MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOrders,
-        MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation,
-        MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount,
-        MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OrderbookPalletId, OutsiderBond,
-        PmPalletId, RemoveKeysLimit, RequestInterval, TreasuryPalletId, VotePeriod,
+        CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CombinatorialTokensPalletId,
+        CorrectionPeriod, CourtPalletId, ExistentialDeposit, ExistentialDeposits, GdVotingPeriod,
+        GetNativeCurrencyId, GlobalDisputeLockId, GlobalDisputesPalletId, HybridRouterPalletId,
+        InflationPeriod, LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxCreatorFee,
+        MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes,
+        MaxGracePeriod, MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration,
+        MaxOrders, MaxOwners, MaxRejectReasonLen, MaxReserves, MaxSelectedDraws,
+        MaxYearlyInflation, MinCategories, MinDisputeDuration, MinJurorStake, MinOracleDuration,
+        MinOutcomeVoteAmount, MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OrderbookPalletId,
+        OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval, TreasuryPalletId, VotePeriod,
         VotingOutcomeFee, BASE, CENT, MAX_ASSETS,
     },
     traits::DistributeFees,
     types::{
-        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CurrencyId, Hash, MarketId, Moment,
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CombinatorialId, CurrencyId, Hash,
+        MarketId, Moment,
     },
 };
+use zrml_combinatorial_tokens::types::{CryptographicIdManager, Fuel};
+
 #[cfg(feature = "parachain")]
 use {
     orml_traits::asset_registry::AssetProcessor, parity_scale_codec::Encode,
     sp_runtime::DispatchError, zeitgeist_primitives::types::Asset,
     zeitgeist_primitives::types::CustomMetadata,
 };
+
+#[cfg(feature = "runtime-benchmarks")]
+use zeitgeist_primitives::types::NoopCombinatorialTokensBenchmarkHelper;
 
 pub const ALICE: AccountIdTest = 0;
 #[allow(unused)]
@@ -74,6 +81,7 @@ pub const FEE_ACCOUNT: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 123456;
 pub const EXTERNAL_FEES: Balance = CENT;
 pub const INITIAL_BALANCE: Balance = 100 * BASE;
+#[allow(unused)]
 pub const MARKET_CREATOR: AccountIdTest = ALICE;
 
 #[cfg(feature = "parachain")]
@@ -90,6 +98,7 @@ ord_parameter_types! {
 }
 parameter_types! {
     pub storage NeoMinSwapFee: Balance = 0;
+    pub storage MaxSplits: u16 = 128;
 }
 parameter_types! {
     pub const AdvisoryBond: Balance = 0;
@@ -154,6 +163,7 @@ construct_runtime!(
         AssetRegistry: orml_asset_registry,
         Authorized: zrml_authorized,
         Balances: pallet_balances,
+        CombinatorialTokens: zrml_combinatorial_tokens,
         Court: zrml_court,
         AssetManager: orml_currencies,
         MarketCommons: zrml_market_commons,
@@ -192,12 +202,17 @@ impl zrml_orderbook::Config for Runtime {
 }
 
 impl zrml_neo_swaps::Config for Runtime {
-    type MultiCurrency = AssetManager;
+    type CombinatorialId = CombinatorialId;
+    type CombinatorialTokens = CombinatorialTokens;
+    type CombinatorialTokensUnsafe = CombinatorialTokens;
     type CompleteSetOperations = PredictionMarkets;
     type ExternalFees = ExternalFees<Runtime, FeeAccount>;
     type MarketCommons = MarketCommons;
+    type MultiCurrency = AssetManager;
+    type PoolId = MarketId;
     type RuntimeEvent = RuntimeEvent;
     type MaxLiquidityTreeDepth = MaxLiquidityTreeDepth;
+    type MaxSplits = MaxSplits;
     type MaxSwapFee = NeoMaxSwapFee;
     type PalletId = NeoSwapsPalletId;
     type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
@@ -262,6 +277,19 @@ impl zrml_authorized::Config for Runtime {
     type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
 }
 
+impl zrml_combinatorial_tokens::Config for Runtime {
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = NoopCombinatorialTokensBenchmarkHelper<Balance, MarketId>;
+    type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
+    type Fuel = Fuel;
+    type MarketCommons = MarketCommons;
+    type MultiCurrency = AssetManager;
+    type Payout = PredictionMarkets;
+    type RuntimeEvent = RuntimeEvent;
+    type PalletId = CombinatorialTokensPalletId;
+    type WeightInfo = zrml_combinatorial_tokens::weights::WeightInfo<Runtime>;
+}
+
 impl zrml_court::Config for Runtime {
     type AppealBond = AppealBond;
     type BlocksPerYear = BlocksPerYear;
@@ -304,7 +332,7 @@ impl frame_system::Config for Runtime {
     type Hashing = BlakeTwo256;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Nonce = u64;
-    type MaxConsumers = frame_support::traits::ConstU32<16>;
+    type MaxConsumers = ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
     type RuntimeOrigin = RuntimeOrigin;

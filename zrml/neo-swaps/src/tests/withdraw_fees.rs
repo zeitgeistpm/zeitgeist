@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -74,7 +74,7 @@ fn withdraw_fees_works() {
                 fees_remaining,
             );
             System::assert_last_event(
-                Event::FeesWithdrawn { who, market_id, amount: fees_withdrawn }.into(),
+                Event::FeesWithdrawn { who, pool_id: market_id, amount: fees_withdrawn }.into(),
             );
         };
         test_withdraw(ALICE, _1_4, _3_4);

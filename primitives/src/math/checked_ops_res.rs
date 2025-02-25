@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -64,6 +64,13 @@ where
     fn checked_rem_res(&self, other: &Self) -> Result<Self, DispatchError>;
 }
 
+pub trait CheckedIncRes
+where
+    Self: Sized,
+{
+    fn checked_inc_res(&self) -> Result<Self, DispatchError>;
+}
+
 impl<T> CheckedAddRes for T
 where
     T: CheckedAdd,
@@ -121,5 +128,15 @@ where
     #[inline]
     fn checked_rem_res(&self, other: &Self) -> Result<Self, DispatchError> {
         self.checked_rem(other).ok_or(DispatchError::Arithmetic(ArithmeticError::DivisionByZero))
+    }
+}
+
+impl<T> CheckedIncRes for T
+where
+    T: CheckedAdd + From<u8>,
+{
+    #[inline]
+    fn checked_inc_res(&self) -> Result<Self, DispatchError> {
+        self.checked_add(&1u8.into()).ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))
     }
 }

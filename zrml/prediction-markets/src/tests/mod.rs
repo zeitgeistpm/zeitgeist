@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -33,6 +33,7 @@ mod manually_close_market;
 mod on_initialize;
 mod on_market_close;
 mod on_resolution;
+mod payout_vector;
 mod redeem_shares;
 mod reject_early_close;
 mod reject_market;

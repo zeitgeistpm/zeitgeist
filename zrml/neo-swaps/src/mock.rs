@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -29,6 +29,7 @@ use core::marker::PhantomData;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
     traits::{Contains, Everything, NeverEnsureOrigin},
+    Blake2_256,
 };
 use frame_system::{mocking::MockBlock, EnsureRoot, EnsureSignedBy};
 use orml_traits::MultiCurrency;
@@ -36,8 +37,6 @@ use sp_runtime::{
     traits::{BlakeTwo256, ConstU32, Get, IdentityLookup, Zero},
     BuildStorage, DispatchResult, Perbill, Percent, SaturatedConversion,
 };
-#[cfg(feature = "parachain")]
-use zeitgeist_primitives::types::Asset;
 use zeitgeist_primitives::{
     constants::{
         base_multiples::*,
@@ -45,31 +44,38 @@ use zeitgeist_primitives::{
             AddOutcomePeriod, AggregationPeriod, AppealBond, AppealPeriod, AuthorizedPalletId,
             BlockHashCount, BlocksPerYear, CloseEarlyBlockPeriod, CloseEarlyDisputeBond,
             CloseEarlyProtectionBlockPeriod, CloseEarlyProtectionTimeFramePeriod,
-            CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CorrectionPeriod, CourtPalletId,
-            ExistentialDeposit, ExistentialDeposits, GdVotingPeriod, GetNativeCurrencyId,
-            GlobalDisputeLockId, GlobalDisputesPalletId, InflationPeriod, LockId, MaxAppeals,
-            MaxApprovals, MaxCourtParticipants, MaxCreatorFee, MaxDelegations, MaxDisputeDuration,
-            MaxDisputes, MaxEditReasonLen, MaxGlobalDisputeVotes, MaxGracePeriod,
-            MaxLiquidityTreeDepth, MaxLocks, MaxMarketLifetime, MaxOracleDuration, MaxOwners,
-            MaxRejectReasonLen, MaxReserves, MaxSelectedDraws, MaxYearlyInflation, MinCategories,
-            MinDisputeDuration, MinJurorStake, MinOracleDuration, MinOutcomeVoteAmount,
-            MinimumPeriod, NeoMaxSwapFee, NeoSwapsPalletId, OutsiderBond, PmPalletId,
-            RemoveKeysLimit, RequestInterval, TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE,
-            CENT,
+            CloseEarlyRequestBond, CloseEarlyTimeFramePeriod, CombinatorialTokensPalletId,
+            CorrectionPeriod, CourtPalletId, ExistentialDeposit, ExistentialDeposits,
+            GdVotingPeriod, GetNativeCurrencyId, GlobalDisputeLockId, GlobalDisputesPalletId,
+            InflationPeriod, LockId, MaxAppeals, MaxApprovals, MaxCourtParticipants, MaxCreatorFee,
+            MaxDelegations, MaxDisputeDuration, MaxDisputes, MaxEditReasonLen,
+            MaxGlobalDisputeVotes, MaxGracePeriod, MaxLiquidityTreeDepth, MaxLocks,
+            MaxMarketLifetime, MaxOracleDuration, MaxOwners, MaxRejectReasonLen, MaxReserves,
+            MaxSelectedDraws, MaxYearlyInflation, MinCategories, MinDisputeDuration, MinJurorStake,
+            MinOracleDuration, MinOutcomeVoteAmount, MinimumPeriod, NeoMaxSwapFee,
+            NeoSwapsPalletId, OutsiderBond, PmPalletId, RemoveKeysLimit, RequestInterval,
+            TreasuryPalletId, VotePeriod, VotingOutcomeFee, BASE, CENT,
         },
     },
     math::fixed::FixedMul,
     traits::{DeployPoolApi, DistributeFees},
     types::{
-        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CurrencyId, Hash, MarketId, Moment,
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CombinatorialId, CurrencyId, Hash,
+        MarketId, Moment,
     },
 };
+use zrml_combinatorial_tokens::types::{CryptographicIdManager, Fuel};
 use zrml_neo_swaps::BalanceOf;
+
 #[cfg(feature = "parachain")]
 use {
     orml_traits::asset_registry::AssetProcessor, parity_scale_codec::Encode,
-    sp_runtime::DispatchError, zeitgeist_primitives::types::CustomMetadata,
+    sp_runtime::DispatchError, zeitgeist_primitives::types::Asset,
+    zeitgeist_primitives::types::CustomMetadata,
 };
+
+#[cfg(feature = "runtime-benchmarks")]
+use zeitgeist_primitives::types::NoopCombinatorialTokensBenchmarkHelper;
 
 pub const ALICE: AccountIdTest = 0;
 #[allow(unused)]
@@ -95,6 +101,7 @@ ord_parameter_types! {
 }
 parameter_types! {
     pub storage NeoMinSwapFee: Balance = 0;
+    pub storage MaxSplits: u16 = 128;
 }
 parameter_types! {
     pub const AdvisoryBond: Balance = 0;
@@ -168,6 +175,7 @@ construct_runtime!(
         AssetRegistry: orml_asset_registry,
         Authorized: zrml_authorized,
         Balances: pallet_balances,
+        CombinatorialTokens: zrml_combinatorial_tokens,
         Court: zrml_court,
         MarketCommons: zrml_market_commons,
         PredictionMarkets: zrml_prediction_markets,
@@ -181,12 +189,17 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
-    type MultiCurrency = AssetManager;
+    type CombinatorialId = CombinatorialId;
+    type CombinatorialTokens = CombinatorialTokens;
+    type CombinatorialTokensUnsafe = CombinatorialTokens;
     type CompleteSetOperations = PredictionMarkets;
     type ExternalFees = ExternalFees<Runtime, FeeAccount>;
     type MarketCommons = MarketCommons;
+    type MultiCurrency = AssetManager;
+    type PoolId = MarketId;
     type RuntimeEvent = RuntimeEvent;
     type MaxLiquidityTreeDepth = MaxLiquidityTreeDepth;
+    type MaxSplits = MaxSplits;
     type MaxSwapFee = NeoMaxSwapFee;
     type PalletId = NeoSwapsPalletId;
     type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
@@ -249,6 +262,19 @@ impl zrml_authorized::Config for Runtime {
     type MarketCommons = MarketCommons;
     type PalletId = AuthorizedPalletId;
     type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
+}
+
+impl zrml_combinatorial_tokens::Config for Runtime {
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = NoopCombinatorialTokensBenchmarkHelper<Balance, MarketId>;
+    type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
+    type Fuel = Fuel;
+    type MarketCommons = MarketCommons;
+    type MultiCurrency = AssetManager;
+    type Payout = PredictionMarkets;
+    type RuntimeEvent = RuntimeEvent;
+    type PalletId = CombinatorialTokensPalletId;
+    type WeightInfo = zrml_combinatorial_tokens::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_court::Config for Runtime {

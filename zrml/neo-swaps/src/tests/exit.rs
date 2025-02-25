@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -87,7 +87,7 @@ fn exit_works(
         System::assert_last_event(
             Event::ExitExecuted {
                 who: ALICE,
-                market_id,
+                pool_id: market_id,
                 pool_shares_amount,
                 amounts_out,
                 new_liquidity_parameter,
@@ -138,7 +138,7 @@ fn last_exit_destroys_pool(market_status: MarketStatus, amounts_out: Vec<Balance
         assert!(!Pools::<Runtime>::contains_key(market_id));
         assert_balances!(pool_account, outcomes, [0, 0]);
         System::assert_last_event(
-            Event::PoolDestroyed { who: ALICE, market_id, amounts_out }.into(),
+            Event::PoolDestroyed { who: ALICE, pool_id: market_id, amounts_out }.into(),
         );
     });
 }

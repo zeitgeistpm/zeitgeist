@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -15,10 +15,19 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+mod decision_market_benchmark_helper;
+mod decision_market_oracle;
+mod decision_market_oracle_scoreboard;
 mod fee_distribution;
 mod max_assets;
 mod pool;
+mod pool_type;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub use decision_market_benchmark_helper::*;
+pub use decision_market_oracle::*;
+pub use decision_market_oracle_scoreboard::*;
 pub(crate) use fee_distribution::*;
 pub(crate) use max_assets::*;
 pub(crate) use pool::*;
+pub(crate) use pool_type::*;

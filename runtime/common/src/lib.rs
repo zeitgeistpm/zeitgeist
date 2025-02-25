@@ -72,11 +72,9 @@ macro_rules! decl_common_types {
             parameter_types,
             storage::child,
             traits::{Currency, Get, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced},
-            BoundedVec, Twox64Concat,
+            Blake2_256, BoundedVec, Twox64Concat,
         };
         use frame_system::EnsureSigned;
-        #[cfg(feature = "try-runtime")]
-        use frame_try_runtime::{TryStateSelect, UpgradeCheckSelect};
         use orml_traits::MultiCurrency;
         use pallet_balances::CreditOf;
         use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
@@ -86,12 +84,25 @@ macro_rules! decl_common_types {
             generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
         };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
+        use zrml_combinatorial_tokens::types::{CryptographicIdManager, Fuel};
+        use zrml_neo_swaps::types::DecisionMarketOracle;
+
+        #[cfg(feature = "try-runtime")]
+        use frame_try_runtime::{TryStateSelect, UpgradeCheckSelect};
+
+        #[cfg(feature = "runtime-benchmarks")]
+        use zrml_neo_swaps::types::DecisionMarketBenchmarkHelper;
+
+        #[cfg(feature = "runtime-benchmarks")]
+        use zrml_prediction_markets::types::PredictionMarketsCombinatorialTokensBenchmarkHelper;
+
+        use zrml_neo_swaps::migration::MigratePoolStorageItems;
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = ();
+        type Migrations = (MigratePoolStorageItems<Runtime, RemovableMarketIds>);
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -346,6 +357,8 @@ macro_rules! create_runtime {
                 Orderbook: zrml_orderbook::{Call, Event<T>, Pallet, Storage} = 61,
                 Parimutuel: zrml_parimutuel::{Call, Event<T>, Pallet, Storage} = 62,
                 HybridRouter: zrml_hybrid_router::{Call, Event<T>, Pallet, Storage} = 64,
+                CombinatorialTokens: zrml_combinatorial_tokens::{Call, Event<T>, Pallet, Storage} = 65,
+                Futarchy: zrml_futarchy::{Call, Event<T>, Pallet, Storage} = 66,
 
                 $($additional_pallets)*
             }
@@ -784,7 +797,7 @@ macro_rules! impl_config_traits {
             type PalletsOrigin = OriginCaller;
             type MaxVotes = MaxVotes;
             type WeightInfo = weights::pallet_democracy::WeightInfo<Runtime>;
-            type MaxProposals = MaxProposals;
+            type MaxProposals = DemocracyMaxProposals;
             type Preimages = Preimage;
             type MaxBlacklisted = ConstU32<100>;
             type MaxDeposits = ConstU32<100>;
@@ -1125,6 +1138,19 @@ macro_rules! impl_config_traits {
             type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
         }
 
+        impl zrml_combinatorial_tokens::Config for Runtime {
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = PredictionMarketsCombinatorialTokensBenchmarkHelper<Runtime>;
+            type CombinatorialIdManager = CryptographicIdManager<MarketId, Blake2_256>;
+            type Fuel = Fuel;
+            type MarketCommons = MarketCommons;
+            type MultiCurrency = AssetManager;
+            type Payout = PredictionMarkets;
+            type RuntimeEvent = RuntimeEvent;
+            type PalletId = CombinatorialTokensPalletId;
+            type WeightInfo = zrml_combinatorial_tokens::weights::WeightInfo<Runtime>;
+        }
+
         impl zrml_court::Config for Runtime {
             type AppealBond = AppealBond;
             type BlocksPerYear = BlocksPerYear;
@@ -1150,6 +1176,17 @@ macro_rules! impl_config_traits {
             type Slash = Treasury;
             type TreasuryPalletId = TreasuryPalletId;
             type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
+        }
+
+        impl zrml_futarchy::Config for Runtime {
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = DecisionMarketBenchmarkHelper<Runtime>;
+            type MaxProposals = FutarchyMaxProposals;
+            type MinDuration = MinDuration;
+            type Oracle = DecisionMarketOracle<Runtime>;
+            type RuntimeEvent = RuntimeEvent;
+            type Scheduler = Scheduler;
+            type WeightInfo = zrml_futarchy::weights::WeightInfo<Runtime>;
         }
 
         impl zrml_market_commons::Config for Runtime {
@@ -1245,13 +1282,18 @@ macro_rules! impl_config_traits {
         common_runtime::impl_market_creator_fees!();
 
         impl zrml_neo_swaps::Config for Runtime {
+            type CombinatorialId = CombinatorialId;
+            type CombinatorialTokens = CombinatorialTokens;
+            type CombinatorialTokensUnsafe = CombinatorialTokens;
             type CompleteSetOperations = PredictionMarkets;
             type ExternalFees = MarketCreatorFee;
             type MarketCommons = MarketCommons;
             type MultiCurrency = AssetManager;
+            type PoolId = MarketId;
             type RuntimeEvent = RuntimeEvent;
             type WeightInfo = zrml_neo_swaps::weights::WeightInfo<Runtime>;
             type MaxLiquidityTreeDepth = MaxLiquidityTreeDepth;
+            type MaxSplits = MaxSplits;
             type MaxSwapFee = NeoSwapsMaxSwapFee;
             type PalletId = NeoSwapsPalletId;
         }
@@ -1399,7 +1441,9 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, pallet_vesting, Vesting);
                     list_benchmark!(list, extra, zrml_swaps, Swaps);
                     list_benchmark!(list, extra, zrml_authorized, Authorized);
+                    list_benchmark!(list, extra, zrml_combinatorial_tokens, CombinatorialTokens);
                     list_benchmark!(list, extra, zrml_court, Court);
+                    list_benchmark!(list, extra, zrml_futarchy, Futarchy);
                     list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
                     list_benchmark!(list, extra, zrml_orderbook, Orderbook);
                     list_benchmark!(list, extra, zrml_parimutuel, Parimutuel);
@@ -1487,7 +1531,9 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, pallet_vesting, Vesting);
                     add_benchmark!(params, batches, zrml_swaps, Swaps);
                     add_benchmark!(params, batches, zrml_authorized, Authorized);
+                    add_benchmark!(params, batches, zrml_combinatorial_tokens, CombinatorialTokens);
                     add_benchmark!(params, batches, zrml_court, Court);
+                    add_benchmark!(params, batches, zrml_futarchy, Futarchy);
                     add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
                     add_benchmark!(params, batches, zrml_orderbook, Orderbook);
                     add_benchmark!(params, batches, zrml_parimutuel, Parimutuel);
@@ -2058,6 +2104,33 @@ macro_rules! create_common_tests {
         mod common_tests {
             common_runtime::fee_tests!();
 
+            mod utility {
+                use crate::{Balances, BlockNumber, Futarchy, Preimage, Scheduler, System};
+                use frame_support::traits::Hooks;
+
+                // Beware! This only advances certain pallets.
+                pub(crate) fn run_to_block(to: BlockNumber) {
+                    while System::block_number() < to {
+                        let now = System::block_number();
+
+                        Futarchy::on_finalize(now);
+                        Balances::on_finalize(now);
+                        Preimage::on_finalize(now);
+                        Scheduler::on_finalize(now);
+                        System::on_finalize(now);
+
+                        let next = now + 1;
+                        System::set_block_number(next);
+
+                        System::on_initialize(next);
+                        Scheduler::on_initialize(next);
+                        Preimage::on_initialize(next);
+                        Balances::on_initialize(next);
+                        Futarchy::on_initialize(next);
+                    }
+                }
+            }
+
             mod dust_removal {
                 use crate::*;
                 use frame_support::PalletId;
@@ -2094,6 +2167,136 @@ macro_rules! create_common_tests {
                     t.execute_with(|| {
                         let not_whitelisted = AccountId::from([0u8; 32]);
                         assert!(!DustRemovalWhitelist::contains(&not_whitelisted))
+                    });
+                }
+            }
+
+            mod futarchy {
+                use crate::{
+                    common_tests::utility, AccountId, Asset, AssetManager, Balance, Balances,
+                    Futarchy, MarketId, NeoSwaps, PredictionMarkets, Preimage, Runtime,
+                    RuntimeCall, RuntimeOrigin, Scheduler, System,
+                };
+                use frame_support::{assert_ok, dispatch::RawOrigin, traits::StorePreimage};
+                use orml_traits::MultiCurrency;
+                use sp_runtime::{
+                    traits::{Hash, Zero},
+                    BuildStorage, Perbill,
+                };
+                use zeitgeist_primitives::{
+                    math::fixed::{BaseProvider, ZeitgeistBase},
+                    traits::MarketBuilderTrait,
+                    types::{
+                        Deadlines, MarketCreation, MarketPeriod, MarketType, MultiHash, ScoringRule,
+                    },
+                };
+                use zrml_futarchy::types::Proposal;
+                use zrml_market_commons::types::MarketBuilder;
+                use zrml_neo_swaps::types::{DecisionMarketOracle, DecisionMarketOracleScoreboard};
+
+                #[test]
+                fn futarchy_schedules_and_executes_call() {
+                    let mut t: sp_io::TestExternalities =
+                        frame_system::GenesisConfig::<Runtime>::default()
+                            .build_storage()
+                            .unwrap()
+                            .into();
+                    t.execute_with(|| {
+                        let alice = AccountId::from([0u8; 32]);
+
+                        let collateral: Asset<MarketId> = Asset::Ztg;
+                        let one: Balance = ZeitgeistBase::get().unwrap();
+                        let total_cost: Balance = one.saturating_mul(100_000u128);
+                        assert_ok!(AssetManager::deposit(collateral, &alice, total_cost));
+
+                        let mut metadata = [0x01; 50];
+                        metadata[0] = 0x15;
+                        metadata[1] = 0x30;
+                        let multihash = MultiHash::Sha3_384(metadata);
+
+                        let oracle_duration =
+                            <Runtime as zrml_prediction_markets::Config>::MinOracleDuration::get();
+                        let deadlines = Deadlines {
+                            grace_period: Default::default(),
+                            oracle_duration,
+                            dispute_duration: Zero::zero(),
+                        };
+                        assert_ok!(PredictionMarkets::create_market(
+                            RuntimeOrigin::signed(alice.clone()),
+                            collateral,
+                            Perbill::zero(),
+                            alice.clone(),
+                            MarketPeriod::Block(0..999),
+                            deadlines,
+                            multihash,
+                            MarketCreation::Permissionless,
+                            MarketType::Categorical(2),
+                            None,
+                            ScoringRule::AmmCdaHybrid,
+                        ));
+
+                        let market_id = 0;
+                        let amount = one * 100u128;
+                        assert_ok!(PredictionMarkets::buy_complete_set(
+                            RuntimeOrigin::signed(alice.clone()),
+                            market_id,
+                            amount,
+                        ));
+
+                        assert_ok!(NeoSwaps::deploy_pool(
+                            RuntimeOrigin::signed(alice.clone()),
+                            market_id,
+                            amount,
+                            vec![one / 10u128 * 9u128, one / 10u128],
+                            one / 100,
+                        ));
+
+                        let duration = <Runtime as zrml_futarchy::Config>::MinDuration::get();
+
+                        // Wrap `remark_with_event` call in `dispatch_as` so that it doesn't error
+                        // with `BadOrigin`.
+                        let bob = AccountId::from([0x01; 32]);
+                        let remark = b"hullo".to_vec();
+                        let remark_dispatched_as = pallet_utility::Call::<Runtime>::dispatch_as {
+                            as_origin: Box::new(RawOrigin::Signed(bob.clone()).into()),
+                            call: Box::new(
+                                frame_system::Call::remark_with_event { remark: remark.clone() }
+                                    .into(),
+                            ),
+                        };
+                        let call =
+                            Preimage::bound(RuntimeCall::from(remark_dispatched_as)).unwrap();
+                        let scoreboard =
+                            DecisionMarketOracleScoreboard::new(40_000, 10_000, one / 7, one);
+                        let oracle = DecisionMarketOracle::new(
+                            market_id,
+                            Asset::CategoricalOutcome(market_id, 0),
+                            Asset::CategoricalOutcome(market_id, 1),
+                            scoreboard,
+                        );
+                        let when = duration + 10;
+                        let proposal = Proposal { when, call, oracle };
+
+                        assert_ok!(Futarchy::submit_proposal(
+                            RawOrigin::Root.into(),
+                            duration,
+                            proposal.clone()
+                        ));
+
+                        utility::run_to_block(when);
+
+                        let hash = <Runtime as frame_system::Config>::Hashing::hash(&remark);
+                        System::assert_has_event(
+                            frame_system::Event::<Runtime>::Remarked { sender: bob, hash }.into(),
+                        );
+                        System::assert_has_event(
+                            pallet_scheduler::Event::<Runtime>::Dispatched {
+                                task: (when, 0),
+                                id: None,
+                                result: Ok(()),
+                            }
+                            .into(),
+                        );
                     });
                 }
             }

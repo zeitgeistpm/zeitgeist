@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -20,11 +20,11 @@
 use crate::{
     assert_liquidity_tree_state, create_b_tree_map,
     liquidity_tree::{
-        traits::liquidity_tree_helper::LiquidityTreeHelper,
+        traits::LiquidityTreeHelper,
         types::{LiquidityTreeError, Node},
     },
     mock::Runtime,
-    traits::liquidity_shares_manager::LiquiditySharesManager,
+    traits::LiquiditySharesManager,
     LiquidityTreeOf,
 };
 use alloc::collections::BTreeMap;

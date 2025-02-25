@@ -109,7 +109,9 @@ xcm-executor = { workspace = true, optional = true }
 common-runtime = { workspace = true }
 zeitgeist-primitives = { workspace = true }
 zrml-authorized = { workspace = true }
+zrml-combinatorial-tokens = { workspace = true }
 zrml-court = { workspace = true }
+zrml-futarchy = { workspace = true }
 zrml-global-disputes = { workspace = true, optional = true }
 zrml-hybrid-router = { workspace = true }
 zrml-market-commons = { workspace = true }
@@ -214,7 +216,9 @@ runtime-benchmarks = [
     "sp-runtime/runtime-benchmarks",
     "xcm-builder?/runtime-benchmarks",
     "zrml-authorized/runtime-benchmarks",
+    "zrml-combinatorial-tokens/runtime-benchmarks",
     "zrml-court/runtime-benchmarks",
+    "zrml-futarchy/runtime-benchmarks",
     "zrml-hybrid-router/runtime-benchmarks",
     "zrml-neo-swaps/runtime-benchmarks",
     "zrml-parimutuel/runtime-benchmarks",
@@ -327,7 +331,9 @@ std = [
 
     "zeitgeist-primitives/std",
     "zrml-authorized/std",
+    "zrml-combinatorial-tokens/std",
     "zrml-court/std",
+    "zrml-futarchy/std",
     "zrml-hybrid-router/std",
     "zrml-market-commons/std",
     "zrml-neo-swaps/std",
@@ -381,7 +387,9 @@ try-runtime = [
 
     # Zeitgeist runtime pallets
     "zrml-authorized/try-runtime",
+    "zrml-combinatorial-tokens/try-runtime",
     "zrml-court/try-runtime",
+    "zrml-futarchy/try-runtime",
     "zrml-hybrid-router/try-runtime",
     "zrml-market-commons/try-runtime",
     "zrml-neo-swaps/try-runtime",

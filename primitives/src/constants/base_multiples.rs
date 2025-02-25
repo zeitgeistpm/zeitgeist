@@ -1,4 +1,4 @@
-// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2024-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -39,9 +39,13 @@ pub const _36: u128 = 36 * _1;
 pub const _40: u128 = 40 * _1;
 pub const _70: u128 = 70 * _1;
 pub const _80: u128 = 80 * _1;
+pub const _99: u128 = 99 * _1;
 pub const _100: u128 = 100 * _1;
 pub const _200: u128 = 200 * _1;
 pub const _101: u128 = 101 * _1;
+pub const _300: u128 = 300 * _1;
+pub const _321: u128 = 321 * _1;
+pub const _400: u128 = 400 * _1;
 pub const _444: u128 = 444 * _1;
 pub const _500: u128 = 500 * _1;
 pub const _777: u128 = 777 * _1;
@@ -59,6 +63,8 @@ pub const _1_5: u128 = _1 / 5;
 
 pub const _1_6: u128 = _1 / 6;
 pub const _5_6: u128 = _5 / 6;
+
+pub const _1_7: u128 = _1 / 7;
 
 pub const _1_10: u128 = _1 / 10;
 pub const _2_10: u128 = _2 / 10;

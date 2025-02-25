@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -31,6 +31,11 @@ use sp_arithmetic::Perbill;
 parameter_types! {
     pub const AuthorizedPalletId: PalletId = PalletId(*b"zge/atzd");
     pub const CorrectionPeriod: BlockNumber = 4;
+}
+
+// CombinatorialTokens
+parameter_types! {
+    pub const CombinatorialTokensPalletId: PalletId = PalletId(*b"zge/coto");
 }
 
 // Court

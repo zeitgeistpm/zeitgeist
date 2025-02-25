@@ -1,4 +1,4 @@
-// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2024-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -71,7 +71,7 @@ fn sell_to_amm_and_then_fill_specified_order() {
         System::assert_has_event(
             NeoSwapsEvent::<Runtime>::SellExecuted {
                 who: ALICE,
-                market_id,
+                pool_id: market_id,
                 asset_in: asset,
                 amount_in: amm_amount_in,
                 amount_out: 2775447716,
@@ -445,7 +445,7 @@ fn sell_to_amm() {
         System::assert_has_event(
             NeoSwapsEvent::<Runtime>::SellExecuted {
                 who: ALICE,
-                market_id,
+                pool_id: market_id,
                 asset_in: asset,
                 amount_in: 20000000000,
                 amount_out: 9460629504,
@@ -556,7 +556,7 @@ fn sell_to_amm_but_low_amount() {
         System::assert_has_event(
             NeoSwapsEvent::<Runtime>::SellExecuted {
                 who: ALICE,
-                market_id,
+                pool_id: market_id,
                 asset_in: asset,
                 amount_in: 58,
                 amount_out: 29,
@@ -672,7 +672,7 @@ fn sell_to_amm_only() {
         System::assert_has_event(
             NeoSwapsEvent::<Runtime>::SellExecuted {
                 who: ALICE,
-                market_id,
+                pool_id: market_id,
                 asset_in: asset,
                 amount_in: 20000000000,
                 amount_out: 9460629504,

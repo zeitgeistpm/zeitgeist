@@ -16,20 +16,24 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::traits::CombinatorialTokensBenchmarkHelper;
 pub use crate::{
     asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, proxy_type::*,
     serde_wrapper::*,
 };
-#[cfg(feature = "arbitrary")]
-use arbitrary::{Arbitrary, Result, Unstructured};
-use frame_support::weights::Weight;
+use alloc::vec::Vec;
+use core::marker::PhantomData;
+use frame_support::{dispatch::PostDispatchInfo, weights::Weight};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
     generic,
     traits::{BlakeTwo256, IdentifyAccount, Verify},
-    MultiSignature, OpaqueExtrinsic,
+    DispatchResult, MultiSignature, OpaqueExtrinsic,
 };
+
+#[cfg(feature = "arbitrary")]
+use arbitrary::{Arbitrary, Result, Unstructured};
 
 /// Signed counter-part of Balance
 pub type Amount = i128;
@@ -53,6 +57,9 @@ pub type BlockNumber = u64;
 
 /// The index of the category for a `CategoricalOutcome` asset.
 pub type CategoryIndex = u16;
+
+/// The type used to identify combinatorial outcomes.
+pub type CombinatorialId = [u8; 32];
 
 /// Multihash for digest sizes up to 384 bit.
 /// The multicodec encoding the hash algorithm uses only 1 byte,
@@ -170,4 +177,28 @@ pub struct XcmMetadata {
     ///
     /// Should be updated regularly.
     pub fee_factor: Option<Balance>,
+}
+
+pub struct NoopCombinatorialTokensBenchmarkHelper<Balance, MarketId>(
+    PhantomData<(Balance, MarketId)>,
+);
+
+impl<Balance, MarketId> CombinatorialTokensBenchmarkHelper
+    for NoopCombinatorialTokensBenchmarkHelper<Balance, MarketId>
+{
+    type Balance = Balance;
+    type MarketId = MarketId;
+
+    fn setup_payout_vector(
+        _market_id: Self::MarketId,
+        _payout: Option<Vec<Self::Balance>>,
+    ) -> DispatchResult {
+        Ok(())
+    }
+}
+
+pub struct SplitPositionDispatchInfo<CombinatorialId, MarketId> {
+    pub collection_ids: Vec<CombinatorialId>,
+    pub position_ids: Vec<Asset<MarketId>>,
+    pub post_dispatch_info: PostDispatchInfo,
 }

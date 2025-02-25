@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -37,7 +37,7 @@ use sp_runtime::{
 
 // Abstraction of the market type, which is not a part of `MarketCommonsPalletApi` because Rust
 // doesn't support type aliases in traits.
-type MarketOf<T> = Market<
+pub type MarketOf<T> = Market<
     <T as MarketCommonsPalletApi>::AccountId,
     <T as MarketCommonsPalletApi>::Balance,
     <T as MarketCommonsPalletApi>::BlockNumber,

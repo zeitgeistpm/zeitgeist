@@ -10,6 +10,7 @@ zeitgeist-primitives = { workspace = true }
 zrml-market-commons = { workspace = true }
 
 cfg-if = { workspace = true, optional = true }
+env_logger = { workspace = true, optional = true }
 orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
@@ -23,6 +24,7 @@ sp-io = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
 zrml-authorized = { workspace = true, optional = true }
+zrml-combinatorial-tokens = { workspace = true, optional = true }
 zrml-court = { workspace = true, optional = true }
 zrml-global-disputes = { workspace = true, optional = true }
 zrml-neo-swaps = { workspace = true, optional = true }
@@ -30,7 +32,6 @@ zrml-orderbook = { workspace = true, optional = true }
 zrml-prediction-markets = { workspace = true, optional = true }
 
 [dev-dependencies]
-env_logger = { workspace = true }
 test-case = { workspace = true }
 zrml-hybrid-router = { workspace = true, features = ["mock"] }
 
@@ -38,6 +39,7 @@ zrml-hybrid-router = { workspace = true, features = ["mock"] }
 default = ["std"]
 mock = [
     "cfg-if",
+    "env_logger/default",
     "orml-asset-registry/default",
     "orml-currencies/default",
     "orml-tokens/default",
@@ -50,6 +52,7 @@ mock = [
     "sp-io/default",
     "xcm/default",
     "zeitgeist-primitives/mock",
+    "zrml-combinatorial-tokens/default",
     "zrml-market-commons/default",
     "zrml-neo-swaps/default",
     "zrml-orderbook/default",
@@ -68,6 +71,7 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
+    "zrml-combinatorial-tokens/runtime-benchmarks",
     "zrml-prediction-markets/runtime-benchmarks",
 ]
 std = [

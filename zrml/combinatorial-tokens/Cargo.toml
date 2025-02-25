@@ -1,0 +1,64 @@
+[dependencies]
+ark-bn254 = { workspace = true }
+ark-ff = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+orml-traits = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
+scale-info = { workspace = true, features = ["derive"] }
+sp-runtime = { workspace = true }
+zeitgeist-primitives = { workspace = true }
+
+# mock
+
+env_logger = { workspace = true, optional = true }
+orml-currencies = { workspace = true, optional = true }
+orml-tokens = { workspace = true, optional = true }
+pallet-balances = { workspace = true, optional = true }
+pallet-timestamp = { workspace = true, optional = true }
+sp-io = { workspace = true, optional = true }
+zrml-market-commons = { workspace = true, optional = true }
+
+[dev-dependencies]
+rstest = { workspace = true }
+test-case = { workspace = true }
+zrml-combinatorial-tokens = { workspace = true, features = ["default", "mock"] }
+
+[features]
+default = ["std"]
+mock = [
+    "env_logger/default",
+    "orml-currencies/default",
+    "orml-tokens/default",
+    "sp-io/default",
+    "pallet-balances/default",
+    "pallet-timestamp/default",
+    "zrml-market-commons/default",
+    "zeitgeist-primitives/mock",
+]
+runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+]
+std = [
+    "frame-benchmarking?/std",
+    "frame-support/std",
+    "frame-system/std",
+    "ark-bn254/std",
+    "ark-ff/std",
+    "orml-traits/std",
+    "parity-scale-codec/std",
+    "sp-runtime/std",
+    "zeitgeist-primitives/std",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+]
+
+[package]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
+edition.workspace = true
+name = "zrml-combinatorial-tokens"
+version = "0.5.5"

@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -15,6 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-pub(crate) mod liquidity_tree_helper;
+mod liquidity_tree_helper;
 
 pub(crate) use liquidity_tree_helper::*;

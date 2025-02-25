@@ -1,0 +1,26 @@
+[[bin]]
+doc = false
+name = "submit_proposal"
+path = "submit_proposal.rs"
+test = false
+
+[dependencies]
+arbitrary = { workspace = true, features = ["derive"] }
+frame-support = { workspace = true, features = ["default"] }
+frame-system = { workspace = true }
+libfuzzer-sys = { workspace = true }
+orml-traits = { workspace = true, features = ["default"] }
+rand = { workspace = true, features = ["default"] }
+sp-runtime = { workspace = true, features = ["default"] }
+zeitgeist-primitives = { workspace = true, features = ["default", "mock"] }
+zrml-futarchy = { workspace = true, features = ["default", "fuzzing", "mock"] }
+
+[package]
+authors = ["Forecasting Technologies Ltd"]
+edition.workspace = true
+name = "zrml-futarchy-fuzz"
+publish = false
+version = "0.5.5"
+
+[package.metadata]
+cargo-fuzz = true

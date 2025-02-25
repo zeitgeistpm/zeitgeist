@@ -1,4 +1,4 @@
-// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2024-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -20,9 +20,7 @@
 
 extern crate alloc;
 
-#[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-#[cfg(test)]
 mod mock;
 mod tests;
 mod types;

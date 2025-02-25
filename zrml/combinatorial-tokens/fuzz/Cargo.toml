@@ -1,0 +1,38 @@
+[[bin]]
+doc = false
+name = "split_position"
+path = "split_position.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "merge_position"
+path = "merge_position.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "redeem_position"
+path = "redeem_position.rs"
+test = false
+
+[dependencies]
+arbitrary = { workspace = true, features = ["derive"] }
+frame-support = { workspace = true, features = ["default"] }
+frame-system = { workspace = true }
+libfuzzer-sys = { workspace = true }
+orml-traits = { workspace = true, features = ["default"] }
+rand = { workspace = true, features = ["default"] }
+sp-runtime = { workspace = true, features = ["default"] }
+zeitgeist-primitives = { workspace = true, features = ["default", "mock"] }
+zrml-combinatorial-tokens = { workspace = true, features = ["default", "mock"] }
+
+[package]
+authors = ["Forecasting Technologies Ltd"]
+edition.workspace = true
+name = "zrml-combinatorial-tokens-fuzz"
+publish = false
+version = "0.5.5"
+
+[package.metadata]
+cargo-fuzz = true

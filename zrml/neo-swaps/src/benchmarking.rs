@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -20,7 +20,8 @@
 use super::*;
 use crate::{
     liquidity_tree::{traits::LiquidityTreeHelper, types::LiquidityTree},
-    traits::{liquidity_shares_manager::LiquiditySharesManager, pool_operations::PoolOperations},
+    traits::{LiquiditySharesManager, PoolOperations, PoolStorage},
+    types::{DecisionMarketOracle, DecisionMarketOracleScoreboard},
     AssetOf, BalanceOf, MarketIdOf, Pallet as NeoSwaps, Pools, MIN_SPOT_PRICE,
 };
 use alloc::{vec, vec::Vec};
@@ -39,7 +40,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::{base_multiples::*, CENT},
     math::fixed::{BaseProvider, FixedDiv, FixedMul, ZeitgeistBase},
-    traits::CompleteSetOperationsApi,
+    traits::{CombinatorialTokensFuel, CompleteSetOperationsApi, FutarchyOracle},
     types::{Asset, Market, MarketCreation, MarketPeriod, MarketStatus, MarketType, ScoringRule},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -490,6 +491,228 @@ mod benchmarks {
             create_spot_prices::<T>(asset_count),
             CENT.saturated_into(),
         );
+    }
+
+    // Remark on benchmarks for combinatorial pools: Combinatorial buying, selling and deploying
+    // pools depends on the number of assets as well as the number of markets. But these parameters
+    // depend on each other (the more markets, the more assets). The benchmark parameter is the
+    // market count and the logarithm of the number of assets. This maximizes the number of markets
+    // per asset.
+
+    #[benchmark]
+    fn combo_buy(n: Linear<1, 7>) {
+        let market_count = n;
+
+        let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = 2u16.pow(market_count);
+
+        let mut market_ids = vec![];
+        for _ in 0..market_count {
+            let market_id = create_market::<T>(alice.clone(), base_asset, 2);
+            market_ids.push(market_id);
+        }
+
+        let amount = (100 * _100).saturated_into();
+        let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));
+        assert_ok!(NeoSwaps::<T>::deploy_combinatorial_pool(
+            RawOrigin::Signed(alice).into(),
+            asset_count,
+            market_ids,
+            amount,
+            create_spot_prices::<T>(asset_count),
+            CENT.saturated_into(),
+            FuelOf::<T>::from_total(16),
+        ));
+
+        let pool_id = 0u8.into();
+        let pool = <Pallet<T> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
+
+        let amount_in = _1.saturated_into();
+        let min_amount_out = Zero::zero();
+
+        // Work is maximized by having no keep indicies.
+        let middle = asset_count / 2;
+        let buy_arg = (0..middle).map(|i| assets[i as usize]).collect::<Vec<_>>();
+        let sell_arg = (middle..asset_count).map(|i| assets[i as usize]).collect::<Vec<_>>();
+
+        let helper = BenchmarkHelper::<T>::new();
+        let bob = helper.accounts().next().unwrap();
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &bob, amount_in));
+
+        #[extrinsic_call]
+        _(
+            RawOrigin::Signed(bob),
+            pool_id,
+            asset_count,
+            buy_arg,
+            sell_arg,
+            amount_in,
+            min_amount_out,
+        );
+    }
+
+    #[benchmark]
+    fn combo_sell(n: Linear<1, 7>) {
+        let market_count = n;
+
+        let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = 2u16.pow(market_count);
+
+        let mut market_ids = vec![];
+        for _ in 0..market_count {
+            let market_id = create_market::<T>(alice.clone(), base_asset, 2);
+            market_ids.push(market_id);
+        }
+
+        let amount = (100 * _100).saturated_into();
+        let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));
+        assert_ok!(NeoSwaps::<T>::deploy_combinatorial_pool(
+            RawOrigin::Signed(alice).into(),
+            asset_count,
+            market_ids,
+            amount,
+            create_spot_prices::<T>(asset_count),
+            CENT.saturated_into(),
+            FuelOf::<T>::from_total(16),
+        ));
+
+        let pool_id = 0u8.into();
+        let pool = <Pallet<T> as PoolStorage>::get(pool_id).unwrap();
+        let assets = pool.assets();
+
+        // Work is maximized by having as few sell indices as possible.
+        let buy_arg = vec![assets[0]];
+        let sell_arg = vec![assets[1]];
+        let keep_arg = (2..asset_count).map(|i| assets[i as usize]).collect::<Vec<_>>();
+
+        let amount_buy: BalanceOf<T> = (100 * _2).saturated_into();
+        let amount_keep = if keep_arg.is_empty() {
+            // If n = 1;
+            Zero::zero()
+        } else {
+            _1.saturated_into()
+        };
+        let min_amount_out = Zero::zero();
+
+        let helper = BenchmarkHelper::<T>::new();
+        let bob = helper.accounts().next().unwrap();
+
+        // We don't care about being precise here and just deposit a huge bunch of tokens for Bob.
+        for &asset in assets.iter() {
+            let amount_for_bob = amount_buy;
+            assert_ok!(T::MultiCurrency::deposit(asset, &bob, amount_for_bob));
+        }
+
+        #[extrinsic_call]
+        _(
+            RawOrigin::Signed(bob),
+            pool_id,
+            asset_count,
+            buy_arg,
+            keep_arg,
+            sell_arg,
+            amount_buy,
+            amount_keep,
+            min_amount_out,
+        );
+    }
+
+    #[benchmark]
+    fn deploy_combinatorial_pool(n: Linear<1, 7>, m: Linear<32, 64>) {
+        let market_count = n;
+        let total = m;
+
+        let alice: T::AccountId = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = 2u16.pow(market_count);
+
+        let mut market_ids = vec![];
+        for _ in 0..market_count {
+            let market_id = create_market::<T>(alice.clone(), base_asset, 2);
+            market_ids.push(market_id);
+        }
+
+        let amount = (100 * _100).saturated_into();
+        let total_cost = amount + T::MultiCurrency::minimum_balance(base_asset);
+        assert_ok!(T::MultiCurrency::deposit(base_asset, &alice, total_cost));
+
+        let spot_prices = create_spot_prices::<T>(asset_count);
+        let swap_fee = CENT.saturated_into();
+
+        #[extrinsic_call]
+        _(
+            RawOrigin::Signed(alice),
+            asset_count,
+            market_ids,
+            amount,
+            spot_prices,
+            swap_fee,
+            FuelOf::<T>::from_total(total),
+        );
+    }
+
+    #[benchmark]
+    fn decision_market_oracle_evaluate() {
+        let alice = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = 2;
+        let market_id = create_market_and_deploy_pool::<T>(
+            alice,
+            base_asset,
+            asset_count,
+            (100 * _100).saturated_into(),
+        );
+
+        let pool = Pools::<T>::get(market_id).unwrap();
+        let assets = pool.assets();
+
+        let scoreboard = DecisionMarketOracleScoreboard::<T>::new(
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+        );
+        let oracle = DecisionMarketOracle::<T>::new(market_id, assets[0], assets[1], scoreboard);
+
+        #[block]
+        {
+            let _ = oracle.evaluate();
+        }
+    }
+
+    #[benchmark]
+    fn decision_market_oracle_update() {
+        let alice = whitelisted_caller();
+        let base_asset = Asset::Ztg;
+        let asset_count = 2;
+        let market_id = create_market_and_deploy_pool::<T>(
+            alice,
+            base_asset,
+            asset_count,
+            (100 * _100).saturated_into(),
+        );
+
+        let pool = Pools::<T>::get(market_id).unwrap();
+        let assets = pool.assets();
+
+        let scoreboard = DecisionMarketOracleScoreboard::<T>::new(
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+            Zero::zero(),
+        );
+        let mut oracle =
+            DecisionMarketOracle::<T>::new(market_id, assets[0], assets[1], scoreboard);
+
+        #[block]
+        {
+            let _ = oracle.update(1u8.into());
+        }
     }
 
     impl_benchmark_test_suite!(

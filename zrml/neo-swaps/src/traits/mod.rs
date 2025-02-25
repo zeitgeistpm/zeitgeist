@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -15,8 +15,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-pub(crate) mod liquidity_shares_manager;
-pub(crate) mod pool_operations;
+mod liquidity_shares_manager;
+mod pool_operations;
+mod pool_storage;
 
 pub(crate) use liquidity_shares_manager::LiquiditySharesManager;
 pub(crate) use pool_operations::PoolOperations;
+pub(crate) use pool_storage::PoolStorage;

@@ -31,6 +31,7 @@ sp-io = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
 zrml-authorized = { workspace = true, optional = true }
+zrml-combinatorial-tokens = { workspace = true, optional = true }
 zrml-court = { workspace = true, optional = true }
 zrml-global-disputes = { workspace = true, optional = true }
 zrml-prediction-markets = { workspace = true, optional = true }
@@ -62,6 +63,9 @@ mock = [
     "pallet-timestamp/default",
     "sp-api/default",
     "sp-io/default",
+    "zrml-combinatorial-tokens/std",
+    "zrml-combinatorial-tokens/mock",
+    "zrml-combinatorial-tokens/default",
     "zrml-court/std",
     "zrml-authorized/std",
     "zrml-global-disputes/std",
@@ -78,6 +82,7 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
+    "zrml-combinatorial-tokens/runtime-benchmarks",
 ]
 std = [
     "frame-benchmarking?/std",

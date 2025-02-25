@@ -57,3 +57,13 @@ cargo fuzz run --release --fuzz-dir zrml/swaps/fuzz pool_exit -- -runs=$(($(($RU
 
 # --- Orderbook-v1 Pallet fuzz tests ---
 cargo fuzz run --release --fuzz-dir zrml/orderbook/fuzz orderbook_v1_full_workflow -- -runs=$RUNS
+
+cargo fuzz run --release --fuzz-dir zrml/futarchy/fuzz submit_proposal -- -runs=$RUNS
+
+cargo fuzz run --release --fuzz-dir zrml/combinatorial-tokens/fuzz split_position -- -runs=$RUNS
+cargo fuzz run --release --fuzz-dir zrml/combinatorial-tokens/fuzz merge_position -- -runs=$RUNS
+cargo fuzz run --release --fuzz-dir zrml/combinatorial-tokens/fuzz redeem_position -- -runs=$RUNS
+
+cargo fuzz run --release --fuzz-dir zrml/neo-swaps/fuzz deploy_combinatorial_pool -- -runs=$RUNS
+cargo fuzz run --release --fuzz-dir zrml/neo-swaps/fuzz combo_buy -- -runs=$RUNS
+cargo fuzz run --release --fuzz-dir zrml/neo-swaps/fuzz combo_sell -- -runs=$RUNS

@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -27,6 +27,7 @@ mod benchmarks;
 pub mod migrations;
 pub mod mock;
 mod tests;
+pub mod types;
 pub mod weights;
 
 pub use pallet::*;
@@ -60,14 +61,15 @@ mod pallet {
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::{Perbill, Percent};
     use sp_runtime::{
-        traits::{Saturating, Zero},
+        traits::{CheckedSub, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::MILLISECS_PER_BLOCK,
+        math::fixed::{BaseProvider, FixedDiv, ZeitgeistBase},
         traits::{
             CompleteSetOperationsApi, DeployPoolApi, DisputeApi, DisputeMaxWeightApi,
-            DisputeResolutionApi, MarketBuilderTrait,
+            DisputeResolutionApi, MarketBuilderTrait, PayoutApi,
         },
         types::{
             Asset, Bond, Deadlines, EarlyClose, EarlyCloseState, GlobalDisputeItem, Market,
@@ -3050,6 +3052,54 @@ mod pallet {
             amount: Self::Balance,
         ) -> DispatchResult {
             Self::do_sell_complete_set(who, market_id, amount)
+        }
+    }
+
+    impl<T> PayoutApi for Pallet<T>
+    where
+        T: Config,
+    {
+        type Balance = BalanceOf<T>;
+        type MarketId = MarketIdOf<T>;
+
+        fn payout_vector(market_id: Self::MarketId) -> Option<Vec<Self::Balance>> {
+            let market = <zrml_market_commons::Pallet<T>>::market(&market_id).ok()?;
+
+            if market.status != MarketStatus::Resolved || !market.is_redeemable() {
+                return None;
+            }
+            let resolved_outcome = market.resolved_outcome.clone()?;
+
+            let result = match resolved_outcome {
+                OutcomeReport::Categorical(category_index) => {
+                    let mut result = vec![Zero::zero(); market.outcomes() as usize];
+                    *result.get_mut(category_index as usize)? = ZeitgeistBase::get().ok()?;
+
+                    result
+                }
+                OutcomeReport::Scalar(value) => {
+                    let MarketType::Scalar(range) = market.market_type else {
+                        return None;
+                    };
+                    let low = *range.start();
+                    let high = *range.end();
+
+                    let low_bal: BalanceOf<T> = low.saturated_into();
+                    let high_bal: BalanceOf<T> = high.saturated_into();
+                    let value_bal: BalanceOf<T> = value.saturated_into();
+
+                    let value_clamped = value_bal.max(low_bal).min(high_bal);
+                    let nominator = value_clamped.checked_sub(&low_bal)?;
+                    let denominator = high_bal.checked_sub(&low_bal)?;
+                    let payout_long = nominator.bdiv(denominator).ok()?;
+                    let payout_short =
+                        ZeitgeistBase::<BalanceOf<T>>::get().ok()?.checked_sub(&payout_long)?;
+
+                    vec![payout_long, payout_short]
+                }
+            };
+
+            Some(result)
         }
     }
 }

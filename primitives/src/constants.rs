@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -41,6 +41,7 @@ pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60; // 300
 // Definitions for currency
 pub const DECIMALS: u8 = 10;
 pub const BASE: u128 = 10u128.pow(DECIMALS as u32);
+pub const DIME: Balance = BASE / 10; // 1_000_000_000
 pub const CENT: Balance = BASE / 100; // 100_000_000
 pub const MILLI: Balance = CENT / 10; //  10_000_000
 pub const MICRO: Balance = MILLI / 1000; // 10_000
@@ -69,6 +70,9 @@ parameter_types! {
 // Authorized
 /// Pallet identifier, mainly used for named balance reserves.
 pub const AUTHORIZED_PALLET_ID: PalletId = PalletId(*b"zge/atzd");
+
+// Combinatorial Tokens
+pub const COMBINATORIAL_TOKENS_PALLET_ID: PalletId = PalletId(*b"zge/coto");
 
 // Court
 /// Pallet identifier, mainly used for named balance reserves.

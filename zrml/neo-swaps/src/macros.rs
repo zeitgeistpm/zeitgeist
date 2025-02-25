@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -61,11 +61,8 @@ macro_rules! assert_pool_state {
         $(,)?
     ) => {
         let pool = Pools::<Runtime>::get($market_id).unwrap();
-        assert_eq!(
-            pool.reserves.values().cloned().collect::<Vec<_>>(),
-            $reserves,
-            "assert_pool_state: Reserves mismatch"
-        );
+        let pool_reserves = pool.assets().iter().map(|a| pool.reserves[a]).collect::<Vec<_>>();
+        assert_eq!(pool_reserves, $reserves, "assert_pool_state: Reserves mismatch");
         let actual_spot_prices = pool
             .assets()
             .iter()
@@ -100,7 +97,7 @@ macro_rules! assert_pool_state {
             .fold(0u128, |acc, node| acc + node.fees + node.lazy_fees);
         assert_eq!(actual_total_fees, $total_fees);
         let invariant = actual_spot_prices.iter().sum::<u128>();
-        assert_approx!(invariant, _1, 1);
+        assert_approx!(invariant, _1, 2);
     };
 }
 

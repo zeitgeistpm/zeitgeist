@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -89,6 +89,9 @@ parameter_types! {
     pub const TechnicalCommitteeMaxProposals: u32 = 64;
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
+    // CombinatorialTokens
+    pub const CombinatorialTokensPalletId: PalletId = COMBINATORIAL_TOKENS_PALLET_ID;
+
     // Contracts
     pub const ContractsMaxDelegateDependencies: u32 = 32;
 
@@ -153,7 +156,11 @@ parameter_types! {
     /// can lead to extrinsic with very big weight: see delegate for instance.
     pub const MaxVotes: u32 = 100;
     /// The maximum number of public proposals that can exist at any time.
-    pub const MaxProposals: u32 = 100;
+    pub const DemocracyMaxProposals: u32 = 100;
+
+    // Futarchy
+    pub const FutarchyMaxProposals: u32 = 4;
+    pub const MinDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Hybrid Router parameters
     pub const HybridRouterPalletId: PalletId = HYBRID_ROUTER_PALLET_ID;
@@ -188,6 +195,7 @@ parameter_types! {
     pub const NeoSwapsMaxSwapFee: Balance = 10 * CENT;
     pub const NeoSwapsPalletId: PalletId = NS_PALLET_ID;
     pub const MaxLiquidityTreeDepth: u32 = 9u32;
+    pub const MaxSplits: u16 = 128u16;
 
     // ORML
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
@@ -439,7 +447,8 @@ parameter_type_with_key! {
     pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
         match currency_id {
             Asset::CategoricalOutcome(_,_) => ExistentialDeposit::get(),
-            Asset::CombinatorialOutcome => ExistentialDeposit::get(),
+            Asset::CombinatorialToken(_) => ExistentialDeposit::get(),
+            Asset::CombinatorialOutcomeLegacy => ExistentialDeposit::get(),
             Asset::PoolShare(_)  => ExistentialDeposit::get(),
             Asset::ScalarOutcome(_,_)  => ExistentialDeposit::get(),
             #[cfg(feature = "parachain")]

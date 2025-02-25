@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -20,7 +20,7 @@
 use crate::traits::ZeitgeistAssetEnumerator;
 use crate::{
     traits::PoolSharesId,
-    types::{CategoryIndex, PoolId},
+    types::{CategoryIndex, CombinatorialId, PoolId},
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -48,12 +48,13 @@ use serde::{Deserialize, Serialize};
 pub enum Asset<MarketId> {
     CategoricalOutcome(MarketId, CategoryIndex),
     ScalarOutcome(MarketId, ScalarPosition),
-    CombinatorialOutcome,
+    CombinatorialOutcomeLegacy, // Here to avoid having to migrate all holdings on the chain.
     PoolShare(PoolId),
     #[default]
     Ztg,
     ForeignAsset(u32),
     ParimutuelShare(MarketId, CategoryIndex),
+    CombinatorialToken(CombinatorialId),
 }
 
 #[cfg(feature = "runtime-benchmarks")]
