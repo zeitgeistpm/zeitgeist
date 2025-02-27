@@ -30,7 +30,7 @@ jobs:
           cp target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm runtimes/;
 
       - name: Upload runtimes
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4
         with:
           name: runtimes
           path: runtimes
@@ -41,7 +41,7 @@ jobs:
           cp target/release/zeitgeist binaries/;
 
       - name: Upload binary
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4
         with:
           name: binaries
           path: binaries
