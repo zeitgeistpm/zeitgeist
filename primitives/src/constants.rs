@@ -98,7 +98,7 @@ pub const NS_PALLET_ID: PalletId = PalletId(*b"zge/neos");
 
 // Prediction Markets
 /// The maximum allowed market life time, measured in blocks.
-pub const MAX_MARKET_LIFETIME: BlockNumber = 4 * BLOCKS_PER_YEAR;
+pub const MAX_MARKET_LIFETIME: BlockNumber = 80 * BLOCKS_PER_YEAR;
 /// Max. categories in a prediction market.
 pub const MAX_CATEGORIES: u16 = 64;
 /// The dispute_duration is time where users can dispute the outcome.
