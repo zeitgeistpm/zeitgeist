@@ -30,7 +30,7 @@ jobs:
           cp target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm runtimes/;
 
       - name: Upload runtimes
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4
         with:
           name: runtimes
           path: runtimes
@@ -41,7 +41,7 @@ jobs:
           cp target/release/zeitgeist binaries/;
 
       - name: Upload binary
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4
         with:
           name: binaries
           path: binaries
@@ -80,13 +80,13 @@ jobs:
           mkdir -p integration-tests/tmp
 
       - name: Download runtime
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@v4
         with:
           name: runtimes
           path: target/release/wbuild/zeitgeist-runtime/
 
       - name: Download binary
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@v4
         with:
           name: binaries
           path: target/release
@@ -137,13 +137,13 @@ jobs:
           mkdir -p integration-tests/tmp
 
       - name: Download runtime
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@v4
         with:
           name: runtimes
           path: target/release/wbuild/zeitgeist-runtime/
 
       - name: Download binary
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@v4
         with:
           name: binaries
           path: target/release
@@ -193,7 +193,7 @@ jobs:
           mkdir -p integration-tests/tmp/node_logs
 
       - name: Download runtime
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@v4
         with:
           name: runtimes
           path: target/release/wbuild/battery-station-runtime/
@@ -248,7 +248,7 @@ jobs:
           mkdir -p integration-tests/tmp/node_logs
 
       - name: "Download runtime"
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@v4
         with:
           name: runtimes
           path: target/release/wbuild/zeitgeist-runtime/
