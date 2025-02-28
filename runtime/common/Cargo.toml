@@ -80,7 +80,7 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "common-runtime"
-version = "0.5.6"
+version = "0.6.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
