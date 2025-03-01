@@ -1,3 +1,42 @@
+queue_rules:
+  - name: duplicated Auto merge (main) from Auto merge (feature branch)
+    queue_conditions:
+      - base=main
+      - "#approved-reviews-by>=1"
+      - "#changes-requested-reviews-by=0"
+      - check-success=Coverage
+      - check-success=Format
+      - check-success=Copyright Notices
+      - check-success=Checks (clippy)
+      - check-success=Checks (parachain)
+      - check-success=Checks (standalone)
+      - check-success=Quick check benchmarks
+      - check-success=Test standalone build
+      - check-success=Test parachain build
+      - check-success=Fuzz
+      - label=s:accepted
+      - base!=main
+    merge_conditions: []
+    merge_method: squash
+  - name: Auto merge (main)
+    queue_conditions:
+      - base=main
+      - "#approved-reviews-by>=1"
+      - "#changes-requested-reviews-by=0"
+      - check-success=Coverage
+      - check-success=Format
+      - check-success=Copyright Notices
+      - check-success=Checks (clippy)
+      - check-success=Checks (parachain)
+      - check-success=Checks (standalone)
+      - check-success=Quick check benchmarks
+      - check-success=Test standalone build
+      - check-success=Test parachain build
+      - check-success=Fuzz
+      - label=s:accepted
+    merge_conditions: []
+    merge_method: squash
+
 pull_request_rules:
   - name: Auto merge (main)
     conditions:
@@ -20,8 +59,6 @@ pull_request_rules:
         remove:
           - s:in-progress
           - s:review-needed
-      queue:
-        merge_method: squash
   - name: Auto merge (feature branch)
     conditions:
       - base!=main
@@ -42,52 +79,54 @@ pull_request_rules:
         remove:
           - s:in-progress
           - s:review-needed
-      queue:
-        merge_method: squash
   - name: ask to resolve conflict
     conditions:
       - conflict
     actions:
-        comment:
-          message: This pull request is now in conflicts. Could you fix it @{{author}}? 🙏
-        label:
-          add:
-            - s:revision-needed
-          remove:
-            - s:accepted
-            - s:in-progress
-            - s:review-needed
+      comment:
+        message: This pull request is now in conflicts. Could you fix it @{{author}}? 🙏
+      label:
+        add:
+          - s:revision-needed
+        remove:
+          - s:accepted
+          - s:in-progress
+          - s:review-needed
   - name: Set in-progress label after changes are pushed
     conditions:
       - commits[-1].author!=mergify[bot]
       - commits[-1].date_committer>=0 days 00:01 ago
     actions:
-        label:
-          add:
-            - s:in-progress
-          remove:
-            - s:accepted
-            - s:available
-            - s:blocked
-            - s:on-hold
-            - s:review-needed
-            - s:revision-needed
+      label:
+        add:
+          - s:in-progress
+        remove:
+          - s:accepted
+          - s:available
+          - s:blocked
+          - s:on-hold
+          - s:review-needed
+          - s:revision-needed
   - name: Trigger CI after Mergify merged the base branch (fix merge queue)
     conditions:
       - commits[-1].author=mergify[bot]
       - commits[-1].date_committer>=0 days 00:01 ago
       - queue-position=0
     actions:
-        label:
-          add:
-            - s:review-needed
+      label:
+        add:
+          - s:review-needed
   - name: Remove CI trigger label
     conditions:
       - commits[-1].author=mergify[bot]
       - label=s:review-needed
       - queue-position=0
     actions:
-        label:
-          remove:
-            - s:review-needed
+      label:
+        remove:
+          - s:review-needed
 
+  - name: Auto merge (feature branch) + Auto merge (main)
+    conditions: []
+    actions:
+      queue:
