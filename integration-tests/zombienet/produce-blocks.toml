@@ -20,4 +20,4 @@ id = 2101
 args = ["-lparachain=debug"]
 command = "../target/release/zeitgeist"
 name = "alice"
-ws_port = 9966
+ws_port = 9945

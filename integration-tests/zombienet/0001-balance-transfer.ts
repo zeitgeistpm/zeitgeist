@@ -25,8 +25,13 @@ const ALICE = '//Alice';
 const BOB = '//Bob';
 
 export const run = async (nodeName: string, networkInfo: any, args: any) => {
-    const provider = new WsProvider('ws://127.0.0.1:9966');
-    const api = await ApiPromise.create({ provider });
+    let api: any;
+    const provider = new WsProvider('ws://127.0.0.1:9945');
+    try {
+        api = await ApiPromise.create({ provider });
+    } catch (error) {
+        console.error('Failed to create API:', error);
+    }
 
     // Wait for the crypto library to be ready
     await cryptoWaitReady();
@@ -44,7 +49,7 @@ export const run = async (nodeName: string, networkInfo: any, args: any) => {
     const transfer_amount = "42000000000000000";
 
     // Create a transfer transaction from Alice to Bob
-    const transfer = api.tx.balances.transfer(bob.address, transfer_amount);
+    const transfer = api.tx.balances.transferAllowDeath(bob.address, transfer_amount);
 
     // Get weight info
     const { partialFee, weight } = await transfer.paymentInfo(alice.address);
