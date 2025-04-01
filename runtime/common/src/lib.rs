@@ -96,13 +96,11 @@ macro_rules! decl_common_types {
         #[cfg(feature = "runtime-benchmarks")]
         use zrml_prediction_markets::types::PredictionMarketsCombinatorialTokensBenchmarkHelper;
 
-        use zrml_neo_swaps::migration::MigratePoolStorageItems;
-
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = (MigratePoolStorageItems<Runtime, RemovableMarketIds>);
+        type Migrations = ();
 
         pub type Executive = frame_executive::Executive<
             Runtime,
