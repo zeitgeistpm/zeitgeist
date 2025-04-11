@@ -45,10 +45,6 @@ sp-transaction-pool = { workspace = true, features = ["default"] }
 sp-trie = { workspace = true }
 substrate-frame-rpc-system = { workspace = true }
 
-# Try-Runtime
-
-try-runtime-cli = { workspace = true, optional = true }
-
 # Benchmark
 
 frame-benchmarking = { workspace = true, features = ["default"], optional = true }
@@ -175,7 +171,6 @@ runtime-benchmarks = [
 try-runtime = [
     "battery-station-runtime?/try-runtime",
     "zeitgeist-runtime?/try-runtime",
-    "try-runtime-cli/try-runtime",
 ]
 with-battery-station-runtime = ["battery-station-runtime"]
 with-zeitgeist-runtime = ["zeitgeist-runtime"]

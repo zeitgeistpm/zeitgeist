@@ -14,8 +14,6 @@ pallet-asset-tx-payment = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-bounties = { workspace = true }
 pallet-collective = { workspace = true }
-pallet-contracts = { workspace = true }
-pallet-contracts-primitives = { workspace = true }
 pallet-democracy = { workspace = true }
 pallet-identity = { workspace = true }
 pallet-insecure-randomness-collective-flip = { workspace = true }
@@ -195,7 +193,6 @@ runtime-benchmarks = [
     "pallet-balances/runtime-benchmarks",
     "pallet-bounties/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
-    "pallet-contracts/runtime-benchmarks",
     "pallet-democracy/runtime-benchmarks",
     "pallet-grandpa/runtime-benchmarks",
     "pallet-identity/runtime-benchmarks",
@@ -243,8 +240,6 @@ std = [
     "pallet-balances/std",
     "pallet-bounties/std",
     "pallet-collective/std",
-    "pallet-contracts/std",
-    "pallet-contracts-primitives/std",
     "pallet-democracy/std",
     "pallet-identity/std",
     "pallet-membership/std",
@@ -374,7 +369,6 @@ try-runtime = [
     "pallet-membership/try-runtime",
 
     # Other Parity runtime pallets
-    "pallet-contracts/try-runtime",
     "pallet-identity/try-runtime",
     "pallet-utility/try-runtime",
 
