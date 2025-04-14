@@ -522,12 +522,10 @@ fn prepare_exit_court_removes_lowest_staked_juror() {
         }
 
         let len = CourtPool::<Runtime>::get().into_inner().len();
-        assert!(
-            CourtPool::<Runtime>::get()
-                .into_inner()
-                .iter()
-                .any(|item| item.court_participant == 0u128)
-        );
+        assert!(CourtPool::<Runtime>::get()
+            .into_inner()
+            .iter()
+            .any(|item| item.court_participant == 0u128));
         assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(0u128)));
         assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
         CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
@@ -552,12 +550,10 @@ fn prepare_exit_court_removes_middle_staked_juror() {
         let middle_index = (CourtPoolOf::<Runtime>::bound() / 2) as u128;
 
         let len = CourtPool::<Runtime>::get().into_inner().len();
-        assert!(
-            CourtPool::<Runtime>::get()
-                .into_inner()
-                .iter()
-                .any(|item| item.court_participant == middle_index)
-        );
+        assert!(CourtPool::<Runtime>::get()
+            .into_inner()
+            .iter()
+            .any(|item| item.court_participant == middle_index));
         assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(middle_index)));
         assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
         CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
@@ -582,12 +578,10 @@ fn prepare_exit_court_removes_highest_staked_juror() {
         let last_index = (CourtPoolOf::<Runtime>::bound() - 1) as u128;
 
         let len = CourtPool::<Runtime>::get().into_inner().len();
-        assert!(
-            CourtPool::<Runtime>::get()
-                .into_inner()
-                .iter()
-                .any(|item| item.court_participant == last_index)
-        );
+        assert!(CourtPool::<Runtime>::get()
+            .into_inner()
+            .iter()
+            .any(|item| item.court_participant == last_index));
         assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(last_index)));
         assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
         CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {

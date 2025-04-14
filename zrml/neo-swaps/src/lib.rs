@@ -132,40 +132,40 @@ mod pallet {
 
         /// API used for calculating splits of tokens when creating combinatorial pools.
         type CombinatorialTokens: CombinatorialTokensApi<
-                AccountId = Self::AccountId,
-                Balance = BalanceOf<Self>,
-                CombinatorialId = Self::CombinatorialId,
-                MarketId = MarketIdOf<Self>,
-            >;
+            AccountId = Self::AccountId,
+            Balance = BalanceOf<Self>,
+            CombinatorialId = Self::CombinatorialId,
+            MarketId = MarketIdOf<Self>,
+        >;
 
         /// API for fast creation of tokens when buying or selling combinatorial tokens.
         type CombinatorialTokensUnsafe: CombinatorialTokensUnsafeApi<
-                AccountId = Self::AccountId,
-                Balance = BalanceOf<Self>,
-                MarketId = MarketIdOf<Self>,
-            >;
+            AccountId = Self::AccountId,
+            Balance = BalanceOf<Self>,
+            MarketId = MarketIdOf<Self>,
+        >;
 
         type CompleteSetOperations: CompleteSetOperationsApi<
-                AccountId = Self::AccountId,
-                Balance = BalanceOf<Self>,
-                MarketId = MarketIdOf<Self>,
-            >;
+            AccountId = Self::AccountId,
+            Balance = BalanceOf<Self>,
+            MarketId = MarketIdOf<Self>,
+        >;
 
         /// Distribute external fees. The fees are paid from the pool account, which in turn has
         /// received the fees from the trader.
         type ExternalFees: DistributeFees<
-                Asset = AssetOf<Self>,
-                AccountId = AccountIdOf<Self>,
-                Balance = BalanceOf<Self>,
-                MarketId = MarketIdOf<Self>,
-            >;
+            Asset = AssetOf<Self>,
+            AccountId = AccountIdOf<Self>,
+            Balance = BalanceOf<Self>,
+            MarketId = MarketIdOf<Self>,
+        >;
 
         type MarketCommons: MarketCommonsPalletApi<
-                AccountId = Self::AccountId,
-                BlockNumber = BlockNumberFor<Self>,
-                Balance = BalanceOf<Self>,
-                MarketId = Self::PoolId,
-            >;
+            AccountId = Self::AccountId,
+            BlockNumber = BlockNumberFor<Self>,
+            Balance = BalanceOf<Self>,
+            MarketId = Self::PoolId,
+        >;
 
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 

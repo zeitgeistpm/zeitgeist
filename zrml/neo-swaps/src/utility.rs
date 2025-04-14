@@ -37,7 +37,11 @@ impl LogCeil for u16 {
         let leading_zeros: u16 = x.leading_zeros().saturated_into();
         let floor_log2 = bits_minus_one.saturating_sub(leading_zeros);
 
-        if x.is_power_of_two() { floor_log2 } else { floor_log2.saturating_add(1) }
+        if x.is_power_of_two() {
+            floor_log2
+        } else {
+            floor_log2.saturating_add(1)
+        }
     }
 }
 

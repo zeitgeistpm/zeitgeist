@@ -1046,7 +1046,11 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values(
         // (Sanity check for dust size)
         let pool_amount = Currencies::free_balance(Swaps::pool_shares_id(DEFAULT_POOL_ID), &ALICE);
         let abs_diff = |x, y| {
-            if x < y { y - x } else { x - y }
+            if x < y {
+                y - x
+            } else {
+                x - y
+            }
         };
         let dust = abs_diff(pool_amount, pool_amount_expected);
         assert_le!(dust, 100);
