@@ -112,11 +112,6 @@ mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     pub(crate) type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
-    pub(crate) type SchedulerHasherOf<T> = <<T as Config>::Scheduler as ScheduleAnon<
-        BlockNumberFor<T>,
-        CallOf<T>,
-        PalletsOriginOf<T>,
-    >>::Hasher;
     pub(crate) type BoundedCallOf<T> = Bounded<CallOf<T>, <T as frame_system::Config>::Hashing>;
     pub(crate) type OracleOf<T> = <T as Config>::Oracle;
     pub(crate) type PalletsOriginOf<T> =
