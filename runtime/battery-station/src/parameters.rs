@@ -49,8 +49,6 @@ pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
     polkadot_primitives::MAX_POV_SIZE as u64,
 );
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
-pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
-pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
 
 #[cfg(not(feature = "parachain"))]
 parameter_types! {
@@ -70,7 +68,6 @@ parameter_types! {
 
     // Balance
     pub const ExistentialDeposit: u128 = BASE / 2;
-    pub const MaxHolds: u32 = 1;
     pub const MaxFreezes: u32 = 1;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
@@ -170,8 +167,6 @@ parameter_types! {
     // Identity
     /// The amount held on deposit for a registered identity
     pub const BasicDeposit: Balance = deposit(1, 258);
-    /// The amount held on deposit per additional field for a registered identity.
-    pub const FieldDeposit: Balance = deposit(0, 66);
     /// Maximum number of additional fields that may be stored in an ID. Needed to bound the I/O
     /// required to access an identity, but can be pretty high.
     pub const MaxAdditionalFields: u32 = 64;
@@ -354,6 +349,8 @@ parameter_types! {
     pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000u128);
     /// Maximum amount of the multiplier.
     pub MaximumMultiplier: Multiplier = Bounded::max_value();
+    /// The percentage of the fees that are paid to the treasury.
+    pub FeesTreasuryProportion: Perbill = Perbill::from_percent(100);
 
     // Treasury
     /// Percentage of spare funds (if any) that are burnt per spend period.
@@ -365,10 +362,6 @@ parameter_types! {
     /// Fraction of a proposal's value that should be bonded in order to place the proposal.
     /// An accepted proposal gets these back. A rejected proposal does not.
     pub const ProposalBond: Permill = Permill::from_percent(5);
-    /// Minimum amount of funds that should be placed in a deposit for making a proposal.
-    pub const ProposalBondMinimum: Balance = 10 * BASE;
-    /// Maximum amount of funds that should be placed in a deposit for making a proposal.
-    pub const ProposalBondMaximum: Balance = 500 * BASE;
     /// Period between successive spends.
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves.

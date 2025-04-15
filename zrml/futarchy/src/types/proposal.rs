@@ -21,10 +21,13 @@ use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
-use arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured};
-use frame_support::traits::Bounded;
-use sp_core::H256;
-use sp_runtime::traits::Hash;
+#[cfg(feature = "fuzzing")]
+use {
+    arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured},
+    frame_support::traits::Bounded,
+    sp_core::H256,
+    sp_runtime::traits::Hash,
+};
 
 // TODO Make config a generic, keeps things simple.
 #[derive(

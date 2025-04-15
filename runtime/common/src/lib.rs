@@ -475,10 +475,16 @@ macro_rules! impl_config_traits {
             #[cfg(not(feature = "parachain"))]
             type OnSetCode = ();
             type RuntimeOrigin = RuntimeOrigin;
+            type RuntimeTask = RuntimeTask;
             type PalletInfo = PalletInfo;
             type SS58Prefix = SS58Prefix;
             type SystemWeightInfo = weights::frame_system::WeightInfo<Runtime>;
             type Version = Version;
+            type SingleBlockMigrations = ();
+            type MultiBlockMigrator = ();
+            type PreInherents = ();
+            type PostInherents = ();
+            type PostTransactions = ();
         }
 
         #[cfg(not(feature = "parachain"))]
@@ -708,7 +714,6 @@ macro_rules! impl_config_traits {
             type ExistentialDeposit = ExistentialDeposit;
             type FreezeIdentifier = ();
             type MaxFreezes = MaxFreezes;
-            type MaxHolds = MaxHolds;
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
             type ReserveIdentifier = [u8; 8];
@@ -805,9 +810,7 @@ macro_rules! impl_config_traits {
             type BasicDeposit = BasicDeposit;
             type Currency = Balances;
             type RuntimeEvent = RuntimeEvent;
-            type FieldDeposit = FieldDeposit;
             type ForceOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
-            type MaxAdditionalFields = MaxAdditionalFields;
             type MaxRegistrars = MaxRegistrars;
             type MaxSubAccounts = MaxSubAccounts;
             type RegistrarOrigin = EnsureRootOrHalfCouncil;
@@ -870,8 +873,6 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type Currency = Balances;
             type ManagerOrigin = EnsureRoot<AccountId>;
-            type BaseDeposit = PreimageBaseDeposit;
-            type ByteDeposit = PreimageByteDeposit;
         }
 
         impl InstanceFilter<RuntimeCall> for ProxyType {
@@ -1061,24 +1062,24 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
             type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-            type OnChargeTransaction =
-                pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
+            type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<
+                Balances,
+                DealWithSubstrateFeesAndTip<
+                    Runtime,
+                    FeesTreasuryProportion,
+                >,
+            >;
             type OperationalFeeMultiplier = OperationalFeeMultiplier;
             type WeightToFee = IdentityFee<Balance>;
         }
 
         impl pallet_treasury::Config for Runtime {
-            type ApproveOrigin = EnsureRootOrTwoThirdsCouncil;
             type Burn = Burn;
             type BurnDestination = ();
             type Currency = Balances;
             type RuntimeEvent = RuntimeEvent;
             type MaxApprovals = MaxApprovals;
-            type OnSlash = Treasury;
             type PalletId = TreasuryPalletId;
-            type ProposalBond = ProposalBond;
-            type ProposalBondMinimum = ProposalBondMinimum;
-            type ProposalBondMaximum = ProposalBondMaximum;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
             type SpendFunds = Bounties;
             type SpendOrigin =
@@ -1704,7 +1705,7 @@ macro_rules! create_runtime_api {
                 fn submit_report_equivocation_unsigned_extrinsic(
                     _equivocation_proof: sp_consensus_grandpa::EquivocationProof<
                         <Block as BlockT>::Hash,
-                        sp_api::NumberFor<Block>,
+                        sp_runtime::traits::NumberFor<Block>,
                     >,
                     _key_owner_proof: sp_consensus_grandpa::OpaqueKeyOwnershipProof,
                 ) -> Option<()> {
