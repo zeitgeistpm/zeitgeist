@@ -82,7 +82,7 @@ fn should_emit_account_crossed_event_with_correct_value() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         assert_ok!(Styx::cross(RuntimeOrigin::signed(ALICE)));
-        System::assert_last_event(
+        System::assert_has_event(
             Event::AccountCrossed(ALICE, crate::BurnAmount::<Runtime>::get()).into(),
         );
     });

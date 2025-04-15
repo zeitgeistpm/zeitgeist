@@ -21,6 +21,7 @@ pallet-treasury = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
+sp-core = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
 zrml-authorized = { workspace = true, optional = true }
@@ -49,6 +50,7 @@ mock = [
     "pallet-treasury/default",
     "pallet-xcm/default",
     "serde/default",
+    "sp-core/default",
     "sp-io/default",
     "xcm/default",
     "zeitgeist-primitives/mock",
