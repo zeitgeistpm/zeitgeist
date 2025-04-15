@@ -103,12 +103,12 @@ pub trait MarketCommonsPalletApi {
     ) -> Result<(Self::MarketId, MarketOf<Self>), DispatchError>
     where
         U: MarketBuilderTrait<
-                Self::AccountId,
-                Self::Balance,
-                Self::BlockNumber,
-                Self::Moment,
-                Self::MarketId,
-            >;
+            Self::AccountId,
+            Self::Balance,
+            Self::BlockNumber,
+            Self::Moment,
+            Self::MarketId,
+        >;
 
     /// Removes a market from the storage.
     fn remove_market(market_id: &Self::MarketId) -> DispatchResult;

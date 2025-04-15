@@ -100,6 +100,17 @@ impl<T: frame_system::Config> pallet_preimage::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().reads(1))
             .saturating_add(T::DbWeight::get().writes(2))
     }
+    fn ensure_updated(s: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `106`
+        //  Estimated: `3556`
+        // Minimum execution time: 19_271 nanoseconds.
+        Weight::from_parts(19_480_000, 3556)
+            // Standard Error: 2
+            .saturating_add(Weight::from_parts(1_822, 0).saturating_mul(s.into()))
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(2))
+    }
     /// Storage: `Preimage::StatusFor` (r:1 w:1)
     /// Proof: `Preimage::StatusFor` (`max_values`: None, `max_size`: Some(91), added: 2566, mode: `MaxEncodedLen`)
     /// Storage: `Preimage::PreimageFor` (r:0 w:1)

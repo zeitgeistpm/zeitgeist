@@ -55,12 +55,12 @@ pub fn cent(decimals: u32) -> Balance {
 pub struct FixedConversionRateProvider<AssetRegistry>(PhantomData<AssetRegistry>);
 
 impl<
-    AssetRegistry: orml_traits::asset_registry::Inspect<
+        AssetRegistry: orml_traits::asset_registry::Inspect<
             AssetId = CurrencyId,
             Balance = Balance,
             CustomMetadata = CustomMetadata,
         >,
-> orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<AssetRegistry>
+    > orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<AssetRegistry>
 {
     fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
         let metadata = AssetRegistry::metadata_by_location(location)?;

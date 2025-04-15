@@ -151,7 +151,11 @@ where
 
 /// Calculate the distance between `x` and `y`.
 fn dist<T: AtLeast32BitUnsigned>(x: T, y: T) -> T {
-    if x > y { x - y } else { y - x }
+    if x > y {
+        x - y
+    } else {
+        y - x
+    }
 }
 
 #[cfg(test)]

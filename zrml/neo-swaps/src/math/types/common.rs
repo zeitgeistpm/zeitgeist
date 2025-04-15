@@ -47,5 +47,9 @@ where
 /// Calculates `exp(value)` but returns `None` if `value` lies outside of the numerical
 /// boundaries.
 pub(crate) fn protected_exp(value: FixedType, neg: bool) -> Option<FixedType> {
-    if value < EXP_NUMERICAL_THRESHOLD { exp(value, neg).ok() } else { None }
+    if value < EXP_NUMERICAL_THRESHOLD {
+        exp(value, neg).ok()
+    } else {
+        None
+    }
 }

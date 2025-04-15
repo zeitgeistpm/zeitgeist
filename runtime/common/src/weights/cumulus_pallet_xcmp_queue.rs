@@ -63,14 +63,57 @@ impl<T: frame_system::Config> cumulus_pallet_xcmp_queue::weights::WeightInfo for
             .saturating_add(T::DbWeight::get().reads(1))
             .saturating_add(T::DbWeight::get().writes(1))
     }
-    /// Storage: `XcmpQueue::QueueConfig` (r:1 w:1)
-    /// Proof: `XcmpQueue::QueueConfig` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
-    fn set_config_with_weight() -> Weight {
+    fn enqueue_xcmp_message() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `142`
         //  Estimated: `1627`
-        // Minimum execution time: 6_170 nanoseconds.
-        Weight::from_parts(6_571_000, 1627)
+        // Minimum execution time: 6_091 nanoseconds.
+        Weight::from_parts(6_390_000, 1627)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn suspend_channel() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `142`
+        //  Estimated: `1627`
+        // Minimum execution time: 6_091 nanoseconds.
+        Weight::from_parts(6_390_000, 1627)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn resume_channel() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `142`
+        //  Estimated: `1627`
+        // Minimum execution time: 6_091 nanoseconds.
+        Weight::from_parts(6_390_000, 1627)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn take_first_concatenated_xcm() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `142`
+        //  Estimated: `1627`
+        // Minimum execution time: 6_091 nanoseconds.
+        Weight::from_parts(6_390_000, 1627)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn on_idle_good_msg() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `142`
+        //  Estimated: `1627`
+        // Minimum execution time: 6_091 nanoseconds.
+        Weight::from_parts(6_390_000, 1627)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn on_idle_large_msg() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `142`
+        //  Estimated: `1627`
+        // Minimum execution time: 6_091 nanoseconds.
+        Weight::from_parts(6_390_000, 1627)
             .saturating_add(T::DbWeight::get().reads(1))
             .saturating_add(T::DbWeight::get().writes(1))
     }

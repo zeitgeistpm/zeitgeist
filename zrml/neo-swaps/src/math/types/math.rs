@@ -247,7 +247,11 @@ mod detail {
             .checked_sub(FixedType::checked_from_num(1)?)?;
         let (ln_result, ln_neg) = ln(inside_ln).ok()?;
         let blob = liquidity.checked_mul(ln_result)?;
-        if ln_neg { reserve.checked_add(blob) } else { reserve.checked_sub(blob) }
+        if ln_neg {
+            reserve.checked_add(blob)
+        } else {
+            reserve.checked_sub(blob)
+        }
     }
 
     pub(crate) fn calculate_spot_price_fixed(

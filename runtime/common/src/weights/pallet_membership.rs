@@ -73,6 +73,18 @@ impl<T: frame_system::Config> pallet_membership::weights::WeightInfo for WeightI
             .saturating_add(T::DbWeight::get().writes(3))
             .saturating_add(Weight::from_parts(0, 64).saturating_mul(m.into()))
     }
+    fn reset_members(m: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `135 + m * (64 ±0)`
+        //  Estimated: `4687 + m * (64 ±0)`
+        // Minimum execution time: 19_700 nanoseconds.
+        Weight::from_parts(21_127_868, 4687)
+            // Standard Error: 1_036
+            .saturating_add(Weight::from_parts(34_924, 0).saturating_mul(m.into()))
+            .saturating_add(T::DbWeight::get().reads(2))
+            .saturating_add(T::DbWeight::get().writes(3))
+            .saturating_add(Weight::from_parts(0, 64).saturating_mul(m.into()))
+    }
     /// Storage: `AdvisoryCommitteeMembership::Members` (r:1 w:1)
     /// Proof: `AdvisoryCommitteeMembership::Members` (`max_values`: Some(1), `max_size`: Some(3202), added: 3697, mode: `MaxEncodedLen`)
     /// Storage: `AdvisoryCommittee::Proposals` (r:1 w:0)
@@ -115,29 +127,6 @@ impl<T: frame_system::Config> pallet_membership::weights::WeightInfo for WeightI
         Weight::from_parts(23_842_833, 4687)
             // Standard Error: 1_060
             .saturating_add(Weight::from_parts(47_936, 0).saturating_mul(m.into()))
-            .saturating_add(T::DbWeight::get().reads(3))
-            .saturating_add(T::DbWeight::get().writes(3))
-            .saturating_add(Weight::from_parts(0, 64).saturating_mul(m.into()))
-    }
-    /// Storage: `AdvisoryCommitteeMembership::Members` (r:1 w:1)
-    /// Proof: `AdvisoryCommitteeMembership::Members` (`max_values`: Some(1), `max_size`: Some(3202), added: 3697, mode: `MaxEncodedLen`)
-    /// Storage: `AdvisoryCommittee::Proposals` (r:1 w:0)
-    /// Proof: `AdvisoryCommittee::Proposals` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
-    /// Storage: `AdvisoryCommitteeMembership::Prime` (r:1 w:0)
-    /// Proof: `AdvisoryCommitteeMembership::Prime` (`max_values`: Some(1), `max_size`: Some(32), added: 527, mode: `MaxEncodedLen`)
-    /// Storage: `AdvisoryCommittee::Members` (r:0 w:1)
-    /// Proof: `AdvisoryCommittee::Members` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
-    /// Storage: `AdvisoryCommittee::Prime` (r:0 w:1)
-    /// Proof: `AdvisoryCommittee::Prime` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
-    /// The range of component `m` is `[1, 100]`.
-    fn reset_member(m: u32) -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `239 + m * (64 ±0)`
-        //  Estimated: `4687 + m * (64 ±0)`
-        // Minimum execution time: 22_370 nanoseconds.
-        Weight::from_parts(24_093_018, 4687)
-            // Standard Error: 1_816
-            .saturating_add(Weight::from_parts(178_476, 0).saturating_mul(m.into()))
             .saturating_add(T::DbWeight::get().reads(3))
             .saturating_add(T::DbWeight::get().writes(3))
             .saturating_add(Weight::from_parts(0, 64).saturating_mul(m.into()))
@@ -189,7 +178,7 @@ impl<T: frame_system::Config> pallet_membership::weights::WeightInfo for WeightI
     /// Storage: `AdvisoryCommittee::Prime` (r:0 w:1)
     /// Proof: `AdvisoryCommittee::Prime` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
     /// The range of component `m` is `[1, 100]`.
-    fn clear_prime(_m: u32) -> Weight {
+    fn clear_prime() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `0`
         //  Estimated: `0`

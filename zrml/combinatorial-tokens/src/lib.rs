@@ -77,17 +77,17 @@ mod pallet {
     pub trait Config: frame_system::Config {
         #[cfg(feature = "runtime-benchmarks")]
         type BenchmarkHelper: CombinatorialTokensBenchmarkHelper<
-                Balance = BalanceOf<Self>,
-                MarketId = MarketIdOf<Self>,
-            >;
+            Balance = BalanceOf<Self>,
+            MarketId = MarketIdOf<Self>,
+        >;
 
         /// Interface for calculating collection and position IDs.
         type CombinatorialIdManager: CombinatorialIdManager<
-                Asset = AssetOf<Self>,
-                MarketId = MarketIdOf<Self>,
-                CombinatorialId = CombinatorialId,
-                Fuel = Self::Fuel,
-            >;
+            Asset = AssetOf<Self>,
+            MarketId = MarketIdOf<Self>,
+            CombinatorialId = CombinatorialId,
+            Fuel = Self::Fuel,
+        >;
 
         type Fuel: Clone
             + CombinatorialTokensFuel
@@ -99,7 +99,10 @@ mod pallet {
             + PartialEq
             + TypeInfo;
 
-        type MarketCommons: MarketCommonsPalletApi<AccountId = Self::AccountId, BlockNumber = BlockNumberFor<Self>>;
+        type MarketCommons: MarketCommonsPalletApi<
+            AccountId = Self::AccountId,
+            BlockNumber = BlockNumberFor<Self>,
+        >;
 
         type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = AssetOf<Self>>;
 

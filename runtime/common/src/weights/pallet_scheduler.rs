@@ -131,10 +131,52 @@ impl<T: frame_system::Config> pallet_scheduler::weights::WeightInfo for WeightIn
         // Minimum execution time: 2_580 nanoseconds.
         Weight::from_parts(2_770_000, 0)
     }
+    fn set_retry() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `0`
+        //  Estimated: `0`
+        // Minimum execution time: 2_580 nanoseconds.
+        Weight::from_parts(2_770_000, 0)
+    }
+    fn set_retry_named() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `0`
+        //  Estimated: `0`
+        // Minimum execution time: 2_580 nanoseconds.
+        Weight::from_parts(2_770_000, 0)
+    }
+    fn cancel_retry() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `0`
+        //  Estimated: `0`
+        // Minimum execution time: 2_580 nanoseconds.
+        Weight::from_parts(2_770_000, 0)
+    }
+    fn cancel_retry_named() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `0`
+        //  Estimated: `0`
+        // Minimum execution time: 2_580 nanoseconds.
+        Weight::from_parts(2_770_000, 0)
+    }
     /// Storage: `Scheduler::Agenda` (r:1 w:1)
     /// Proof: `Scheduler::Agenda` (`max_values`: None, `max_size`: Some(109074), added: 111549, mode: `MaxEncodedLen`)
     /// The range of component `s` is `[0, 511]`.
     fn schedule(s: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `85 + s * (181 ±0)`
+        //  Estimated: `112539`
+        // Minimum execution time: 13_980 nanoseconds.
+        Weight::from_parts(20_704_123, 112539)
+            // Standard Error: 2_275
+            .saturating_add(Weight::from_parts(406_759, 0).saturating_mul(s.into()))
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    /// Storage: `Scheduler::Agenda` (r:1 w:1)
+    /// Proof: `Scheduler::Agenda` (`max_values`: None, `max_size`: Some(109074), added: 111549, mode: `MaxEncodedLen`)
+    /// The range of component `s` is `[0, 511]`.
+    fn schedule_retry(s: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `85 + s * (181 ±0)`
         //  Estimated: `112539`

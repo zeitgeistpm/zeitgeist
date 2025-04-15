@@ -63,6 +63,33 @@ impl<T: frame_system::Config> pallet_balances::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().reads(2))
             .saturating_add(T::DbWeight::get().writes(2))
     }
+    fn burn_allow_death() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `144`
+        //  Estimated: `6204`
+        // Minimum execution time: 79_931 nanoseconds.
+        Weight::from_parts(82_021_000, 6204)
+            .saturating_add(T::DbWeight::get().reads(2))
+            .saturating_add(T::DbWeight::get().writes(2))
+    }
+    fn force_adjust_total_issuance() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `0`
+        //  Estimated: `0`
+        // Minimum execution time: 20_000 nanoseconds.
+        Weight::from_parts(20_000_000, 0)
+            .saturating_add(T::DbWeight::get().reads(0))
+            .saturating_add(T::DbWeight::get().writes(0))
+    }
+    fn burn_keep_alive() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `0`
+        //  Estimated: `3597`
+        // Minimum execution time: 48_281 nanoseconds.
+        Weight::from_parts(49_831_000, 3597)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
     /// Storage: `System::Account` (r:1 w:1)
     /// Proof: `System::Account` (`max_values`: None, `max_size`: Some(132), added: 2607, mode: `MaxEncodedLen`)
     fn transfer_keep_alive() -> Weight {

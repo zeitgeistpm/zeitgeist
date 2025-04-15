@@ -196,12 +196,12 @@ mod pallet {
         ) -> Result<(Self::MarketId, MarketOf<T>), DispatchError>
         where
             U: MarketBuilderTrait<
-                    Self::AccountId,
-                    Self::Balance,
-                    Self::BlockNumber,
-                    Self::Moment,
-                    Self::MarketId,
-                >,
+                Self::AccountId,
+                Self::Balance,
+                Self::BlockNumber,
+                Self::Moment,
+                Self::MarketId,
+            >,
         {
             let market_id = Self::next_market_id()?;
             market_builder.market_id(market_id);

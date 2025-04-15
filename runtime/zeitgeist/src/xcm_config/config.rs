@@ -221,11 +221,11 @@ pub struct AlignedFractionalTransactAsset<
 }
 
 impl<
-    AssetRegistry: Inspect<AssetId = CurrencyId>,
-    FracDecPlaces: Get<u8>,
-    CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
-    TransactAssetDelegate: TransactAsset,
->
+        AssetRegistry: Inspect<AssetId = CurrencyId>,
+        FracDecPlaces: Get<u8>,
+        CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
+        TransactAssetDelegate: TransactAsset,
+    >
     AlignedFractionalTransactAsset<
         AssetRegistry,
         CurrencyIdConvert,
@@ -264,11 +264,11 @@ impl<
 }
 
 impl<
-    AssetRegistry: Inspect<AssetId = CurrencyId>,
-    CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
-    FracDecPlaces: Get<u8>,
-    TransactAssetDelegate: TransactAsset,
-> TransactAsset
+        AssetRegistry: Inspect<AssetId = CurrencyId>,
+        CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
+        FracDecPlaces: Get<u8>,
+        TransactAssetDelegate: TransactAsset,
+    > TransactAsset
     for AlignedFractionalTransactAsset<
         AssetRegistry,
         CurrencyIdConvert,
@@ -380,7 +380,11 @@ impl MaybeEquivalence<MultiLocation, CurrencyId> for AssetConvert {
                 let key = &data[..data.len().min(*length as usize)];
 
                 if *para_id == u32::from(ParachainInfo::parachain_id()) {
-                    if key == zeitgeist::KEY { Some(CurrencyId::Ztg) } else { None }
+                    if key == zeitgeist::KEY {
+                        Some(CurrencyId::Ztg)
+                    } else {
+                        None
+                    }
                 } else {
                     AssetRegistry::location_to_asset_id(location)
                 }
