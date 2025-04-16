@@ -23,6 +23,8 @@
 )]
 
 use super::{RuntimeHoldReason, VERSION};
+#[cfg(feature = "parachain")]
+use super::Runtime;
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,

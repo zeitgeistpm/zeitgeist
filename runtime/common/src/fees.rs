@@ -142,7 +142,7 @@ macro_rules! impl_foreign_fees {
                 /// Since the polkadot API extension assumes the same type as on the asset-hubs,
                 /// we use it too.
                 /// https://github.com/polkadot-fellows/runtimes/blob/20ac6ff4dc4c488ad08f507c14b899adc6cb4394/system-parachains/asset-hubs/asset-hub-polkadot/src/lib.rs#L767
-                pub type TxPaymentAssetId = xcm::latest::MultiLocation;
+                pub type TxPaymentAssetId = xcm::latest::Location;
 
                 pub(crate) fn convert_asset_to_currency_id(
                     value: TxPaymentAssetId,

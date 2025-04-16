@@ -99,8 +99,6 @@ pub struct IsCallable;
 
 impl Contains<RuntimeCall> for IsCallable {
     fn contains(runtime_call: &RuntimeCall) -> bool {
-        #[cfg(feature = "parachain")]
-        use cumulus_pallet_dmp_queue::Call::service_overweight;
         use frame_system::Call::{
             kill_prefix, kill_storage, set_code, set_code_without_checks, set_storage,
         };
@@ -135,8 +133,6 @@ impl Contains<RuntimeCall> for IsCallable {
             }
             // Membership is managed by the respective Membership instance
             RuntimeCall::Council(set_members { .. }) => false,
-            #[cfg(feature = "parachain")]
-            RuntimeCall::DmpQueue(service_overweight { .. }) => false,
             RuntimeCall::PredictionMarkets(inner_call) => match inner_call {
                 admin_move_market_to_closed { .. } => false,
                 admin_move_market_to_resolved { .. } => false,

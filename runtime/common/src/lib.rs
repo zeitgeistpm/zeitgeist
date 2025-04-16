@@ -377,7 +377,7 @@ macro_rules! create_runtime_with_additional_pallets {
         #[cfg(feature = "parachain")]
         create_runtime!(
             // System
-            ParachainSystem: cumulus_pallet_parachain_system::{Call, Config<T>, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
+            ParachainSystem: cumulus_pallet_parachain_system::{Call, Config<T>, Event<T>, Inherent, Pallet, Storage} = 100,
             ParachainInfo: parachain_info::{Config<T>, Pallet, Storage} = 101,
 
             // Consensus
@@ -388,7 +388,7 @@ macro_rules! create_runtime_with_additional_pallets {
 
             // XCM
             CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
-            DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
+            // Previously: DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
             PolkadotXcm: pallet_xcm::{Call, Config<T>, Event<T>, Origin, Pallet, Storage} = 122,
             XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 123,
             AssetRegistry: orml_asset_registry::module::{Call, Config<T>, Event<T>, Pallet, Storage} = 124,
@@ -418,19 +418,23 @@ macro_rules! impl_config_traits {
         #[cfg(feature = "parachain")]
         use xcm_config::config::*;
 
+        // TODO outsource constants to parameters file for whole runtime
+        /// Maximum number of blocks simultaneously accepted by the Runtime, not yet included
+        /// into the relay chain.
+        const UNINCLUDED_SEGMENT_CAPACITY: u32 = 3;
+        /// How many parachain blocks are processed by the relay chain per parent. Limits the
+        /// number of blocks authored per slot.
+        const BLOCK_PROCESSING_VELOCITY: u32 = 1;
+
+        type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<
+            Runtime,
+            BLOCK_PROCESSING_VELOCITY,
+            UNINCLUDED_SEGMENT_CAPACITY,
+        >;
+
         // Configure Pallets
         #[cfg(feature = "parachain")]
-        impl cumulus_pallet_dmp_queue::Config for Runtime {
-            type RuntimeEvent = RuntimeEvent;
-            type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
-            type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
-        }
-
-        #[cfg(feature = "parachain")]
         impl cumulus_pallet_parachain_system::Config for Runtime {
-            type CheckAssociatedRelayNumber =
-                cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
-            type DmpMessageHandler = DmpQueue;
             type RuntimeEvent = RuntimeEvent;
             type OnSystemEvent = ();
             type OutboundXcmpMessageSource = XcmpQueue;
@@ -438,6 +442,10 @@ macro_rules! impl_config_traits {
             type ReservedXcmpWeight = crate::parachain_params::ReservedXcmpWeight;
             type SelfParaId = parachain_info::Pallet<Runtime>;
             type XcmpMessageHandler = XcmpQueue;
+            type CheckAssociatedRelayNumber = EmergencyParaXcm;
+            type ConsensusHook = ConsensusHookWrapperForRelayTimestamp<Runtime, ConsensusHook>;
+            type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
+            type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -451,12 +459,20 @@ macro_rules! impl_config_traits {
             type ChannelInfo = ParachainSystem;
             type ControllerOrigin = EnsureRootOrThreeFifthsTechnicalCommittee;
             type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-            type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
-            type PriceForSiblingDelivery = ();
+            type PriceForSiblingDelivery =
+                polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery<
+                    cumulus_primitives_core::ParaId,
+                >;
+            type MaxActiveOutboundChannels = ConstU32<128>;
+            // Most on-chain HRMP channels are configured to use 102400 bytes of max message size, so we
+            // need to set the page size larger than that until we reduce the channel size on-chain.
+            type MaxPageSize = MessageQueueHeapSize;
             type RuntimeEvent = RuntimeEvent;
             type VersionWrapper = ();
+            type XcmpQueue =
+                TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
+            type MaxInboundSuspended = sp_core::ConstU32<1_000>;
             type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
-            type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
         }
 
         impl frame_system::Config for Runtime {
