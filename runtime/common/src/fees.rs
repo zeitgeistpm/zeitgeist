@@ -20,18 +20,17 @@
 #[macro_export]
 macro_rules! impl_fee_types {
     () => {
-        use frame_support::pallet_prelude::TypedGet;
-        use frame_support::traits::tokens::imbalance::ResolveTo;
+        use frame_support::{pallet_prelude::TypedGet, traits::tokens::imbalance::ResolveTo};
         use pallet_treasury::TreasuryAccountId;
 
+        /*
         /// Deal with substrate based fees and tip. This should be used with pallet_transaction_payment.
         pub struct DealWithSubstrateFeesAndTip<R, FeesTreasuryProportion>(
             sp_std::marker::PhantomData<(R, FeesTreasuryProportion)>,
         );
         impl<R, FeesTreasuryProportion> DealWithSubstrateFeesAndTip<R, FeesTreasuryProportion>
         where
-            R: pallet_balances::Config + pallet_treasury::Config + pallet_author_inherent::Config,
-            pallet_author_inherent::Pallet<R>: Get<R::AccountId>,
+            R: pallet_balances::Config + pallet_treasury::Config,
             FeesTreasuryProportion: Get<Perbill>,
         {
             fn deal_with_fees(amount: Credit<R::AccountId, pallet_balances::Pallet<R>>) {
@@ -41,23 +40,29 @@ macro_rules! impl_fee_types {
                 let treasury_part = treasury_proportion.deconstruct();
                 let burn_part = Perbill::one().deconstruct() - treasury_part;
                 let (_, to_treasury) = amount.ration(burn_part, treasury_part);
-                ResolveTo::<TreasuryAccountId<R>, pallet_balances::Pallet<R>>::on_unbalanced(to_treasury);
+                ResolveTo::<TreasuryAccountId<R>, pallet_balances::Pallet<R>>::on_unbalanced(
+                    to_treasury,
+                );
             }
 
             fn deal_with_tip(amount: Credit<R::AccountId, pallet_balances::Pallet<R>>) {
-                ResolveTo::<BlockAuthorAccountId<R>, pallet_balances::Pallet<R>>::on_unbalanced(amount);
+                ResolveTo::<BlockAuthorAccountId<R>, pallet_balances::Pallet<R>>::on_unbalanced(
+                    amount,
+                );
             }
         }
 
-        impl<R, FeesTreasuryProportion> OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>>
+        impl<R, FeesTreasuryProportion>
+            OnUnbalanced<Credit<R::AccountId, pallet_balances::Pallet<R>>>
             for DealWithSubstrateFeesAndTip<R, FeesTreasuryProportion>
         where
-            R: pallet_balances::Config + pallet_treasury::Config + pallet_author_inherent::Config,
-            pallet_author_inherent::Pallet<R>: Get<R::AccountId>,
+            R: pallet_balances::Config + pallet_treasury::Config,
             FeesTreasuryProportion: Get<Perbill>,
         {
             fn on_unbalanceds(
-                mut fees_then_tips: impl Iterator<Item = Credit<R::AccountId, pallet_balances::Pallet<R>>>,
+                mut fees_then_tips: impl Iterator<
+                    Item = Credit<R::AccountId, pallet_balances::Pallet<R>>,
+                >,
             ) {
                 if let Some(fees) = fees_then_tips.next() {
                     Self::deal_with_fees(fees);
@@ -67,6 +72,9 @@ macro_rules! impl_fee_types {
                 }
             }
         }
+        */
+
+        use pallet_balances::NegativeImbalance;
 
         // TODO: use the above proper to replace the below
         pub struct DealWithForeignFees;

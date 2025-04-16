@@ -71,7 +71,12 @@ macro_rules! decl_common_types {
             pallet_prelude::StorageVersion,
             parameter_types,
             storage::child,
-            traits::{Currency, Get, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced},
+            traits::{
+                fungible::HoldConsideration,
+                tokens::{PayFromAccount, UnityAssetBalanceConversion},
+                Currency, Get, Imbalance, LinearStoragePrice, NeverEnsureOrigin, OnRuntimeUpgrade,
+                OnUnbalanced,
+            },
             Blake2_256, BoundedVec, Twox64Concat,
         };
         use frame_system::EnsureSigned;
@@ -81,7 +86,8 @@ macro_rules! decl_common_types {
         use scale_info::TypeInfo;
         use sp_core::storage::ChildInfo;
         use sp_runtime::{
-            generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
+            generic, traits::IdentityLookup, DispatchError, DispatchResult, RuntimeDebug,
+            SaturatedConversion,
         };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
         use zrml_combinatorial_tokens::types::{CryptographicIdManager, Fuel};
@@ -493,6 +499,7 @@ macro_rules! impl_config_traits {
             type AuthorityId = sp_consensus_aura::sr25519::AuthorityId;
             type DisabledValidators = ();
             type MaxAuthorities = MaxAuthorities;
+            type SlotDuration = pallet_aura::MinimumPeriodTimesTwo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -622,6 +629,7 @@ macro_rules! impl_config_traits {
             type OnNewRound = ();
             type RevokeDelegationDelay = RevokeDelegationDelay;
             type RewardPaymentDelay = RewardPaymentDelay;
+            type SlotDuration = SlotDuration;
             type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
         }
 
@@ -719,6 +727,7 @@ macro_rules! impl_config_traits {
             type ReserveIdentifier = [u8; 8];
             type RuntimeEvent = RuntimeEvent;
             type RuntimeHoldReason = RuntimeHoldReason;
+            type RuntimeFreezeReason = RuntimeFreezeReason;
             type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
         }
 
@@ -808,14 +817,22 @@ macro_rules! impl_config_traits {
 
         impl pallet_identity::Config for Runtime {
             type BasicDeposit = BasicDeposit;
+            type ByteDeposit = IdentityByteDeposit;
             type Currency = Balances;
+            type IdentityInformation = pallet_identity::legacy::IdentityInfo<MaxAdditionalFields>;
             type RuntimeEvent = RuntimeEvent;
             type ForceOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
             type MaxRegistrars = MaxRegistrars;
             type MaxSubAccounts = MaxSubAccounts;
+            type MaxSuffixLength = MaxSuffixLength;
+            type MaxUsernameLength = MaxUsernameLength;
+            type OffchainSignature = Signature;
+            type PendingUsernameExpiration = PendingUsernameExpiration;
             type RegistrarOrigin = EnsureRootOrHalfCouncil;
             type Slashed = Treasury;
             type SubAccountDeposit = SubAccountDeposit;
+            type SigningPublicKey = <Signature as sp_runtime::traits::Verify>::Signer;
+            type UsernameAuthorityOrigin = EnsureRoot<AccountId>;
             type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
         }
 
@@ -873,6 +890,12 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type Currency = Balances;
             type ManagerOrigin = EnsureRoot<AccountId>;
+            type Consideration = HoldConsideration<
+                AccountId,
+                Balances,
+                PreimageHoldReason,
+                LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
+            >;
         }
 
         impl InstanceFilter<RuntimeCall> for ProxyType {
@@ -1064,22 +1087,25 @@ macro_rules! impl_config_traits {
             type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
             type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<
                 Balances,
-                DealWithSubstrateFeesAndTip<
-                    Runtime,
-                    FeesTreasuryProportion,
-                >,
+                DealWithSubstrateFeesAndTip<Runtime, FeesTreasuryProportion>,
             >;
             type OperationalFeeMultiplier = OperationalFeeMultiplier;
             type WeightToFee = IdentityFee<Balance>;
         }
 
         impl pallet_treasury::Config for Runtime {
+            type AssetKind = ();
+            type BalanceConverter = UnityAssetBalanceConversion;
+            type Beneficiary = AccountId;
+            type BeneficiaryLookup = IdentityLookup<AccountId>;
             type Burn = Burn;
             type BurnDestination = ();
             type Currency = Balances;
             type RuntimeEvent = RuntimeEvent;
             type MaxApprovals = MaxApprovals;
             type PalletId = TreasuryPalletId;
+            type Paymaster = PayFromAccount<Balances, ZeitgeistTreasuryAccount>;
+            type PayoutPeriod = PayoutPeriod;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
             type SpendFunds = Bounties;
             type SpendOrigin =
@@ -1100,6 +1126,7 @@ macro_rules! impl_config_traits {
             type DataDepositPerByte = DataDepositPerByte;
             type RuntimeEvent = RuntimeEvent;
             type MaximumReasonLength = MaximumReasonLength;
+            type OnSlash = Treasury;
             type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
         }
 
@@ -1111,6 +1138,7 @@ macro_rules! impl_config_traits {
         }
 
         impl pallet_vesting::Config for Runtime {
+            type BlockNumberProvider = System;
             type RuntimeEvent = RuntimeEvent;
             type Currency = Balances;
             type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
@@ -1570,24 +1598,21 @@ macro_rules! create_runtime_api {
             }
 
             impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
-                fn query_fee_details(
-                    uxt: <Block as BlockT>::Extrinsic,
-                    len: u32,
-                ) -> pallet_transaction_payment::FeeDetails<Balance> {
-                    TransactionPayment::query_fee_details(uxt, len)
-                }
-
                 fn query_info(
                     uxt: <Block as BlockT>::Extrinsic,
                     len: u32,
                 ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
                     TransactionPayment::query_info(uxt, len)
                 }
-
+                fn query_fee_details(
+                    uxt: <Block as BlockT>::Extrinsic,
+                    len: u32,
+                ) -> pallet_transaction_payment::FeeDetails<Balance> {
+                    TransactionPayment::query_fee_details(uxt, len)
+                }
                 fn query_weight_to_fee(weight: Weight) -> Balance {
                     TransactionPayment::weight_to_fee(weight)
                 }
-
                 fn query_length_to_fee(length: u32) -> Balance {
                     TransactionPayment::length_to_fee(length)
                 }
@@ -1633,16 +1658,16 @@ macro_rules! create_runtime_api {
             }
 
             impl sp_api::Core<Block> for Runtime {
-                fn execute_block(block: Block) {
-                    Executive::execute_block(block)
-                }
-
-                fn initialize_block(header: &<Block as BlockT>::Header) {
-                    Executive::initialize_block(header)
-                }
-
                 fn version() -> RuntimeVersion {
                     VERSION
+                }
+
+                fn execute_block(block: Block) {
+                    Executive::execute_block(block);
+                }
+
+                fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode {
+                    Executive::initialize_block(header)
                 }
             }
 
@@ -1665,13 +1690,6 @@ macro_rules! create_runtime_api {
                     Executive::apply_extrinsic(extrinsic)
                 }
 
-                fn check_inherents(
-                    block: Block,
-                    data: sp_inherents::InherentData,
-                ) -> sp_inherents::CheckInherentsResult {
-                    data.check_extrinsics(&block)
-                }
-
                 fn finalize_block() -> <Block as BlockT>::Header {
                     Executive::finalize_block()
                 }
@@ -1679,16 +1697,23 @@ macro_rules! create_runtime_api {
                 fn inherent_extrinsics(data: sp_inherents::InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
                     data.create_extrinsics()
                 }
+
+                fn check_inherents(
+                    block: Block,
+                    data: sp_inherents::InherentData,
+                ) -> sp_inherents::CheckInherentsResult {
+                    data.check_extrinsics(&block)
+                }
             }
 
             #[cfg(not(feature = "parachain"))]
             impl sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId> for Runtime {
-                fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
-                    Aura::authorities().into_inner()
-                }
-
                 fn slot_duration() -> sp_consensus_aura::SlotDuration {
                     sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
+                }
+
+                fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
+                    pallet_aura::Authorities::<Runtime>::get().into_inner()
                 }
             }
 
@@ -1730,12 +1755,14 @@ macro_rules! create_runtime_api {
             }
 
             impl sp_session::SessionKeys<Block> for Runtime {
-                fn decode_session_keys(encoded: Vec<u8>) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
-                    opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
-                }
-
                 fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
                     opaque::SessionKeys::generate(seed)
+                }
+
+                fn decode_session_keys(
+                    encoded: Vec<u8>,
+                ) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
+                    opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
                 }
             }
 
@@ -1779,6 +1806,9 @@ macro_rules! create_runtime_api {
             #[cfg(feature = "try-runtime")]
             impl frame_try_runtime::TryRuntime<Block> for Runtime {
                 fn on_runtime_upgrade(checks: UpgradeCheckSelect) -> (Weight, Weight) {
+                    // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+                    // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
+                    // right here and right now.
                     let weight = Executive::try_runtime_upgrade(checks).unwrap();
                     (weight, RuntimeBlockWeights::get().max_block)
                 }

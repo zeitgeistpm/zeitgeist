@@ -22,7 +22,7 @@
     clippy::arithmetic_side_effects
 )]
 
-use super::{Runtime, VERSION};
+use super::{Runtime, RuntimeHoldReason, VERSION};
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
@@ -167,6 +167,8 @@ parameter_types! {
     // Identity
     /// The amount held on deposit for a registered identity
     pub const BasicDeposit: Balance = deposit(1, 258);
+    /// The amount held on deposit per encoded byte for a registered identity.
+    pub const IdentityByteDeposit: Balance = deposit(0, 1);
     /// Maximum number of additional fields that may be stored in an ID. Needed to bound the I/O
     /// required to access an identity, but can be pretty high.
     pub const MaxAdditionalFields: u32 = 64;
@@ -175,6 +177,12 @@ parameter_types! {
     pub const MaxRegistrars: u32 = 8;
     /// The maximum number of sub-accounts allowed per identified account.
     pub const MaxSubAccounts: u32 = 64;
+    /// The maximum length of a suffix.
+    pub const MaxSuffixLength: u32 = 7;
+    /// The maximum length of a username, including its suffix and any system-added delimiters.
+    pub const MaxUsernameLength: u32 = 32;
+    /// The number of blocks within which a username grant must be accepted.
+    pub const PendingUsernameExpiration: u64 = 7 * BLOCKS_PER_DAY;
     /// The amount held on deposit for a registered subaccount. This should account for the fact
     /// that one storage item's value will increase by the size of an account ID, and there will
     /// be another trie item whose value is the size of an account ID plus 32 bytes.
@@ -264,6 +272,7 @@ parameter_types! {
     pub const PreimageMaxSize: u32 = 4096 * 1024;
     pub PreimageBaseDeposit: Balance = deposit(2, 64);
     pub PreimageByteDeposit: Balance = deposit(0, 1);
+    pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
 
     // Proxy
     // One storage item; key size 32, value size 8; .
@@ -359,6 +368,8 @@ parameter_types! {
     pub const MaxApprovals: u32 = 100;
     /// Maximum amount a verified origin can spend
     pub const MaxTreasurySpend: Balance = Balance::MAX;
+    /// The period during which an approved treasury spend has to be claimed.
+    pub const PayoutPeriod: BlockNumber = 30 * BLOCKS_PER_DAY;
     /// Fraction of a proposal's value that should be bonded in order to place the proposal.
     /// An accepted proposal gets these back. A rejected proposal does not.
     pub const ProposalBond: Permill = Permill::from_percent(5);

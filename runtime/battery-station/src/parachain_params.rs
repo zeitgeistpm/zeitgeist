@@ -85,6 +85,8 @@ parameter_types! {
     pub const MinDelegation: u128 = BASE / 2;
     /// Minimum collators selected per round, default at genesis and minimum forever after
     pub const MinSelectedCandidates: u32 = 8;
+    /// Slot duration in milliseconds
+    pub const SlotDuration: u64 = 12_000;
     /// Rounds before the delegator revocation can be executed
     pub const RevokeDelegationDelay: u32 = 2;
     /// Rounds before the reward is paid
