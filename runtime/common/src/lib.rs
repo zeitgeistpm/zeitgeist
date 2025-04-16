@@ -391,7 +391,7 @@ macro_rules! create_runtime_with_additional_pallets {
             DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
             PolkadotXcm: pallet_xcm::{Call, Config<T>, Event<T>, Origin, Pallet, Storage} = 122,
             XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 123,
-            AssetRegistry: orml_asset_registry::{Call, Config<T>, Event<T>, Pallet, Storage} = 124,
+            AssetRegistry: orml_asset_registry::module::{Call, Config<T>, Event<T>, Pallet, Storage} = 124,
             UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 125,
             XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 126,
 
@@ -635,7 +635,7 @@ macro_rules! impl_config_traits {
         }
 
         #[cfg(feature = "parachain")]
-        impl orml_asset_registry::Config for Runtime {
+        impl orml_asset_registry::module::Config for Runtime {
             type AssetId = CurrencyId;
             type AssetProcessor = CustomAssetProcessor;
             type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrThreeFifthsCouncil>;

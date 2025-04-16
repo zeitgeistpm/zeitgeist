@@ -45,7 +45,7 @@ impl ExtBuilder {
             let custom_metadata =
                 CustomMetadata { allow_as_base_asset: true, ..Default::default() };
 
-            orml_asset_registry::GenesisConfig::<Runtime> {
+            orml_asset_registry::module::GenesisConfig::<Runtime> {
                 assets: vec![(
                     FOREIGN_ASSET,
                     AssetMetadata {

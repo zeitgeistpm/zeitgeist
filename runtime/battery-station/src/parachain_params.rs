@@ -28,9 +28,9 @@ use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent};
 use xcm::latest::{
-    prelude::{GlobalConsensus, InteriorMultiLocation, X1, X2},
+    prelude::{GlobalConsensus, InteriorLocation},
     Junction::Parachain,
-    MultiLocation, NetworkId,
+    Location, NetworkId,
 };
 use zeitgeist_primitives::{
     constants::{BASE, BLOCKS_PER_MINUTE},
@@ -108,21 +108,21 @@ parameter_types! {
     pub const MaxRemoteLockConsumers: u32 = 0;
 
     /// Relative self location
-    pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
+    pub SelfLocation: Location = Location::new(1, [Parachain(ParachainInfo::parachain_id().into())]);
     /// This chain's Universal Location
-    pub UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
+    pub UniversalLocation: InteriorLocation = [GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into())].into();
 }
 
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
     // XCM
-    /// A `MultiLocation` that can be reached via `XcmRouter`. Used only in benchmarks.
-    pub ReachableDest: Option<MultiLocation> = Some(xcm::latest::prelude::Parent.into());
+    /// A `Location` that can be reached via `XcmRouter`. Used only in benchmarks.
+    pub ReachableDest: Option<Location> = Some(xcm::latest::prelude::Parent.into());
 }
 
 parameter_type_with_key! {
     // XCM
-    pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+    pub ParachainMinFee: |_location: Location| -> Option<u128> {
         None
     };
 }

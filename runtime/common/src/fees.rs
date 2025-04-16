@@ -461,7 +461,7 @@ macro_rules! fee_tests {
         #[cfg(feature = "parachain")]
         mod parachain {
             use super::*;
-            use orml_asset_registry::AssetMetadata;
+            use orml_asset_registry::module::AssetMetadata;
 
             #[test]
             fn correct_and_deposit_fee_dot_foreign_asset() {

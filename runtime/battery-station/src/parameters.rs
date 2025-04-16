@@ -458,7 +458,7 @@ parameter_type_with_key! {
             #[cfg(feature = "parachain")]
             Asset::ForeignAsset(id) => {
                 let maybe_metadata = <
-                    orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect
+                    orml_asset_registry::module::Pallet<Runtime> as orml_traits::asset_registry::Inspect
                 >::metadata(&Asset::ForeignAsset(*id));
 
                 if let Some(metadata) = maybe_metadata {
