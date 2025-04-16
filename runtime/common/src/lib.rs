@@ -73,6 +73,7 @@ macro_rules! decl_common_types {
             storage::child,
             traits::{
                 fungible::HoldConsideration,
+                fungibles::Imbalance as FImbalance,
                 tokens::{PayFromAccount, UnityAssetBalanceConversion},
                 Currency, Get, Imbalance, LinearStoragePrice, NeverEnsureOrigin, OnRuntimeUpgrade,
                 OnUnbalanced,
@@ -81,7 +82,7 @@ macro_rules! decl_common_types {
         };
         use frame_system::EnsureSigned;
         use orml_traits::MultiCurrency;
-        use pallet_balances::CreditOf;
+        use pallet_balances::{CreditOf, NegativeImbalance};
         use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
         use scale_info::TypeInfo;
         use sp_core::storage::ChildInfo;
@@ -320,7 +321,7 @@ macro_rules! create_runtime {
                 Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent} = 1,
                 RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 2,
                 Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 3,
-                Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 4,
+                Preimage: pallet_preimage = 4,
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
@@ -1093,6 +1094,20 @@ macro_rules! impl_config_traits {
             type WeightToFee = IdentityFee<Balance>;
         }
 
+        #[cfg(feature = "runtime-benchmarks")]
+        pub struct TreasuryBenchmarkHelper;
+
+        #[cfg(feature = "runtime-benchmarks")]
+        impl pallet_treasury::ArgumentsFactory<(), AccountId> for TreasuryBenchmarkHelper {
+            fn create_asset_kind(_seed: u32) -> () {
+                ()
+            }
+
+            fn create_beneficiary(seed: [u8; 32]) -> AccountId {
+                AccountId::from(seed)
+            }
+        }
+
         impl pallet_treasury::Config for Runtime {
             type AssetKind = ();
             type BalanceConverter = UnityAssetBalanceConversion;
@@ -1112,6 +1127,8 @@ macro_rules! impl_config_traits {
                 EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxTreasurySpend>;
             type SpendPeriod = SpendPeriod;
             type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = TreasuryBenchmarkHelper;
         }
 
         impl pallet_bounties::Config for Runtime {

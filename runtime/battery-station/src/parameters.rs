@@ -22,7 +22,7 @@
     clippy::arithmetic_side_effects
 )]
 
-use super::{Runtime, RuntimeHoldReason, VERSION};
+use super::{RuntimeHoldReason, VERSION};
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
