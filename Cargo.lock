@@ -1570,6 +1570,7 @@ checksum = "2382f75942f4b3be3690fe4f86365e9c853c1587d6ee58212cebf6e2a9ccd101"
 name = "common-runtime"
 version = "0.6.0"
 dependencies = [
+ "async-backing-primitives",
  "cfg-if",
  "cumulus-pallet-xcmp-queue",
  "frame-support",
@@ -1577,6 +1578,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "pallet-asset-tx-payment",
+ "pallet-async-backing",
  "pallet-author-inherent",
  "pallet-author-mapping",
  "pallet-author-slot-filter",
@@ -1584,6 +1586,7 @@ dependencies = [
  "pallet-bounties",
  "pallet-collective",
  "pallet-democracy",
+ "pallet-emergency-para-xcm",
  "pallet-identity",
  "pallet-insecure-randomness-collective-flip",
  "pallet-membership",
@@ -7032,6 +7035,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-async-backing"
+version = "0.9.0"
+source = "git+https://github.com/zeitgeistpm/moonkit?branch=zeitgeist-polkadot-stable2409#42bb0e730597514973940a24dc80538edef69557"
+dependencies = [
+ "cumulus-pallet-parachain-system",
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "log",
+ "nimbus-primitives",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-consensus-slots",
+ "sp-core",
+ "sp-runtime",
+ "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409)",
+]
+
+[[package]]
 name = "pallet-aura"
 version = "37.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
@@ -7421,6 +7444,25 @@ dependencies = [
  "sp-npos-elections",
  "sp-runtime",
  "sp-staking",
+]
+
+[[package]]
+name = "pallet-emergency-para-xcm"
+version = "0.1.0"
+source = "git+https://github.com/zeitgeistpm/moonkit?branch=zeitgeist-polkadot-stable2409#42bb0e730597514973940a24dc80538edef69557"
+dependencies = [
+ "cumulus-pallet-parachain-system",
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-message-queue",
+ "parity-scale-codec",
+ "polkadot-parachain-primitives",
+ "scale-info",
+ "sp-runtime",
+ "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409)",
+ "xcm-primitives",
 ]
 
 [[package]]
@@ -16170,6 +16212,22 @@ dependencies = [
  "sp-tracing",
  "staging-xcm",
  "staging-xcm-executor",
+]
+
+[[package]]
+name = "xcm-primitives"
+version = "0.1.0"
+source = "git+https://github.com/zeitgeistpm/moonkit?branch=zeitgeist-polkadot-stable2409#42bb0e730597514973940a24dc80538edef69557"
+dependencies = [
+ "frame-support",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "primitive-types",
+ "sp-core",
+ "sp-runtime",
+ "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409)",
+ "staging-xcm",
 ]
 
 [[package]]

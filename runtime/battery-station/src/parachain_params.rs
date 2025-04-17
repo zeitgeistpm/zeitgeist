@@ -36,10 +36,15 @@ use zeitgeist_primitives::{
     constants::{BASE, BLOCKS_PER_MINUTE},
     types::Balance,
 };
+use cumulus_primitives_core::AggregateMessageOrigin;
 
 parameter_types! {
     // Asset registry
     pub const AssetRegistryStringLimit: u32 = 1024;
+
+    // Async backing
+    pub const AllowMultipleBlocksPerSlot: bool = true;
+    pub const ExpectedBlockTime: u64 = 6_000;
 
     // Author-Mapping
     /// The amount that should be taken as a security deposit when registering a NimbusId.
@@ -51,8 +56,11 @@ parameter_types! {
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
     pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
     pub UnitWeightCost: Weight = Weight::from_parts(200_000_000u64, 0);
+    pub const RelayOrigin: AggregateMessageOrigin = AggregateMessageOrigin::Parent;
 
     // Staking
+    /// Average time beetween 2 blocks in milliseconds
+    pub const BlockTime: u64 = 6_000;
     /// Rounds before the candidate bond increase/decrease can be executed
     pub const CandidateBondLessDelay: u32 = 2;
     /// Default fixed percent a collator takes off the top of due rewards
@@ -86,7 +94,7 @@ parameter_types! {
     /// Minimum collators selected per round, default at genesis and minimum forever after
     pub const MinSelectedCandidates: u32 = 8;
     /// Slot duration in milliseconds
-    pub const SlotDuration: u64 = 12_000;
+    pub const SlotDuration: u64 = 6_000;
     /// Rounds before the delegator revocation can be executed
     pub const RevokeDelegationDelay: u32 = 2;
     /// Rounds before the reward is paid
@@ -106,6 +114,29 @@ parameter_types! {
     pub const MaxLockers: u32 = 8;
     /// The maximum number of consumers a single remote lock may have.
     pub const MaxRemoteLockConsumers: u32 = 0;
+    /// Maximal number of outbound XCMP channels that can have messages queued at the same time.
+    pub const MaxActiveOutboundChannels: u32 = 128;
+    /// The maximum number of inbound XCMP channels that can be suspended simultaneously.
+    pub const MaxInboundSuspended: u32 = 1_000;
+    /// Maximum number of relay block to skip before trigering the Paused mode.
+    pub const PausedThreshold: u32 = 300;
+    /// The amount of weight (if any) which should be provided to the message queue for
+    /// servicing enqueued items.
+    ///
+    /// This may be legitimately `None` in the case that you will call
+    /// `ServiceQueues::service_queues` manually.
+    pub MessageQueueServiceWeight: Weight =
+        Perbill::from_percent(25) * RuntimeBlockWeights::get().max_block;
+    /// The maximum number of stale pages (i.e. of overweight messages) allowed before culling
+    /// can happen. Once there are more stale pages than this, then historical pages may be
+    /// dropped, even if they contain unprocessed overweight messages.
+    pub const MessageQueueMaxStale: u32 = 8;
+    /// The size of the page; this implies the maximum message size which can be sent.
+    ///
+    /// A good value depends on the expected message sizes, their weights, the weight that is
+    /// available for processing them and the maximal needed message size. The maximal message
+    /// size is slightly lower than this as defined by [`MaxMessageLenOf`].
+    pub const MessageQueueHeapSize: u32 = 103 * 1024;
 
     /// Relative self location
     pub SelfLocation: Location = Location::new(1, [Parachain(ParachainInfo::parachain_id().into())]);
