@@ -67,6 +67,7 @@ pub mod weights;
 macro_rules! decl_common_types {
     () => {
         use core::marker::PhantomData;
+        use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
         use frame_support::{
             migration::storage_key_iter,
             migrations::RemovePallet,
@@ -85,14 +86,19 @@ macro_rules! decl_common_types {
         use frame_system::EnsureSigned;
         use orml_traits::MultiCurrency;
         use pallet_balances::{CreditOf, NegativeImbalance};
+        use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
         use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
         use scale_info::TypeInfo;
+        use sp_consensus_slots::Slot;
         use sp_core::storage::ChildInfo;
         use sp_runtime::{
             generic, traits::IdentityLookup, DispatchError, DispatchResult, RuntimeDebug,
             SaturatedConversion,
         };
-        use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
+        use zeitgeist_primitives::{
+            constants::{BLOCK_PROCESSING_VELOCITY, UNINCLUDED_SEGMENT_CAPACITY},
+            traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi},
+        };
         use zrml_combinatorial_tokens::types::{CryptographicIdManager, Fuel};
         use zrml_neo_swaps::types::DecisionMarketOracle;
 
@@ -442,9 +448,13 @@ macro_rules! impl_config_traits {
             type CheckAssociatedRelayNumber =
                 cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
             type ConsensusHook =
-                relay_timestamp::ConsensusHookWrapperForRelayTimestamp<Runtime, ConsensusHook>;
+                common_runtime::relay_timestamp::ConsensusHookWrapperForRelayTimestamp<
+                    Runtime,
+                    ConsensusHook,
+                >;
             type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
-            type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
+            // TODO: add weight info after benchmarking
+            type WeightInfo = ();
         }
 
         #[cfg(feature = "parachain")]
@@ -459,9 +469,7 @@ macro_rules! impl_config_traits {
             type ControllerOrigin = EnsureRootOrThreeFifthsTechnicalCommittee;
             type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
             type PriceForSiblingDelivery =
-                polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery<
-                    cumulus_primitives_core::ParaId,
-                >;
+                polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery<ParaId>;
             type MaxActiveOutboundChannels = MaxActiveOutboundChannels;
             // Most on-chain HRMP channels are configured to use 102400 bytes of max message size, so we
             // need to set the page size larger than that until we reduce the channel size on-chain.
@@ -478,13 +486,12 @@ macro_rules! impl_config_traits {
         impl pallet_message_queue::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
             #[cfg(feature = "runtime-benchmarks")]
-            type MessageProcessor = pallet_message_queue::mock_helpers::NoopMessageProcessor<
-                cumulus_primitives_core::AggregateMessageOrigin,
-            >;
+            type MessageProcessor =
+                pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
             #[cfg(not(feature = "runtime-benchmarks"))]
             type MessageProcessor = xcm_builder::ProcessXcmMessage<
                 AggregateMessageOrigin,
-                xcm_executor::XcmExecutor<xcm_config::XcmConfig>,
+                xcm_executor::XcmExecutor<XcmConfig>,
                 RuntimeCall,
             >;
             type Size = u32;
@@ -494,7 +501,8 @@ macro_rules! impl_config_traits {
             // The XCMP queue pallet is only ever able to handle the `Sibling(ParaId)` origin:
             type QueueChangeHandler = NarrowOriginToSibling<XcmpQueue>;
             type QueuePausedQuery = NarrowOriginToSibling<XcmpQueue>;
-            type WeightInfo = moonbeam_weights::pallet_message_queue::WeightInfo<Runtime>;
+            // TODO: add weight info after benchmarking
+            type WeightInfo = ();
             type IdleMaxServiceWeight = MessageQueueServiceWeight;
         }
 
@@ -756,6 +764,8 @@ macro_rules! impl_config_traits {
             type MaxAssetsForTransfer = MaxAssetsForTransfer;
             type MinXcmFee = ParachainMinFee;
             type LocationsFilter = Everything;
+            type RateLimiter = ();
+            type RateLimiterId = ();
             type ReserveProvider = orml_traits::location::AbsoluteReserveProvider;
             type SelfLocation = SelfLocation;
             type UniversalLocation = UniversalLocation;

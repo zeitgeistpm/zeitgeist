@@ -34,6 +34,7 @@ polkadot-primitives = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }
+sp-consensus-slots = { workspace = true }
 sp-core = { workspace = true }
 sp-debug-derive = { workspace = true }
 sp-inherents = { workspace = true }
@@ -63,6 +64,7 @@ cumulus-primitives-core = { workspace = true, optional = true }
 cumulus-primitives-timestamp = { workspace = true, optional = true }
 cumulus-primitives-utility = { workspace = true, optional = true }
 parachain-info = { workspace = true, optional = true }
+parachains-common = { workspace = true, optional = true }
 
 # Parachain
 nimbus-primitives = { workspace = true, optional = true }
@@ -71,11 +73,14 @@ pallet-author-mapping = { workspace = true, optional = true }
 pallet-author-slot-filter = { workspace = true, optional = true }
 pallet-parachain-staking = { workspace = true, optional = true }
 session-keys-primitives = { workspace = true, optional = true }
+pallet-async-backing = { workspace = true, optional = true }
+async-backing-primitives = { workspace = true, optional = true }
 
 
 # Polkadot
 
 polkadot-parachain-primitives = { workspace = true, optional = true }
+polkadot-runtime-common = { workspace = true, optional = true }
 
 # Standalone
 
@@ -145,6 +150,7 @@ parachain = [
     "cumulus-primitives-timestamp",
     "cumulus-primitives-utility",
     "parachain-info",
+    "parachains-common",
 
     # Parachain
 
@@ -154,7 +160,10 @@ parachain = [
     "pallet-author-slot-filter",
     "pallet-parachain-staking",
     "polkadot-parachain-primitives",
+    "polkadot-runtime-common",
     "session-keys-primitives",
+    "pallet-async-backing",
+    "async-backing-primitives",
 
     # XCM
 
@@ -226,6 +235,7 @@ runtime-benchmarks = [
     "zrml-orderbook/runtime-benchmarks",
 ]
 std = [
+    "async-backing-primitives?/std",
     "frame-executive/std",
     "frame-support/std",
     "frame-system-rpc-runtime-api/std",
@@ -237,6 +247,7 @@ std = [
     "orml-tokens/std",
     "orml-traits/std",
     "pallet-asset-tx-payment/std",
+    "pallet-async-backing?/std",
     "pallet-balances/std",
     "pallet-bounties/std",
     "pallet-collective/std",
@@ -260,6 +271,7 @@ std = [
     "scale-info/std",
     "sp-api/std",
     "sp-block-builder/std",
+    "sp-consensus-slots/std",
     "sp-core/std",
     "sp-inherents/std",
     "sp-offchain/std",
@@ -286,6 +298,7 @@ std = [
     "cumulus-primitives-timestamp?/std",
     "cumulus-primitives-utility?/std",
     "parachain-info?/std",
+    "parachains-common?/std",
 
     # Parachain
 
@@ -300,6 +313,7 @@ std = [
 
     "pallet-xcm?/std",
     "polkadot-parachain-primitives?/std",
+    "polkadot-runtime-common?/std",
 
     # Standalone
 
@@ -395,6 +409,7 @@ try-runtime = [
     "zrml-orderbook/try-runtime",
 
     # Parachain
+    "pallet-async-backing?/try-runtime",
     "pallet-author-inherent?/try-runtime",
     "pallet-author-mapping?/try-runtime",
     "pallet-author-slot-filter?/try-runtime",

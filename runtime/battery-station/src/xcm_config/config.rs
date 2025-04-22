@@ -26,6 +26,7 @@ use crate::{
 
 use alloc::vec::Vec;
 use core::{cmp::min, marker::PhantomData};
+use cumulus_primitives_core::Location;
 use frame_support::{
     parameter_types,
     traits::{ConstU8, Everything, Get, Nothing},
@@ -41,10 +42,9 @@ use sp_runtime::traits::{ConstU32, Convert, MaybeEquivalence};
 use xcm::{
     latest::{
         prelude::{
-            AccountId32, Asset as XcmAsset, AssetId, AssetId as XcmAssetId, GeneralKey,
-            XcmContext,
+            AccountId32, Asset as XcmAsset, AssetId, AssetId as XcmAssetId, GeneralKey, XcmContext,
         },
-        Error as XcmError, Junction, Location, Result as XcmResult,
+        Error as XcmError, Junction, Result as XcmResult,
     },
     opaque::latest::Fungibility::Fungible,
 };
@@ -124,6 +124,16 @@ impl xcm_executor::Config for XcmConfig {
     type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
     /// How to send an onward XCM message.
     type XcmSender = XcmRouter;
+    /// Transactional processor for XCM instructions.
+    type TransactionalProcessor = xcm_builder::FrameTransactionalProcessor;
+    /// Allows optional logic execution for the `HrmpNewChannelOpenRequest` XCM notification.
+    type HrmpNewChannelOpenRequestHandler = ();
+    /// Allows optional logic execution for the `HrmpChannelAccepted` XCM notification.
+    type HrmpChannelAcceptedHandler = ();
+    /// Allows optional logic execution for the `HrmpChannelClosing` XCM notification.
+    type HrmpChannelClosingHandler = ();
+    /// Allows recording the last executed XCM (used by dry-run runtime APIs).
+    type XcmRecorder = PolkadotXcm;
 }
 
 /// Additional filters that specify whether the XCM instruction should be executed at all.
@@ -279,7 +289,11 @@ impl<
         TransactAssetDelegate,
     >
 {
-    fn deposit_asset(asset: &XcmAsset, location: &Location, context: &XcmContext) -> XcmResult {
+    fn deposit_asset(
+        asset: &XcmAsset,
+        location: &Location,
+        context: Option<&XcmContext>,
+    ) -> XcmResult {
         let asset_adjusted = Self::adjust_fractional_places(asset);
         TransactAssetDelegate::deposit_asset(&asset_adjusted, location, context)
     }
@@ -397,7 +411,8 @@ impl MaybeEquivalence<Location, CurrencyId> for AssetConvert {
                 [
                     Junction::Parachain(ParachainInfo::parachain_id().into()),
                     general_key(battery_station::KEY),
-                ].into(),
+                ]
+                .into(),
             )),
             Asset::ForeignAsset(_) => AssetRegistry::location(id).ok()?,
             _ => None,

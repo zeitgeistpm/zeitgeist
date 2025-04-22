@@ -27,7 +27,6 @@ runtime-benchmarks = []
 std = [
     "frame-support/std",
     "frame-system/std",
-    "hex-literal/std",
     "orml-currencies/std",
     "orml-tokens/std",
     "orml-traits/std",

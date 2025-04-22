@@ -1,13 +1,12 @@
 [dependencies]
 # Pallets
+cumulus-pallet-parachain-system = { workspace = true, optional = true }
 cumulus-pallet-xcmp-queue = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 orml-currencies = { workspace = true }
 orml-tokens = { workspace = true }
 pallet-asset-tx-payment = { workspace = true }
-pallet-async-backing = { workspace = true, optional = true }
-async-backing-primitives = { workspace = true, optional = true }
 pallet-author-inherent = { workspace = true, optional = true }
 pallet-author-mapping = { workspace = true, optional = true }
 pallet-author-slot-filter = { workspace = true, optional = true }
@@ -33,20 +32,20 @@ zeitgeist-primitives = { workspace = true }
 
 # Utility
 cfg-if = { workspace = true }
+log = { workspace = true }
 
 [features]
 default = ["std"]
 parachain = [
-    "async-backing-primitives",
+    "cumulus-pallet-parachain-system",
     "cumulus-pallet-xcmp-queue",
-    "pallet-async-backing",
     "pallet-author-inherent",
     "pallet-author-mapping",
     "pallet-author-slot-filter",
     "pallet-parachain-staking",
 ]
 std = [
-    "async-backing-primitives?/std",
+    "cumulus-pallet-parachain-system?/std",
     "cumulus-pallet-xcmp-queue?/std",
     "frame-system/std",
     "frame-support/std",
@@ -56,7 +55,6 @@ std = [
     "pallet-author-inherent?/std",
     "pallet-author-mapping?/std",
     "pallet-author-slot-filter?/std",
-    "pallet-async-backing?/std",
     "pallet-balances/std",
     "pallet-bounties/std",
     "pallet-collective/std",

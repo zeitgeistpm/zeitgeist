@@ -101,6 +101,7 @@ cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/polkadot-sdk"
 cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 cumulus-primitives-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 cumulus-primitives-utility = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
+parachains-common = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 async-backing-primitives = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 nimbus-primitives = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 pallet-async-backing = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
@@ -120,7 +121,7 @@ moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "zeit
 pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 
 # ORML (wasm)
-orml-asset-registry = { git = "https://github.com/zeitgeistpm/open-runtime-module-library", branch = "zeitgeist-polkadot-stable2409", default-features = false }
+orml-asset-registry = { git = "https://github.com/zeitgeistpm/open-runtime-module-library", branch = "zeitgeist-polkadot-stable2409-asset-registry-location-fix", default-features = false }
 orml-benchmarking = { git = "https://github.com/zeitgeistpm/open-runtime-module-library", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 orml-currencies = { git = "https://github.com/zeitgeistpm/open-runtime-module-library", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 orml-tokens = { git = "https://github.com/zeitgeistpm/open-runtime-module-library", branch = "zeitgeist-polkadot-stable2409", default-features = false }
@@ -208,6 +209,7 @@ sp-consensus-aura = { git = "https://github.com/paritytech/polkadot-sdk", tag = 
 sp-consensus-babe = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 sp-consensus-beefy = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 sp-consensus-grandpa = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
+sp-consensus-slots = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 sp-debug-derive = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 sp-inherents = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
@@ -231,6 +233,7 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkad
 polkadot-parachain-primitives = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 #polkadot-runtime = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
+polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 rococo-runtime = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 rococo-runtime-constants = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
