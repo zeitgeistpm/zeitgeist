@@ -363,8 +363,7 @@ impl Convert<CurrencyId, Option<Location>> for AssetConvert {
                 [
                     Junction::Parachain(ParachainInfo::parachain_id().into()),
                     general_key(battery_station::KEY),
-                ]
-                .into(),
+                ],
             )),
             Asset::ForeignAsset(_) => AssetRegistry::location(&id).ok()?,
             _ => None,
@@ -411,8 +410,7 @@ impl MaybeEquivalence<Location, CurrencyId> for AssetConvert {
                 [
                     Junction::Parachain(ParachainInfo::parachain_id().into()),
                     general_key(battery_station::KEY),
-                ]
-                .into(),
+                ],
             )),
             Asset::ForeignAsset(_) => AssetRegistry::location(id).ok()?,
             _ => None,
