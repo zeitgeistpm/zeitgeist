@@ -375,3 +375,6 @@ overflow-checks = true
 # Ensure same Substrate dependencies are used everywhere
 sp-arithmetic = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
+
+[patch."https://github.com/paritytech/polkadot-sdk"]
+pallet-asset-tx-payment = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-asset-tx-payment-asset-id-fix" }
