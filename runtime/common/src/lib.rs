@@ -115,6 +115,7 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
+        // TODO: look for parachain-staking migrations here: https://github.com/moonbeam-foundation/moonbeam/blob/v0.44.0/pallets/parachain-staking/migrations.md
         type Migrations = ();
 
         pub type Executive = frame_executive::Executive<
@@ -624,9 +625,8 @@ macro_rules! impl_config_traits {
             type SovereignAccountOf = LocationToAccountId;
             type MaxLockers = MaxLockers;
             type MaxRemoteLockConsumers = MaxRemoteLockConsumers;
+            // TODO(#1425) use correct weight info after benchmarking
             type WeightInfo = pallet_xcm::TestWeightInfo;
-            #[cfg(feature = "runtime-benchmarks")]
-            type ReachableDest = ReachableDest;
             type RemoteLockConsumerIdentifier = ();
 
             const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
@@ -1572,6 +1572,7 @@ macro_rules! create_runtime_api {
                             list_benchmark!(list, extra, pallet_author_inherent, AuthorInherent);
                             list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                             list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
+                            list_benchmark!(list, extra, pallet_message_queue, MessageQueue);
                             list_benchmark!(list, extra, pallet_parachain_staking, ParachainStaking);
                         } else {
                             list_benchmark!(list, extra, pallet_grandpa, Grandpa);
@@ -1664,6 +1665,7 @@ macro_rules! create_runtime_api {
                             add_benchmark!(params, batches, pallet_author_inherent, AuthorInherent);
                             add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
+                            add_benchmark!(params, batches, pallet_message_queue, MessageQueue);
                             add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
 
                         } else {
