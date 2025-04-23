@@ -420,11 +420,8 @@ impl MaybeEquivalence<Location, CurrencyId> for AssetConvert {
 
 impl Convert<XcmAsset, Option<CurrencyId>> for AssetConvert {
     fn convert(asset: XcmAsset) -> Option<CurrencyId> {
-        if let XcmAsset { id: XcmAssetId(location), .. } = asset {
-            <AssetConvert as MaybeEquivalence<_, _>>::convert(&location)
-        } else {
-            None
-        }
+        let XcmAsset { id: XcmAssetId(location), .. } = asset;
+        <AssetConvert as MaybeEquivalence<_, _>>::convert(&location)
     }
 }
 
