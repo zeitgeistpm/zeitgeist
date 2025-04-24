@@ -47,7 +47,8 @@ use zeitgeist_primitives::{constants::*, types::*};
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
-    WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
+    // previously the block weight was 500ms, the updated execution time is 2000ms weight
+    WEIGHT_REF_TIME_PER_SECOND.saturating_mul(2),
     polkadot_primitives::MAX_POV_SIZE as u64,
 );
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
