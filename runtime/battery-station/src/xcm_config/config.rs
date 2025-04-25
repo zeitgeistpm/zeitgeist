@@ -18,10 +18,10 @@
 
 use super::fees::{native_per_second, FixedConversionRateProvider};
 use crate::{
-    AccountId, AssetManager, AssetRegistry, Balance, CurrencyId, MaxAssetsIntoHolding,
-    MaxInstructions, ParachainInfo, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork,
-    RuntimeCall, RuntimeOrigin, UnitWeightCost, UniversalLocation, UnknownTokens, XcmpQueue,
-    ZeitgeistTreasuryAccount,
+    AccountId, AssetHubLocation, AssetManager, AssetRegistry, Balance, CurrencyId,
+    MaxAssetsIntoHolding, MaxInstructions, ParachainInfo, ParachainSystem, PolkadotXcm,
+    RelayChainNativeAssetFromAssetHub, RelayChainOrigin, RelayNetwork, RuntimeCall, RuntimeOrigin,
+    UnitWeightCost, UniversalLocation, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
 };
 
 use alloc::vec::Vec;
@@ -29,7 +29,7 @@ use core::{cmp::min, marker::PhantomData};
 use cumulus_primitives_core::Location;
 use frame_support::{
     parameter_types,
-    traits::{ConstU8, Everything, Get, Nothing},
+    traits::{ConstU8, ContainsPair, Everything, Get, Nothing},
 };
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{asset_registry::Inspect, location::AbsoluteReserveProvider};
@@ -42,7 +42,8 @@ use sp_runtime::traits::{ConstU32, Convert, MaybeEquivalence};
 use xcm::{
     latest::{
         prelude::{
-            AccountId32, Asset as XcmAsset, AssetId, AssetId as XcmAssetId, GeneralKey, XcmContext,
+            AccountId32, Asset as XcmAsset, AssetId, AssetId as XcmAssetId, Fungibility,
+            GeneralKey, XcmContext,
         },
         Error as XcmError, Junction, Result as XcmResult,
     },
@@ -50,10 +51,10 @@ use xcm::{
 };
 use xcm_builder::{
     AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-    AllowTopLevelPaidExecutionFrom, FixedRateOfFungible, FixedWeightBounds, ParentIsPreset,
+    AllowTopLevelPaidExecutionFrom, Case, FixedRateOfFungible, FixedWeightBounds, ParentIsPreset,
     RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
-    TakeWeightCredit, WithComputedOrigin,
+    TakeWeightCredit, TrailingSetTopicAsId, WithComputedOrigin, WithUniqueTopic,
 };
 use xcm_executor::{traits::TransactAsset, AssetsInHolding};
 use zeitgeist_primitives::{constants::BalanceFractionalDecimals, types::Asset};
@@ -92,7 +93,7 @@ impl xcm_executor::Config for XcmConfig {
     type FeeManager = ();
     /// Combinations of (Location, Asset) pairs which are trusted as reserves.
     // Trust the parent chain, sibling parachains and children chains of this chain.
-    type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
+    type IsReserve = Reserves;
     /// Combinations of (Location, Asset) pairs which we trust as teleporters.
     type IsTeleporter = ();
     /// Maximum amount of tokens the holding register can store
@@ -137,7 +138,7 @@ impl xcm_executor::Config for XcmConfig {
 }
 
 /// Additional filters that specify whether the XCM instruction should be executed at all.
-pub type Barrier = (
+pub type Barrier = TrailingSetTopicAsId<(
     // Execution barrier that just takes max_weight from weight_credit
     TakeWeightCredit,
     // Expected responses are OK.
@@ -152,6 +153,35 @@ pub type Barrier = (
         UniversalLocation,
         ConstU32<8>,
     >,
+)>;
+
+/// Matches foreign assets from a given origin.
+/// Foreign assets are assets bridged from other consensus systems. i.e parents > 1.
+pub struct IsBridgedConcreteAssetFrom<Origin>(PhantomData<Origin>);
+impl<Origin> ContainsPair<XcmAsset, Location> for IsBridgedConcreteAssetFrom<Origin>
+where
+    Origin: Get<Location>,
+{
+    fn contains(asset: &XcmAsset, origin: &Location) -> bool {
+        let loc = Origin::get();
+        &loc == origin
+            && matches!(
+                asset,
+                XcmAsset {
+                    id: AssetId(Location { parents: 2, .. }),
+                    fun: Fungibility::Fungible(_)
+                },
+            )
+    }
+}
+
+type Reserves = (
+    // Assets bridged from different consensus systems held in reserve on Asset Hub.
+    IsBridgedConcreteAssetFrom<AssetHubLocation>,
+    // Relaychain (DOT) from Asset Hub
+    Case<RelayChainNativeAssetFromAssetHub>,
+    // Assets which the reserve is the same as the origin.
+    MultiNativeAsset<AbsoluteReserveProvider>,
 );
 
 /// The means of purchasing weight credit for XCM execution.
@@ -477,12 +507,12 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 /// The means for routing XCM messages which are not for local execution into the right message
 /// queues.
-pub type XcmRouter = (
+pub type XcmRouter = WithUniqueTopic<(
     // Two routers - use UMP to communicate with the relay chain:
     cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, ()>,
     // ..and XCMP to communicate with the sibling chains.
     XcmpQueue,
-);
+)>;
 
 /// Build a fixed-size array using as many elements from `src` as possible
 /// without overflowing and ensuring that the array is 0 padded in the case

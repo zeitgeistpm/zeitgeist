@@ -404,6 +404,8 @@ try-runtime = [
     # Polkadot
     # "polkadot-runtime?/try-runtime",
 ]
+# Enable the metadata hash generation in the wasm builder.
+metadata-hash = ["substrate-wasm-builder/metadata-hash"]
 # Allow to print logs details (no wasm:stripped)
 force-debug = ["sp-debug-derive/force-debug"]
 

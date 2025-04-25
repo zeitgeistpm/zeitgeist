@@ -139,6 +139,8 @@ macro_rules! decl_common_types {
             CheckWeight<Runtime>,
             // https://docs.rs/pallet-asset-tx-payment/latest/src/pallet_asset_tx_payment/lib.rs.html#32-34
             pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
+            cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim<Runtime>,
+            frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
         );
         pub type EventRecord = frame_system::EventRecord<
             <Runtime as frame_system::Config>::RuntimeEvent,
@@ -476,7 +478,7 @@ macro_rules! impl_config_traits {
             // need to set the page size larger than that until we reduce the channel size on-chain.
             type MaxPageSize = MessageQueueHeapSize;
             type RuntimeEvent = RuntimeEvent;
-            type VersionWrapper = ();
+            type VersionWrapper = PolkadotXcm;
             type XcmpQueue =
                 TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
             type MaxInboundSuspended = MaxInboundSuspended;
@@ -890,7 +892,7 @@ macro_rules! impl_config_traits {
             type Currency = Balances;
             type IdentityInformation = pallet_identity::legacy::IdentityInfo<MaxAdditionalFields>;
             type RuntimeEvent = RuntimeEvent;
-            type ForceOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
+            type ForceOrigin = EnsureRootOrHalfCouncil;
             type MaxRegistrars = MaxRegistrars;
             type MaxSubAccounts = MaxSubAccounts;
             type MaxSuffixLength = MaxSuffixLength;

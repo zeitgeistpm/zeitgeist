@@ -94,21 +94,22 @@ cumulus-relay-chain-rpc-interface = { git = "https://github.com/paritytech/polka
 nimbus-consensus = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409" }
 
 # Cumulus / Nimbus (wasm)
+async-backing-primitives = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 cumulus-pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
+cumulus-primitives-storage-weight-reclaim = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 cumulus-primitives-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 cumulus-primitives-utility = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
-parachains-common = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
-async-backing-primitives = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 nimbus-primitives = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 pallet-async-backing = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 pallet-author-inherent = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 pallet-author-slot-filter = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", package = "staging-parachain-info", tag = "polkadot-stable2409", default-features = false }
+parachains-common = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 session-keys-primitives = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 
 # HydraDX (wasm)
@@ -171,6 +172,7 @@ substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", t
 # Substrate (wasm)
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
+frame-metadata-hash-extension = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 frame-system-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }

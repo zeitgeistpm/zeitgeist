@@ -23,12 +23,13 @@
 )]
 #![cfg(feature = "parachain")]
 
-use super::{parameters::MAXIMUM_BLOCK_WEIGHT, ParachainInfo, RuntimeOrigin, RuntimeBlockWeights};
+use super::{parameters::MAXIMUM_BLOCK_WEIGHT, ParachainInfo, RuntimeBlockWeights, RuntimeOrigin};
+use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent};
 use xcm::latest::{
-    prelude::{GlobalConsensus, InteriorLocation},
+    prelude::{AllOf, AssetFilter, GlobalConsensus, InteriorLocation, Wild, WildFungible},
     Junction::Parachain,
     Location, NetworkId,
 };
@@ -36,7 +37,6 @@ use zeitgeist_primitives::{
     constants::{BASE, BLOCKS_PER_MINUTE},
     types::Balance,
 };
-use cumulus_primitives_core::AggregateMessageOrigin;
 
 parameter_types! {
     // Asset registry
@@ -142,6 +142,16 @@ parameter_types! {
     pub SelfLocation: Location = Location::new(1, [Parachain(ParachainInfo::parachain_id().into())]);
     /// This chain's Universal Location
     pub UniversalLocation: InteriorLocation = [GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into())].into();
+    pub const RelayLocation: Location = Location::parent();
+    pub RelayLocationFilter: AssetFilter = Wild(AllOf {
+        fun: WildFungible,
+        id: xcm::prelude::AssetId(RelayLocation::get()),
+    });
+    pub AssetHubLocation: Location = Location::new(1, [Parachain(1000)]);
+    pub RelayChainNativeAssetFromAssetHub: (AssetFilter, Location) = (
+        RelayLocationFilter::get(),
+        AssetHubLocation::get()
+    );
 }
 
 #[cfg(feature = "runtime-benchmarks")]
