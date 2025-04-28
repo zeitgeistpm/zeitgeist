@@ -225,7 +225,7 @@ impl TakeRevenue for ToTreasury {
 parameter_types! {
     pub CheckAccount: AccountId = PolkadotXcm::check_account();
     /// The amount of ZTG charged per second of execution (canonical multilocation).
-    pub ZtgPerSecondCanonical: (AssetId, u128, u128) = (
+    pub ZtgPerSecondCanonical: (XcmAssetId, u128, u128) = (
         Location::new(
             0,
             [general_key(battery_station::KEY)],
@@ -234,7 +234,7 @@ parameter_types! {
         0,
     );
     /// The amount of ZTG charged per second of execution.
-    pub ZtgPerSecond: (AssetId, u128, u128) = (
+    pub ZtgPerSecond: (XcmAssetId, u128, u128) = (
         Location::new(
             1,
             [Junction::Parachain(ParachainInfo::parachain_id().into()), general_key(battery_station::KEY)],
