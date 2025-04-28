@@ -172,6 +172,10 @@ try-runtime = [
     "battery-station-runtime?/try-runtime",
     "zeitgeist-runtime?/try-runtime",
 ]
+metadata-hash = [
+    "battery-station-runtime?/metadata-hash",
+    "zeitgeist-runtime?/metadata-hash",
+]
 with-battery-station-runtime = ["battery-station-runtime"]
 with-zeitgeist-runtime = ["zeitgeist-runtime"]
 

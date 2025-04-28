@@ -1,6 +1,8 @@
 [dependencies]
 # Pallets
+cumulus-pallet-parachain-system = { workspace = true, optional = true }
 cumulus-pallet-xcmp-queue = { workspace = true, optional = true }
+cumulus-primitives-storage-weight-reclaim = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 orml-currencies = { workspace = true }
@@ -31,10 +33,12 @@ zeitgeist-primitives = { workspace = true }
 
 # Utility
 cfg-if = { workspace = true }
+log = { workspace = true }
 
 [features]
 default = ["std"]
 parachain = [
+    "cumulus-pallet-parachain-system",
     "cumulus-pallet-xcmp-queue",
     "pallet-author-inherent",
     "pallet-author-mapping",
@@ -42,7 +46,9 @@ parachain = [
     "pallet-parachain-staking",
 ]
 std = [
+    "cumulus-pallet-parachain-system?/std",
     "cumulus-pallet-xcmp-queue?/std",
+    "cumulus-primitives-storage-weight-reclaim/std",
     "frame-system/std",
     "frame-support/std",
     "orml-currencies/std",
