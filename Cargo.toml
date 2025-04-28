@@ -227,6 +227,7 @@ sp-version = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkad
 polkadot-cli = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 polkadot-service = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 polkadot-test-service = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
+rococo-emulated-chain = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 xcm-emulator = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 
 # Polkadot / XCM (wasm)

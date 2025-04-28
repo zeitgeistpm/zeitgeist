@@ -131,6 +131,7 @@ zrml-swaps-runtime-api = { workspace = true }
 [dev-dependencies]
 env_logger = { workspace = true }
 pallet-im-online = { workspace = true, features = ["default"] }
+rococo-emulated-chain = { workspace = true }
 sp-authority-discovery = { workspace = true, features = ["default"] }
 sp-consensus-babe = { workspace = true, features = ["default"] }
 sp-consensus-beefy = { workspace = true, features = ["default"] }
