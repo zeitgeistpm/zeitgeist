@@ -456,6 +456,7 @@ macro_rules! impl_config_traits {
                     Runtime,
                     ConsensusHook,
                 >;
+            // TODO(#1426): figure out a way to have the integration tests work with the relay timestamp and BLOCK_PROCESSING_VELOCITY of 1
             // Use normal consensus hook for xcm integration tests to avoid relay timestamp setting
             #[cfg(test)]
             type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<
