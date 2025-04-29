@@ -450,11 +450,15 @@ macro_rules! impl_config_traits {
             type XcmpMessageHandler = XcmpQueue;
             type CheckAssociatedRelayNumber =
                 cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+            #[cfg(not(test))]
             type ConsensusHook =
                 common_runtime::relay_timestamp::ConsensusHookWrapperForRelayTimestamp<
                     Runtime,
                     ConsensusHook,
                 >;
+            // Use normal consensus hook for xcm integration tests to avoid relay timestamp setting
+            #[cfg(test)]
+            type ConsensusHook = ConsensusHook;
             type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
             // TODO: add weight info after benchmarking
             type WeightInfo = ();

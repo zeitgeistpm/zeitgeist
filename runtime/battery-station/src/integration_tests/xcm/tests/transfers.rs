@@ -416,7 +416,7 @@ fn transfer_roc_to_relay_chain() {
     // rococo-runtime does not process messages when runtime-benchmarks is enabled:
     // https://github.com/paritytech/polkadot-sdk/blob/release-polkadot-v1.1.0/polkadot/runtime/rococo/src/lib.rs#L1078-L1080
     RococoRelay::execute_with(|| {
-        let expected_fee = 10_454_619;
+        let expected_fee = 10_651_797;
         let expected_balance_bob = initial_balance_bob + transfer_amount - expected_fee;
         assert_eq!(rococo_runtime::Balances::free_balance(&bob()), expected_balance_bob);
     });
@@ -424,14 +424,14 @@ fn transfer_roc_to_relay_chain() {
 
 #[test]
 fn test_total_fee() {
-    assert_eq!(btc_fee(), 642_960);
-    assert_eq!(roc_fee(), 8_037_000_000);
-    assert_eq!(ztg_fee(), 64_296_000);
+    assert_eq!(ztg_fee(), 93_390_000);
+    assert_eq!(btc_fee(), 933_900);
+    assert_eq!(roc_fee(), 9_339_000_000);
 }
 
 #[inline]
 fn ztg_fee() -> Balance {
-    fee(BalanceFractionalDecimals::get().into(), 8)
+    fee(BalanceFractionalDecimals::get().into(), 10)
 }
 
 #[inline]
@@ -446,7 +446,7 @@ fn roc_fee() -> Balance {
 
 #[inline]
 fn btc_fee() -> Balance {
-    fee(8, 8)
+    fee(8, 10)
 }
 
 #[inline]
