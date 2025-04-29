@@ -458,7 +458,12 @@ macro_rules! impl_config_traits {
                 >;
             // Use normal consensus hook for xcm integration tests to avoid relay timestamp setting
             #[cfg(test)]
-            type ConsensusHook = ConsensusHook;
+            type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<
+                Runtime,
+                // The xcm integration tests require to process two blocks in a single slot
+                2,
+                UNINCLUDED_SEGMENT_CAPACITY,
+            >;
             type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
             // TODO: add weight info after benchmarking
             type WeightInfo = ();
