@@ -102,8 +102,6 @@ orml-xcm-support = { workspace = true, optional = true }
 orml-xtokens = { workspace = true, optional = true }
 pallet-message-queue = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
-# polkadot-runtime = { workspace = true, optional = true }
-polkadot-runtime-parachains = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
 xcm-executor = { workspace = true, optional = true }
@@ -130,10 +128,13 @@ zrml-swaps-runtime-api = { workspace = true }
 [dev-dependencies]
 env_logger = { workspace = true }
 pallet-im-online = { workspace = true, features = ["default"] }
+polkadot-runtime-parachains = { workspace = true }
 sp-authority-discovery = { workspace = true, features = ["default"] }
 sp-consensus-babe = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 test-case = { workspace = true }
+polkadot-emulated-chain = { workspace = true }
+polkadot-runtime = { workspace = true }
 xcm-emulator = { workspace = true }
 
 [features]
@@ -167,8 +168,6 @@ parachain = [
 
     # XCM
 
-    # "polkadot-runtime",
-    "polkadot-runtime-parachains",
     "orml-asset-registry",
     "orml-unknown-tokens",
     "orml-xcm-support",
@@ -192,7 +191,6 @@ runtime-benchmarks = [
     "frame-system-benchmarking/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "hex-literal",
-    # "polkadot-runtime?/runtime-benchmarks",
     "orml-asset-registry?/runtime-benchmarks",
     "orml-benchmarking",
     "orml-tokens/runtime-benchmarks",
@@ -310,8 +308,7 @@ std = [
 
     # XCM
 
-    # "polkadot-runtime?/std",
-    "polkadot-runtime-parachains?/std",
+    "polkadot-runtime-parachains/std",
     "orml-asset-registry?/std",
     "orml-unknown-tokens?/std",
     "orml-xcm-support?/std",
@@ -346,6 +343,9 @@ std = [
     "zrml-styx/std",
     "zrml-swaps/std",
     "zrml-orderbook/std",
+
+    # Polkadot
+    "polkadot-runtime/std",
 ]
 try-runtime = [
     "frame-executive/try-runtime",
@@ -421,7 +421,7 @@ try-runtime = [
     "parachain-info?/try-runtime",
 
     # Polkadot
-    # "polkadot-runtime?/try-runtime",
+    "polkadot-runtime/try-runtime",
 ]
 # Enable the metadata hash generation in the wasm builder.
 metadata-hash = ["substrate-wasm-builder/metadata-hash"]

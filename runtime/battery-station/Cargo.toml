@@ -104,7 +104,6 @@ orml-xtokens = { workspace = true, optional = true }
 pallet-message-queue = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
 polkadot-runtime-parachains = { workspace = true, optional = true }
-rococo-runtime = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
 xcm-executor = { workspace = true, optional = true }
@@ -177,7 +176,6 @@ parachain = [
     "pallet-message-queue",
     "pallet-xcm",
     "polkadot-runtime-parachains",
-    "rococo-runtime",
     "xcm-builder",
     "xcm-executor",
     "xcm",
@@ -219,7 +217,6 @@ runtime-benchmarks = [
     "pallet-vesting/runtime-benchmarks",
     "pallet-xcm?/runtime-benchmarks",
     "pallet-parachain-staking?/runtime-benchmarks",
-    "rococo-runtime?/runtime-benchmarks",
     "nimbus-primitives?/runtime-benchmarks",
     "session-keys-primitives?/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
@@ -336,7 +333,6 @@ std = [
     "pallet-message-queue?/std",
     "pallet-xcm?/std",
     "polkadot-runtime-parachains?/std",
-    "rococo-runtime?/std",
     "xcm-builder?/std",
     "xcm-executor?/std",
     "xcm?/std",

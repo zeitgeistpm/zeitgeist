@@ -33,6 +33,7 @@ use crate::{
 
 use frame_support::{assert_ok, traits::tokens::fungible::Mutate};
 use orml_traits::MultiCurrency;
+use rococo_emulated_chain::rococo_runtime;
 use xcm::latest::{Junction, Junction::*, Junctions::*, Location, WeightLimit};
 use xcm_emulator::{RelayChain, TestExt};
 use zeitgeist_primitives::{
