@@ -147,7 +147,7 @@ macro_rules! impl_foreign_fees {
                 pub(crate) fn convert_asset_to_currency_id(
                     value: TxPaymentAssetId,
                 ) -> Result<CurrencyId, TransactionValidityError> {
-                    // value (TxPaymentAssetId) is a MultiLocation as defined above
+                    // value (TxPaymentAssetId) is a Location as defined above
                     let currency_id = AssetRegistry::location_to_asset_id(value).ok_or(
                         TransactionValidityError::Invalid(InvalidTransaction::Custom(
                             CustomTxError::InvalidFeeAsset as u8,
@@ -387,7 +387,7 @@ macro_rules! impl_market_creator_fees {
 macro_rules! fee_tests {
    () => {
         use crate::*;
-        use frame_support::{assert_noop, assert_ok, dispatch::DispatchClass, weights::Weight};
+        use frame_support::{assert_noop, assert_ok, dispatch::DispatchClass, traits::fungible::Balanced as SubstrateBalanced, weights::Weight};
         use orml_traits::MultiCurrency;
         use pallet_asset_tx_payment::OnChargeAssetTransaction;
         use sp_core::H256;
@@ -412,11 +412,13 @@ macro_rules! fee_tests {
                 frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap().into();
             t.execute_with(|| {
                 let fee_balance = 3 * ExistentialDeposit::get();
-                let fee_imbalance = Balances::issue(fee_balance);
+                let fee_imbalance = <Balances as SubstrateBalanced<AccountId>>::issue(fee_balance);
                 let tip_balance = 7 * ExistentialDeposit::get();
-                let tip_imbalance = Balances::issue(tip_balance);
+                let tip_imbalance = <Balances as SubstrateBalanced<AccountId>>::issue(tip_balance);
                 assert_eq!(Balances::free_balance(Treasury::account_id()), 0);
-                DealWithFees::on_unbalanceds(vec![fee_imbalance, tip_imbalance].into_iter());
+                DealWithSubstrateFeesAndTip::<Runtime, FeesTreasuryProportion>::on_unbalanceds(
+                    vec![fee_imbalance, tip_imbalance].into_iter(),
+                );
                 assert_eq!(
                     Balances::free_balance(Treasury::account_id()),
                     fee_balance + tip_balance,
@@ -461,7 +463,7 @@ macro_rules! fee_tests {
         #[cfg(feature = "parachain")]
         mod parachain {
             use super::*;
-            use orml_asset_registry::module::AssetMetadata;
+            use orml_traits::asset_registry::AssetMetadata;
 
             #[test]
             fn correct_and_deposit_fee_dot_foreign_asset() {
@@ -483,7 +485,7 @@ macro_rules! fee_tests {
                             name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
                             symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
                             existential_deposit: ExistentialDeposit::get(),
-                            location: Some(xcm::VersionedMultiLocation::V3(xcm::latest::MultiLocation::parent())),
+                            location: Some(xcm::VersionedLocation::V4(xcm::latest::Location::parent())),
                             additional: custom_metadata,
                         };
                         let dot = Asset::ForeignAsset(0);
@@ -551,8 +553,8 @@ macro_rules! fee_tests {
                             name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
                             symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
                             existential_deposit: ExistentialDeposit::get(),
-                            location: Some(xcm::VersionedMultiLocation::V3(
-                                xcm::latest::MultiLocation::parent(),
+                            location: Some(xcm::VersionedLocation::V4(
+                                xcm::latest::Location::parent(),
                             )),
                             additional: custom_metadata,
                         };
@@ -605,8 +607,8 @@ macro_rules! fee_tests {
                             name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
                             symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
                             existential_deposit: ExistentialDeposit::get(),
-                            location: Some(xcm::VersionedMultiLocation::V3(
-                                xcm::latest::MultiLocation::parent(),
+                            location: Some(xcm::VersionedLocation::V4(
+                                xcm::latest::Location::parent(),
                             )),
                             additional: custom_metadata,
                         };
@@ -671,15 +673,15 @@ macro_rules! fee_tests {
                         xcm: XcmMetadata { fee_factor: Some(fee_factor) },
                         allow_as_base_asset: true,
                     };
-                    let dot_location = xcm::latest::MultiLocation::parent();
+                    let dot_location = xcm::latest::Location::parent();
                     let meta: AssetMetadata<Balance, CustomMetadata, AssetRegistryStringLimit> =
                         AssetMetadata {
                             decimals: 10,
                             name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
                             symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
                             existential_deposit: 5 * MILLI,
-                            location: Some(xcm::VersionedMultiLocation::V3(
-                                dot_location,
+                            location: Some(xcm::VersionedLocation::V4(
+                                dot_location.clone(),
                             )),
                             additional: custom_metadata,
                         };

@@ -16,4 +16,3 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 pub(super) mod battery_station;
-pub(super) mod rococo;

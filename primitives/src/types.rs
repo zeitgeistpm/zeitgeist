@@ -115,10 +115,10 @@ pub type PoolId = u128;
 pub type Signature = MultiSignature;
 
 pub mod well_known_relay_keys {
-	use hex_literal::hex;
+    use hex_literal::hex;
 
-	pub const TIMESTAMP_NOW: &[u8] =
-		&hex!["f0c365c3cf59d671eb72da0e7a4113c49f1f0515f462cdcf84e0f1d6045dfcbb"];
+    pub const TIMESTAMP_NOW: &[u8] =
+        &hex!["f0c365c3cf59d671eb72da0e7a4113c49f1f0515f462cdcf84e0f1d6045dfcbb"];
 }
 
 // Tests

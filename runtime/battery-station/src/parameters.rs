@@ -22,9 +22,9 @@
     clippy::arithmetic_side_effects
 )]
 
-use super::{RuntimeHoldReason, VERSION};
 #[cfg(feature = "parachain")]
 use super::Runtime;
+use super::{RuntimeHoldReason, VERSION};
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,

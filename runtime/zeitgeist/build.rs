@@ -29,10 +29,10 @@ fn main() {
 #[cfg(feature = "metadata-hash")]
 fn main() {
     #[cfg(feature = "std")]
-	substrate_wasm_builder::WasmBuilder::new()
-		.with_current_project()
-		.export_heap_base()
-		.import_memory()
-		.enable_metadata_hash("ZTG", 10)
-		.build()
+    substrate_wasm_builder::WasmBuilder::new()
+        .with_current_project()
+        .export_heap_base()
+        .import_memory()
+        .enable_metadata_hash("ZTG", 10)
+        .build()
 }
