@@ -102,7 +102,7 @@ clap = { workspace = true, features = ["derive"] }
 futures = { workspace = true, features = ["thread-pool"] }
 hex-literal = { workspace = true }
 jsonrpsee = { workspace = true, features = ["server"] }
-log = { workspace = true, optional = true }
+log = { workspace = true }
 url = { workspace = true }
 
 # Zeitgeist
@@ -136,7 +136,6 @@ parachain = [
 
     # Parachain
 
-    "log",
     "moonbeam-vrf",
     "nimbus-consensus",
     "nimbus-primitives",

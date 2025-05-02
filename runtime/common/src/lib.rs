@@ -67,7 +67,6 @@ pub mod weights;
 macro_rules! decl_common_types {
     () => {
         use core::marker::PhantomData;
-        use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
         use frame_support::{
             migration::storage_key_iter,
             migrations::RemovePallet,
@@ -86,7 +85,6 @@ macro_rules! decl_common_types {
         use frame_system::EnsureSigned;
         use orml_traits::MultiCurrency;
         use pallet_balances::{CreditOf, NegativeImbalance};
-        use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
         use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
         use scale_info::TypeInfo;
         use sp_consensus_slots::Slot;
@@ -429,7 +427,12 @@ macro_rules! impl_config_traits {
     () => {
         use common_runtime::weights;
         #[cfg(feature = "parachain")]
-        use xcm_config::config::*;
+        use {
+            cumulus_primitives_core::{AggregateMessageOrigin, ParaId},
+            frame_support::traits::Nothing,
+            parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling},
+            xcm_config::config::*,
+        };
 
         #[cfg(feature = "parachain")]
         type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<

@@ -380,3 +380,5 @@ sp-std = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-s
 
 [patch."https://github.com/paritytech/polkadot-sdk"]
 pallet-asset-tx-payment = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-asset-tx-payment-asset-id-fix" }
+# Updated `ParachainInherentDataProvider::create_at` parameters to include additional relay keys
+cumulus-client-parachain-inherent = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-moonbeam-lazy-migrations" }
