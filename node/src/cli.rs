@@ -27,7 +27,11 @@ pub use cli_parachain::RelayChainCli;
 use sc_cli::{ChainSpec, SubstrateCli};
 use sc_client_api::{KeysIter, PairsIter};
 use sp_consensus::BlockStatus;
-use sp_runtime::{generic::SignedBlock, traits::{Block as BlockT, NumberFor}, Justifications};
+use sp_runtime::{
+    generic::SignedBlock,
+    traits::{Block as BlockT, NumberFor},
+    Justifications,
+};
 use sp_storage::{ChildInfo, StorageData, StorageKey};
 use sp_trie::MerkleValue;
 use std::sync::Arc;
@@ -132,7 +136,8 @@ pub enum Subcommand {
 
     /// Export the genesis state of the parachain.
     #[cfg(feature = "parachain")]
-    ExportGenesisState(cumulus_client_cli::ExportGenesisStateCommand),
+    #[command(alias = "export-genesis-state")]
+    ExportGenesisHead(cumulus_client_cli::ExportGenesisHeadCommand),
 
     /// Export the genesis wasm of the parachain.
     #[cfg(feature = "parachain")]

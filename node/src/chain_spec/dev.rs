@@ -60,7 +60,7 @@ generate_generic_genesis_function! {
     },
 }
 
-fn genesis_config() -> serde_json::Value {
+fn genesis_config(wasm: &'static [u8]) -> serde_json::Value {
     serde_json::to_value(&generic_genesis(
         #[cfg(feature = "parachain")]
         AdditionalChainSpec {
@@ -127,6 +127,6 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
     .with_id("dev")
     .with_chain_type(ChainType::Local)
     .with_properties(token_properties("DEV", battery_station_runtime::SS58Prefix::get()))
-    .with_genesis_config(genesis_config())
+    .with_genesis_config(genesis_config(wasm))
     .build())
 }

@@ -236,7 +236,7 @@ pallet-message-queue = { git = "https://github.com/paritytech/polkadot-sdk", tag
 pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 polkadot-parachain-primitives = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
-polkadot-runtime = { git = "https://github.com/zeitgeistpm/runtimes", branch = "zeitgeist-polkadot-stable2409-emulated-chain-fix" }
+polkadot-runtime = { git = "https://github.com/zeitgeistpm/runtimes", branch = "zeitgeist-polkadot-stable2409-emulated-chain-fix", default-features = false }
 polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
@@ -296,6 +296,7 @@ num-traits = { version = "0.2.18", default-features = false }
 rand = { version = "0.8.5", default-features = false }
 rand_chacha = { version = "0.3.1", default-features = false }
 serde = { version = "1.0.209", default-features = false }
+serde_json = { version = "1.0.111", default-features = false }
 typenum = { version = "1.17.0", default-features = false }
 
 [profile.test]
@@ -382,3 +383,5 @@ sp-std = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-s
 pallet-asset-tx-payment = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-asset-tx-payment-asset-id-fix" }
 # Updated `ParachainInherentDataProvider::create_at` parameters to include additional relay keys
 cumulus-client-parachain-inherent = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-moonbeam-lazy-migrations" }
+# Fix Found variants that have duplicate indexes. Both `Consensus` and `RemoteCallResponse` have the index `6`. Use different indexes for each variant.
+sc-network = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "zeitgeist-polkadot-stable2409-sc-network-fix" }

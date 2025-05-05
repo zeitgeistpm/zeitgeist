@@ -28,7 +28,7 @@ use sc_client_api::{Backend, BlockBackend};
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
 use sc_consensus_grandpa::{protocol_standard_name, SharedVoterState};
 #[allow(deprecated)]
-use sc_executor::{HostFunctions, NativeExecutionDispatch, NativeElseWasmExecutor};
+use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sc_service::{error::Error as ServiceError, Configuration, TFullBackend, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryWorker};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;

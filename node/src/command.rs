@@ -23,8 +23,13 @@ use super::{
     service::{new_chain_ops, new_full, HostFunctions, IdentifyVariant},
 };
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
-use sc_cli::SubstrateCli;
+use sc_cli::{ChainSpec, SubstrateCli};
+use sp_core::Encode;
 use sp_keyring::Sr25519Keyring;
+use sp_runtime::{
+    traits::{Block as BlockT, Hash as HashT, Header as HeaderT, Zero},
+    StateVersion,
+};
 #[cfg(feature = "with-battery-station-runtime")]
 use {
     super::service::BatteryStationExecutor,
@@ -39,11 +44,8 @@ use {
 };
 #[cfg(feature = "parachain")]
 use {
-    sc_client_api::client::BlockBackend,
-    sp_core::hexdisplay::HexDisplay,
-    sp_core::Encode,
-    sp_runtime::traits::{AccountIdConversion, Block as BlockT},
-    std::io::Write,
+    sc_client_api::client::BlockBackend, sp_core::hexdisplay::HexDisplay,
+    sp_runtime::traits::AccountIdConversion, std::io::Write,
 };
 
 pub fn run() -> sc_cli::Result<()> {
@@ -312,7 +314,7 @@ pub fn run() -> sc_cli::Result<()> {
             })
         }
         #[cfg(feature = "parachain")]
-        Some(Subcommand::ExportGenesisState(params)) => {
+        Some(Subcommand::ExportGenesisHead(params)) => {
             let mut builder = sc_cli::LoggerBuilder::new("");
             builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
             let _ = builder.init();
@@ -324,7 +326,7 @@ pub fn run() -> sc_cli::Result<()> {
                 #[cfg(feature = "with-zeitgeist-runtime")]
                 spec if spec.is_zeitgeist() => {
                     let block: zeitgeist_runtime::Block =
-                        cumulus_client_cli::generate_genesis_block(&**chain_spec, state_version)?;
+                        generate_genesis_block(&**chain_spec, state_version)?;
                     let raw_header = block.header().encode();
 
                     if params.raw {
@@ -336,7 +338,7 @@ pub fn run() -> sc_cli::Result<()> {
                 #[cfg(feature = "with-battery-station-runtime")]
                 _ => {
                     let block: battery_station_runtime::Block =
-                        cumulus_client_cli::generate_genesis_block(&**chain_spec, state_version)?;
+                        generate_genesis_block(&**chain_spec, state_version)?;
                     let raw_header = block.header().encode();
 
                     if params.raw {
@@ -471,8 +473,7 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
             );
         let state_version = Cli::runtime_version(chain_spec).state_version();
         let block: zeitgeist_runtime::Block =
-            cumulus_client_cli::generate_genesis_block(&**chain_spec, state_version)
-                .map_err(|e| format!("{:?}", e))?;
+            generate_genesis_block(&**chain_spec, state_version).map_err(|e| format!("{:?}", e))?;
         let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
         let tokio_handle = parachain_config.tokio_handle.clone();
@@ -487,7 +488,7 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
         let hwbench = (!cli.no_hardware_benchmarks)
             .then_some(parachain_config.database.path().map(|database_path| {
                 let _ = std::fs::create_dir_all(database_path);
-                sc_sysinfo::gather_hwbench(Some(database_path))
+                sc_sysinfo::gather_hwbench(Some(database_path), &SUBSTRATE_REFERENCE_HARDWARE)
             }))
             .flatten();
 
@@ -569,4 +570,40 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
             _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
         }
     })
+}
+
+/// Generate the genesis block from a given ChainSpec.
+pub fn generate_genesis_block<Block: BlockT>(
+    chain_spec: &dyn ChainSpec,
+    genesis_state_version: StateVersion,
+) -> std::result::Result<Block, String> {
+    let storage = chain_spec.build_storage()?;
+
+    let child_roots = storage.children_default.iter().map(|(sk, child_content)| {
+        let state_root = <<<Block as BlockT>::Header as HeaderT>::Hashing as HashT>::trie_root(
+            child_content.data.clone().into_iter().collect(),
+            genesis_state_version,
+        );
+        (sk.clone(), state_root.encode())
+    });
+    let state_root = <<<Block as BlockT>::Header as HeaderT>::Hashing as HashT>::trie_root(
+        storage.top.clone().into_iter().chain(child_roots).collect(),
+        genesis_state_version,
+    );
+
+    let extrinsics_root = <<<Block as BlockT>::Header as HeaderT>::Hashing as HashT>::trie_root(
+        Vec::new(),
+        genesis_state_version,
+    );
+
+    Ok(Block::new(
+        <<Block as BlockT>::Header as HeaderT>::new(
+            Zero::zero(),
+            extrinsics_root,
+            state_root,
+            Default::default(),
+            Default::default(),
+        ),
+        Default::default(),
+    ))
 }

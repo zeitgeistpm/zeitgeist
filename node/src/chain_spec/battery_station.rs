@@ -130,7 +130,7 @@ generate_generic_genesis_function!(
 #[cfg(feature = "parachain")]
 generate_inflation_config_function!(battery_station_runtime);
 
-fn genesis_config() -> serde_json::Value {
+fn genesis_config(wasm: &'static [u8]) -> serde_json::Value {
     serde_json::to_value(&generic_genesis(
         additional_chain_spec_staging_battery_station(
             #[cfg(feature = "parachain")]
@@ -162,6 +162,6 @@ pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, Strin
     .with_properties(token_properties("ZBS", SS58Prefix::get()))
     .with_telemetry_endpoints(telemetry_endpoints().expect("Telemetry endpoints should be set"))
     .with_protocol_id("battery_station")
-    .with_genesis_config(genesis_config())
+    .with_genesis_config(genesis_config(wasm))
     .build())
 }

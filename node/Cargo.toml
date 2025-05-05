@@ -49,6 +49,7 @@ substrate-frame-rpc-system = { workspace = true }
 
 frame-benchmarking = { workspace = true, features = ["default"], optional = true }
 frame-benchmarking-cli = { workspace = true }
+frame-metadata-hash-extension = { workspace = true }
 
 # Cumulus
 
@@ -60,6 +61,7 @@ cumulus-client-network = { workspace = true, optional = true }
 cumulus-client-service = { workspace = true, optional = true }
 cumulus-primitives-core = { workspace = true, features = ["default"], optional = true }
 cumulus-primitives-parachain-inherent = { workspace = true, optional = true }
+cumulus-primitives-storage-weight-reclaim = { workspace = true }
 cumulus-relay-chain-inprocess-interface = { workspace = true, optional = true }
 cumulus-relay-chain-interface = { workspace = true, optional = true }
 cumulus-relay-chain-minimal-node = { workspace = true, optional = true }
@@ -88,7 +90,6 @@ polkadot-cli = { workspace = true, optional = true }
 polkadot-parachain-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-service = { workspace = true, optional = true }
-polkadot-test-service = { workspace = true, optional = true }
 
 # Standalone
 
@@ -115,6 +116,10 @@ zrml-swaps-rpc = { workspace = true }
 
 [features]
 default = ["with-battery-station-runtime", "with-zeitgeist-runtime"]
+metadata-hash = [
+    "battery-station-runtime?/metadata-hash",
+    "zeitgeist-runtime?/metadata-hash",
+]
 parachain = [
     "battery-station-runtime?/parachain",
     "zeitgeist-runtime?/parachain",
@@ -157,7 +162,6 @@ parachain = [
     "polkadot-parachain-primitives",
     "polkadot-primitives",
     "polkadot-service",
-    "polkadot-test-service",
 ]
 runtime-benchmarks = [
     "battery-station-runtime?/runtime-benchmarks",
@@ -165,16 +169,11 @@ runtime-benchmarks = [
     "frame-benchmarking-cli/runtime-benchmarks",
     "polkadot-cli?/runtime-benchmarks",
     "polkadot-service?/runtime-benchmarks",
-    "polkadot-test-service?/runtime-benchmarks",
     "zeitgeist-runtime?/runtime-benchmarks",
 ]
 try-runtime = [
     "battery-station-runtime?/try-runtime",
     "zeitgeist-runtime?/try-runtime",
-]
-metadata-hash = [
-    "battery-station-runtime?/metadata-hash",
-    "zeitgeist-runtime?/metadata-hash",
 ]
 with-battery-station-runtime = ["battery-station-runtime"]
 with-zeitgeist-runtime = ["zeitgeist-runtime"]

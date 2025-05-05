@@ -21,16 +21,20 @@ use crate::{
     POLKADOT_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
 use cumulus_client_cli::CollatorOptions;
+use cumulus_client_collator::service::CollatorService;
 use cumulus_client_consensus_common::{
     ParachainBlockImport as TParachainBlockImport, ParachainConsensus,
 };
+use cumulus_client_consensus_proposer::Proposer;
+use cumulus_client_network::RequireSecondedInBlockAnnounce;
 use cumulus_client_service::{
-    build_relay_chain_interface, prepare_node_config, BuildNetworkParams, CollatorSybilResistance,
+    build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks, BuildNetworkParams,
+    CollatorSybilResistance, DARecoveryProfile, StartRelayChainTasksParams,
 };
 use cumulus_primitives_core::ParaId;
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
+use frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE;
 use futures::FutureExt;
-use nimbus_consensus::{BuildNimbusConsensusParams, NimbusConsensus};
 use nimbus_primitives::NimbusId;
 use polkadot_service::CollatorPair;
 use sc_client_api::Backend;
@@ -50,6 +54,7 @@ use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerH
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 use sp_api::ConstructRuntimeApi;
 use sp_keystore::KeystorePtr;
+use sp_runtime::traits::Block as BlockT;
 use std::sync::Arc;
 use substrate_prometheus_endpoint::Registry;
 use zeitgeist_primitives::types::{Block, Hash};
@@ -57,21 +62,21 @@ use zeitgeist_primitives::types::{Block, Hash};
 #[allow(deprecated)]
 pub type ParachainExecutor<Executor> = NativeElseWasmExecutor<Executor>;
 
-pub type ParachainClient<RuntimeApi, Executor> =
+pub type FullClient<RuntimeApi, Executor> =
     TFullClient<Block, RuntimeApi, ParachainExecutor<Executor>>;
 
-pub type ParachainBackend = TFullBackend<Block>;
+pub type FullBackend = TFullBackend<Block>;
 
 pub type ParachainBlockImport<RuntimeApi, Executor> =
-    TParachainBlockImport<Block, Arc<ParachainClient<RuntimeApi, Executor>>, ParachainBackend>;
+    TParachainBlockImport<Block, Arc<FullClient<RuntimeApi, Executor>>, FullBackend>;
 
 /// Assembly of PartialComponents (enough to run chain ops subcommands)
-pub type PartialComponents<RuntimeApi, Executor> = PartialComponents<
-    ParachainClient<RuntimeApi, Executor>,
-    ParachainBackend,
+pub type ParachainPartialComponents<RuntimeApi, Executor> = PartialComponents<
+    FullClient<RuntimeApi, Executor>,
+    FullBackend,
     (),
     sc_consensus::DefaultImportQueue<Block>,
-    sc_transaction_pool::FullPool<Block, ParachainClient<RuntimeApi>>,
+    sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
     (ParachainBlockImport<RuntimeApi, Executor>, Option<Telemetry>, Option<TelemetryWorkerHandle>),
 >;
 
@@ -84,9 +89,10 @@ pub async fn new_full<RuntimeApi, Executor>(
     polkadot_config: Configuration,
     hwbench: Option<sc_sysinfo::HwBench>,
     collator_options: CollatorOptions,
-) -> ServiceResult<(TaskManager, Arc<ParachainClient<RuntimeApi, Executor>>)>
+) -> ServiceResult<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
-    RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
     RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
     Executor: NativeExecutionDispatch + 'static,
 {
@@ -106,9 +112,10 @@ where
 /// be able to perform chain operations.
 pub fn new_partial<RuntimeApi, Executor>(
     config: &Configuration,
-) -> Result<PartialComponents<RuntimeApi, Executor>, ServiceError>
+) -> Result<ParachainPartialComponents<RuntimeApi, Executor>, ServiceError>
 where
-    RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
     RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
     Executor: NativeExecutionDispatch + 'static,
 {
@@ -177,7 +184,7 @@ where
         false,
     )?;
 
-    Ok(PartialComponents {
+    Ok(ParachainPartialComponents {
         backend,
         client,
         import_queue,
@@ -199,9 +206,10 @@ async fn do_new_full<RuntimeApi, Executor, N>(
     para_id: polkadot_primitives::Id,
     hwbench: Option<sc_sysinfo::HwBench>,
     collator_options: CollatorOptions,
-) -> ServiceResult<(TaskManager, Arc<ParachainClient<RuntimeApi>>)>
+) -> ServiceResult<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
-    RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
     RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
     Executor: NativeExecutionDispatch + 'static,
     N: sc_network::NetworkBackend<Block, <Block as BlockT>::Hash>,
@@ -243,7 +251,7 @@ where
         parachain_config.prometheus_config.as_ref().map(|cfg| &cfg.registry),
     );
     let (network, system_rpc_tx, tx_handler_controller, start_network, sync_service) =
-        sc_service::build_network(BuildNetworkParams {
+        sc_service::build_network(sc_service::BuildNetworkParams {
             config: &parachain_config,
             client: client.clone(),
             transaction_pool: transaction_pool.clone(),
@@ -252,15 +260,11 @@ where
             block_announce_validator_builder: Some(Box::new(|_| {
                 Box::new(block_announce_validator)
             })),
-            net_config,
-            para_id,
-            relay_chain_interface: relay_chain_interface.clone(),
             warp_sync_config: None,
-            metrics,
+            net_config,
             block_relay: None,
-            sybil_resistance_level: CollatorSybilResistance::Resistant,
-        })
-        .await?;
+            metrics,
+        })?;
 
     if parachain_config.offchain_worker.enabled {
         task_manager.spawn_handle().spawn(
@@ -390,15 +394,13 @@ where
 }
 
 fn start_consensus<RuntimeApi, Executor>(
-    client: Arc<ParachainClient<RuntimeApi, Executor>>,
+    client: Arc<FullClient<RuntimeApi, Executor>>,
     block_import: ParachainBlockImport<RuntimeApi, Executor>,
     prometheus_registry: Option<&Registry>,
     telemetry: Option<TelemetryHandle>,
     task_manager: &TaskManager,
     relay_chain_interface: Arc<dyn RelayChainInterface>,
-    transaction_pool: Arc<
-        sc_transaction_pool::FullPool<Block, ParachainClient<RuntimeApi, Executor>>,
-    >,
+    transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>>,
     keystore: KeystorePtr,
     para_id: ParaId,
     collator_key: CollatorPair,
@@ -408,7 +410,8 @@ fn start_consensus<RuntimeApi, Executor>(
     full_pov_size: bool,
 ) -> Result<(), sc_service::Error>
 where
-    RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
     RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
     Executor: NativeExecutionDispatch + 'static,
 {
@@ -447,9 +450,8 @@ where
         //authoring_duration: Duration::from_millis(500),
     };
 
-    let fut = nimbus_consensus::collators::basic::run::<Block, _, _, ParachainBackend, _, _, _, _, _>(
-        params,
-    );
+    let fut =
+        nimbus_consensus::collators::basic::run::<Block, _, _, FullBackend, _, _, _, _, _>(params);
     task_manager.spawn_essential_handle().spawn("nimbus", None, fut);
 
     Ok(())

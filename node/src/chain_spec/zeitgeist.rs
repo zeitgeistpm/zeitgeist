@@ -138,28 +138,23 @@ generate_generic_genesis_function!(zeitgeist_runtime,);
 #[cfg(feature = "parachain")]
 generate_inflation_config_function!(zeitgeist_runtime);
 
+fn genesis_config(wasm: &'static [u8]) -> serde_json::Value {
+    serde_json::to_value(&generic_genesis(
+        additional_chain_spec_staging_zeitgeist(
+            #[cfg(feature = "parachain")]
+            POLKADOT_PARACHAIN_ID.into(),
+        ),
+        endowed_accounts_staging_zeitgeist(),
+        wasm,
+    ))
+    .expect("Could not generate JSON for battery station staging genesis.")
+}
+
 pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
     let wasm = get_wasm()?;
 
-    Ok(ZeitgeistChainSpec::from_genesis(
-        "Zeitgeist Staging",
-        "zeitgeist_staging",
-        ChainType::Live,
-        move || {
-            generic_genesis(
-                additional_chain_spec_staging_zeitgeist(
-                    #[cfg(feature = "parachain")]
-                    POLKADOT_PARACHAIN_ID.into(),
-                ),
-                endowed_accounts_staging_zeitgeist(),
-                wasm,
-            )
-        },
-        vec![],
-        telemetry_endpoints(),
-        Some("zeitgeist"),
-        None,
-        Some(token_properties("ZTG", SS58Prefix::get())),
+    Ok(ZeitgeistChainSpec::builder(
+        wasm,
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "polkadot".into(),
@@ -168,5 +163,13 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),
-    ))
+    )
+    .with_name("Zeitgeist Staging")
+    .with_id("zeitgeist_staging")
+    .with_chain_type(ChainType::Live)
+    .with_properties(token_properties("ZTG", SS58Prefix::get()))
+    .with_telemetry_endpoints(telemetry_endpoints().expect("Telemetry endpoints should be set"))
+    .with_protocol_id("zeitgeist")
+    .with_genesis_config(genesis_config(wasm))
+    .build())
 }

@@ -175,7 +175,7 @@ macro_rules! generate_generic_genesis_function {
                 #[cfg(feature = "parachain")]
                 // Default should use the pallet configuration
                 polkadot_xcm: PolkadotXcmConfig::default(),
-                system: $runtime::SystemConfig { code: wasm_binary.to_vec(), ..Default::default() },
+                system: $runtime::SystemConfig::default(),
                 technical_committee: Default::default(),
                 technical_committee_membership: $runtime::TechnicalCommitteeMembershipConfig {
                     members: vec![].try_into().unwrap(),
