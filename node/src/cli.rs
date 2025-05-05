@@ -26,10 +26,10 @@ use clap::Parser;
 pub use cli_parachain::RelayChainCli;
 use sc_cli::{ChainSpec, SubstrateCli};
 use sc_client_api::{KeysIter, PairsIter};
-use sp_api::NumberFor;
 use sp_consensus::BlockStatus;
-use sp_runtime::{generic::SignedBlock, traits::Block as BlockT, Justifications};
+use sp_runtime::{generic::SignedBlock, traits::{Block as BlockT, NumberFor}, Justifications};
 use sp_storage::{ChildInfo, StorageData, StorageKey};
+use sp_trie::MerkleValue;
 use std::sync::Arc;
 use zeitgeist_primitives::types::{Block, Header};
 pub use zeitgeist_primitives::types::{BlockNumber, Hash};
@@ -410,6 +410,23 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         key: &StorageKey,
     ) -> sp_blockchain::Result<Option<<Block as BlockT>::Hash>> {
         match_client!(self, child_storage_hash(hash, child_info, key))
+    }
+
+    fn closest_merkle_value(
+        &self,
+        hash: <Block as BlockT>::Hash,
+        key: &StorageKey,
+    ) -> sp_blockchain::Result<Option<MerkleValue<<Block as BlockT>::Hash>>> {
+        match_client!(self, closest_merkle_value(hash, key))
+    }
+
+    fn child_closest_merkle_value(
+        &self,
+        hash: <Block as BlockT>::Hash,
+        child_info: &ChildInfo,
+        key: &StorageKey,
+    ) -> sp_blockchain::Result<Option<MerkleValue<<Block as BlockT>::Hash>>> {
+        match_client!(self, child_closest_merkle_value(hash, child_info, key))
     }
 }
 

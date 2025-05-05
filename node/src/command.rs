@@ -72,11 +72,11 @@ pub fn run() -> sc_cli::Result<()> {
                         match chain_spec {
                             #[cfg(feature = "with-zeitgeist-runtime")]
                             spec if spec.is_zeitgeist() => runner.sync_run(|config| {
-                                cmd.run::<zeitgeist_runtime::Block, HostFunctions>(config)
+                                cmd.run_with_spec::<sp_runtime::traits::HashingFor<zeitgeist_runtime::Block>, HostFunctions>(Some(config.chain_spec))
                             }),
                             #[cfg(feature = "with-battery-station-runtime")]
                             _ => runner.sync_run(|config| {
-                                cmd.run::<battery_station_runtime::Block, HostFunctions>(config)
+                                cmd.run_with_spec::<sp_runtime::traits::HashingFor<battery_station_runtime::Block>, HostFunctions>(Some(config.chain_spec))
                             }),
                             #[cfg(not(feature = "with-battery-station-runtime"))]
                             _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
@@ -540,18 +540,28 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
         match &config.chain_spec {
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => {
-                new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(config, cli)
-                    .map_err(sc_cli::Error::Service)
+                new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor, sc_network::NetworkWorker<_, _>>(
+                    config, cli,
+                )
+                .map_err(sc_cli::Error::Service)
             }
             #[cfg(feature = "with-battery-station-runtime")]
-            _ => new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(config, cli)
-                .map_err(sc_cli::Error::Service),
+            _ => new_full::<
+                BatteryStationRuntimeApi,
+                BatteryStationExecutor,
+                sc_network::NetworkWorker<_, _>,
+            >(config, cli)
+            .map_err(sc_cli::Error::Service),
             #[cfg(all(
                 not(feature = "with-battery-station-runtime"),
                 feature = "with-zeitgeist-runtime"
             ))]
-            _ => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(config, cli)
-                .map_err(sc_cli::Error::Service),
+            _ => {
+                new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor, sc_network::NetworkWorker<_, _>>(
+                    config, cli,
+                )
+                .map_err(sc_cli::Error::Service)
+            }
             #[cfg(all(
                 not(feature = "with-battery-station-runtime"),
                 not(feature = "with-zeitgeist-runtime")
