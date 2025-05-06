@@ -38,8 +38,7 @@ use sc_client_api::Backend;
 use sc_consensus::ImportQueue;
 #[allow(deprecated)]
 use sc_executor::{
-    HeapAllocStrategy, NativeElseWasmExecutor, NativeExecutionDispatch, WasmExecutor,
-    DEFAULT_HEAP_ALLOC_STRATEGY,
+    HeapAllocStrategy, NativeElseWasmExecutor, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY,
 };
 use sc_network::{config::FullNetworkConfiguration, NetworkBlock};
 use sc_service::{
@@ -55,44 +54,84 @@ use std::sync::Arc;
 use substrate_prometheus_endpoint::Registry;
 use zeitgeist_primitives::types::{Block, Hash};
 
-#[allow(deprecated)]
-pub type ParachainExecutor<Executor> = NativeElseWasmExecutor<Executor>;
+#[cfg(feature = "runtime-benchmarks")]
+pub type HostFunctions =
+    (frame_benchmarking::benchmarking::HostFunctions, sp_io::SubstrateHostFunctions);
+#[cfg(not(feature = "runtime-benchmarks"))]
+pub type HostFunctions = (sp_io::SubstrateHostFunctions,);
 
-pub type FullClient<RuntimeApi, Executor> =
-    TFullClient<Block, RuntimeApi, ParachainExecutor<Executor>>;
+#[cfg(feature = "with-battery-station-runtime")]
+pub struct BatteryStationExecutor;
+
+#[cfg(feature = "with-battery-station-runtime")]
+impl sc_executor::NativeExecutionDispatch for BatteryStationExecutor {
+    type ExtendHostFunctions = HostFunctions;
+
+    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+        battery_station_runtime::api::dispatch(method, data)
+    }
+
+    fn native_version() -> sc_executor::NativeVersion {
+        battery_station_runtime::native_version()
+    }
+}
+
+#[cfg(not(feature = "with-battery-station-runtime"))]
+pub struct ZeitgeistExecutor;
+
+#[cfg(not(feature = "with-battery-station-runtime"))]
+impl sc_executor::NativeExecutionDispatch for ZeitgeistExecutor {
+    type ExtendHostFunctions = HostFunctions;
+
+    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+        zeitgeist_runtime::api::dispatch(method, data)
+    }
+
+    fn native_version() -> sc_executor::NativeVersion {
+        zeitgeist_runtime::native_version()
+    }
+}
+
+#[cfg(feature = "with-battery-station-runtime")]
+type Executor = BatteryStationExecutor;
+#[cfg(not(feature = "with-battery-station-runtime"))]
+type Executor = ZeitgeistExecutor;
+
+#[allow(deprecated)]
+pub type ParachainExecutor = NativeElseWasmExecutor<Executor>;
+
+pub type FullClient<RuntimeApi> = TFullClient<Block, RuntimeApi, ParachainExecutor>;
 
 pub type FullBackend = TFullBackend<Block>;
 
-pub type ParachainBlockImport<RuntimeApi, Executor> =
-    TParachainBlockImport<Block, Arc<FullClient<RuntimeApi, Executor>>, FullBackend>;
+pub type ParachainBlockImport<RuntimeApi> =
+    TParachainBlockImport<Block, Arc<FullClient<RuntimeApi>>, FullBackend>;
 
 /// Assembly of PartialComponents (enough to run chain ops subcommands)
-pub type ParachainPartialComponents<RuntimeApi, Executor> = PartialComponents<
-    FullClient<RuntimeApi, Executor>,
+pub type ParachainPartialComponents<RuntimeApi> = PartialComponents<
+    FullClient<RuntimeApi>,
     FullBackend,
     (),
     sc_consensus::DefaultImportQueue<Block>,
-    sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
-    (ParachainBlockImport<RuntimeApi, Executor>, Option<Telemetry>, Option<TelemetryWorkerHandle>),
+    sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi>>,
+    (ParachainBlockImport<RuntimeApi>, Option<Telemetry>, Option<TelemetryWorkerHandle>),
 >;
 
 /// Start a parachain node.
 /// called `start_parachain_node` in moonkit node template
 #[allow(deprecated)]
-pub async fn new_full<RuntimeApi, Executor>(
+pub async fn new_full<RuntimeApi>(
     parachain_config: Configuration,
     para_id: ParaId,
     polkadot_config: Configuration,
     hwbench: Option<sc_sysinfo::HwBench>,
     collator_options: CollatorOptions,
-) -> ServiceResult<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
+) -> ServiceResult<(TaskManager, Arc<FullClient<RuntimeApi>>)>
 where
-    RuntimeApi:
-        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
     RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
-    Executor: NativeExecutionDispatch + 'static,
 {
-    do_new_full::<RuntimeApi, Executor, sc_network::NetworkWorker<_, _>>(
+    do_new_full::<RuntimeApi, sc_network::NetworkWorker<_, _>>(
         parachain_config,
         polkadot_config,
         para_id,
@@ -106,14 +145,12 @@ where
 ///
 /// Use this function if you don't actually need the full service, but just the partial in order to
 /// be able to perform chain operations.
-pub fn new_partial<RuntimeApi, Executor>(
+pub fn new_partial<RuntimeApi>(
     config: &Configuration,
-) -> Result<ParachainPartialComponents<RuntimeApi, Executor>, ServiceError>
+) -> Result<ParachainPartialComponents<RuntimeApi>, ServiceError>
 where
-    RuntimeApi:
-        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
     RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
-    Executor: NativeExecutionDispatch + 'static,
 {
     let telemetry = config
         .telemetry_endpoints
@@ -139,7 +176,7 @@ where
         .with_runtime_cache_size(config.executor.runtime_cache_size)
         .build();
 
-    let executor = ParachainExecutor::<Executor>::new_with_wasm_executor(wasm);
+    let executor = ParachainExecutor::new_with_wasm_executor(wasm);
 
     let (client, backend, keystore_container, task_manager) =
         sc_service::new_full_parts_record_import::<Block, RuntimeApi, _>(
@@ -165,8 +202,7 @@ where
         client.clone(),
     );
 
-    let block_import =
-        ParachainBlockImport::<RuntimeApi, Executor>::new(client.clone(), backend.clone());
+    let block_import = ParachainBlockImport::<RuntimeApi>::new(client.clone(), backend.clone());
 
     let import_queue = nimbus_consensus::import_queue(
         client.clone(),
@@ -196,23 +232,21 @@ where
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
 #[sc_tracing::logging::prefix_logs_with("🔮 Zeitgeist Parachain")]
-async fn do_new_full<RuntimeApi, Executor, N>(
+async fn do_new_full<RuntimeApi, N>(
     parachain_config: Configuration,
     polkadot_config: Configuration,
     para_id: polkadot_primitives::Id,
     hwbench: Option<sc_sysinfo::HwBench>,
     collator_options: CollatorOptions,
-) -> ServiceResult<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
+) -> ServiceResult<(TaskManager, Arc<FullClient<RuntimeApi>>)>
 where
-    RuntimeApi:
-        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
     RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
-    Executor: NativeExecutionDispatch + 'static,
     N: sc_network::NetworkBackend<Block, <Block as BlockT>::Hash>,
 {
     let parachain_config = prepare_node_config(parachain_config);
 
-    let params = new_partial::<RuntimeApi, Executor>(&parachain_config)?;
+    let params = new_partial::<RuntimeApi>(&parachain_config)?;
     let (block_import, mut telemetry, telemetry_worker_handle) = params.other;
 
     let client = params.client.clone();
@@ -389,14 +423,14 @@ where
     Ok((task_manager, client))
 }
 
-fn start_consensus<RuntimeApi, Executor>(
-    client: Arc<FullClient<RuntimeApi, Executor>>,
-    block_import: ParachainBlockImport<RuntimeApi, Executor>,
+fn start_consensus<RuntimeApi>(
+    client: Arc<FullClient<RuntimeApi>>,
+    block_import: ParachainBlockImport<RuntimeApi>,
     prometheus_registry: Option<&Registry>,
     telemetry: Option<TelemetryHandle>,
     task_manager: &TaskManager,
     relay_chain_interface: Arc<dyn RelayChainInterface>,
-    transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>>,
+    transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi>>>,
     keystore: KeystorePtr,
     para_id: ParaId,
     collator_key: CollatorPair,
@@ -406,10 +440,8 @@ fn start_consensus<RuntimeApi, Executor>(
     full_pov_size: bool,
 ) -> Result<(), sc_service::Error>
 where
-    RuntimeApi:
-        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
     RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
-    Executor: NativeExecutionDispatch + 'static,
 {
     let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
         task_manager.spawn_handle(),

@@ -27,8 +27,6 @@ use futures::FutureExt;
 use sc_client_api::{Backend, BlockBackend};
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
 use sc_consensus_grandpa::{protocol_standard_name, SharedVoterState};
-#[allow(deprecated)]
-use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sc_service::{error::Error as ServiceError, Configuration, TFullBackend, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryWorker};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
@@ -38,8 +36,11 @@ use std::{path::Path, sync::Arc, time::Duration};
 use zeitgeist_primitives::types::Block;
 
 #[allow(deprecated)]
-pub type FullClient<RuntimeApi, Executor> =
-    sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
+pub type FullClient<RuntimeApi> = sc_service::TFullClient<
+    Block,
+    RuntimeApi,
+    sc_executor::WasmExecutor<sp_io::SubstrateHostFunctions>,
+>;
 pub type FullBackend = TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
@@ -50,17 +51,14 @@ const GRANDPA_JUSTIFICATION_PERIOD: u32 = 512;
 /// Builds a new service for a full client.
 pub fn new_full<
     RuntimeApi,
-    Executor,
     N: sc_network::NetworkBackend<Block, <Block as sp_runtime::traits::Block>::Hash>,
 >(
     config: Configuration,
     cli: Cli,
 ) -> Result<TaskManager, ServiceError>
 where
-    RuntimeApi:
-        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
     RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
-    Executor: NativeExecutionDispatch + 'static,
 {
     let hwbench = (cli.no_hardware_benchmarks)
         .then_some(config.database.path().map(|database_path| {
@@ -78,7 +76,7 @@ where
         select_chain,
         transaction_pool,
         other: (block_import, grandpa_link, mut telemetry),
-    } = new_partial::<RuntimeApi, Executor>(&config)?;
+    } = new_partial::<RuntimeApi>(&config)?;
 
     let mut net_config = sc_network::config::FullNetworkConfiguration::<
         Block,
@@ -309,32 +307,28 @@ where
     Ok(task_manager)
 }
 
-pub type Service<RuntimeApi, Executor> = sc_service::PartialComponents<
-    FullClient<RuntimeApi, Executor>,
+pub type Service<RuntimeApi> = sc_service::PartialComponents<
+    FullClient<RuntimeApi>,
     FullBackend,
     FullSelectChain,
     sc_consensus::DefaultImportQueue<Block>,
-    sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
+    sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi>>,
     (
         sc_consensus_grandpa::GrandpaBlockImport<
             FullBackend,
             Block,
-            FullClient<RuntimeApi, Executor>,
+            FullClient<RuntimeApi>,
             FullSelectChain,
         >,
-        sc_consensus_grandpa::LinkHalf<Block, FullClient<RuntimeApi, Executor>, FullSelectChain>,
+        sc_consensus_grandpa::LinkHalf<Block, FullClient<RuntimeApi>, FullSelectChain>,
         Option<Telemetry>,
     ),
 >;
 
-pub fn new_partial<RuntimeApi, Executor>(
-    config: &Configuration,
-) -> Result<Service<RuntimeApi, Executor>, ServiceError>
+pub fn new_partial<RuntimeApi>(config: &Configuration) -> Result<Service<RuntimeApi>, ServiceError>
 where
-    RuntimeApi:
-        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
     RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
-    Executor: NativeExecutionDispatch + 'static,
 {
     let telemetry = config
         .telemetry_endpoints
@@ -381,31 +375,35 @@ where
     )?;
 
     let cidp_client = client.clone();
-    let import_queue = sc_consensus_aura::import_queue::<AuraPair, _, _, _, _, _>(
-        ImportQueueParams {
+    let import_queue =
+        sc_consensus_aura::import_queue::<AuraPair, _, _, _, _, _>(ImportQueueParams {
             block_import: grandpa_block_import.clone(),
             justification_import: Some(Box::new(grandpa_block_import.clone())),
             client: client.clone(),
             create_inherent_data_providers: move |parent_hash, _| {
-                let slot_duration =
-                    sc_consensus_aura::standalone::slot_duration_at(&*cidp_client, parent_hash)?;
-                let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+                let cidp_client = cidp_client.clone();
+                async move {
+                    let slot_duration = sc_consensus_aura::standalone::slot_duration_at(
+                        &*cidp_client,
+                        parent_hash,
+                    )?;
+                    let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
-                let slot =
-                    sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-                        *timestamp,
-                        slot_duration,
-                    );
+                    let slot =
+						sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+							*timestamp,
+							slot_duration,
+						);
 
-                Ok((slot, timestamp))
+                    Ok((slot, timestamp))
+                }
             },
             spawner: &task_manager.spawn_essential_handle(),
             registry: config.prometheus_registry(),
             check_for_equivocation: Default::default(),
             telemetry: telemetry.as_ref().map(|x| x.handle()),
             compatibility_mode: Default::default(),
-        },
-    )?;
+        })?;
 
     Ok(sc_service::PartialComponents {
         client,

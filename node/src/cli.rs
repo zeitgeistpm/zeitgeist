@@ -21,6 +21,8 @@
 mod cli_parachain;
 
 use super::service::{FullBackend, FullClient, IdentifyVariant};
+#[cfg(feature = "with-battery-station-runtime")]
+use battery_station_runtime::RuntimeApi as BatteryStationRuntimeApi;
 use clap::Parser;
 #[cfg(feature = "parachain")]
 pub use cli_parachain::RelayChainCli;
@@ -37,13 +39,8 @@ use sp_trie::MerkleValue;
 use std::sync::Arc;
 use zeitgeist_primitives::types::{Block, Header};
 pub use zeitgeist_primitives::types::{BlockNumber, Hash};
-#[cfg(feature = "with-battery-station-runtime")]
-use {
-    super::service::BatteryStationExecutor,
-    battery_station_runtime::RuntimeApi as BatteryStationRuntimeApi,
-};
 #[cfg(feature = "with-zeitgeist-runtime")]
-use {super::service::ZeitgeistExecutor, zeitgeist_runtime::RuntimeApi as ZeitgeistRuntimeApi};
+use zeitgeist_runtime::RuntimeApi as ZeitgeistRuntimeApi;
 
 const COPYRIGHT_START_YEAR: i32 = 2021;
 const IMPL_NAME: &str = "Zeitgeist Node";
@@ -255,21 +252,21 @@ impl SubstrateCli for Cli {
 #[derive(Clone)]
 pub enum Client {
     #[cfg(feature = "with-battery-station-runtime")]
-    BatteryStation(Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>),
+    BatteryStation(Arc<FullClient<BatteryStationRuntimeApi>>),
     #[cfg(feature = "with-zeitgeist-runtime")]
-    Zeitgeist(Arc<FullClient<ZeitgeistRuntimeApi, ZeitgeistExecutor>>),
+    Zeitgeist(Arc<FullClient<ZeitgeistRuntimeApi>>),
 }
 
 #[cfg(feature = "with-battery-station-runtime")]
-impl From<Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>> for Client {
-    fn from(client: Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>) -> Self {
+impl From<Arc<FullClient<BatteryStationRuntimeApi>>> for Client {
+    fn from(client: Arc<FullClient<BatteryStationRuntimeApi>>) -> Self {
         Self::BatteryStation(client)
     }
 }
 
 #[cfg(feature = "with-zeitgeist-runtime")]
-impl From<Arc<FullClient<ZeitgeistRuntimeApi, ZeitgeistExecutor>>> for Client {
-    fn from(client: Arc<FullClient<ZeitgeistRuntimeApi, ZeitgeistExecutor>>) -> Self {
+impl From<Arc<FullClient<ZeitgeistRuntimeApi>>> for Client {
+    fn from(client: Arc<FullClient<ZeitgeistRuntimeApi>>) -> Self {
         Self::Zeitgeist(client)
     }
 }
