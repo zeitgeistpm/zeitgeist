@@ -44,9 +44,9 @@ cfg_if::cfg_if! {
         const DEFAULT_COLLATOR_BALANCE_ZEITGEIST: Option<u128> =
             DEFAULT_STAKING_AMOUNT_ZEITGEIST.checked_add(CollatorDeposit::get());
         const NUM_SELECTED_CANDIDATES: u32 = 8;
-        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::RuntimeGenesisConfig, Extensions>;
+        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<Extensions>;
     } else {
-        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::RuntimeGenesisConfig>;
+        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec;
     }
 }
 
@@ -138,14 +138,13 @@ generate_generic_genesis_function!(zeitgeist_runtime,);
 #[cfg(feature = "parachain")]
 generate_inflation_config_function!(zeitgeist_runtime);
 
-fn genesis_config(wasm: &'static [u8]) -> serde_json::Value {
+fn get_genesis_config() -> serde_json::Value {
     serde_json::to_value(&generic_genesis(
         additional_chain_spec_staging_zeitgeist(
             #[cfg(feature = "parachain")]
             POLKADOT_PARACHAIN_ID.into(),
         ),
         endowed_accounts_staging_zeitgeist(),
-        wasm,
     ))
     .expect("Could not generate JSON for battery station staging genesis.")
 }
@@ -170,6 +169,6 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
     .with_properties(token_properties("ZTG", SS58Prefix::get()))
     .with_telemetry_endpoints(telemetry_endpoints().expect("Telemetry endpoints should be set"))
     .with_protocol_id("zeitgeist")
-    .with_genesis_config(genesis_config(wasm))
+    .with_genesis_config(get_genesis_config())
     .build())
 }

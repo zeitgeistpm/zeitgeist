@@ -38,7 +38,6 @@ cfg_if::cfg_if!(
         const POLKADOT_PARACHAIN_ID: u32 = 2092;
         const BATTERY_STATION_PARACHAIN_ID: u32 = 2101;
         const POLKADOT_BLOCK_DURATION: core::time::Duration = core::time::Duration::from_secs(6);
-        const SOFT_DEADLINE_PERCENT: sp_runtime::Percent = sp_runtime::Percent::from_percent(100);
     }
 );
 

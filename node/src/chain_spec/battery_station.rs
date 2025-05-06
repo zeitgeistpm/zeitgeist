@@ -42,10 +42,10 @@ cfg_if::cfg_if! {
         pub(super) const DEFAULT_STAKING_AMOUNT_BATTERY_STATION: u128 = 2_000 * BASE;
         const DEFAULT_COLLATOR_BALANCE_BATTERY_STATION: Option<u128> =
             DEFAULT_STAKING_AMOUNT_BATTERY_STATION.checked_add(CollatorDeposit::get());
-        pub type BatteryStationChainSpec = sc_service::GenericChainSpec<battery_station_runtime::RuntimeGenesisConfig, Extensions>;
+        pub type BatteryStationChainSpec = sc_service::GenericChainSpec<Extensions>;
         const NUM_SELECTED_CANDIDATES: u32 = 8;
     } else {
-        pub type BatteryStationChainSpec = sc_service::GenericChainSpec<battery_station_runtime::RuntimeGenesisConfig>;
+        pub type BatteryStationChainSpec = sc_service::GenericChainSpec;
     }
 }
 
@@ -130,14 +130,13 @@ generate_generic_genesis_function!(
 #[cfg(feature = "parachain")]
 generate_inflation_config_function!(battery_station_runtime);
 
-fn genesis_config(wasm: &'static [u8]) -> serde_json::Value {
+fn get_genesis_config() -> serde_json::Value {
     serde_json::to_value(&generic_genesis(
         additional_chain_spec_staging_battery_station(
             #[cfg(feature = "parachain")]
             BATTERY_STATION_PARACHAIN_ID.into(),
         ),
         endowed_accounts_staging_battery_station(),
-        wasm,
     ))
     .expect("Could not generate JSON for battery station staging genesis.")
 }
@@ -162,6 +161,6 @@ pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, Strin
     .with_properties(token_properties("ZBS", SS58Prefix::get()))
     .with_telemetry_endpoints(telemetry_endpoints().expect("Telemetry endpoints should be set"))
     .with_protocol_id("battery_station")
-    .with_genesis_config(genesis_config(wasm))
+    .with_genesis_config(get_genesis_config())
     .build())
 }

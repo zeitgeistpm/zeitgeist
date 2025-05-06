@@ -56,6 +56,7 @@ frame-metadata-hash-extension = { workspace = true }
 cumulus-client-cli = { workspace = true, optional = true }
 cumulus-client-collator = { workspace = true, optional = true }
 cumulus-client-consensus-common = { workspace = true, optional = true }
+cumulus-client-consensus-proposer = { workspace = true, optional = true }
 cumulus-client-consensus-relay-chain = { workspace = true, optional = true }
 cumulus-client-network = { workspace = true, optional = true }
 cumulus-client-service = { workspace = true, optional = true }
@@ -129,6 +130,7 @@ parachain = [
     "cumulus-client-cli",
     "cumulus-client-collator",
     "cumulus-client-consensus-common",
+    "cumulus-client-consensus-proposer",
     "cumulus-client-consensus-relay-chain",
     "cumulus-client-network",
     "cumulus-client-service",

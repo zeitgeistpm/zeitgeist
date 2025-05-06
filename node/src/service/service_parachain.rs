@@ -18,24 +18,21 @@
 
 use crate::{
     service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
-    POLKADOT_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
+    POLKADOT_BLOCK_DURATION,
 };
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_collator::service::CollatorService;
-use cumulus_client_consensus_common::{
-    ParachainBlockImport as TParachainBlockImport, ParachainConsensus,
-};
+use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
 use cumulus_client_network::RequireSecondedInBlockAnnounce;
 use cumulus_client_service::{
-    build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks, BuildNetworkParams,
-    CollatorSybilResistance, DARecoveryProfile, StartRelayChainTasksParams,
+    build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks, DARecoveryProfile,
+    StartRelayChainTasksParams,
 };
 use cumulus_primitives_core::ParaId;
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
 use frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE;
 use futures::FutureExt;
-use nimbus_primitives::NimbusId;
 use polkadot_service::CollatorPair;
 use sc_client_api::Backend;
 use sc_consensus::ImportQueue;
@@ -45,7 +42,6 @@ use sc_executor::{
     DEFAULT_HEAP_ALLOC_STRATEGY,
 };
 use sc_network::{config::FullNetworkConfiguration, NetworkBlock};
-use sc_network_sync::SyncingService;
 use sc_service::{
     error::{Error as ServiceError, Result as ServiceResult},
     Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager,

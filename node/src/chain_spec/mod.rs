@@ -90,9 +90,9 @@ cfg_if::cfg_if! {
         }
 
         pub(crate) use generate_inflation_config_function;
-        pub type DummyChainSpec = sc_service::GenericChainSpec<(), Extensions>;
+        pub type DummyChainSpec = sc_service::GenericChainSpec<Extensions>;
     } else {
-        pub type DummyChainSpec = sc_service::GenericChainSpec<()>;
+        pub type DummyChainSpec = sc_service::GenericChainSpec;
     }
 }
 
@@ -107,7 +107,6 @@ macro_rules! generate_generic_genesis_function {
         pub(super) fn generic_genesis(
             acs: AdditionalChainSpec,
             endowed_accounts: Vec<EndowedAccountWithBalance>,
-            wasm_binary: &[u8],
         ) -> $runtime::RuntimeGenesisConfig {
             $runtime::RuntimeGenesisConfig {
                 // Common genesis

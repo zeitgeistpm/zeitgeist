@@ -83,6 +83,7 @@ resolver = "2"
 cumulus-client-cli = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 cumulus-client-collator = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 cumulus-client-consensus-common = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
+cumulus-client-consensus-proposer = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 cumulus-client-consensus-relay-chain = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 cumulus-client-network = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 cumulus-client-service = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
