@@ -42,7 +42,6 @@ if [ "$PROFILE" = "dev" ]; then
 else
     export PROFILE_DIR="$PROFILE"
 fi
-export EXECUTION="${EXECUTION:-wasm}"
 export ADDITIONAL_PARAMS="${ADDITIONAL:-}"
 export ADDITIONAL_FEATURES="${ADDITIONAL_FEATURES:-}"
 export HEADER="${HEADER:-./HEADER_GPL3}"

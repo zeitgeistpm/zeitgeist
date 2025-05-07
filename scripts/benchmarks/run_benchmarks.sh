@@ -23,12 +23,13 @@ cargo build \
 
 for pallet in ${FRAME_PALLETS[@]}; do
     ./target/$PROFILE_DIR/zeitgeist benchmark pallet \
-        --chain=dev \
+        --runtime=target/$PROFILE_DIR/wbuild/zeitgeist-runtime/zeitgeist_runtime.wasm \
+        --genesis-builder=runtime \
+        --genesis-builder-preset=0 \
         --steps=$FRAME_PALLETS_STEPS \
         --repeat=$FRAME_PALLETS_RUNS \
         --pallet=$pallet \
         --extrinsic='*' \
-        --execution=$EXECUTION \
         --wasm-execution=compiled \
         --heap-pages=4096 \
         --template=$FRAME_WEIGHT_TEMPLATE \
@@ -39,12 +40,13 @@ done
 
 for pallet in ${ORML_PALLETS[@]}; do
     ./target/$PROFILE_DIR/zeitgeist benchmark pallet \
-        --chain=dev \
+        --runtime=target/$PROFILE_DIR/wbuild/zeitgeist-runtime/zeitgeist_runtime.wasm \
+        --genesis-builder=runtime \
+        --genesis-builder-preset=0 \
         --steps=$ORML_PALLETS_STEPS \
         --repeat=$ORML_PALLETS_RUNS \
         --pallet=$pallet \
         --extrinsic='*' \
-        --execution=$EXECUTION \
         --wasm-execution=compiled \
         --heap-pages=4096 \
         --template=$ORML_WEIGHT_TEMPLATE \
@@ -57,12 +59,13 @@ for pallet in ${ZEITGEIST_PALLETS[@]}; do
     pallet_folder_name=${pallet//zrml_/}
     pallet_folder_name=${pallet_folder_name//_/-}
     ./target/$PROFILE_DIR/zeitgeist benchmark pallet \
-        --chain=dev \
+        --runtime=target/$PROFILE_DIR/wbuild/zeitgeist-runtime/zeitgeist_runtime.wasm \
+        --genesis-builder=runtime \
+        --genesis-builder-preset=0 \
         --steps=$ZEITGEIST_PALLETS_STEPS \
         --repeat=$ZEITGEIST_PALLETS_RUNS \
         --pallet=$pallet \
         --extrinsic='*' \
-        --execution=$EXECUTION \
         --wasm-execution=compiled \
         --heap-pages=4096 \
         --template=$ZEITGEIST_WEIGHT_TEMPLATE \
@@ -80,12 +83,13 @@ cargo build \
 
 for pallet in ${FRAME_PALLETS_PARACHAIN[@]}; do
     ./target/$PROFILE_DIR/zeitgeist benchmark pallet \
-        --chain=dev \
+        --runtime=target/$PROFILE_DIR/wbuild/zeitgeist-runtime/zeitgeist_runtime.wasm \
+        --genesis-builder=runtime \
+        --genesis-builder-preset=0 \
         --steps=$FRAME_PALLETS_PARACHAIN_STEPS \
         --repeat=$FRAME_PALLETS_PARACHAIN_RUNS \
         --pallet=$pallet \
         --extrinsic='*' \
-        --execution=$EXECUTION \
         --wasm-execution=compiled \
         --heap-pages=4096 \
         --template=$FRAME_WEIGHT_TEMPLATE \

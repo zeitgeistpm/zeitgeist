@@ -1461,6 +1461,270 @@ macro_rules! impl_config_traits {
     };
 }
 
+#[macro_export]
+macro_rules! create_genesis_config_preset {
+    () => {
+        use sp_core::{sr25519, Pair, Public};
+        use sp_genesis_builder::PresetId;
+        use sp_runtime::traits::{IdentifyAccount, Verify};
+        use zeitgeist_primitives::types::{AccountId, Balance, Signature};
+        #[cfg(feature = "parachain")]
+        use {
+            crate::{
+                DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
+            },
+            nimbus_primitives::NimbusId,
+            pallet_parachain_staking::InflationInfo,
+            sp_runtime::Percent,
+            zeitgeist_primitives::constants::{
+                ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
+                BASE,
+            },
+        };
+
+        const BATTERY_STATION_PARACHAIN_ID: u32 = 2101;
+        #[cfg(feature = "parachain")]
+        const DEFAULT_STAKING_AMOUNT_BATTERY_STATION: u128 = 2_000 * BASE;
+
+        #[cfg(feature = "parachain")]
+        pub fn inflation_config(
+            annual_inflation_min: Perbill,
+            annual_inflation_ideal: Perbill,
+            annual_inflation_max: Perbill,
+            total_supply: zeitgeist_primitives::types::Balance,
+        ) -> pallet_parachain_staking::inflation::InflationInfo<zeitgeist_primitives::types::Balance> {
+            fn to_round_inflation(
+                annual: pallet_parachain_staking::inflation::Range<Perbill>,
+            ) -> pallet_parachain_staking::inflation::Range<Perbill> {
+                use crate::parachain_params::DefaultBlocksPerRound;
+                use pallet_parachain_staking::inflation::perbill_annual_to_perbill_round;
+
+                perbill_annual_to_perbill_round(
+                    annual,
+                    // rounds per year
+                    u32::try_from(zeitgeist_primitives::constants::BLOCKS_PER_YEAR).unwrap()
+                        / DefaultBlocksPerRound::get(),
+                )
+            }
+            let annual = pallet_parachain_staking::inflation::Range {
+                min: annual_inflation_min,
+                ideal: annual_inflation_ideal,
+                max: annual_inflation_max,
+            };
+            pallet_parachain_staking::inflation::InflationInfo {
+                // staking expectations
+                expect: pallet_parachain_staking::inflation::Range {
+                    min: Perbill::from_percent(5).mul_floor(total_supply),
+                    ideal: Perbill::from_percent(10).mul_floor(total_supply),
+                    max: Perbill::from_percent(15).mul_floor(total_supply),
+                },
+                // annual inflation
+                annual,
+                round: to_round_inflation(annual),
+            }
+        }
+
+        #[cfg(feature = "parachain")]
+        pub struct AdditionalChainSpec {
+            pub blocks_per_round: u32,
+            pub candidates: Vec<(AccountId, NimbusId, Balance)>,
+            pub collator_commission: Perbill,
+            pub inflation_info: InflationInfo<Balance>,
+            pub nominations: Vec<(AccountId, AccountId, Balance, Percent)>,
+            pub parachain_bond_reserve_percent: Percent,
+            pub parachain_id: ParaId,
+            pub num_selected_candidates: u32,
+        }
+
+        #[cfg(not(feature = "parachain"))]
+        pub struct AdditionalChainSpec {
+            pub initial_authorities:
+                Vec<(sp_consensus_aura::sr25519::AuthorityId, sp_consensus_grandpa::AuthorityId)>,
+        }
+
+        type AccountPublic = <Signature as Verify>::Signer;
+        #[inline]
+        fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
+        where
+            AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+        {
+            AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+        }
+
+        fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+            TPublic::Pair::from_string(&alloc::format!("//{}", seed), None)
+                .expect("static values are valid; qed")
+                .public()
+        }
+
+        #[derive(Clone)]
+        pub struct EndowedAccountWithBalance(AccountId, Balance);
+
+        pub fn generic_genesis(
+            acs: AdditionalChainSpec,
+            endowed_accounts: Vec<EndowedAccountWithBalance>,
+        ) -> crate::RuntimeGenesisConfig {
+            crate::RuntimeGenesisConfig {
+                // Common genesis
+                advisory_committee: Default::default(),
+                advisory_committee_membership: crate::AdvisoryCommitteeMembershipConfig {
+                    members: vec![].try_into().unwrap(),
+                    phantom: Default::default(),
+                },
+                #[cfg(feature = "parachain")]
+                asset_registry: Default::default(),
+                #[cfg(not(feature = "parachain"))]
+                aura: crate::AuraConfig {
+                    authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),
+                },
+                #[cfg(feature = "parachain")]
+                author_filter: crate::AuthorFilterConfig {
+                    eligible_count: EligibilityValue::new_unchecked(1),
+                    ..Default::default()
+                },
+                #[cfg(feature = "parachain")]
+                author_mapping: crate::AuthorMappingConfig {
+                    mappings: acs
+                        .candidates
+                        .iter()
+                        .cloned()
+                        .map(|(account_id, author_id, _)| (author_id, account_id))
+                        .collect(),
+                },
+                balances: crate::BalancesConfig {
+                    balances: endowed_accounts.iter().cloned().map(|k| (k.0, k.1)).collect(),
+                },
+                council: Default::default(),
+                council_membership: crate::CouncilMembershipConfig {
+                    members: vec![].try_into().unwrap(),
+                    phantom: Default::default(),
+                },
+                democracy: Default::default(),
+                #[cfg(not(feature = "parachain"))]
+                grandpa: crate::GrandpaConfig {
+                    authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
+                    ..Default::default()
+                },
+                #[cfg(feature = "parachain")]
+                parachain_info: crate::ParachainInfoConfig {
+                    parachain_id: acs.parachain_id,
+                    ..Default::default()
+                },
+                #[cfg(feature = "parachain")]
+                parachain_staking: crate::ParachainStakingConfig {
+                    blocks_per_round: acs.blocks_per_round,
+                    candidates: acs
+                        .candidates
+                        .iter()
+                        .cloned()
+                        .map(|(account, _, bond)| (account, bond))
+                        .collect(),
+                    collator_commission: acs.collator_commission,
+                    inflation_config: acs.inflation_info,
+                    delegations: acs.nominations,
+                    parachain_bond_reserve_percent: acs.parachain_bond_reserve_percent,
+                    num_selected_candidates: acs.num_selected_candidates,
+                },
+                #[cfg(feature = "parachain")]
+                parachain_system: Default::default(),
+                #[cfg(feature = "parachain")]
+                // Default should use the pallet configuration
+                polkadot_xcm: PolkadotXcmConfig::default(),
+                system: crate::SystemConfig::default(),
+                technical_committee: Default::default(),
+                technical_committee_membership: crate::TechnicalCommitteeMembershipConfig {
+                    members: vec![].try_into().unwrap(),
+                    phantom: Default::default(),
+                },
+                treasury: Default::default(),
+                transaction_payment: Default::default(),
+                tokens: Default::default(),
+                vesting: Default::default(),
+
+                // Additional genesis
+                sudo: crate::SudoConfig {
+                    key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+                },
+            }
+        }
+
+        const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
+
+        #[cfg(not(feature = "parachain"))]
+        fn authority_keys_from_seed(
+            s: &str,
+        ) -> (sp_consensus_aura::sr25519::AuthorityId, sp_consensus_grandpa::AuthorityId) {
+            (
+                get_from_seed::<sp_consensus_aura::sr25519::AuthorityId>(s),
+                get_from_seed::<sp_consensus_grandpa::AuthorityId>(s),
+            )
+        }
+
+        fn get_genesis_config() -> serde_json::Value {
+            serde_json::to_value(&generic_genesis(
+                #[cfg(feature = "parachain")]
+                AdditionalChainSpec {
+                    blocks_per_round: DefaultBlocksPerRound::get(),
+                    candidates: vec![(
+                        get_account_id_from_seed::<sr25519::Public>("Alice"),
+                        get_from_seed::<nimbus_primitives::NimbusId>("Alice"),
+                        DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
+                    )],
+                    collator_commission: DefaultCollatorCommission::get(),
+                    inflation_info: inflation_config(
+                        STAKING_PTD * Perbill::from_percent(40),
+                        STAKING_PTD * Perbill::from_percent(70),
+                        STAKING_PTD,
+                        TOTAL_INITIAL_ZTG * BASE,
+                    ),
+                    nominations: vec![],
+                    parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
+                    parachain_id: BATTERY_STATION_PARACHAIN_ID.into(),
+                    num_selected_candidates: 8,
+                },
+                #[cfg(not(feature = "parachain"))]
+                AdditionalChainSpec { initial_authorities: vec![authority_keys_from_seed("Alice")] },
+                vec![
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Eve"),
+                    get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+                    get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+                ]
+                .into_iter()
+                .map(|acc| EndowedAccountWithBalance(acc, INITIAL_BALANCE))
+                .collect(),
+            ))
+            .expect("Could not generate JSON for battery station staging genesis.")
+        }
+
+        /// Provides the JSON representation of predefined genesis config for given `id`.
+        pub fn get_genesis_config_preset(id: &PresetId) -> Option<Vec<u8>> {
+            let patch = match id.try_into() {
+                Ok(sp_genesis_builder::DEV_RUNTIME_PRESET) => get_genesis_config(),
+                _ => return None,
+            };
+            Some(
+                serde_json::to_string(&patch)
+                    .expect("serialization to json is expected to work. qed.")
+                    .into_bytes(),
+            )
+        }
+
+        /// List of supported presets.
+        pub fn get_genesis_config_preset_names() -> Vec<PresetId> {
+            vec![PresetId::from(sp_genesis_builder::DEV_RUNTIME_PRESET)]
+        }
+    };
+}
+
 // Implement runtime apis
 #[macro_export]
 macro_rules! create_runtime_api {
@@ -1869,6 +2133,21 @@ macro_rules! create_runtime_api {
                     opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
                 }
             }
+
+            #[cfg(not(feature = "disable-genesis-builder"))]
+            impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
+				fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
+					frame_support::genesis_builder_helper::build_state::<RuntimeGenesisConfig>(config)
+				}
+
+				fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
+					frame_support::genesis_builder_helper::get_preset::<RuntimeGenesisConfig>(id, get_genesis_config_preset)
+				}
+
+				fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
+					get_genesis_config_preset_names()
+				}
+			}
 
             impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
                 fn validate_transaction(
