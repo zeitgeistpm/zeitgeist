@@ -34,7 +34,6 @@ pub use service_standalone::{new_full, new_partial, FullBackend, FullClient};
 use sp_api::ConstructRuntimeApi;
 use std::sync::Arc;
 
-
 /// Can be called for a `Configuration` to check if it is a configuration for
 /// the `Zeitgeist` network.
 pub trait IdentifyVariant {
