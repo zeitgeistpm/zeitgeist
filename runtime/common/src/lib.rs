@@ -137,8 +137,8 @@ macro_rules! decl_common_types {
             CheckWeight<Runtime>,
             // https://docs.rs/pallet-asset-tx-payment/latest/src/pallet_asset_tx_payment/lib.rs.html#32-34
             pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
-            cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim<Runtime>,
             frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
+            cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim<Runtime>,
         );
         pub type EventRecord = frame_system::EventRecord<
             <Runtime as frame_system::Config>::RuntimeEvent,
@@ -1123,14 +1123,14 @@ macro_rules! impl_config_traits {
         impl MinimumPeriod {
             /// Returns the value of this parameter type.
             pub fn get() -> u64 {
-                #[cfg(feature = "runtime-benchmarks")]
-                {
-                    use frame_benchmarking::benchmarking::get_whitelist;
-                    // Should that condition be true, we can assume that we are in a benchmark environment.
-                    if !get_whitelist().is_empty() {
-                        return u64::MAX;
-                    }
-                }
+                // #[cfg(feature = "runtime-benchmarks")]
+                // {
+                //     use frame_benchmarking::benchmarking::get_whitelist;
+                //     // Should that condition be true, we can assume that we are in a benchmark environment.
+                //     if !get_whitelist().is_empty() {
+                //         return u64::MAX;
+                //     }
+                // }
 
                 MinimumPeriodValue::get()
             }

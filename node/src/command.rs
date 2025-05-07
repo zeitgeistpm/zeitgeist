@@ -123,7 +123,6 @@ pub fn run() -> sc_cli::Result<()> {
                     spec if spec.is_zeitgeist() => runner.sync_run(|config| {
                         let params = crate::service::new_partial::<
                             zeitgeist_runtime::RuntimeApi,
-                            ZeitgeistExecutor,
                         >(&config)?;
 
                         let db = params.backend.expose_db();
@@ -135,7 +134,6 @@ pub fn run() -> sc_cli::Result<()> {
                     _ => runner.sync_run(|config| {
                         let params = crate::service::new_partial::<
                             battery_station_runtime::RuntimeApi,
-                            BatteryStationExecutor,
                         >(&config)?;
 
                         let db = params.backend.expose_db();
