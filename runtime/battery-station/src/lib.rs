@@ -131,7 +131,11 @@ impl pallet_sudo::Config for Runtime {
 }
 
 impl_config_traits!();
-create_genesis_config_preset!();
+create_genesis_config_preset!(
+    sudo: SudoConfig {
+        key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+    },
+);
 create_runtime_api!();
 create_common_benchmark_logic!();
 create_common_tests!();

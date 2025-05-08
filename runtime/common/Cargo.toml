@@ -34,6 +34,7 @@ zeitgeist-primitives = { workspace = true }
 # Utility
 cfg-if = { workspace = true }
 log = { workspace = true }
+serde_json = { workspace = true }
 
 [features]
 default = ["std"]

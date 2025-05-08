@@ -62,7 +62,6 @@ cumulus-client-network = { workspace = true, optional = true }
 cumulus-client-service = { workspace = true, optional = true }
 cumulus-primitives-core = { workspace = true, features = ["default"], optional = true }
 cumulus-primitives-parachain-inherent = { workspace = true, optional = true }
-cumulus-primitives-storage-weight-reclaim = { workspace = true }
 cumulus-relay-chain-inprocess-interface = { workspace = true, optional = true }
 cumulus-relay-chain-interface = { workspace = true, optional = true }
 cumulus-relay-chain-minimal-node = { workspace = true, optional = true }
@@ -91,6 +90,7 @@ polkadot-cli = { workspace = true, optional = true }
 polkadot-parachain-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-service = { workspace = true, optional = true }
+polkadot-test-service = { workspace = true, optional = true }
 
 # Standalone
 
@@ -164,6 +164,7 @@ parachain = [
     "polkadot-parachain-primitives",
     "polkadot-primitives",
     "polkadot-service",
+    "polkadot-test-service",
 ]
 runtime-benchmarks = [
     "battery-station-runtime?/runtime-benchmarks",
@@ -171,6 +172,7 @@ runtime-benchmarks = [
     "frame-benchmarking-cli/runtime-benchmarks",
     "polkadot-cli?/runtime-benchmarks",
     "polkadot-service?/runtime-benchmarks",
+    "polkadot-test-service?/runtime-benchmarks",
     "zeitgeist-runtime?/runtime-benchmarks",
 ]
 try-runtime = [

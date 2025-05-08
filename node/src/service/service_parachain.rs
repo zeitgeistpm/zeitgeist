@@ -97,6 +97,7 @@ type Executor = BatteryStationExecutor;
 #[cfg(not(feature = "with-battery-station-runtime"))]
 type Executor = ZeitgeistExecutor;
 
+// TODO(#1430): As soon as the WasmExecutor is used here, enable storage weight reclaim: https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/enable_pov_reclaim/index.html
 #[allow(deprecated)]
 pub type ParachainExecutor = NativeElseWasmExecutor<Executor>;
 

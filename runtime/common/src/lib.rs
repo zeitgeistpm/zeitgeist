@@ -138,7 +138,6 @@ macro_rules! decl_common_types {
             // https://docs.rs/pallet-asset-tx-payment/latest/src/pallet_asset_tx_payment/lib.rs.html#32-34
             pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
             frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
-            cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim<Runtime>,
         );
         pub type EventRecord = frame_system::EventRecord<
             <Runtime as frame_system::Config>::RuntimeEvent,
@@ -1463,7 +1462,7 @@ macro_rules! impl_config_traits {
 
 #[macro_export]
 macro_rules! create_genesis_config_preset {
-    () => {
+    ($($additional_genesis_config:tt)*) => {
         use sp_core::{sr25519, Pair, Public};
         use sp_genesis_builder::PresetId;
         use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -1642,9 +1641,7 @@ macro_rules! create_genesis_config_preset {
                 vesting: Default::default(),
 
                 // Additional genesis
-                sudo: crate::SudoConfig {
-                    key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
-                },
+                $($additional_genesis_config)*
             }
         }
 

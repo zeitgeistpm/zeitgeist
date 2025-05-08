@@ -25,7 +25,7 @@ for pallet in ${FRAME_PALLETS[@]}; do
     ./target/$PROFILE_DIR/zeitgeist benchmark pallet \
         --runtime=target/$PROFILE_DIR/wbuild/zeitgeist-runtime/zeitgeist_runtime.wasm \
         --genesis-builder=runtime \
-        --genesis-builder-preset=0 \
+        --genesis-builder-preset=development \
         --steps=$FRAME_PALLETS_STEPS \
         --repeat=$FRAME_PALLETS_RUNS \
         --pallet=$pallet \
@@ -42,7 +42,7 @@ for pallet in ${ORML_PALLETS[@]}; do
     ./target/$PROFILE_DIR/zeitgeist benchmark pallet \
         --runtime=target/$PROFILE_DIR/wbuild/zeitgeist-runtime/zeitgeist_runtime.wasm \
         --genesis-builder=runtime \
-        --genesis-builder-preset=0 \
+        --genesis-builder-preset=development \
         --steps=$ORML_PALLETS_STEPS \
         --repeat=$ORML_PALLETS_RUNS \
         --pallet=$pallet \
@@ -61,7 +61,7 @@ for pallet in ${ZEITGEIST_PALLETS[@]}; do
     ./target/$PROFILE_DIR/zeitgeist benchmark pallet \
         --runtime=target/$PROFILE_DIR/wbuild/zeitgeist-runtime/zeitgeist_runtime.wasm \
         --genesis-builder=runtime \
-        --genesis-builder-preset=0 \
+        --genesis-builder-preset=development \
         --steps=$ZEITGEIST_PALLETS_STEPS \
         --repeat=$ZEITGEIST_PALLETS_RUNS \
         --pallet=$pallet \
@@ -85,7 +85,7 @@ for pallet in ${FRAME_PALLETS_PARACHAIN[@]}; do
     ./target/$PROFILE_DIR/zeitgeist benchmark pallet \
         --runtime=target/$PROFILE_DIR/wbuild/zeitgeist-runtime/zeitgeist_runtime.wasm \
         --genesis-builder=runtime \
-        --genesis-builder-preset=0 \
+        --genesis-builder-preset=development \
         --steps=$FRAME_PALLETS_PARACHAIN_STEPS \
         --repeat=$FRAME_PALLETS_PARACHAIN_RUNS \
         --pallet=$pallet \

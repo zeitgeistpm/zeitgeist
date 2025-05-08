@@ -35,7 +35,6 @@ use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use std::{path::Path, sync::Arc, time::Duration};
 use zeitgeist_primitives::types::Block;
 
-#[allow(deprecated)]
 pub type FullClient<RuntimeApi> = sc_service::TFullClient<
     Block,
     RuntimeApi,

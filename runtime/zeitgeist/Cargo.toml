@@ -62,7 +62,6 @@ cumulus-pallet-parachain-system = { workspace = true, optional = true }
 cumulus-pallet-xcm = { workspace = true, optional = true }
 cumulus-pallet-xcmp-queue = { workspace = true, optional = true }
 cumulus-primitives-core = { workspace = true, optional = true }
-cumulus-primitives-storage-weight-reclaim = { workspace = true }
 cumulus-primitives-timestamp = { workspace = true, optional = true }
 cumulus-primitives-utility = { workspace = true, optional = true }
 parachain-info = { workspace = true, optional = true }
@@ -95,6 +94,7 @@ sp-consensus-grandpa = { workspace = true }
 cfg-if = { workspace = true }
 hex-literal = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
+serde_json = { workspace = true }
 
 # XCM
 orml-asset-registry = { workspace = true, optional = true }
@@ -295,7 +295,6 @@ std = [
     "cumulus-primitives-core?/std",
     "cumulus-primitives-timestamp?/std",
     "cumulus-primitives-utility?/std",
-    "cumulus-primitives-storage-weight-reclaim/std",
     "parachain-info?/std",
     "parachains-common?/std",
 
