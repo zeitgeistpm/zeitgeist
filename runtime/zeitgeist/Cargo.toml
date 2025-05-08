@@ -269,6 +269,7 @@ std = [
     "parity-scale-codec/std",
     "polkadot-primitives/std",
     "scale-info/std",
+    "serde_json/std",
     "sp-api/std",
     "sp-block-builder/std",
     "sp-consensus-slots/std",

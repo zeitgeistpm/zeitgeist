@@ -31,8 +31,10 @@ use {
     super::{generate_inflation_config_function, Extensions},
     crate::BATTERY_STATION_PARACHAIN_ID,
     battery_station_runtime::{
-        CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
-        DefaultParachainBondReservePercent, EligibilityValue, PolkadotXcmConfig,
+        parachain_params::{
+            DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
+        },
+        CollatorDeposit, EligibilityValue, PolkadotXcmConfig,
     },
     zeitgeist_primitives::constants::ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
 };

@@ -16,6 +16,7 @@ sc-client-api = { workspace = true }
 sc-client-db = { workspace = true }
 sc-consensus = { workspace = true }
 sc-executor = { workspace = true }
+sp-genesis-builder = { workspace = true, features = ["std"] }
 sc-keystore = { workspace = true }
 sc-network = { workspace = true }
 sc-network-statement = { workspace = true }
@@ -90,7 +91,6 @@ polkadot-cli = { workspace = true, optional = true }
 polkadot-parachain-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-service = { workspace = true, optional = true }
-polkadot-test-service = { workspace = true, optional = true }
 
 # Standalone
 
@@ -164,7 +164,6 @@ parachain = [
     "polkadot-parachain-primitives",
     "polkadot-primitives",
     "polkadot-service",
-    "polkadot-test-service",
 ]
 runtime-benchmarks = [
     "battery-station-runtime?/runtime-benchmarks",
@@ -172,7 +171,6 @@ runtime-benchmarks = [
     "frame-benchmarking-cli/runtime-benchmarks",
     "polkadot-cli?/runtime-benchmarks",
     "polkadot-service?/runtime-benchmarks",
-    "polkadot-test-service?/runtime-benchmarks",
     "zeitgeist-runtime?/runtime-benchmarks",
 ]
 try-runtime = [
