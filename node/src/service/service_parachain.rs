@@ -55,10 +55,12 @@ use substrate_prometheus_endpoint::Registry;
 use zeitgeist_primitives::types::{Block, Hash};
 
 #[cfg(feature = "runtime-benchmarks")]
-pub type HostFunctions =
-    (frame_benchmarking::benchmarking::HostFunctions, sp_io::SubstrateHostFunctions);
+pub type HostFunctions = (
+    cumulus_client_service::ParachainHostFunctions,
+    frame_benchmarking::benchmarking::HostFunctions,
+);
 #[cfg(not(feature = "runtime-benchmarks"))]
-pub type HostFunctions = (sp_io::SubstrateHostFunctions,);
+pub type HostFunctions = (cumulus_client_service::ParachainHostFunctions,);
 
 #[cfg(feature = "with-battery-station-runtime")]
 pub struct BatteryStationExecutor;
