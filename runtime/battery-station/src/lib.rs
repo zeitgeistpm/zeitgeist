@@ -26,7 +26,8 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use common_runtime::{
     create_common_benchmark_logic, create_common_tests, create_runtime, create_runtime_api,
-    create_runtime_with_additional_pallets, decl_common_types, impl_config_traits,
+    create_runtime_with_additional_pallets, decl_common_types,
+    create_genesis_config_preset, impl_config_traits,
 };
 pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
@@ -130,6 +131,11 @@ impl pallet_sudo::Config for Runtime {
 }
 
 impl_config_traits!();
+create_genesis_config_preset!(
+    sudo: SudoConfig {
+        key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+    },
+);
 create_runtime_api!();
 create_common_benchmark_logic!();
 create_common_tests!();

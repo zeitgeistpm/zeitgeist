@@ -25,7 +25,9 @@ use super::{
 };
 #[cfg(feature = "parachain")]
 use battery_station_runtime::{
-    DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
+    parachain_params::{
+        DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
+    },
     EligibilityValue, PolkadotXcmConfig,
 };
 use sc_service::ChainType;
@@ -126,6 +128,6 @@ pub fn dev_config() -> Result<BatteryStationChainSpec, String> {
     .with_id("dev")
     .with_chain_type(ChainType::Local)
     .with_properties(token_properties("DEV", battery_station_runtime::SS58Prefix::get()))
-    .with_genesis_config(get_genesis_config())
+    .with_genesis_config_preset_name(sp_genesis_builder::DEV_RUNTIME_PRESET)
     .build())
 }

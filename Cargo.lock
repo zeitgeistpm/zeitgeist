@@ -933,7 +933,6 @@ dependencies = [
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-core",
- "cumulus-primitives-storage-weight-reclaim",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
  "env_logger 0.11.8",
@@ -993,6 +992,7 @@ dependencies = [
  "polkadot-runtime-parachains",
  "rococo-emulated-chain",
  "scale-info",
+ "serde_json",
  "session-keys-primitives",
  "sp-api",
  "sp-authority-discovery",
@@ -1004,6 +1004,7 @@ dependencies = [
  "sp-consensus-slots",
  "sp-core",
  "sp-debug-derive",
+ "sp-genesis-builder",
  "sp-inherents",
  "sp-io",
  "sp-offchain",
@@ -1798,7 +1799,6 @@ dependencies = [
  "cfg-if",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-storage-weight-reclaim",
  "frame-support",
  "frame-system",
  "log",
@@ -1826,6 +1826,7 @@ dependencies = [
  "pallet-treasury",
  "pallet-utility",
  "pallet-vesting",
+ "serde_json",
  "zeitgeist-primitives",
 ]
 
@@ -2553,22 +2554,6 @@ dependencies = [
  "sp-externalities",
  "sp-runtime-interface",
  "sp-trie",
-]
-
-[[package]]
-name = "cumulus-primitives-storage-weight-reclaim"
-version = "8.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
-dependencies = [
- "cumulus-primitives-core",
- "cumulus-primitives-proof-size-hostfunction",
- "docify",
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime",
 ]
 
 [[package]]
@@ -8535,13 +8520,14 @@ dependencies = [
 [[package]]
 name = "pallet-treasury"
 version = "37.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
+source = "git+https://github.com/zeitgeistpm/polkadot-sdk?branch=polkadot-stable2409-treasury-benchmark-fix#aef56c98bb23eba121e4be0aa8173e71e14d0a77"
 dependencies = [
  "docify",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
+ "log",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
@@ -16945,7 +16931,6 @@ dependencies = [
  "cumulus-client-service",
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
- "cumulus-primitives-storage-weight-reclaim",
  "cumulus-relay-chain-inprocess-interface",
  "cumulus-relay-chain-interface",
  "cumulus-relay-chain-minimal-node",
@@ -17004,6 +16989,7 @@ dependencies = [
  "sp-consensus-aura",
  "sp-consensus-grandpa",
  "sp-core",
+ "sp-genesis-builder",
  "sp-inherents",
  "sp-io",
  "sp-keyring",
@@ -17060,7 +17046,6 @@ dependencies = [
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-core",
- "cumulus-primitives-storage-weight-reclaim",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
  "env_logger 0.11.8",
@@ -17120,6 +17105,7 @@ dependencies = [
  "polkadot-runtime-common",
  "polkadot-runtime-parachains",
  "scale-info",
+ "serde_json",
  "session-keys-primitives",
  "sp-api",
  "sp-authority-discovery",
@@ -17130,6 +17116,7 @@ dependencies = [
  "sp-consensus-slots",
  "sp-core",
  "sp-debug-derive",
+ "sp-genesis-builder",
  "sp-inherents",
  "sp-io",
  "sp-offchain",

@@ -181,9 +181,6 @@ pub fn create_benchmark_extrinsic_zeitgeist<RuntimeApi>(
             frame_metadata_hash_extension::CheckMetadataHash::<zeitgeist_runtime::Runtime>::new(
                 true,
             ),
-            cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim::<
-                zeitgeist_runtime::Runtime,
-            >::new(),
         );
 
     let raw_payload = zeitgeist_runtime::SignedPayload::from_raw(
@@ -199,7 +196,6 @@ pub fn create_benchmark_extrinsic_zeitgeist<RuntimeApi>(
             (),
             (),
             None,
-            (),
         ),
     );
     let signature = raw_payload.using_encoded(|e| sender.sign(e));
@@ -247,9 +243,6 @@ pub fn create_benchmark_extrinsic_battery_station<RuntimeApi>(
         frame_metadata_hash_extension::CheckMetadataHash::<battery_station_runtime::Runtime>::new(
             true,
         ),
-        cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim::<
-            battery_station_runtime::Runtime,
-        >::new(),
     );
 
     let raw_payload = battery_station_runtime::SignedPayload::from_raw(
@@ -265,7 +258,6 @@ pub fn create_benchmark_extrinsic_battery_station<RuntimeApi>(
             (),
             (),
             None,
-            (),
         ),
     );
     let signature = raw_payload.using_encoded(|e| sender.sign(e));
