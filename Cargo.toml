@@ -385,3 +385,5 @@ pallet-asset-tx-payment = { git = "https://github.com/zeitgeistpm/polkadot-sdk",
 cumulus-client-parachain-inherent = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-moonbeam-lazy-migrations" }
 # Fix Found variants that have duplicate indexes. Both `Consensus` and `RemoteCallResponse` have the index `6`. Use different indexes for each variant.
 sc-network = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "zeitgeist-polkadot-stable2409-sc-network-fix" }
+# Benchmarks failed, because of Token(BelowMinimum) for treasury spend, that's why one should at least transfer the existential deposit 
+pallet-treasury = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-treasury-benchmark-fix" }
