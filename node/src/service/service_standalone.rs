@@ -41,11 +41,8 @@ pub type HostFunctions =
 #[cfg(not(feature = "runtime-benchmarks"))]
 pub type HostFunctions = (sp_io::SubstrateHostFunctions,);
 
-pub type FullClient<RuntimeApi> = sc_service::TFullClient<
-    Block,
-    RuntimeApi,
-    sc_executor::WasmExecutor<HostFunctions>,
->;
+pub type FullClient<RuntimeApi> =
+    sc_service::TFullClient<Block, RuntimeApi, sc_executor::WasmExecutor<HostFunctions>>;
 pub type FullBackend = TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 

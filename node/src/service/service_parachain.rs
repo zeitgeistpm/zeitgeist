@@ -36,9 +36,8 @@ use futures::FutureExt;
 use polkadot_service::CollatorPair;
 use sc_client_api::Backend;
 use sc_consensus::ImportQueue;
-#[allow(deprecated)]
 use sc_executor::{
-    HeapAllocStrategy, NativeElseWasmExecutor, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY,
+    HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY,
 };
 use sc_network::{config::FullNetworkConfiguration, NetworkBlock};
 use sc_service::{
@@ -56,54 +55,17 @@ use zeitgeist_primitives::types::{Block, Hash};
 
 #[cfg(feature = "runtime-benchmarks")]
 pub type HostFunctions = (
-    cumulus_client_service::ParachainHostFunctions,
+    sp_io::SubstrateHostFunctions,
+    cumulus_client_service::storage_proof_size::HostFunctions,
     frame_benchmarking::benchmarking::HostFunctions,
 );
 #[cfg(not(feature = "runtime-benchmarks"))]
-pub type HostFunctions = (cumulus_client_service::ParachainHostFunctions,);
+pub type HostFunctions = (
+    sp_io::SubstrateHostFunctions,
+    cumulus_client_service::storage_proof_size::HostFunctions,
+);
 
-#[cfg(feature = "with-battery-station-runtime")]
-pub struct BatteryStationExecutor;
-
-#[cfg(feature = "with-battery-station-runtime")]
-impl sc_executor::NativeExecutionDispatch for BatteryStationExecutor {
-    type ExtendHostFunctions = HostFunctions;
-
-    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-        battery_station_runtime::api::dispatch(method, data)
-    }
-
-    fn native_version() -> sc_executor::NativeVersion {
-        battery_station_runtime::native_version()
-    }
-}
-
-#[cfg(not(feature = "with-battery-station-runtime"))]
-pub struct ZeitgeistExecutor;
-
-#[cfg(not(feature = "with-battery-station-runtime"))]
-impl sc_executor::NativeExecutionDispatch for ZeitgeistExecutor {
-    type ExtendHostFunctions = HostFunctions;
-
-    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-        zeitgeist_runtime::api::dispatch(method, data)
-    }
-
-    fn native_version() -> sc_executor::NativeVersion {
-        zeitgeist_runtime::native_version()
-    }
-}
-
-#[cfg(feature = "with-battery-station-runtime")]
-type Executor = BatteryStationExecutor;
-#[cfg(not(feature = "with-battery-station-runtime"))]
-type Executor = ZeitgeistExecutor;
-
-// TODO(#1430): As soon as the WasmExecutor is used here, enable storage weight reclaim: https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/enable_pov_reclaim/index.html
-#[allow(deprecated)]
-pub type ParachainExecutor = NativeElseWasmExecutor<Executor>;
-
-pub type FullClient<RuntimeApi> = TFullClient<Block, RuntimeApi, ParachainExecutor>;
+pub type FullClient<RuntimeApi> = TFullClient<Block, RuntimeApi, WasmExecutor<HostFunctions>>;
 
 pub type FullBackend = TFullBackend<Block>;
 
@@ -171,15 +133,13 @@ where
         .default_heap_pages
         .map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h| HeapAllocStrategy::Static { extra_pages: h as _ });
 
-    let wasm = WasmExecutor::builder()
+    let executor = WasmExecutor::builder()
         .with_execution_method(config.executor.wasm_method)
         .with_onchain_heap_alloc_strategy(heap_pages)
         .with_offchain_heap_alloc_strategy(heap_pages)
         .with_max_runtime_instances(config.executor.max_runtime_instances)
         .with_runtime_cache_size(config.executor.runtime_cache_size)
         .build();
-
-    let executor = ParachainExecutor::new_with_wasm_executor(wasm);
 
     let (client, backend, keystore_container, task_manager) =
         sc_service::new_full_parts::<Block, RuntimeApi, _>(

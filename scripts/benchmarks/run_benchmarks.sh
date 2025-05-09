@@ -22,7 +22,7 @@ cargo build \
     --bin=zeitgeist
 
 for pallet in ${FRAME_PALLETS[@]}; do
-    ./target/$PROFILE_DIR/zeitgeist benchmark pallet \
+    frame-omni-bencher v1 benchmark pallet \
         --runtime=target/$PROFILE_DIR/wbuild/battery-station-runtime/battery_station_runtime.wasm \
         --genesis-builder=runtime \
         --genesis-builder-preset=development \
@@ -39,7 +39,7 @@ for pallet in ${FRAME_PALLETS[@]}; do
 done
 
 for pallet in ${ORML_PALLETS[@]}; do
-    ./target/$PROFILE_DIR/zeitgeist benchmark pallet \
+    frame-omni-bencher v1 benchmark pallet \
         --runtime=target/$PROFILE_DIR/wbuild/battery-station-runtime/battery_station_runtime.wasm \
         --genesis-builder=runtime \
         --genesis-builder-preset=development \
@@ -58,7 +58,7 @@ done
 for pallet in ${ZEITGEIST_PALLETS[@]}; do
     pallet_folder_name=${pallet//zrml_/}
     pallet_folder_name=${pallet_folder_name//_/-}
-    ./target/$PROFILE_DIR/zeitgeist benchmark pallet \
+    frame-omni-bencher v1 benchmark pallet \
         --runtime=target/$PROFILE_DIR/wbuild/battery-station-runtime/battery_station_runtime.wasm \
         --genesis-builder=runtime \
         --genesis-builder-preset=development \
@@ -82,7 +82,7 @@ cargo build \
     --bin=zeitgeist
 
 for pallet in ${FRAME_PALLETS_PARACHAIN[@]}; do
-    ./target/$PROFILE_DIR/zeitgeist benchmark pallet \
+    frame-omni-bencher v1 benchmark pallet \
         --runtime=target/$PROFILE_DIR/wbuild/battery-station-runtime/battery_station_runtime.wasm \
         --genesis-builder=runtime \
         --genesis-builder-preset=development \
