@@ -1149,10 +1149,7 @@ macro_rules! impl_config_traits {
         impl pallet_timestamp::Config for Runtime {
             type MinimumPeriod = MinimumPeriod;
             type Moment = u64;
-            #[cfg(feature = "parachain")]
             type OnTimestampSet = ();
-            #[cfg(not(feature = "parachain"))]
-            type OnTimestampSet = Aura;
             type WeightInfo = weights::pallet_timestamp::WeightInfo<Runtime>;
         }
 
