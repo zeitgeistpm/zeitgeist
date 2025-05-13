@@ -164,24 +164,19 @@ pub fn create_benchmark_extrinsic_zeitgeist<RuntimeApi>(
         .map(|c| c / 2)
         .unwrap_or(2);
 
-    let extra: zeitgeist_runtime::SignedExtra =
-        (
-            zeitgeist_runtime::CheckNonZeroSender::<zeitgeist_runtime::Runtime>::new(),
-            zeitgeist_runtime::CheckSpecVersion::<zeitgeist_runtime::Runtime>::new(),
-            zeitgeist_runtime::CheckTxVersion::<zeitgeist_runtime::Runtime>::new(),
-            zeitgeist_runtime::CheckGenesis::<zeitgeist_runtime::Runtime>::new(),
-            zeitgeist_runtime::CheckEra::<zeitgeist_runtime::Runtime>::from(
-                sp_runtime::generic::Era::mortal(period, best_block.saturated_into()),
-            ),
-            zeitgeist_runtime::CheckNonce::<zeitgeist_runtime::Runtime>::from(nonce.into()),
-            zeitgeist_runtime::CheckWeight::<zeitgeist_runtime::Runtime>::new(),
-            pallet_asset_tx_payment::ChargeAssetTxPayment::<zeitgeist_runtime::Runtime>::from(
-                0, None,
-            ),
-            frame_metadata_hash_extension::CheckMetadataHash::<zeitgeist_runtime::Runtime>::new(
-                true,
-            ),
-        );
+    let extra: zeitgeist_runtime::SignedExtra = (
+        zeitgeist_runtime::CheckNonZeroSender::<zeitgeist_runtime::Runtime>::new(),
+        zeitgeist_runtime::CheckSpecVersion::<zeitgeist_runtime::Runtime>::new(),
+        zeitgeist_runtime::CheckTxVersion::<zeitgeist_runtime::Runtime>::new(),
+        zeitgeist_runtime::CheckGenesis::<zeitgeist_runtime::Runtime>::new(),
+        zeitgeist_runtime::CheckEra::<zeitgeist_runtime::Runtime>::from(
+            sp_runtime::generic::Era::mortal(period, best_block.saturated_into()),
+        ),
+        zeitgeist_runtime::CheckNonce::<zeitgeist_runtime::Runtime>::from(nonce.into()),
+        zeitgeist_runtime::CheckWeight::<zeitgeist_runtime::Runtime>::new(),
+        pallet_asset_tx_payment::ChargeAssetTxPayment::<zeitgeist_runtime::Runtime>::from(0, None),
+        frame_metadata_hash_extension::CheckMetadataHash::<zeitgeist_runtime::Runtime>::new(true),
+    );
 
     let raw_payload = zeitgeist_runtime::SignedPayload::from_raw(
         call.clone(),

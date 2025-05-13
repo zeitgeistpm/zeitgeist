@@ -468,8 +468,7 @@ macro_rules! impl_config_traits {
                 UNINCLUDED_SEGMENT_CAPACITY,
             >;
             type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
-            // TODO: add weight info after benchmarking
-            type WeightInfo = ();
+            type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -516,8 +515,7 @@ macro_rules! impl_config_traits {
             // The XCMP queue pallet is only ever able to handle the `Sibling(ParaId)` origin:
             type QueueChangeHandler = NarrowOriginToSibling<XcmpQueue>;
             type QueuePausedQuery = NarrowOriginToSibling<XcmpQueue>;
-            // TODO: add weight info after benchmarking
-            type WeightInfo = ();
+            type WeightInfo = weights::pallet_message_queue::WeightInfo<Runtime>;
             type IdleMaxServiceWeight = MessageQueueServiceWeight;
         }
 
