@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "with-zeitgeist-runtime")]
-
 use super::{
     generate_generic_genesis_function, telemetry_endpoints, token_properties, AdditionalChainSpec,
     EndowedAccountWithBalance,
@@ -141,7 +139,7 @@ generate_generic_genesis_function!(zeitgeist_runtime,);
 generate_inflation_config_function!(zeitgeist_runtime);
 
 fn get_genesis_config() -> serde_json::Value {
-    serde_json::to_value(&generic_genesis(
+    serde_json::to_value(generic_genesis(
         additional_chain_spec_staging_zeitgeist(
             #[cfg(feature = "parachain")]
             POLKADOT_PARACHAIN_ID.into(),

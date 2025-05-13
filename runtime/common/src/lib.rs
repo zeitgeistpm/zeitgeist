@@ -1176,8 +1176,8 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "runtime-benchmarks")]
         impl pallet_treasury::ArgumentsFactory<(), AccountId> for TreasuryBenchmarkHelper {
-            fn create_asset_kind(_seed: u32) -> () {
-                ()
+            fn create_asset_kind(_seed: u32) {
+                // No-op
             }
 
             fn create_beneficiary(seed: [u8; 32]) -> AccountId {

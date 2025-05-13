@@ -422,8 +422,8 @@ impl zrml_global_disputes::Config for Runtime {
 pub struct BenchmarkHelper;
 #[cfg(feature = "runtime-benchmarks")]
 impl ArgumentsFactory<(), AccountIdTest> for BenchmarkHelper {
-    fn create_asset_kind(_seed: u32) -> () {
-        ()
+    fn create_asset_kind(_seed: u32) {
+        // No-op
     }
 
     fn create_beneficiary(seed: [u8; 32]) -> AccountIdTest {

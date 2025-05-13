@@ -216,6 +216,7 @@ runtime-benchmarks = [
     "pallet-vesting/runtime-benchmarks",
     "pallet-xcm?/runtime-benchmarks",
     "pallet-parachain-staking?/runtime-benchmarks",
+    "polkadot-runtime/runtime-benchmarks",
     "session-keys-primitives?/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "xcm-builder?/runtime-benchmarks",

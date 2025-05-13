@@ -45,12 +45,17 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for cumulus_pallet_parachain_system (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> cumulus_pallet_parachain_system::weights::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> cumulus_pallet_parachain_system::weights::WeightInfo
+    for WeightInfo<T>
+{
     /// Storage: `ParachainSystem::LastDmqMqcHead` (r:1 w:1)
     /// Proof: `ParachainSystem::LastDmqMqcHead` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
     /// Storage: `MessageQueue::BookStateFor` (r:1 w:1)
@@ -62,7 +67,7 @@ impl<T: frame_system::Config> cumulus_pallet_parachain_system::weights::WeightIn
     /// Storage: `MessageQueue::Pages` (r:0 w:1000)
     /// Proof: `MessageQueue::Pages` (`max_values`: None, `max_size`: Some(105521), added: 107996, mode: `MaxEncodedLen`)
     /// The range of component `n` is `[0, 1000]`.
-    fn enqueue_inbound_downward_messages(n: u32, ) -> Weight {
+    fn enqueue_inbound_downward_messages(n: u32) -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `151`
         //  Estimated: `3517`

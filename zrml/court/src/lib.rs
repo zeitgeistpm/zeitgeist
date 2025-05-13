@@ -581,7 +581,7 @@ mod pallet {
 
             let pool = CourtPool::<T>::get();
             let is_valid_set = sorted_delegations.iter().all(|pretended_juror| {
-                <Participants<T>>::get(pretended_juror).map_or(false, |pretended_juror_info| {
+                <Participants<T>>::get(pretended_juror).is_some_and(|pretended_juror_info| {
                     match Self::get_pool_item(&pool, pretended_juror_info.stake, pretended_juror) {
                         Ok(Some(_)) => pretended_juror_info.delegations.is_none(),
                         _ => false,

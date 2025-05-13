@@ -20,7 +20,11 @@ use sp_io::TestExternalities;
 use sp_runtime::BuildStorage;
 
 #[cfg(feature = "parachain")]
-use {crate::mock::consts::FOREIGN_ASSET, zeitgeist_primitives::types::CustomMetadata};
+use {
+    crate::mock::{consts::FOREIGN_ASSET, runtime::AssetMetadata},
+    parity_scale_codec::Encode,
+    zeitgeist_primitives::types::CustomMetadata,
+};
 
 pub struct ExtBuilder;
 

@@ -306,11 +306,11 @@ pub enum MarketDisputeMechanism {
 /// Must be an exclusive range because:
 ///
 /// 1. `zrml_predition_markets::Pallet::admin_move_market_to_closed` uses the current block as the
-/// end period.
+///    end period.
 /// 2. The liquidity mining pallet takes into consideration the different between the two blocks.
-/// So 1..5 correctly outputs 4 (`5 - 1`) while 1..=5 would incorrectly output the same 4.
+///    So 1..5 correctly outputs 4 (`5 - 1`) while 1..=5 would incorrectly output the same 4.
 /// 3. With inclusive ranges it is not possible to express empty ranges and this feature
-/// mostly conflicts with existent tests and corner cases.
+///    mostly conflicts with existent tests and corner cases.
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum MarketPeriod<BlockNumber, Moment> {
     Block(Range<BlockNumber>),

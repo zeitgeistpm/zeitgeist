@@ -381,6 +381,7 @@ where
     Ok((task_manager, client))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn start_consensus<RuntimeApi>(
     client: Arc<FullClient<RuntimeApi>>,
     block_import: ParachainBlockImport<RuntimeApi>,
