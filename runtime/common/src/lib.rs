@@ -499,10 +499,6 @@ macro_rules! impl_config_traits {
         #[cfg(feature = "parachain")]
         impl pallet_message_queue::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
-            #[cfg(feature = "runtime-benchmarks")]
-            type MessageProcessor =
-                pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
-            #[cfg(not(feature = "runtime-benchmarks"))]
             type MessageProcessor = xcm_builder::ProcessXcmMessage<
                 AggregateMessageOrigin,
                 xcm_executor::XcmExecutor<XcmConfig>,
