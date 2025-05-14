@@ -129,13 +129,13 @@ zrml-swaps-runtime-api = { workspace = true }
 [dev-dependencies]
 env_logger = { workspace = true }
 pallet-im-online = { workspace = true, features = ["default"] }
+polkadot-emulated-chain = { workspace = true }
+polkadot-runtime = { workspace = true }
 polkadot-runtime-parachains = { workspace = true }
 sp-authority-discovery = { workspace = true, features = ["default"] }
 sp-consensus-babe = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 test-case = { workspace = true }
-polkadot-emulated-chain = { workspace = true }
-polkadot-runtime = { workspace = true }
 xcm-emulator = { workspace = true }
 
 [features]

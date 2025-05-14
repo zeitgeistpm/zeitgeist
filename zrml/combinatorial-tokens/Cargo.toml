@@ -13,8 +13,8 @@ zeitgeist-primitives = { workspace = true }
 # mock
 
 cfg-if = { workspace = true, optional = true }
-orml-asset-registry = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
+orml-asset-registry = { workspace = true, optional = true }
 orml-currencies = { workspace = true, optional = true }
 orml-tokens = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
