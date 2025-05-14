@@ -34,11 +34,11 @@ use alloc::{
 };
 use core::marker::PhantomData;
 use frame_support::{
-    dispatch::DispatchResult,
+    dispatch::{DispatchResult, DispatchResultWithPostInfo},
     ensure,
     pallet_prelude::{
-        ConstU32, Decode, DispatchResultWithPostInfo, Encode, EnsureOrigin, Hooks, OptionQuery,
-        StorageMap, StorageValue, TypeInfo, ValueQuery,
+        ConstU32, Decode, Encode, EnsureOrigin, Hooks, OptionQuery, StorageMap, StorageValue,
+        TypeInfo, ValueQuery,
     },
     traits::{
         Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
