@@ -452,7 +452,7 @@ impl pallet_treasury::Config for Runtime {
     type SpendPeriod = ();
     type WeightInfo = ();
     #[cfg(feature = "runtime-benchmarks")]
-    type BenchmarkHelper = BenchmarkHelper;
+    type BenchmarkHelper = ();
 }
 
 pub struct ExtBuilder {
