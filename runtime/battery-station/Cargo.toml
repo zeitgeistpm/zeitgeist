@@ -302,6 +302,7 @@ std = [
     "cumulus-pallet-xcm?/std",
     "cumulus-pallet-xcmp-queue?/std",
     "cumulus-primitives-core?/std",
+    "cumulus-primitives-storage-weight-reclaim/std",
     "cumulus-primitives-timestamp?/std",
     "cumulus-primitives-utility?/std",
     "parachain-info?/std",
