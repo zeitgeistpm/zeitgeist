@@ -34,6 +34,7 @@ zeitgeist-primitives = { workspace = true }
 # Utility
 cfg-if = { workspace = true }
 log = { workspace = true }
+serde_json = { workspace = true }
 
 [features]
 default = ["std"]
@@ -75,6 +76,7 @@ std = [
     "pallet-utility/std",
     "pallet-vesting/std",
     "pallet-parachain-staking?/std",
+    "serde_json/std",
     "zeitgeist-primitives/std",
 ]
 

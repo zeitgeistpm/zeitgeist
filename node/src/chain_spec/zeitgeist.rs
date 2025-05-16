@@ -33,8 +33,10 @@ use {
     crate::POLKADOT_PARACHAIN_ID,
     zeitgeist_primitives::constants::ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
     zeitgeist_runtime::{
-        CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
-        DefaultParachainBondReservePercent, EligibilityValue, MinCandidateStk, PolkadotXcmConfig,
+        parachain_params::{
+            DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
+        },
+        CollatorDeposit, EligibilityValue, MinCandidateStk, PolkadotXcmConfig,
     },
 };
 
