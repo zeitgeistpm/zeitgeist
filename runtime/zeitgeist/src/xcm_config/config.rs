@@ -207,7 +207,7 @@ impl TakeRevenue for ToTreasury {
 
         if let XcmAsset { id: XcmAssetId(ref location), fun: Fungible(_amount) } = revenue {
             if let Some(asset_id) =
-                <AssetConvert as MaybeEquivalence<Location, CurrencyId>>::convert(&location)
+                <AssetConvert as MaybeEquivalence<Location, CurrencyId>>::convert(location)
             {
                 let adj_am =
                     AlignedFractionalXcmAssetTransactor::adjust_fractional_places(&revenue).fun;

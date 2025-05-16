@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "mock")]
-
 pub use super::*;
 use crate::{
     asset::Asset,

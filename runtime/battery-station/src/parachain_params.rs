@@ -21,7 +21,6 @@
     // arithmetic operations at compile time
     clippy::arithmetic_side_effects
 )]
-#![cfg(feature = "parachain")]
 
 use super::{parameters::MAXIMUM_BLOCK_WEIGHT, ParachainInfo, RuntimeBlockWeights, RuntimeOrigin};
 use cumulus_primitives_core::AggregateMessageOrigin;

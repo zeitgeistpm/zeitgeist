@@ -112,7 +112,7 @@ fn it_appeals_a_court_market_to_global_dispute() {
             Possession::Shared { owners: frame_support::BoundedVec::try_from(vec![BOB]).unwrap() };
         let outcome_info = OutcomeInfo { outcome_sum: Zero::zero(), possession };
         assert_eq!(
-            Outcomes::<Runtime>::get(market_id, &OutcomeReport::Categorical(0)).unwrap(),
+            Outcomes::<Runtime>::get(market_id, OutcomeReport::Categorical(0)).unwrap(),
             outcome_info
         );
 

@@ -18,6 +18,7 @@ pallet-democracy = { workspace = true }
 pallet-identity = { workspace = true }
 pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-membership = { workspace = true }
+pallet-message-queue = { workspace = true, optional = true }
 pallet-multisig = { workspace = true }
 pallet-parachain-staking = { workspace = true, optional = true }
 pallet-preimage = { workspace = true }
@@ -44,6 +45,7 @@ parachain = [
     "pallet-author-inherent",
     "pallet-author-mapping",
     "pallet-author-slot-filter",
+    "pallet-message-queue",
     "pallet-parachain-staking",
 ]
 std = [
@@ -64,6 +66,7 @@ std = [
     "pallet-democracy/std",
     "pallet-identity/std",
     "pallet-membership/std",
+    "pallet-message-queue?/std",
     "pallet-multisig/std",
     "pallet-preimage/std",
     "pallet-proxy/std",

@@ -45,8 +45,11 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_message_queue (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
@@ -119,8 +122,7 @@ impl<T: frame_system::Config> pallet_message_queue::weights::WeightInfo for Weig
         //  Measured:  `0`
         //  Estimated: `0`
         // Minimum execution time: 188_530 nanoseconds.
-        Weight::from_parts(190_690_000, 0)
-            .saturating_add(T::DbWeight::get().writes(2))
+        Weight::from_parts(190_690_000, 0).saturating_add(T::DbWeight::get().writes(2))
     }
     /// Storage: `MessageQueue::ServiceHead` (r:1 w:1)
     /// Proof: `MessageQueue::ServiceHead` (`max_values`: Some(1), `max_size`: Some(5), added: 500, mode: `MaxEncodedLen`)

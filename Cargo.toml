@@ -230,6 +230,7 @@ polkadot-cli = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polk
 polkadot-emulated-chain = { git = "https://github.com/zeitgeistpm/runtimes", branch = "zeitgeist-polkadot-stable2409-emulated-chain-fix" }
 polkadot-service = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 rococo-emulated-chain = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
+rococo-runtime = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 xcm-emulator = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 
 # Polkadot / XCM (wasm)

@@ -40,10 +40,9 @@ mod pallet {
     use crate::{types::*, weights::WeightInfoZeitgeist, GlobalDisputesPalletApi, InitialItemOf};
     use core::marker::PhantomData;
     use frame_support::{
+        dispatch::DispatchResultWithPostInfo,
         ensure,
-        pallet_prelude::{
-            DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, StorageMap, ValueQuery,
-        },
+        pallet_prelude::{OptionQuery, StorageDoubleMap, StorageMap, ValueQuery},
         sp_runtime::traits::StaticLookup,
         traits::{
             Currency, ExistenceRequirement, Get, IsType, LockIdentifier, LockableCurrency,

@@ -20,7 +20,6 @@
     // Auto-generated code is a no man's land
     clippy::arithmetic_side_effects
 )]
-#![cfg(feature = "runtime-benchmarks")]
 #![allow(clippy::type_complexity)]
 
 use super::*;

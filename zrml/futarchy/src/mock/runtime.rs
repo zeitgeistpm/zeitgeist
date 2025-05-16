@@ -24,8 +24,15 @@ use frame_support::{construct_runtime, parameter_types, traits::Everything};
 use frame_system::mocking::MockBlock;
 use sp_runtime::traits::{BlakeTwo256, ConstU32, IdentityLookup};
 use zeitgeist_primitives::{
-    constants::mock::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves},
-    types::{AccountIdTest, Balance, BlockNumber, Hash},
+    constants::mock::{
+        BlockHashCount, ExistentialDeposit, ExistentialDeposits, MaxLocks, MaxReserves,
+    },
+    types::{AccountIdTest, Amount, Balance, BlockNumber, CurrencyId, Hash},
+};
+#[cfg(feature = "parachain")]
+use {
+    frame_system::EnsureRoot, orml_traits::asset_registry::AssetProcessor,
+    sp_runtime::DispatchError, zeitgeist_primitives::types::CustomMetadata,
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -41,6 +48,9 @@ construct_runtime! {
     pub enum Runtime {
         System: frame_system,
         Balances: pallet_balances,
+        #[cfg(feature = "parachain")]
+        AssetRegistry: orml_asset_registry::module,
+        Tokens: orml_tokens,
         Futarchy: zrml_futarchy,
     }
 }
@@ -90,6 +100,49 @@ impl pallet_balances::Config for Runtime {
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type RuntimeFreezeReason = ();
+    type WeightInfo = ();
+}
+
+cfg_if::cfg_if!(
+    if #[cfg(feature = "parachain")] {
+        pub type AssetMetadata = orml_traits::asset_registry::AssetMetadata<
+            Balance,
+            CustomMetadata,
+            ConstU32<1024>
+        >;
+        pub struct NoopAssetProcessor {}
+
+        impl AssetProcessor<CurrencyId, AssetMetadata> for NoopAssetProcessor {
+            fn pre_register(id: Option<CurrencyId>, asset_metadata: AssetMetadata)
+             -> Result<(CurrencyId, AssetMetadata), DispatchError> {
+                Ok((id.unwrap(), asset_metadata))
+            }
+        }
+
+        impl orml_asset_registry::module::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            type CustomMetadata = CustomMetadata;
+            type AssetId = CurrencyId;
+            type AuthorityOrigin = EnsureRoot<AccountIdTest>;
+            type AssetProcessor = NoopAssetProcessor;
+            type Balance = Balance;
+            type StringLimit = ConstU32<1024>;
+            type WeightInfo = ();
+        }
+    }
+);
+
+impl orml_tokens::Config for Runtime {
+    type Amount = Amount;
+    type Balance = Balance;
+    type CurrencyId = CurrencyId;
+    type DustRemovalWhitelist = Everything;
+    type RuntimeEvent = RuntimeEvent;
+    type ExistentialDeposits = ExistentialDeposits;
+    type MaxLocks = ();
+    type MaxReserves = MaxReserves;
+    type CurrencyHooks = ();
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 

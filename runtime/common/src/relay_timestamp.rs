@@ -18,8 +18,6 @@
 
 //! A way to get a relyable timestamp
 
-#![cfg(feature = "parachain")]
-
 use cumulus_pallet_parachain_system::{
     consensus_hook::UnincludedSegmentCapacity,
     relay_state_snapshot::{self, ReadEntryErr},

@@ -16,7 +16,6 @@ sc-client-api = { workspace = true }
 sc-client-db = { workspace = true }
 sc-consensus = { workspace = true }
 sc-executor = { workspace = true }
-sp-genesis-builder = { workspace = true, features = ["std"] }
 sc-keystore = { workspace = true }
 sc-network = { workspace = true }
 sc-network-statement = { workspace = true }
@@ -34,6 +33,7 @@ sp-block-builder = { workspace = true, features = ["default"] }
 sp-blockchain = { workspace = true }
 sp-consensus = { workspace = true }
 sp-core = { workspace = true, features = ["default"] }
+sp-genesis-builder = { workspace = true, features = ["std"] }
 sp-inherents = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 sp-keyring = { workspace = true }

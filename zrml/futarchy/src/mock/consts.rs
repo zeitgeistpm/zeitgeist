@@ -15,10 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "mock")]
+#[cfg(feature = "parachain")]
+use zeitgeist_primitives::types::{Asset, MarketId};
 
-pub mod consts;
-pub mod ext_builder;
-pub mod runtime;
-pub mod types;
-pub mod utility;
+#[cfg(feature = "parachain")]
+pub(crate) const FOREIGN_ASSET: Asset<MarketId> = Asset::ForeignAsset(1);

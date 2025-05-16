@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "with-battery-station-runtime")]
-
 use super::{AdditionalChainSpec, EndowedAccountWithBalance};
 use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
 use battery_station_runtime::parameters::SS58Prefix;
@@ -133,7 +131,7 @@ generate_generic_genesis_function!(
 generate_inflation_config_function!(battery_station_runtime);
 
 fn get_genesis_config() -> serde_json::Value {
-    serde_json::to_value(&generic_genesis(
+    serde_json::to_value(generic_genesis(
         additional_chain_spec_staging_battery_station(
             #[cfg(feature = "parachain")]
             BATTERY_STATION_PARACHAIN_ID.into(),

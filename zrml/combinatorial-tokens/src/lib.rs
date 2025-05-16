@@ -46,8 +46,9 @@ mod pallet {
     use alloc::{vec, vec::Vec};
     use core::{fmt::Debug, marker::PhantomData};
     use frame_support::{
+        dispatch::DispatchResultWithPostInfo,
         ensure,
-        pallet_prelude::{DispatchResultWithPostInfo, IsType, StorageVersion},
+        pallet_prelude::{IsType, StorageVersion},
         require_transactional, transactional, PalletId,
     };
     use frame_system::{

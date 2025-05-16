@@ -134,6 +134,7 @@ mod detail {
         from_fixed(result_fixed)
     }
 
+    #[allow(dead_code)] // is actually used above
     pub(super) fn calculate_equalize_amount(
         buy: Vec<u128>,
         sell: Vec<u128>,
@@ -170,6 +171,7 @@ mod detail {
         from_fixed(result_fixed)
     }
 
+    #[allow(dead_code)] // is actually used above
     pub(super) fn calculate_spot_price(
         buy: Vec<u128>,
         sell: Vec<u128>,
