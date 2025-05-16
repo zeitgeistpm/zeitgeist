@@ -2,6 +2,7 @@
 # Pallets
 cumulus-pallet-parachain-system = { workspace = true, optional = true }
 cumulus-pallet-xcmp-queue = { workspace = true, optional = true }
+cumulus-primitives-storage-weight-reclaim = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 orml-currencies = { workspace = true }
@@ -48,6 +49,7 @@ parachain = [
 std = [
     "cumulus-pallet-parachain-system?/std",
     "cumulus-pallet-xcmp-queue?/std",
+    "cumulus-primitives-storage-weight-reclaim/std",
     "frame-system/std",
     "frame-support/std",
     "orml-currencies/std",

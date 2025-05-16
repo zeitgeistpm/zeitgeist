@@ -164,19 +164,27 @@ pub fn create_benchmark_extrinsic_zeitgeist<RuntimeApi>(
         .map(|c| c / 2)
         .unwrap_or(2);
 
-    let extra: zeitgeist_runtime::SignedExtra = (
-        zeitgeist_runtime::CheckNonZeroSender::<zeitgeist_runtime::Runtime>::new(),
-        zeitgeist_runtime::CheckSpecVersion::<zeitgeist_runtime::Runtime>::new(),
-        zeitgeist_runtime::CheckTxVersion::<zeitgeist_runtime::Runtime>::new(),
-        zeitgeist_runtime::CheckGenesis::<zeitgeist_runtime::Runtime>::new(),
-        zeitgeist_runtime::CheckEra::<zeitgeist_runtime::Runtime>::from(
-            sp_runtime::generic::Era::mortal(period, best_block.saturated_into()),
-        ),
-        zeitgeist_runtime::CheckNonce::<zeitgeist_runtime::Runtime>::from(nonce.into()),
-        zeitgeist_runtime::CheckWeight::<zeitgeist_runtime::Runtime>::new(),
-        pallet_asset_tx_payment::ChargeAssetTxPayment::<zeitgeist_runtime::Runtime>::from(0, None),
-        frame_metadata_hash_extension::CheckMetadataHash::<zeitgeist_runtime::Runtime>::new(true),
-    );
+    let extra: zeitgeist_runtime::SignedExtra =
+        (
+            zeitgeist_runtime::CheckNonZeroSender::<zeitgeist_runtime::Runtime>::new(),
+            zeitgeist_runtime::CheckSpecVersion::<zeitgeist_runtime::Runtime>::new(),
+            zeitgeist_runtime::CheckTxVersion::<zeitgeist_runtime::Runtime>::new(),
+            zeitgeist_runtime::CheckGenesis::<zeitgeist_runtime::Runtime>::new(),
+            zeitgeist_runtime::CheckEra::<zeitgeist_runtime::Runtime>::from(
+                sp_runtime::generic::Era::mortal(period, best_block.saturated_into()),
+            ),
+            zeitgeist_runtime::CheckNonce::<zeitgeist_runtime::Runtime>::from(nonce.into()),
+            zeitgeist_runtime::CheckWeight::<zeitgeist_runtime::Runtime>::new(),
+            pallet_asset_tx_payment::ChargeAssetTxPayment::<zeitgeist_runtime::Runtime>::from(
+                0, None,
+            ),
+            frame_metadata_hash_extension::CheckMetadataHash::<zeitgeist_runtime::Runtime>::new(
+                true,
+            ),
+            cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim::<
+                zeitgeist_runtime::Runtime,
+            >::new(),
+        );
 
     let raw_payload = zeitgeist_runtime::SignedPayload::from_raw(
         call.clone(),
@@ -191,6 +199,7 @@ pub fn create_benchmark_extrinsic_zeitgeist<RuntimeApi>(
             (),
             (),
             None,
+            (),
         ),
     );
     let signature = raw_payload.using_encoded(|e| sender.sign(e));
@@ -238,6 +247,9 @@ pub fn create_benchmark_extrinsic_battery_station<RuntimeApi>(
         frame_metadata_hash_extension::CheckMetadataHash::<battery_station_runtime::Runtime>::new(
             true,
         ),
+        cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim::<
+            battery_station_runtime::Runtime,
+        >::new(),
     );
 
     let raw_payload = battery_station_runtime::SignedPayload::from_raw(
@@ -253,6 +265,7 @@ pub fn create_benchmark_extrinsic_battery_station<RuntimeApi>(
             (),
             (),
             None,
+            (),
         ),
     );
     let signature = raw_payload.using_encoded(|e| sender.sign(e));
