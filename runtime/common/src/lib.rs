@@ -114,6 +114,14 @@ macro_rules! decl_common_types {
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
         // TODO: look for parachain-staking migrations here: https://github.com/moonbeam-foundation/moonbeam/blob/v0.44.0/pallets/parachain-staking/migrations.md
+        #[cfg(feature = "parachain")]
+        type Migrations = (
+            cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
+            cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
+            // This migration can be permanently added to the runtime migrations. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/polkadot/xcm/pallet-xcm/src/migration.rs#L83
+	        pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+        );
+        #[cfg(not(feature = "parachain"))]
         type Migrations = ();
 
         pub type Executive = frame_executive::Executive<
@@ -398,7 +406,8 @@ macro_rules! create_runtime_with_additional_pallets {
 
             // XCM
             CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
-            // Previously: DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
+            // TODO Remove this pallet once the lazy migration is complete. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/cumulus/pallets/dmp-queue/src/lib.rs#L45
+            DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
             PolkadotXcm: pallet_xcm::{Call, Config<T>, Event<T>, Origin, Pallet, Storage} = 122,
             XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 123,
             AssetRegistry: orml_asset_registry::module::{Call, Config<T>, Event<T>, Pallet, Storage} = 124,
@@ -433,6 +442,14 @@ macro_rules! impl_config_traits {
             parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling},
             xcm_config::config::*,
         };
+
+        // TODO: Remove this pallet once the lazy migration is complete. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/cumulus/pallets/dmp-queue/src/lib.rs#L45
+        #[cfg(feature = "parachain")]
+        impl cumulus_pallet_dmp_queue::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            type DmpSink = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
+            type WeightInfo = weights::cumulus_pallet_dmp_queue::WeightInfo<Runtime>;
+        }
 
         #[cfg(feature = "parachain")]
         type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<
@@ -1841,6 +1858,7 @@ macro_rules! create_runtime_api {
                         if #[cfg(feature = "parachain")] {
                             list_benchmark!(list, extra, cumulus_pallet_parachain_system, ParachainSystem);
                             list_benchmark!(list, extra, cumulus_pallet_xcmp_queue, XcmpQueue);
+                            list_benchmark!(list, extra, cumulus_pallet_dmp_queue, DmpQueue);
                             list_benchmark!(list, extra, pallet_author_inherent, AuthorInherent);
                             list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                             list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
@@ -1934,6 +1952,7 @@ macro_rules! create_runtime_api {
                         if #[cfg(feature = "parachain")] {
                             add_benchmark!(params, batches, cumulus_pallet_parachain_system, ParachainSystem);
                             add_benchmark!(params, batches, cumulus_pallet_xcmp_queue, XcmpQueue);
+                            add_benchmark!(params, batches, cumulus_pallet_dmp_queue, DmpQueue);
                             add_benchmark!(params, batches, pallet_author_inherent, AuthorInherent);
                             add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);

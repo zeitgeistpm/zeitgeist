@@ -1,6 +1,7 @@
 [dependencies]
 # Pallets
 cumulus-pallet-parachain-system = { workspace = true, optional = true }
+cumulus-pallet-dmp-queue = { workspace = true, optional = true }
 cumulus-pallet-xcmp-queue = { workspace = true, optional = true }
 cumulus-primitives-storage-weight-reclaim = { workspace = true }
 frame-support = { workspace = true }
@@ -41,6 +42,7 @@ serde_json = { workspace = true }
 default = ["std"]
 parachain = [
     "cumulus-pallet-parachain-system",
+    "cumulus-pallet-dmp-queue",
     "cumulus-pallet-xcmp-queue",
     "pallet-author-inherent",
     "pallet-author-mapping",
@@ -50,6 +52,7 @@ parachain = [
 ]
 std = [
     "cumulus-pallet-parachain-system?/std",
+    "cumulus-pallet-dmp-queue?/std",
     "cumulus-pallet-xcmp-queue?/std",
     "cumulus-primitives-storage-weight-reclaim/std",
     "frame-system/std",
