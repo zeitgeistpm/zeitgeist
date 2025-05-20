@@ -120,7 +120,7 @@ hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-node", packa
 moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "zeitgeist-polkadot-stable2409" }
 
 # Moonbeam (wasm)
-pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "zeitgeist-polkadot-stable2409", default-features = false }
+pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "zeitgeist-polkadot-stable2409-added-prev-migrations-fix", default-features = false }
 
 # ORML (wasm)
 orml-asset-registry = { git = "https://github.com/zeitgeistpm/open-runtime-module-library", branch = "zeitgeist-polkadot-stable2409-asset-registry-location-fix", default-features = false }

@@ -113,16 +113,24 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        // TODO: look for parachain-staking migrations here: https://github.com/moonbeam-foundation/moonbeam/blob/v0.44.0/pallets/parachain-staking/migrations.md
         #[cfg(feature = "parachain")]
         type Migrations = (
             cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
             cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
-            // This migration can be permanently added to the runtime migrations. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/polkadot/xcm/pallet-xcm/src/migration.rs#L83
-	        pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+            // This `MigrateToLatestXcmVersion` migration can be permanently added to the runtime migrations. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/polkadot/xcm/pallet-xcm/src/migration.rs#L83
+            pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+            // u64::MAX from here: https://github.com/paritytech/polkadot-sdk/blob/304bbb8711f61503ae7afa3a5bfd4f78af5cbd62/polkadot/runtime/rococo/src/lib.rs#L1629-L1630
+            pallet_identity::migration::versioned::V0ToV1<Runtime, { u64::MAX }>,
+            // TODO pallet_parachain_staking::migrations::MultiplyRoundLenBy2<Runtime>,
+            // TODO pallet_parachain_staking::migrations::MigrateRoundWithFirstSlot<Runtime>,
+            // TODO pallet_parachain_staking::migrations::MigrateParachainBondConfig<Runtime>,
         );
         #[cfg(not(feature = "parachain"))]
-        type Migrations = ();
+        type Migrations = (
+            pallet_grandpa::migrations::MigrateV4ToV5<Runtime>,
+            // u64::MAX from here: https://github.com/paritytech/polkadot-sdk/blob/304bbb8711f61503ae7afa3a5bfd4f78af5cbd62/polkadot/runtime/rococo/src/lib.rs#L1629-L1630
+            pallet_identity::migration::versioned::V0ToV1<Runtime, { u64::MAX }>,
+        );
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -512,6 +520,12 @@ macro_rules! impl_config_traits {
                 TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
             type MaxInboundSuspended = MaxInboundSuspended;
             type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
+        }
+
+        #[cfg(feature = "parachain")]
+        impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
+            // This must be the same as the `ChannelInfo` from the `Config`:
+            type ChannelList = ParachainSystem;
         }
 
         #[cfg(feature = "parachain")]
