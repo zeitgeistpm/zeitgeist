@@ -70,6 +70,7 @@ cumulus-relay-chain-rpc-interface = { workspace = true, optional = true }
 
 # Parachain
 
+async-backing-primitives = { workspace = true, optional = true }
 moonbeam-vrf = { workspace = true, optional = true }
 nimbus-consensus = { workspace = true, optional = true }
 nimbus-primitives = { workspace = true, features = ["default"], optional = true }
@@ -102,6 +103,7 @@ sp-consensus-grandpa = { workspace = true, features = ["default"] }
 # Utility
 cfg-if = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
+clap-num = { workspace = true }
 futures = { workspace = true, features = ["thread-pool"] }
 hex-literal = { workspace = true }
 jsonrpsee = { workspace = true, features = ["server"] }
@@ -144,6 +146,7 @@ parachain = [
 
     # Parachain
 
+    "async-backing-primitives",
     "moonbeam-vrf",
     "nimbus-consensus",
     "nimbus-primitives",

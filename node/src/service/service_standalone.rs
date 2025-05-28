@@ -35,12 +35,14 @@ use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use std::{path::Path, sync::Arc, time::Duration};
 use zeitgeist_primitives::types::Block;
 
-#[allow(deprecated)]
-pub type FullClient<RuntimeApi> = sc_service::TFullClient<
-    Block,
-    RuntimeApi,
-    sc_executor::WasmExecutor<sp_io::SubstrateHostFunctions>,
->;
+#[cfg(feature = "runtime-benchmarks")]
+pub type HostFunctions =
+    (frame_benchmarking::benchmarking::HostFunctions, sp_io::SubstrateHostFunctions);
+#[cfg(not(feature = "runtime-benchmarks"))]
+pub type HostFunctions = (sp_io::SubstrateHostFunctions,);
+
+pub type FullClient<RuntimeApi> =
+    sc_service::TFullClient<Block, RuntimeApi, sc_executor::WasmExecutor<HostFunctions>>;
 pub type FullBackend = TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
@@ -341,7 +343,7 @@ where
         })
         .transpose()?;
 
-    let executor = sc_service::new_wasm_executor::<sp_io::SubstrateHostFunctions>(&config.executor);
+    let executor = sc_service::new_wasm_executor::<HostFunctions>(&config.executor);
     let (client, backend, keystore_container, task_manager) =
         sc_service::new_full_parts_record_import::<Block, RuntimeApi, _>(
             &config,

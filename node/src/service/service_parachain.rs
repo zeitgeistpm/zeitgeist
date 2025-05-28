@@ -33,13 +33,11 @@ use cumulus_primitives_core::ParaId;
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
 use frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE;
 use futures::FutureExt;
+use nimbus_primitives::NimbusId;
 use polkadot_service::CollatorPair;
 use sc_client_api::Backend;
 use sc_consensus::ImportQueue;
-#[allow(deprecated)]
-use sc_executor::{
-    HeapAllocStrategy, NativeElseWasmExecutor, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY,
-};
+use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
 use sc_network::{config::FullNetworkConfiguration, NetworkBlock};
 use sc_service::{
     error::{Error as ServiceError, Result as ServiceResult},
@@ -48,59 +46,24 @@ use sc_service::{
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 use sp_api::ConstructRuntimeApi;
+use sp_consensus::SyncOracle;
 use sp_keystore::KeystorePtr;
 use sp_runtime::traits::Block as BlockT;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
 use zeitgeist_primitives::types::{Block, Hash};
 
 #[cfg(feature = "runtime-benchmarks")]
-pub type HostFunctions =
-    (frame_benchmarking::benchmarking::HostFunctions, sp_io::SubstrateHostFunctions);
+pub type HostFunctions = (
+    sp_io::SubstrateHostFunctions,
+    cumulus_client_service::storage_proof_size::HostFunctions,
+    frame_benchmarking::benchmarking::HostFunctions,
+);
 #[cfg(not(feature = "runtime-benchmarks"))]
-pub type HostFunctions = (sp_io::SubstrateHostFunctions,);
+pub type HostFunctions =
+    (sp_io::SubstrateHostFunctions, cumulus_client_service::storage_proof_size::HostFunctions);
 
-#[cfg(feature = "with-battery-station-runtime")]
-pub struct BatteryStationExecutor;
-
-#[cfg(feature = "with-battery-station-runtime")]
-impl sc_executor::NativeExecutionDispatch for BatteryStationExecutor {
-    type ExtendHostFunctions = HostFunctions;
-
-    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-        battery_station_runtime::api::dispatch(method, data)
-    }
-
-    fn native_version() -> sc_executor::NativeVersion {
-        battery_station_runtime::native_version()
-    }
-}
-
-#[cfg(not(feature = "with-battery-station-runtime"))]
-pub struct ZeitgeistExecutor;
-
-#[cfg(not(feature = "with-battery-station-runtime"))]
-impl sc_executor::NativeExecutionDispatch for ZeitgeistExecutor {
-    type ExtendHostFunctions = HostFunctions;
-
-    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-        zeitgeist_runtime::api::dispatch(method, data)
-    }
-
-    fn native_version() -> sc_executor::NativeVersion {
-        zeitgeist_runtime::native_version()
-    }
-}
-
-#[cfg(feature = "with-battery-station-runtime")]
-type Executor = BatteryStationExecutor;
-#[cfg(not(feature = "with-battery-station-runtime"))]
-type Executor = ZeitgeistExecutor;
-
-#[allow(deprecated)]
-pub type ParachainExecutor = NativeElseWasmExecutor<Executor>;
-
-pub type FullClient<RuntimeApi> = TFullClient<Block, RuntimeApi, ParachainExecutor>;
+pub type FullClient<RuntimeApi> = TFullClient<Block, RuntimeApi, WasmExecutor<HostFunctions>>;
 
 pub type FullBackend = TFullBackend<Block>;
 
@@ -124,6 +87,8 @@ pub async fn new_full<RuntimeApi>(
     parachain_config: Configuration,
     para_id: ParaId,
     polkadot_config: Configuration,
+    async_backing: bool,
+    block_authoring_duration: Duration,
     hwbench: Option<sc_sysinfo::HwBench>,
     collator_options: CollatorOptions,
 ) -> ServiceResult<(TaskManager, Arc<FullClient<RuntimeApi>>)>
@@ -135,6 +100,8 @@ where
         parachain_config,
         polkadot_config,
         para_id,
+        async_backing,
+        block_authoring_duration,
         hwbench,
         collator_options,
     )
@@ -168,15 +135,13 @@ where
         .default_heap_pages
         .map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h| HeapAllocStrategy::Static { extra_pages: h as _ });
 
-    let wasm = WasmExecutor::builder()
+    let executor = WasmExecutor::builder()
         .with_execution_method(config.executor.wasm_method)
         .with_onchain_heap_alloc_strategy(heap_pages)
         .with_offchain_heap_alloc_strategy(heap_pages)
         .with_max_runtime_instances(config.executor.max_runtime_instances)
         .with_runtime_cache_size(config.executor.runtime_cache_size)
         .build();
-
-    let executor = ParachainExecutor::new_with_wasm_executor(wasm);
 
     let (client, backend, keystore_container, task_manager) =
         sc_service::new_full_parts_record_import::<Block, RuntimeApi, _>(
@@ -236,6 +201,8 @@ async fn do_new_full<RuntimeApi, N>(
     parachain_config: Configuration,
     polkadot_config: Configuration,
     para_id: polkadot_primitives::Id,
+    async_backing: bool,
+    block_authoring_duration: Duration,
     hwbench: Option<sc_sysinfo::HwBench>,
     collator_options: CollatorOptions,
 ) -> ServiceResult<(TaskManager, Arc<FullClient<RuntimeApi>>)>
@@ -401,6 +368,8 @@ where
 
     if collator {
         start_consensus(
+            async_backing,
+            backend.clone(),
             client.clone(),
             block_import,
             prometheus_registry.as_ref(),
@@ -414,6 +383,9 @@ where
             overseer_handle,
             announce_block,
             force_authoring,
+            relay_chain_slot_duration,
+            block_authoring_duration,
+            sync_service.clone(),
             true,
         )?;
     }
@@ -423,7 +395,9 @@ where
     Ok((task_manager, client))
 }
 
-fn start_consensus<RuntimeApi>(
+fn start_consensus<RuntimeApi, SO>(
+    async_backing: bool,
+    backend: Arc<FullBackend>,
     client: Arc<FullClient<RuntimeApi>>,
     block_import: ParachainBlockImport<RuntimeApi>,
     prometheus_registry: Option<&Registry>,
@@ -437,11 +411,15 @@ fn start_consensus<RuntimeApi>(
     overseer_handle: OverseerHandle,
     announce_block: Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>,
     force_authoring: bool,
+    relay_chain_slot_duration: Duration,
+    block_authoring_duration: Duration,
+    sync_oracle: SO,
     full_pov_size: bool,
 ) -> Result<(), sc_service::Error>
 where
     RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
     RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
+    SO: SyncOracle + Send + Sync + Clone + 'static,
 {
     let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
         task_manager.spawn_handle(),
@@ -460,27 +438,106 @@ where
         client.clone(),
     );
 
-    let params = nimbus_consensus::collators::basic::Params {
-        para_id,
-        overseer_handle,
-        proposer,
-        create_inherent_data_providers: move |_, _| async move { Ok(()) },
-        block_import,
-        relay_client: relay_chain_interface,
-        para_client: client,
-        keystore,
-        collator_service,
-        force_authoring,
-        full_pov_size,
-        additional_digests_provider: (),
-        additional_relay_keys: vec![],
-        collator_key,
-        //authoring_duration: Duration::from_millis(500),
+    let create_inherent_data_providers = |_, _| async move {
+        let time = sp_timestamp::InherentDataProvider::from_system_time();
+
+        let author = nimbus_primitives::InherentDataProvider;
+
+        let randomness = session_keys_primitives::InherentDataProvider;
+
+        Ok((time, author, randomness))
     };
 
-    let fut =
-        nimbus_consensus::collators::basic::run::<Block, _, _, FullBackend, _, _, _, _, _>(params);
-    task_manager.spawn_essential_handle().spawn("nimbus", None, fut);
+    let client_clone = client.clone();
+    let keystore_clone = keystore.clone();
+    let maybe_provide_vrf_digest =
+        move |nimbus_id: NimbusId, parent: Hash| -> Option<sp_runtime::generic::DigestItem> {
+            moonbeam_vrf::vrf_pre_digest::<Block, FullClient<RuntimeApi>>(
+                &client_clone,
+                &keystore_clone,
+                nimbus_id,
+                parent,
+            )
+        };
+
+    if async_backing {
+        log::info!("Collator started with asynchronous backing.");
+        let client_clone = client.clone();
+        let code_hash_provider = move |block_hash| {
+            client_clone
+                .code_at(block_hash)
+                .ok()
+                .map(polkadot_primitives::ValidationCode)
+                .map(|c| c.hash())
+        };
+        let params = nimbus_consensus::collators::lookahead::Params {
+            additional_digests_provider: maybe_provide_vrf_digest,
+            additional_relay_keys: vec![
+                zeitgeist_primitives::types::well_known_relay_keys::TIMESTAMP_NOW.to_vec(),
+            ],
+            authoring_duration: block_authoring_duration,
+            block_import,
+            code_hash_provider,
+            collator_key,
+            collator_service,
+            create_inherent_data_providers,
+            force_authoring,
+            keystore,
+            overseer_handle,
+            para_backend: backend,
+            para_client: client,
+            para_id,
+            proposer,
+            relay_chain_slot_duration,
+            relay_client: relay_chain_interface,
+            slot_duration: None,
+            sync_oracle,
+            reinitialize: false,
+            full_pov_size,
+        };
+
+        let fut = nimbus_consensus::collators::lookahead::run::<
+            Block,
+            _,
+            _,
+            _,
+            FullBackend,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+        >(params);
+        task_manager.spawn_essential_handle().spawn("nimbus", None, fut);
+    } else {
+        log::info!("Collator started without asynchronous backing.");
+
+        let params = nimbus_consensus::collators::basic::Params {
+            additional_digests_provider: maybe_provide_vrf_digest,
+            additional_relay_keys: vec![
+                zeitgeist_primitives::types::well_known_relay_keys::TIMESTAMP_NOW.to_vec(),
+            ],
+            //authoring_duration: Duration::from_millis(500),
+            block_import,
+            collator_key,
+            collator_service,
+            create_inherent_data_providers,
+            force_authoring,
+            keystore,
+            overseer_handle,
+            para_id,
+            para_client: client,
+            proposer,
+            relay_client: relay_chain_interface,
+            full_pov_size,
+        };
+
+        let fut = nimbus_consensus::collators::basic::run::<Block, _, _, FullBackend, _, _, _, _, _>(
+            params,
+        );
+        task_manager.spawn_essential_handle().spawn("nimbus", None, fut);
+    }
 
     Ok(())
 }

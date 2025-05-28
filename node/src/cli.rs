@@ -36,7 +36,7 @@ use sp_runtime::{
 };
 use sp_storage::{ChildInfo, StorageData, StorageKey};
 use sp_trie::MerkleValue;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use zeitgeist_primitives::types::{Block, Header};
 pub use zeitgeist_primitives::types::{BlockNumber, Hash};
 #[cfg(feature = "with-zeitgeist-runtime")]
@@ -201,6 +201,13 @@ pub struct Cli {
     #[allow(missing_docs)]
     #[clap(flatten)]
     pub storage_monitor: sc_storage_monitor::StorageMonitorParams,
+
+    #[clap(long, default_value = "2000", value_parser=block_authoring_duration_parser)]
+    pub block_authoring_duration: Duration,
+}
+
+fn block_authoring_duration_parser(s: &str) -> Result<Duration, String> {
+    Ok(Duration::from_millis(clap_num::number_range(s, 250, 2_000)?))
 }
 
 #[cfg(feature = "parachain")]
