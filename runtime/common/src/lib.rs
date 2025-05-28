@@ -116,7 +116,6 @@ macro_rules! decl_common_types {
         #[cfg(feature = "parachain")]
         type Migrations = (
             pallet_parachain_staking::migrations::MigrateRoundWithFirstSlot<Runtime>,
-            pallet_parachain_staking::migrations::MultiplyRoundLenBy2<Runtime>,
             pallet_parachain_staking::migrations::MigrateParachainBondConfig<Runtime>,
             cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
             cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,

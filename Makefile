@@ -24,7 +24,6 @@ check-dummy:
 	on-runtime-upgrade \
 	--checks=all \
 	--blocktime=6000 \
-	--disable-mbm-checks \
 	live \
 	--uri=${TRYRUNTIME_URL}
 
