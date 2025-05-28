@@ -502,6 +502,8 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
                 parachain_config,
                 parachain_id,
                 polkadot_config,
+                true,
+                cli.block_authoring_duration,
                 hwbench,
                 collator_options,
             )
@@ -513,6 +515,8 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
                 parachain_config,
                 parachain_id,
                 polkadot_config,
+                true,
+                cli.block_authoring_duration,
                 hwbench,
                 collator_options,
             )
