@@ -72,7 +72,6 @@ parachains-common = { workspace = true, optional = true }
 # Parachain
 async-backing-primitives = { workspace = true, optional = true }
 nimbus-primitives = { workspace = true, optional = true }
-pallet-async-backing = { workspace = true, optional = true }
 pallet-author-inherent = { workspace = true, optional = true }
 pallet-author-mapping = { workspace = true, optional = true }
 pallet-author-slot-filter = { workspace = true, optional = true }
@@ -167,7 +166,6 @@ parachain = [
     "polkadot-parachain-primitives",
     "polkadot-runtime-common",
     "session-keys-primitives",
-    "pallet-async-backing",
     "async-backing-primitives",
 
     # XCM
@@ -253,7 +251,6 @@ std = [
     "orml-tokens/std",
     "orml-traits/std",
     "pallet-asset-tx-payment/std",
-    "pallet-async-backing?/std",
     "pallet-balances/std",
     "pallet-bounties/std",
     "pallet-collective/std",
@@ -417,7 +414,6 @@ try-runtime = [
     "zrml-orderbook/try-runtime",
 
     # Parachain
-    "pallet-async-backing?/try-runtime",
     "pallet-author-inherent?/try-runtime",
     "pallet-author-mapping?/try-runtime",
     "pallet-author-slot-filter?/try-runtime",

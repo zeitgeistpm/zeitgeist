@@ -957,7 +957,6 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-tx-payment",
- "pallet-async-backing",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -7417,26 +7416,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-async-backing"
-version = "0.9.0"
-source = "git+https://github.com/zeitgeistpm/moonkit?branch=zeitgeist-polkadot-stable2409#42bb0e730597514973940a24dc80538edef69557"
-dependencies = [
- "cumulus-pallet-parachain-system",
- "cumulus-primitives-core",
- "frame-support",
- "frame-system",
- "log",
- "nimbus-primitives",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "sp-consensus-slots",
- "sp-core",
- "sp-runtime",
- "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409)",
-]
-
-[[package]]
 name = "pallet-aura"
 version = "37.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
@@ -8186,7 +8165,7 @@ dependencies = [
 [[package]]
 name = "pallet-parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=zeitgeist-polkadot-stable2409-added-prev-migrations-fix#c2f3085501014aa5da76f828fc9848745a6c07c3"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=zeitgeist-polkadot-stable2409-added-prev-migrations-fix#6061f8e8c1c1e3b63a08447e716e535a5987fa80"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -17103,7 +17082,6 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-tx-payment",
- "pallet-async-backing",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",

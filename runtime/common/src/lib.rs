@@ -59,8 +59,6 @@
 #![allow(clippy::crate_in_macro_def)]
 
 pub mod fees;
-#[cfg(feature = "parachain")]
-pub mod relay_timestamp;
 pub mod weights;
 
 #[macro_export]
@@ -409,7 +407,6 @@ macro_rules! create_runtime_with_additional_pallets {
             AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
             AuthorFilter: pallet_author_slot_filter::{Call, Config<T>, Event, Pallet, Storage} = 112,
             AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
-            AsyncBacking: pallet_async_backing::{Pallet, Storage} = 114,
 
             // XCM
             CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
@@ -458,13 +455,6 @@ macro_rules! impl_config_traits {
             type WeightInfo = weights::cumulus_pallet_dmp_queue::WeightInfo<Runtime>;
         }
 
-        #[cfg(feature = "parachain")]
-        type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<
-            Runtime,
-            BLOCK_PROCESSING_VELOCITY,
-            UNINCLUDED_SEGMENT_CAPACITY,
-        >;
-
         // Configure Pallets
         #[cfg(feature = "parachain")]
         impl cumulus_pallet_parachain_system::Config for Runtime {
@@ -476,22 +466,8 @@ macro_rules! impl_config_traits {
             type SelfParaId = parachain_info::Pallet<Runtime>;
             type XcmpMessageHandler = XcmpQueue;
             type CheckAssociatedRelayNumber =
-                cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
-            #[cfg(not(test))]
-            type ConsensusHook =
-                common_runtime::relay_timestamp::ConsensusHookWrapperForRelayTimestamp<
-                    Runtime,
-                    ConsensusHook,
-                >;
-            // TODO(#1426): figure out a way to have the integration tests work with the relay timestamp and BLOCK_PROCESSING_VELOCITY of 1
-            // Use normal consensus hook for xcm integration tests to avoid relay timestamp setting
-            #[cfg(test)]
-            type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<
-                Runtime,
-                // The xcm integration tests require to process two blocks in a single slot
-                2,
-                UNINCLUDED_SEGMENT_CAPACITY,
-            >;
+                cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+            type ConsensusHook = cumulus_pallet_parachain_system::ExpectParentIncluded;
             type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
             type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
         }
@@ -583,13 +559,6 @@ macro_rules! impl_config_traits {
             type PreInherents = ();
             type PostInherents = ();
             type PostTransactions = ();
-        }
-
-        #[cfg(feature = "parachain")]
-        impl pallet_async_backing::Config for Runtime {
-            type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
-            type GetAndVerifySlot = pallet_async_backing::RelaySlot;
-            type ExpectedBlockTime = ExpectedBlockTime;
         }
 
         #[cfg(not(feature = "parachain"))]
@@ -702,13 +671,14 @@ macro_rules! impl_config_traits {
             }
         }
         #[cfg(feature = "parachain")]
-        pub struct RelayChainSlotProvider;
+        pub struct StakingRoundSlotProvider;
 
         #[cfg(feature = "parachain")]
-        impl Get<Slot> for RelayChainSlotProvider {
+        impl Get<Slot> for StakingRoundSlotProvider {
             fn get() -> Slot {
-                let slot_info = pallet_async_backing::pallet::Pallet::<Runtime>::slot_info();
-                slot_info.unwrap_or_default().0
+                let block_number: u64 =
+                    frame_system::pallet::Pallet::<Runtime>::block_number().into();
+                Slot::from(block_number)
             }
         }
 
@@ -739,7 +709,7 @@ macro_rules! impl_config_traits {
             type RevokeDelegationDelay = RevokeDelegationDelay;
             type RewardPaymentDelay = RewardPaymentDelay;
             type SlotDuration = SlotDuration;
-            type SlotProvider = RelayChainSlotProvider;
+            type SlotProvider = StakingRoundSlotProvider;
             type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
         }
 
@@ -2236,10 +2206,12 @@ macro_rules! create_runtime_api {
             #[cfg(feature = "parachain")]
             impl async_backing_primitives::UnincludedSegmentApi<Block> for Runtime {
                 fn can_build_upon(
-                    included_hash: <Block as BlockT>::Hash,
-                    slot: async_backing_primitives::Slot,
+                    _included_hash: <Block as BlockT>::Hash,
+                    _slot: async_backing_primitives::Slot,
                 ) -> bool {
-                    ConsensusHook::can_build_upon(included_hash, slot)
+                    // This runtime API can be called only when asynchronous backing is enabled client-side
+                    // We return false here to force the client to not use async backing.
+                    false
                 }
             }
 

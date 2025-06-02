@@ -105,7 +105,6 @@ cumulus-primitives-storage-weight-reclaim = { git = "https://github.com/parityte
 cumulus-primitives-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 cumulus-primitives-utility = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 nimbus-primitives = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
-pallet-async-backing = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 pallet-author-inherent = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
 pallet-author-slot-filter = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
