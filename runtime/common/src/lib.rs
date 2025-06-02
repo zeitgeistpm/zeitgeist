@@ -476,7 +476,7 @@ macro_rules! impl_config_traits {
             type SelfParaId = parachain_info::Pallet<Runtime>;
             type XcmpMessageHandler = XcmpQueue;
             type CheckAssociatedRelayNumber =
-                cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+                cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
             #[cfg(not(test))]
             type ConsensusHook =
                 common_runtime::relay_timestamp::ConsensusHookWrapperForRelayTimestamp<

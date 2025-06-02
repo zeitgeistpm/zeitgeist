@@ -384,7 +384,7 @@ sp-std = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-s
 
 [patch."https://github.com/paritytech/polkadot-sdk"]
 pallet-asset-tx-payment = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-asset-tx-payment-asset-id-fix" }
-# Updated `ParachainInherentDataProvider::create_at` parameters to include additional relay keys
+# Updated `ParachainInherentDataProvider::create_at` parameters to include additional relay keys https://github.com/moonbeam-foundation/polkadot-sdk/compare/moonbeam-polkadot-stable2409...zeitgeistpm:polkadot-sdk:polkadot-stable2409-moonbeam-lazy-migrations
 cumulus-client-parachain-inherent = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-moonbeam-lazy-migrations" }
 # Fix Found variants that have duplicate indexes. Both `Consensus` and `RemoteCallResponse` have the index `6`. Use different indexes for each variant.
 sc-network = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "zeitgeist-polkadot-stable2409-sc-network-fix" }
