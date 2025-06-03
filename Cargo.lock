@@ -8165,7 +8165,7 @@ dependencies = [
 [[package]]
 name = "pallet-parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=zeitgeist-polkadot-stable2409-added-prev-migrations-fix#6061f8e8c1c1e3b63a08447e716e535a5987fa80"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=zeitgeist-polkadot-stable2409-added-prev-migrations-fix#fd299fe79a78af94db9ac31fcc296db89fae8e62"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
