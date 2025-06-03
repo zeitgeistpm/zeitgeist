@@ -1,7 +1,7 @@
 [dependencies]
 # Pallets
-cumulus-pallet-parachain-system = { workspace = true, optional = true }
 cumulus-pallet-dmp-queue = { workspace = true, optional = true }
+cumulus-pallet-parachain-system = { workspace = true, optional = true }
 cumulus-pallet-xcmp-queue = { workspace = true, optional = true }
 cumulus-primitives-storage-weight-reclaim = { workspace = true }
 frame-support = { workspace = true }
