@@ -19,7 +19,7 @@ use crate::{mock::runtime::Runtime, BoundedCallOf, CallOf, PalletsOriginOf};
 use core::cell::RefCell;
 use frame_support::traits::schedule::{v3::Anon as ScheduleAnon, DispatchTime, Period, Priority};
 use frame_system::pallet_prelude::BlockNumberFor;
-use sp_runtime::{DispatchError, DispatchResult};
+use sp_runtime::{traits::BlakeTwo256, DispatchError, DispatchResult};
 
 pub struct MockScheduler;
 
@@ -57,6 +57,7 @@ impl ScheduleAnon<BlockNumberFor<Runtime>, CallOf<Runtime>, PalletsOriginOf<Runt
     for MockScheduler
 {
     type Address = ();
+    type Hasher = BlakeTwo256;
 
     fn schedule(
         when: DispatchTime<BlockNumberFor<Runtime>>,
