@@ -18,11 +18,12 @@
 
 use crate::types::{Asset, OutcomeReport, ScalarPosition};
 use alloc::{vec, vec::Vec};
+use num_traits::Zero;
 use core::ops::{Range, RangeInclusive};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Perbill;
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{traits::Saturating, RuntimeDebug};
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Market<AccountId, Balance, BlockNumber, Moment, MarketId> {
@@ -199,9 +200,7 @@ pub struct MarketBonds<AccountId, Balance> {
     pub close_dispute: Option<Bond<AccountId, Balance>>,
 }
 
-impl<AccountId: Ord, Balance: frame_support::traits::tokens::Balance>
-    MarketBonds<AccountId, Balance>
-{
+impl<AccountId: Ord, Balance: Zero + Saturating + Copy> MarketBonds<AccountId, Balance> {
     /// Return the combined value of the open bonds for `who`.
     pub fn total_amount_bonded(&self, who: &AccountId) -> Balance {
         let value_or_default = |bond: &Option<Bond<AccountId, Balance>>| match bond {

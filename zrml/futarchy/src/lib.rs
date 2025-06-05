@@ -97,7 +97,12 @@ mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// Scheduler interface for executing proposals.
-        type Scheduler: ScheduleAnon<BlockNumberFor<Self>, CallOf<Self>, PalletsOriginOf<Self>>;
+        type Scheduler: ScheduleAnon<
+            BlockNumberFor<Self>,
+            CallOf<Self>,
+            PalletsOriginOf<Self>,
+            Hasher = <Self as frame_system::Config>::Hashing,
+        >;
 
         type WeightInfo: WeightInfoZeitgeist;
     }
@@ -107,7 +112,7 @@ mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     pub(crate) type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
-    pub(crate) type BoundedCallOf<T> = Bounded<CallOf<T>>;
+    pub(crate) type BoundedCallOf<T> = Bounded<CallOf<T>, <T as frame_system::Config>::Hashing>;
     pub(crate) type OracleOf<T> = <T as Config>::Oracle;
     pub(crate) type PalletsOriginOf<T> =
         <<T as frame_system::Config>::RuntimeOrigin as OriginTrait>::PalletsOrigin;

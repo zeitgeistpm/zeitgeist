@@ -98,6 +98,24 @@ impl<T: frame_system::Config> frame_system::weights::WeightInfo for WeightInfo<T
             .saturating_add(T::DbWeight::get().reads(1))
             .saturating_add(T::DbWeight::get().writes(2))
     }
+    fn authorize_upgrade() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `0`
+        //  Estimated: `1485`
+        // Minimum execution time: 92_660_889 nanoseconds.
+        Weight::from_parts(96_694_937_000, 1485)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(2))
+    }
+    fn apply_authorized_upgrade() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `0`
+        //  Estimated: `1485`
+        // Minimum execution time: 92_660_889 nanoseconds.
+        Weight::from_parts(96_694_937_000, 1485)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(2))
+    }
     /// Storage: `Skipped::Metadata` (r:0 w:0)
     /// Proof: `Skipped::Metadata` (`max_values`: None, `max_size`: None, mode: `Measured`)
     /// The range of component `i` is `[0, 1000]`.

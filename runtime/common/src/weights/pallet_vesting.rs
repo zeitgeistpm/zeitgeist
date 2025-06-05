@@ -100,6 +100,27 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     /// Proof: `Balances::Locks` (`max_values`: None, `max_size`: Some(1299), added: 3774, mode: `MaxEncodedLen`)
     /// Storage: `Balances::Freezes` (r:1 w:0)
     /// Proof: `Balances::Freezes` (`max_values`: None, `max_size`: Some(65), added: 2540, mode: `MaxEncodedLen`)
+    /// The range of component `l` is `[0, 49]`.
+    /// The range of component `s` is `[1, 28]`.
+    fn force_remove_vesting_schedule(l: u32, s: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `343 + l * (25 ±0) + s * (40 ±0)`
+        //  Estimated: `4764`
+        // Minimum execution time: 42_860 nanoseconds.
+        Weight::from_parts(45_054_715, 4764)
+            // Standard Error: 4_032
+            .saturating_add(Weight::from_parts(40_411, 0).saturating_mul(l.into()))
+            // Standard Error: 7_175
+            .saturating_add(Weight::from_parts(92_014, 0).saturating_mul(s.into()))
+            .saturating_add(T::DbWeight::get().reads(3))
+            .saturating_add(T::DbWeight::get().writes(2))
+    }
+    /// Storage: `Vesting::Vesting` (r:1 w:1)
+    /// Proof: `Vesting::Vesting` (`max_values`: None, `max_size`: Some(1169), added: 3644, mode: `MaxEncodedLen`)
+    /// Storage: `Balances::Locks` (r:1 w:1)
+    /// Proof: `Balances::Locks` (`max_values`: None, `max_size`: Some(1299), added: 3774, mode: `MaxEncodedLen`)
+    /// Storage: `Balances::Freezes` (r:1 w:0)
+    /// Proof: `Balances::Freezes` (`max_values`: None, `max_size`: Some(65), added: 2540, mode: `MaxEncodedLen`)
     /// Storage: `System::Account` (r:1 w:1)
     /// Proof: `System::Account` (`max_values`: None, `max_size`: Some(132), added: 2607, mode: `MaxEncodedLen`)
     /// The range of component `l` is `[0, 49]`.

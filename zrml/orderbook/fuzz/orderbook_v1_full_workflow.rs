@@ -98,5 +98,9 @@ fn asset(seed: (u128, u16)) -> Asset<u128> {
 }
 
 fn maker_partial_fill(s: u128) -> Option<u128> {
-    if s % 2 == 0 { Some(s) } else { None }
+    if s % 2 == 0 {
+        Some(s)
+    } else {
+        None
+    }
 }
