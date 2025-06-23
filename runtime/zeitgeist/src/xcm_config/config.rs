@@ -41,8 +41,8 @@ use sp_runtime::traits::{ConstU32, Convert, MaybeEquivalence};
 use xcm::{
     latest::{
         prelude::{
-            AccountId32, Asset as XcmAsset, AssetId as XcmAssetId, Fungibility,
-            GeneralKey, XcmContext, Location,
+            AccountId32, Asset as XcmAsset, AssetId as XcmAssetId, Fungibility, GeneralKey,
+            Location, XcmContext,
         },
         Error as XcmError, Junction, Result as XcmResult,
     },

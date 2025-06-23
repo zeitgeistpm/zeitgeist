@@ -452,11 +452,21 @@ macro_rules! impl_config_traits {
             type XcmpMessageHandler = XcmpQueue;
             type CheckAssociatedRelayNumber =
                 cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+            #[cfg(not(test))]
             type ConsensusHook =
                 common_runtime::relay_timestamp::ConsensusHookWrapperForRelayTimestamp<
                     Runtime,
                     ConsensusHook,
                 >;
+            // TODO(#1426): figure out a way to have the integration tests work with the relay timestamp and BLOCK_PROCESSING_VELOCITY of 1
+            // Use normal consensus hook for xcm integration tests to avoid relay timestamp setting
+            #[cfg(test)]
+            type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<
+                Runtime,
+                // The xcm integration tests require to process two blocks in a single slot
+                2,
+                UNINCLUDED_SEGMENT_CAPACITY,
+            >;
             type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
             // TODO: add weight info after benchmarking
             type WeightInfo = ();
