@@ -90,9 +90,9 @@ cfg_if::cfg_if! {
         }
 
         pub(crate) use generate_inflation_config_function;
-        pub type DummyChainSpec = sc_service::GenericChainSpec<(), Extensions>;
+        pub type DummyChainSpec = sc_service::GenericChainSpec<Extensions>;
     } else {
-        pub type DummyChainSpec = sc_service::GenericChainSpec<()>;
+        pub type DummyChainSpec = sc_service::GenericChainSpec;
     }
 }
 
@@ -107,7 +107,6 @@ macro_rules! generate_generic_genesis_function {
         pub(super) fn generic_genesis(
             acs: AdditionalChainSpec,
             endowed_accounts: Vec<EndowedAccountWithBalance>,
-            wasm_binary: &[u8],
         ) -> $runtime::RuntimeGenesisConfig {
             $runtime::RuntimeGenesisConfig {
                 // Common genesis
@@ -175,7 +174,7 @@ macro_rules! generate_generic_genesis_function {
                 #[cfg(feature = "parachain")]
                 // Default should use the pallet configuration
                 polkadot_xcm: PolkadotXcmConfig::default(),
-                system: $runtime::SystemConfig { code: wasm_binary.to_vec(), ..Default::default() },
+                system: $runtime::SystemConfig::default(),
                 technical_committee: Default::default(),
                 technical_committee_membership: $runtime::TechnicalCommitteeMembershipConfig {
                     members: vec![].try_into().unwrap(),

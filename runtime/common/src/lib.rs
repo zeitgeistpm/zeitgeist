@@ -67,8 +67,6 @@ pub mod weights;
 macro_rules! decl_common_types {
     () => {
         use core::marker::PhantomData;
-        #[cfg(feature = "parachain")]
-        use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
         use frame_support::{
             migration::storage_key_iter,
             migrations::RemovePallet,
@@ -87,8 +85,6 @@ macro_rules! decl_common_types {
         use frame_system::EnsureSigned;
         use orml_traits::MultiCurrency;
         use pallet_balances::{CreditOf, NegativeImbalance};
-        #[cfg(feature = "parachain")]
-        use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
         use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
         use scale_info::TypeInfo;
         use sp_consensus_slots::Slot;
@@ -141,8 +137,8 @@ macro_rules! decl_common_types {
             CheckWeight<Runtime>,
             // https://docs.rs/pallet-asset-tx-payment/latest/src/pallet_asset_tx_payment/lib.rs.html#32-34
             pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
-            cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim<Runtime>,
             frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
+            cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim<Runtime>,
         );
         pub type EventRecord = frame_system::EventRecord<
             <Runtime as frame_system::Config>::RuntimeEvent,
@@ -431,7 +427,12 @@ macro_rules! impl_config_traits {
     () => {
         use common_runtime::weights;
         #[cfg(feature = "parachain")]
-        use xcm_config::config::*;
+        use {
+            cumulus_primitives_core::{AggregateMessageOrigin, ParaId},
+            frame_support::traits::Nothing,
+            parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling},
+            xcm_config::config::*,
+        };
 
         #[cfg(feature = "parachain")]
         type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<
@@ -1122,14 +1123,14 @@ macro_rules! impl_config_traits {
         impl MinimumPeriod {
             /// Returns the value of this parameter type.
             pub fn get() -> u64 {
-                #[cfg(feature = "runtime-benchmarks")]
-                {
-                    use frame_benchmarking::benchmarking::get_whitelist;
-                    // Should that condition be true, we can assume that we are in a benchmark environment.
-                    if !get_whitelist().is_empty() {
-                        return u64::MAX;
-                    }
-                }
+                // #[cfg(feature = "runtime-benchmarks")]
+                // {
+                //     use frame_benchmarking::benchmarking::get_whitelist;
+                //     // Should that condition be true, we can assume that we are in a benchmark environment.
+                //     if !get_whitelist().is_empty() {
+                //         return u64::MAX;
+                //     }
+                // }
 
                 MinimumPeriodValue::get()
             }

@@ -52,7 +52,7 @@ use sp_version::NativeVersion;
 use zeitgeist_primitives::types::*;
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
+    frame_support::traits::{AsEnsureOriginWithArg, Everything},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
