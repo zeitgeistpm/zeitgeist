@@ -67,6 +67,7 @@ pub mod weights;
 macro_rules! decl_common_types {
     () => {
         use core::marker::PhantomData;
+        #[cfg(feature = "parachain")]
         use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
         use frame_support::{
             migration::storage_key_iter,
@@ -86,6 +87,7 @@ macro_rules! decl_common_types {
         use frame_system::EnsureSigned;
         use orml_traits::MultiCurrency;
         use pallet_balances::{CreditOf, NegativeImbalance};
+        #[cfg(feature = "parachain")]
         use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
         use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
         use scale_info::TypeInfo;

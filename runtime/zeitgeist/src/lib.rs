@@ -41,7 +41,7 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter, Nothing},
+    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
 use frame_system::{EnsureRoot, EnsureWithSuccess};
@@ -52,7 +52,7 @@ use sp_version::NativeVersion;
 use zeitgeist_primitives::types::*;
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{AsEnsureOriginWithArg, Everything},
+    frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
