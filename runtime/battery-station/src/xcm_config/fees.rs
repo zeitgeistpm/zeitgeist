@@ -19,7 +19,7 @@
 use crate::{Balance, CurrencyId};
 use core::marker::PhantomData;
 use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND};
-use xcm::latest::MultiLocation;
+use xcm::latest::Location;
 use zeitgeist_primitives::{
     constants::BalanceFractionalDecimals, math::fixed::FixedMul, types::CustomMetadata,
 };
@@ -62,7 +62,7 @@ impl<
         >,
     > orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<AssetRegistry>
 {
-    fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
+    fn get_fee_per_second(location: &Location) -> Option<u128> {
         let metadata = AssetRegistry::metadata_by_location(location)?;
         let default_per_second = native_per_second();
         let native_decimals: u32 = BalanceFractionalDecimals::get().into();

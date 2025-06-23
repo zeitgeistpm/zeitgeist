@@ -59,31 +59,48 @@
 #![allow(clippy::crate_in_macro_def)]
 
 pub mod fees;
+#[cfg(feature = "parachain")]
+pub mod relay_timestamp;
 pub mod weights;
 
 #[macro_export]
 macro_rules! decl_common_types {
     () => {
         use core::marker::PhantomData;
+        #[cfg(feature = "parachain")]
+        use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
         use frame_support::{
             migration::storage_key_iter,
             migrations::RemovePallet,
             pallet_prelude::StorageVersion,
             parameter_types,
             storage::child,
-            traits::{Currency, Get, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced},
+            traits::{
+                fungible::HoldConsideration,
+                fungibles::Imbalance as FImbalance,
+                tokens::{PayFromAccount, UnityAssetBalanceConversion},
+                Currency, Get, Imbalance, LinearStoragePrice, NeverEnsureOrigin, OnRuntimeUpgrade,
+                OnUnbalanced, TransformOrigin,
+            },
             Blake2_256, BoundedVec, Twox64Concat,
         };
         use frame_system::EnsureSigned;
         use orml_traits::MultiCurrency;
-        use pallet_balances::CreditOf;
+        use pallet_balances::{CreditOf, NegativeImbalance};
+        #[cfg(feature = "parachain")]
+        use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
         use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
         use scale_info::TypeInfo;
+        use sp_consensus_slots::Slot;
         use sp_core::storage::ChildInfo;
         use sp_runtime::{
-            generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
+            generic, traits::IdentityLookup, DispatchError, DispatchResult, RuntimeDebug,
+            SaturatedConversion,
         };
-        use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
+        use zeitgeist_primitives::{
+            constants::{BLOCK_PROCESSING_VELOCITY, UNINCLUDED_SEGMENT_CAPACITY},
+            traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi},
+        };
         use zrml_combinatorial_tokens::types::{CryptographicIdManager, Fuel};
         use zrml_neo_swaps::types::DecisionMarketOracle;
 
@@ -100,6 +117,7 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
+        // TODO: look for parachain-staking migrations here: https://github.com/moonbeam-foundation/moonbeam/blob/v0.44.0/pallets/parachain-staking/migrations.md
         type Migrations = ();
 
         pub type Executive = frame_executive::Executive<
@@ -123,6 +141,8 @@ macro_rules! decl_common_types {
             CheckWeight<Runtime>,
             // https://docs.rs/pallet-asset-tx-payment/latest/src/pallet_asset_tx_payment/lib.rs.html#32-34
             pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
+            cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim<Runtime>,
+            frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
         );
         pub type EventRecord = frame_system::EventRecord<
             <Runtime as frame_system::Config>::RuntimeEvent,
@@ -314,7 +334,7 @@ macro_rules! create_runtime {
                 Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent} = 1,
                 RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 2,
                 Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 3,
-                Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 4,
+                Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>, HoldReason} = 4,
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
@@ -370,7 +390,7 @@ macro_rules! create_runtime_with_additional_pallets {
         #[cfg(feature = "parachain")]
         create_runtime!(
             // System
-            ParachainSystem: cumulus_pallet_parachain_system::{Call, Config<T>, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
+            ParachainSystem: cumulus_pallet_parachain_system::{Call, Config<T>, Event<T>, Inherent, Pallet, Storage} = 100,
             ParachainInfo: parachain_info::{Config<T>, Pallet, Storage} = 101,
 
             // Consensus
@@ -378,15 +398,17 @@ macro_rules! create_runtime_with_additional_pallets {
             AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
             AuthorFilter: pallet_author_slot_filter::{Call, Config<T>, Event, Pallet, Storage} = 112,
             AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
+            AsyncBacking: pallet_async_backing::{Pallet, Storage} = 114,
 
             // XCM
             CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
-            DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
+            // Previously: DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
             PolkadotXcm: pallet_xcm::{Call, Config<T>, Event<T>, Origin, Pallet, Storage} = 122,
             XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 123,
-            AssetRegistry: orml_asset_registry::{Call, Config<T>, Event<T>, Pallet, Storage} = 124,
+            AssetRegistry: orml_asset_registry::module::{Call, Config<T>, Event<T>, Pallet, Storage} = 124,
             UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 125,
             XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 126,
+            MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>} = 127,
 
             // Others
             $($additional_pallets)*
@@ -411,19 +433,16 @@ macro_rules! impl_config_traits {
         #[cfg(feature = "parachain")]
         use xcm_config::config::*;
 
+        #[cfg(feature = "parachain")]
+        type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<
+            Runtime,
+            BLOCK_PROCESSING_VELOCITY,
+            UNINCLUDED_SEGMENT_CAPACITY,
+        >;
+
         // Configure Pallets
         #[cfg(feature = "parachain")]
-        impl cumulus_pallet_dmp_queue::Config for Runtime {
-            type RuntimeEvent = RuntimeEvent;
-            type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
-            type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
-        }
-
-        #[cfg(feature = "parachain")]
         impl cumulus_pallet_parachain_system::Config for Runtime {
-            type CheckAssociatedRelayNumber =
-                cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
-            type DmpMessageHandler = DmpQueue;
             type RuntimeEvent = RuntimeEvent;
             type OnSystemEvent = ();
             type OutboundXcmpMessageSource = XcmpQueue;
@@ -431,6 +450,16 @@ macro_rules! impl_config_traits {
             type ReservedXcmpWeight = crate::parachain_params::ReservedXcmpWeight;
             type SelfParaId = parachain_info::Pallet<Runtime>;
             type XcmpMessageHandler = XcmpQueue;
+            type CheckAssociatedRelayNumber =
+                cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+            type ConsensusHook =
+                common_runtime::relay_timestamp::ConsensusHookWrapperForRelayTimestamp<
+                    Runtime,
+                    ConsensusHook,
+                >;
+            type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
+            // TODO: add weight info after benchmarking
+            type WeightInfo = ();
         }
 
         #[cfg(feature = "parachain")]
@@ -444,12 +473,42 @@ macro_rules! impl_config_traits {
             type ChannelInfo = ParachainSystem;
             type ControllerOrigin = EnsureRootOrThreeFifthsTechnicalCommittee;
             type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-            type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
-            type PriceForSiblingDelivery = ();
+            type PriceForSiblingDelivery =
+                polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery<ParaId>;
+            type MaxActiveOutboundChannels = MaxActiveOutboundChannels;
+            // Most on-chain HRMP channels are configured to use 102400 bytes of max message size, so we
+            // need to set the page size larger than that until we reduce the channel size on-chain.
+            type MaxPageSize = MessageQueueHeapSize;
             type RuntimeEvent = RuntimeEvent;
-            type VersionWrapper = ();
+            type VersionWrapper = PolkadotXcm;
+            type XcmpQueue =
+                TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
+            type MaxInboundSuspended = MaxInboundSuspended;
             type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
-            type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
+        }
+
+        #[cfg(feature = "parachain")]
+        impl pallet_message_queue::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            #[cfg(feature = "runtime-benchmarks")]
+            type MessageProcessor =
+                pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
+            #[cfg(not(feature = "runtime-benchmarks"))]
+            type MessageProcessor = xcm_builder::ProcessXcmMessage<
+                AggregateMessageOrigin,
+                xcm_executor::XcmExecutor<XcmConfig>,
+                RuntimeCall,
+            >;
+            type Size = u32;
+            type HeapSize = MessageQueueHeapSize;
+            type MaxStale = MessageQueueMaxStale;
+            type ServiceWeight = MessageQueueServiceWeight;
+            // The XCMP queue pallet is only ever able to handle the `Sibling(ParaId)` origin:
+            type QueueChangeHandler = NarrowOriginToSibling<XcmpQueue>;
+            type QueuePausedQuery = NarrowOriginToSibling<XcmpQueue>;
+            // TODO: add weight info after benchmarking
+            type WeightInfo = ();
+            type IdleMaxServiceWeight = MessageQueueServiceWeight;
         }
 
         impl frame_system::Config for Runtime {
@@ -475,10 +534,23 @@ macro_rules! impl_config_traits {
             #[cfg(not(feature = "parachain"))]
             type OnSetCode = ();
             type RuntimeOrigin = RuntimeOrigin;
+            type RuntimeTask = RuntimeTask;
             type PalletInfo = PalletInfo;
             type SS58Prefix = SS58Prefix;
             type SystemWeightInfo = weights::frame_system::WeightInfo<Runtime>;
             type Version = Version;
+            type SingleBlockMigrations = ();
+            type MultiBlockMigrator = ();
+            type PreInherents = ();
+            type PostInherents = ();
+            type PostTransactions = ();
+        }
+
+        #[cfg(feature = "parachain")]
+        impl pallet_async_backing::Config for Runtime {
+            type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
+            type GetAndVerifySlot = pallet_async_backing::RelaySlot;
+            type ExpectedBlockTime = ExpectedBlockTime;
         }
 
         #[cfg(not(feature = "parachain"))]
@@ -487,6 +559,7 @@ macro_rules! impl_config_traits {
             type AuthorityId = sp_consensus_aura::sr25519::AuthorityId;
             type DisabledValidators = ();
             type MaxAuthorities = MaxAuthorities;
+            type SlotDuration = pallet_aura::MinimumPeriodTimesTwo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -556,9 +629,8 @@ macro_rules! impl_config_traits {
             type SovereignAccountOf = LocationToAccountId;
             type MaxLockers = MaxLockers;
             type MaxRemoteLockConsumers = MaxRemoteLockConsumers;
+            // TODO(#1425) use correct weight info after benchmarking
             type WeightInfo = pallet_xcm::TestWeightInfo;
-            #[cfg(feature = "runtime-benchmarks")]
-            type ReachableDest = ReachableDest;
             type RemoteLockConsumerIdentifier = ();
 
             const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
@@ -590,10 +662,21 @@ macro_rules! impl_config_traits {
                     .saturating_add(extra_weight))
             }
         }
+        #[cfg(feature = "parachain")]
+        pub struct RelayChainSlotProvider;
+
+        #[cfg(feature = "parachain")]
+        impl Get<Slot> for RelayChainSlotProvider {
+            fn get() -> Slot {
+                let slot_info = pallet_async_backing::pallet::Pallet::<Runtime>::slot_info();
+                slot_info.unwrap_or_default().0
+            }
+        }
 
         #[cfg(feature = "parachain")]
         impl pallet_parachain_staking::Config for Runtime {
             type BlockAuthor = AuthorInherent;
+            type BlockTime = BlockTime;
             type CandidateBondLessDelay = CandidateBondLessDelay;
             type Currency = Balances;
             type DelegationBondLessDelay = DelegationBondLessDelay;
@@ -616,11 +699,13 @@ macro_rules! impl_config_traits {
             type OnNewRound = ();
             type RevokeDelegationDelay = RevokeDelegationDelay;
             type RewardPaymentDelay = RewardPaymentDelay;
+            type SlotDuration = SlotDuration;
+            type SlotProvider = RelayChainSlotProvider;
             type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
-        impl orml_asset_registry::Config for Runtime {
+        impl orml_asset_registry::module::Config for Runtime {
             type AssetId = CurrencyId;
             type AssetProcessor = CustomAssetProcessor;
             type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrThreeFifthsCouncil>;
@@ -674,7 +759,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl orml_xtokens::Config for Runtime {
-            type AccountIdToMultiLocation = AccountIdToMultiLocation;
+            type AccountIdToLocation = AccountIdToLocation;
             type Balance = Balance;
             type BaseXcmWeight = BaseXcmWeight;
             type CurrencyId = CurrencyId;
@@ -682,7 +767,9 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type MaxAssetsForTransfer = MaxAssetsForTransfer;
             type MinXcmFee = ParachainMinFee;
-            type MultiLocationsFilter = Everything;
+            type LocationsFilter = Everything;
+            type RateLimiter = ();
+            type RateLimiterId = ();
             type ReserveProvider = orml_traits::location::AbsoluteReserveProvider;
             type SelfLocation = SelfLocation;
             type UniversalLocation = UniversalLocation;
@@ -708,12 +795,12 @@ macro_rules! impl_config_traits {
             type ExistentialDeposit = ExistentialDeposit;
             type FreezeIdentifier = ();
             type MaxFreezes = MaxFreezes;
-            type MaxHolds = MaxHolds;
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
             type ReserveIdentifier = [u8; 8];
             type RuntimeEvent = RuntimeEvent;
             type RuntimeHoldReason = RuntimeHoldReason;
+            type RuntimeFreezeReason = RuntimeFreezeReason;
             type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
         }
 
@@ -803,16 +890,22 @@ macro_rules! impl_config_traits {
 
         impl pallet_identity::Config for Runtime {
             type BasicDeposit = BasicDeposit;
+            type ByteDeposit = IdentityByteDeposit;
             type Currency = Balances;
+            type IdentityInformation = pallet_identity::legacy::IdentityInfo<MaxAdditionalFields>;
             type RuntimeEvent = RuntimeEvent;
-            type FieldDeposit = FieldDeposit;
-            type ForceOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
-            type MaxAdditionalFields = MaxAdditionalFields;
+            type ForceOrigin = EnsureRootOrHalfCouncil;
             type MaxRegistrars = MaxRegistrars;
             type MaxSubAccounts = MaxSubAccounts;
+            type MaxSuffixLength = MaxSuffixLength;
+            type MaxUsernameLength = MaxUsernameLength;
+            type OffchainSignature = Signature;
+            type PendingUsernameExpiration = PendingUsernameExpiration;
             type RegistrarOrigin = EnsureRootOrHalfCouncil;
             type Slashed = Treasury;
             type SubAccountDeposit = SubAccountDeposit;
+            type SigningPublicKey = <Signature as sp_runtime::traits::Verify>::Signer;
+            type UsernameAuthorityOrigin = EnsureRoot<AccountId>;
             type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
         }
 
@@ -870,8 +963,12 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type Currency = Balances;
             type ManagerOrigin = EnsureRoot<AccountId>;
-            type BaseDeposit = PreimageBaseDeposit;
-            type ByteDeposit = PreimageByteDeposit;
+            type Consideration = HoldConsideration<
+                AccountId,
+                Balances,
+                PreimageHoldReason,
+                LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
+            >;
         }
 
         impl InstanceFilter<RuntimeCall> for ProxyType {
@@ -1061,30 +1158,49 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
             type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-            type OnChargeTransaction =
-                pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
+            type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<
+                Balances,
+                DealWithSubstrateFeesAndTip<Runtime, FeesTreasuryProportion>,
+            >;
             type OperationalFeeMultiplier = OperationalFeeMultiplier;
             type WeightToFee = IdentityFee<Balance>;
         }
 
+        #[cfg(feature = "runtime-benchmarks")]
+        pub struct TreasuryBenchmarkHelper;
+
+        #[cfg(feature = "runtime-benchmarks")]
+        impl pallet_treasury::ArgumentsFactory<(), AccountId> for TreasuryBenchmarkHelper {
+            fn create_asset_kind(_seed: u32) -> () {
+                ()
+            }
+
+            fn create_beneficiary(seed: [u8; 32]) -> AccountId {
+                AccountId::from(seed)
+            }
+        }
+
         impl pallet_treasury::Config for Runtime {
-            type ApproveOrigin = EnsureRootOrTwoThirdsCouncil;
+            type AssetKind = ();
+            type BalanceConverter = UnityAssetBalanceConversion;
+            type Beneficiary = AccountId;
+            type BeneficiaryLookup = IdentityLookup<AccountId>;
             type Burn = Burn;
             type BurnDestination = ();
             type Currency = Balances;
             type RuntimeEvent = RuntimeEvent;
             type MaxApprovals = MaxApprovals;
-            type OnSlash = Treasury;
             type PalletId = TreasuryPalletId;
-            type ProposalBond = ProposalBond;
-            type ProposalBondMinimum = ProposalBondMinimum;
-            type ProposalBondMaximum = ProposalBondMaximum;
+            type Paymaster = PayFromAccount<Balances, ZeitgeistTreasuryAccount>;
+            type PayoutPeriod = PayoutPeriod;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
             type SpendFunds = Bounties;
             type SpendOrigin =
                 EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxTreasurySpend>;
             type SpendPeriod = SpendPeriod;
             type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = TreasuryBenchmarkHelper;
         }
 
         impl pallet_bounties::Config for Runtime {
@@ -1099,6 +1215,7 @@ macro_rules! impl_config_traits {
             type DataDepositPerByte = DataDepositPerByte;
             type RuntimeEvent = RuntimeEvent;
             type MaximumReasonLength = MaximumReasonLength;
+            type OnSlash = Treasury;
             type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
         }
 
@@ -1110,6 +1227,7 @@ macro_rules! impl_config_traits {
         }
 
         impl pallet_vesting::Config for Runtime {
+            type BlockNumberProvider = System;
             type RuntimeEvent = RuntimeEvent;
             type Currency = Balances;
             type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
@@ -1453,10 +1571,12 @@ macro_rules! create_runtime_api {
 
                     cfg_if::cfg_if! {
                         if #[cfg(feature = "parachain")] {
+                            list_benchmark!(list, extra, cumulus_pallet_parachain_system, ParachainSystem);
                             list_benchmark!(list, extra, cumulus_pallet_xcmp_queue, XcmpQueue);
                             list_benchmark!(list, extra, pallet_author_inherent, AuthorInherent);
                             list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                             list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
+                            list_benchmark!(list, extra, pallet_message_queue, MessageQueue);
                             list_benchmark!(list, extra, pallet_parachain_staking, ParachainStaking);
                         } else {
                             list_benchmark!(list, extra, pallet_grandpa, Grandpa);
@@ -1544,10 +1664,12 @@ macro_rules! create_runtime_api {
 
                     cfg_if::cfg_if! {
                         if #[cfg(feature = "parachain")] {
+                            add_benchmark!(params, batches, cumulus_pallet_parachain_system, ParachainSystem);
                             add_benchmark!(params, batches, cumulus_pallet_xcmp_queue, XcmpQueue);
                             add_benchmark!(params, batches, pallet_author_inherent, AuthorInherent);
                             add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
+                            add_benchmark!(params, batches, pallet_message_queue, MessageQueue);
                             add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
 
                         } else {
@@ -1569,24 +1691,21 @@ macro_rules! create_runtime_api {
             }
 
             impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
-                fn query_fee_details(
-                    uxt: <Block as BlockT>::Extrinsic,
-                    len: u32,
-                ) -> pallet_transaction_payment::FeeDetails<Balance> {
-                    TransactionPayment::query_fee_details(uxt, len)
-                }
-
                 fn query_info(
                     uxt: <Block as BlockT>::Extrinsic,
                     len: u32,
                 ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
                     TransactionPayment::query_info(uxt, len)
                 }
-
+                fn query_fee_details(
+                    uxt: <Block as BlockT>::Extrinsic,
+                    len: u32,
+                ) -> pallet_transaction_payment::FeeDetails<Balance> {
+                    TransactionPayment::query_fee_details(uxt, len)
+                }
                 fn query_weight_to_fee(weight: Weight) -> Balance {
                     TransactionPayment::weight_to_fee(weight)
                 }
-
                 fn query_length_to_fee(length: u32) -> Balance {
                     TransactionPayment::length_to_fee(length)
                 }
@@ -1632,16 +1751,16 @@ macro_rules! create_runtime_api {
             }
 
             impl sp_api::Core<Block> for Runtime {
-                fn execute_block(block: Block) {
-                    Executive::execute_block(block)
-                }
-
-                fn initialize_block(header: &<Block as BlockT>::Header) {
-                    Executive::initialize_block(header)
-                }
-
                 fn version() -> RuntimeVersion {
                     VERSION
+                }
+
+                fn execute_block(block: Block) {
+                    Executive::execute_block(block);
+                }
+
+                fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode {
+                    Executive::initialize_block(header)
                 }
             }
 
@@ -1664,13 +1783,6 @@ macro_rules! create_runtime_api {
                     Executive::apply_extrinsic(extrinsic)
                 }
 
-                fn check_inherents(
-                    block: Block,
-                    data: sp_inherents::InherentData,
-                ) -> sp_inherents::CheckInherentsResult {
-                    data.check_extrinsics(&block)
-                }
-
                 fn finalize_block() -> <Block as BlockT>::Header {
                     Executive::finalize_block()
                 }
@@ -1678,16 +1790,23 @@ macro_rules! create_runtime_api {
                 fn inherent_extrinsics(data: sp_inherents::InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
                     data.create_extrinsics()
                 }
+
+                fn check_inherents(
+                    block: Block,
+                    data: sp_inherents::InherentData,
+                ) -> sp_inherents::CheckInherentsResult {
+                    data.check_extrinsics(&block)
+                }
             }
 
             #[cfg(not(feature = "parachain"))]
             impl sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId> for Runtime {
-                fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
-                    Aura::authorities().into_inner()
-                }
-
                 fn slot_duration() -> sp_consensus_aura::SlotDuration {
                     sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
+                }
+
+                fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
+                    pallet_aura::Authorities::<Runtime>::get().into_inner()
                 }
             }
 
@@ -1704,7 +1823,7 @@ macro_rules! create_runtime_api {
                 fn submit_report_equivocation_unsigned_extrinsic(
                     _equivocation_proof: sp_consensus_grandpa::EquivocationProof<
                         <Block as BlockT>::Hash,
-                        sp_api::NumberFor<Block>,
+                        sp_runtime::traits::NumberFor<Block>,
                     >,
                     _key_owner_proof: sp_consensus_grandpa::OpaqueKeyOwnershipProof,
                 ) -> Option<()> {
@@ -1729,12 +1848,14 @@ macro_rules! create_runtime_api {
             }
 
             impl sp_session::SessionKeys<Block> for Runtime {
-                fn decode_session_keys(encoded: Vec<u8>) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
-                    opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
-                }
-
                 fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
                     opaque::SessionKeys::generate(seed)
+                }
+
+                fn decode_session_keys(
+                    encoded: Vec<u8>,
+                ) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
+                    opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
                 }
             }
 
@@ -1778,6 +1899,9 @@ macro_rules! create_runtime_api {
             #[cfg(feature = "try-runtime")]
             impl frame_try_runtime::TryRuntime<Block> for Runtime {
                 fn on_runtime_upgrade(checks: UpgradeCheckSelect) -> (Weight, Weight) {
+                    // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+                    // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
+                    // right here and right now.
                     let weight = Executive::try_runtime_upgrade(checks).unwrap();
                     (weight, RuntimeBlockWeights::get().max_block)
                 }
@@ -1794,6 +1918,16 @@ macro_rules! create_runtime_api {
                 }
             }
 
+            #[cfg(feature = "parachain")]
+            impl async_backing_primitives::UnincludedSegmentApi<Block> for Runtime {
+                fn can_build_upon(
+                    included_hash: <Block as BlockT>::Hash,
+                    slot: async_backing_primitives::Slot,
+                ) -> bool {
+                    ConsensusHook::can_build_upon(included_hash, slot)
+                }
+            }
+
             $($additional_apis)*
         }
 
@@ -1801,6 +1935,10 @@ macro_rules! create_runtime_api {
         #[cfg(feature = "parachain")]
         struct CheckInherents;
 
+
+        // Parity has decided to depreciate this trait, but does not offer a satisfactory replacement,
+        // see issue: https://github.com/paritytech/polkadot-sdk/issues/2841
+        #[allow(deprecated)]
         #[cfg(feature = "parachain")]
         impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
             fn check_inherents(

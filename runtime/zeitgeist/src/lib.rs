@@ -41,7 +41,7 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter, Nothing},
+    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
 use frame_system::{EnsureRoot, EnsureWithSuccess};
@@ -52,7 +52,7 @@ use sp_version::NativeVersion;
 use zeitgeist_primitives::types::*;
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{AsEnsureOriginWithArg, Everything},
+    frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
@@ -62,10 +62,11 @@ use {
 
 use frame_support::construct_runtime;
 
-use sp_api::{impl_runtime_apis, BlockT};
+use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str,
+    traits::Block as BlockT,
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
@@ -99,8 +100,6 @@ pub struct IsCallable;
 
 impl Contains<RuntimeCall> for IsCallable {
     fn contains(runtime_call: &RuntimeCall) -> bool {
-        #[cfg(feature = "parachain")]
-        use cumulus_pallet_dmp_queue::Call::service_overweight;
         use frame_system::Call::{
             kill_prefix, kill_storage, set_code, set_code_without_checks, set_storage,
         };
@@ -135,8 +134,6 @@ impl Contains<RuntimeCall> for IsCallable {
             }
             // Membership is managed by the respective Membership instance
             RuntimeCall::Council(set_members { .. }) => false,
-            #[cfg(feature = "parachain")]
-            RuntimeCall::DmpQueue(service_overweight { .. }) => false,
             RuntimeCall::PredictionMarkets(inner_call) => match inner_call {
                 admin_move_market_to_closed { .. } => false,
                 admin_move_market_to_resolved { .. } => false,

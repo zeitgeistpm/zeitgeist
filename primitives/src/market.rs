@@ -18,7 +18,6 @@
 
 use crate::types::{Asset, OutcomeReport, ScalarPosition};
 use alloc::{vec, vec::Vec};
-use num_traits::Zero;
 use core::ops::{Range, RangeInclusive};
 use num_traits::Zero;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};

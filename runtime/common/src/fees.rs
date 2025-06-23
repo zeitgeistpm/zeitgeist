@@ -20,21 +20,57 @@
 #[macro_export]
 macro_rules! impl_fee_types {
     () => {
-        pub struct DealWithFees;
+        use frame_support::{
+            pallet_prelude::TypedGet,
+            traits::{fungible::Credit as FungibleCredit, tokens::imbalance::ResolveTo},
+        };
+        use pallet_treasury::TreasuryAccountId;
 
-        type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
-        impl OnUnbalanced<NegativeImbalance> for DealWithFees {
-            fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
-                if let Some(mut fees) = fees_then_tips.next() {
-                    if let Some(tips) = fees_then_tips.next() {
-                        tips.merge_into(&mut fees);
+        /// Deal with substrate based fees and tip. This should be used with pallet_transaction_payment.
+        pub struct DealWithSubstrateFeesAndTip<R, FeesTreasuryProportion>(
+            sp_std::marker::PhantomData<(R, FeesTreasuryProportion)>,
+        );
+        impl<R, FeesTreasuryProportion> DealWithSubstrateFeesAndTip<R, FeesTreasuryProportion>
+        where
+            R: pallet_balances::Config + pallet_treasury::Config,
+            FeesTreasuryProportion: Get<Perbill>,
+        {
+            fn deal_with_fees(amount: FungibleCredit<R::AccountId, pallet_balances::Pallet<R>>) {
+                // Balances pallet automatically burns dropped Credits by decreasing
+                // total_supply accordingly
+                let treasury_proportion = FeesTreasuryProportion::get();
+                let treasury_part = treasury_proportion.deconstruct();
+                let burn_part = Perbill::one().deconstruct() - treasury_part;
+                let (_, to_treasury) = amount.ration(burn_part, treasury_part);
+                ResolveTo::<TreasuryAccountId<R>, pallet_balances::Pallet<R>>::on_unbalanced(
+                    to_treasury,
+                );
+            }
+
+            fn deal_with_tip(amount: FungibleCredit<R::AccountId, pallet_balances::Pallet<R>>) {
+                ResolveTo::<TreasuryAccountId<R>, pallet_balances::Pallet<R>>::on_unbalanced(
+                    amount,
+                );
+            }
+        }
+
+        impl<R, FeesTreasuryProportion>
+            OnUnbalanced<FungibleCredit<R::AccountId, pallet_balances::Pallet<R>>>
+            for DealWithSubstrateFeesAndTip<R, FeesTreasuryProportion>
+        where
+            R: pallet_balances::Config + pallet_treasury::Config,
+            FeesTreasuryProportion: Get<Perbill>,
+        {
+            fn on_unbalanceds(
+                mut fees_then_tips: impl Iterator<
+                    Item = FungibleCredit<R::AccountId, pallet_balances::Pallet<R>>,
+                >,
+            ) {
+                if let Some(fees) = fees_then_tips.next() {
+                    Self::deal_with_fees(fees);
+                    if let Some(tip) = fees_then_tips.next() {
+                        Self::deal_with_tip(tip);
                     }
-                    debug_assert!(
-                        FEES_AND_TIPS_TREASURY_PERCENTAGE + FEES_AND_TIPS_BURN_PERCENTAGE == 100u32
-                    );
-                    let mut split = fees
-                        .ration(FEES_AND_TIPS_TREASURY_PERCENTAGE, FEES_AND_TIPS_BURN_PERCENTAGE);
-                    Treasury::on_unbalanced(split.0);
                 }
             }
         }
@@ -106,7 +142,7 @@ macro_rules! impl_foreign_fees {
                 /// Since the polkadot API extension assumes the same type as on the asset-hubs,
                 /// we use it too.
                 /// https://github.com/polkadot-fellows/runtimes/blob/20ac6ff4dc4c488ad08f507c14b899adc6cb4394/system-parachains/asset-hubs/asset-hub-polkadot/src/lib.rs#L767
-                pub type TxPaymentAssetId = xcm::latest::MultiLocation;
+                pub type TxPaymentAssetId = xcm::latest::Location;
 
                 pub(crate) fn convert_asset_to_currency_id(
                     value: TxPaymentAssetId,
@@ -217,8 +253,8 @@ macro_rules! impl_foreign_fees {
                     who,
                     converted_fee,
                     Precision::Exact,
-                    Preservation::Expendable,
-                    Fortitude::Force,
+                    Preservation::Protect,
+                    Fortitude::Polite,
                 );
                 result.map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
             }
@@ -425,7 +461,7 @@ macro_rules! fee_tests {
         #[cfg(feature = "parachain")]
         mod parachain {
             use super::*;
-            use orml_asset_registry::AssetMetadata;
+            use orml_asset_registry::module::AssetMetadata;
 
             #[test]
             fn correct_and_deposit_fee_dot_foreign_asset() {

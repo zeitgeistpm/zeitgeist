@@ -57,6 +57,7 @@ use substrate_prometheus_endpoint::Registry;
 use zeitgeist_primitives::types::{Block, Hash};
 
 pub type FullBackend = TFullBackend<Block>;
+// TODO: add ParachainHostFunctions to WasmExecutor like here https://paritytech.github.io/polkadot-sdk/master/polkadot_sdk_docs/guides/enable_pov_reclaim/index.html#1-add-the-host-function-to-your-node or here https://github.com/moonbeam-foundation/moonbeam/blob/1542cdb31fc121817119983726aa1c5cc551ffb4/node/service/src/lib.rs#L85C6-L85C16
 pub type FullClient<RuntimeApi, Executor> =
     TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
 pub type ParachainPartialComponents<Executor, RuntimeApi> = PartialComponents<
@@ -206,10 +207,11 @@ where
     let wasm_executor = wasm_builder.build();
     let executor = NativeElseWasmExecutor::<Executor>::new_with_wasm_executor(wasm_executor);
     let (client, backend, keystore_container, task_manager) =
-        sc_service::new_full_parts::<Block, RuntimeApi, _>(
+        sc_service::new_full_parts_record_import::<Block, RuntimeApi, _>(
             config,
             telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
             executor,
+            true,
         )?;
     let client = Arc::new(client);
     let telemetry_worker_handle = telemetry.as_ref().map(|(worker, _)| worker.handle());

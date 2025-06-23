@@ -3,6 +3,7 @@ substrate-wasm-builder = { workspace = true }
 
 [dependencies]
 frame-executive = { workspace = true }
+frame-metadata-hash-extension = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
@@ -33,6 +34,7 @@ polkadot-primitives = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }
+sp-consensus-slots = { workspace = true }
 sp-core = { workspace = true }
 sp-debug-derive = { workspace = true }
 sp-inherents = { workspace = true }
@@ -59,13 +61,17 @@ cumulus-pallet-parachain-system = { workspace = true, optional = true }
 cumulus-pallet-xcm = { workspace = true, optional = true }
 cumulus-pallet-xcmp-queue = { workspace = true, optional = true }
 cumulus-primitives-core = { workspace = true, optional = true }
+cumulus-primitives-storage-weight-reclaim = { workspace = true }
 cumulus-primitives-timestamp = { workspace = true, optional = true }
 cumulus-primitives-utility = { workspace = true, optional = true }
 parachain-info = { workspace = true, optional = true }
+parachains-common = { workspace = true, optional = true }
 
 # Parachain
 
+async-backing-primitives = { workspace = true, optional = true }
 nimbus-primitives = { workspace = true, optional = true }
+pallet-async-backing = { workspace = true, optional = true }
 pallet-author-inherent = { workspace = true, optional = true }
 pallet-author-mapping = { workspace = true, optional = true }
 pallet-author-slot-filter = { workspace = true, optional = true }
@@ -75,6 +81,7 @@ session-keys-primitives = { workspace = true, optional = true }
 # Polkadot
 
 polkadot-parachain-primitives = { workspace = true, optional = true }
+polkadot-runtime-common = { workspace = true, optional = true }
 
 # Standalone
 
@@ -143,6 +150,7 @@ parachain = [
     "cumulus-primitives-timestamp",
     "cumulus-primitives-utility",
     "parachain-info",
+    "parachains-common",
 
     # Parachain
 
@@ -152,7 +160,10 @@ parachain = [
     "pallet-author-slot-filter",
     "pallet-parachain-staking",
     "polkadot-parachain-primitives",
+    "polkadot-runtime-common",
     "session-keys-primitives",
+    "pallet-async-backing",
+    "async-backing-primitives",
 
     # XCM
 
@@ -223,7 +234,9 @@ runtime-benchmarks = [
     "zrml-orderbook/runtime-benchmarks",
 ]
 std = [
+    "async-backing-primitives?/std",
     "frame-executive/std",
+    "frame-metadata-hash-extension/std",
     "frame-support/std",
     "frame-system-rpc-runtime-api/std",
     "frame-system/std",
@@ -235,6 +248,7 @@ std = [
     "orml-tokens/std",
     "orml-traits/std",
     "pallet-asset-tx-payment/std",
+    "pallet-async-backing?/std",
     "pallet-balances/std",
     "pallet-bounties/std",
     "pallet-collective/std",
@@ -258,6 +272,7 @@ std = [
     "scale-info/std",
     "sp-api/std",
     "sp-block-builder/std",
+    "sp-consensus-slots/std",
     "sp-core/std",
     "sp-inherents/std",
     "sp-offchain/std",
@@ -280,7 +295,9 @@ std = [
     "cumulus-primitives-core?/std",
     "cumulus-primitives-timestamp?/std",
     "cumulus-primitives-utility?/std",
+    "cumulus-primitives-storage-weight-reclaim/std",
     "parachain-info?/std",
+    "parachains-common?/std",
 
     # Parachain
 
@@ -300,6 +317,7 @@ std = [
     "orml-xcm-support?/std",
     "orml-xtokens?/std",
     "pallet-xcm?/std",
+    "polkadot-runtime-common?/std",
     "xcm-builder?/std",
     "xcm-executor?/std",
     "xcm?/std",
@@ -383,6 +401,7 @@ try-runtime = [
     "zrml-orderbook/try-runtime",
 
     # Parachain
+    "pallet-async-backing?/try-runtime",
     "pallet-author-inherent?/try-runtime",
     "pallet-author-mapping?/try-runtime",
     "pallet-author-slot-filter?/try-runtime",
@@ -404,6 +423,8 @@ try-runtime = [
     # Polkadot
     # "polkadot-runtime?/try-runtime",
 ]
+# Enable the metadata hash generation in the wasm builder.
+metadata-hash = ["substrate-wasm-builder/metadata-hash"]
 # Allow to print logs details (no wasm:stripped)
 force-debug = ["sp-debug-derive/force-debug"]
 
