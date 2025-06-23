@@ -175,6 +175,24 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
             .saturating_add(T::DbWeight::get().writes(7))
             .saturating_add(Weight::from_parts(0, 53).saturating_mul(x.into()))
     }
+    fn set_inflation_distribution_config() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `88`
+        //  Estimated: `1573`
+        // Minimum execution time: 11_130 nanoseconds.
+        Weight::from_parts(11_510_000, 1573)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn mark_collators_as_inactive(_s: u32) -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `88`
+        //  Estimated: `1573`
+        // Minimum execution time: 11_130 nanoseconds.
+        Weight::from_parts(11_510_000, 1573)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
     /// Storage: `ParachainStaking::CandidateInfo` (r:1 w:1)
     /// Proof: `ParachainStaking::CandidateInfo` (`max_values`: None, `max_size`: None, mode: `Measured`)
     /// Storage: `ParachainStaking::CandidatePool` (r:1 w:1)

@@ -66,6 +66,69 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().reads(1))
             .saturating_add(T::DbWeight::get().writes(1))
     }
+    fn add_username_authority() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `32`
+        //  Estimated: `1942`
+        // Minimum execution time: 14_420 nanoseconds.
+        Weight::from_parts(15_366_038, 1942)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn remove_username_authority() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `32`
+        //  Estimated: `1942`
+        // Minimum execution time: 14_420 nanoseconds.
+        Weight::from_parts(15_366_038, 1942)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn set_username_for() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `32`
+        //  Estimated: `1942`
+        // Minimum execution time: 14_420 nanoseconds.
+        Weight::from_parts(15_366_038, 1942)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn accept_username() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `32`
+        //  Estimated: `1942`
+        // Minimum execution time: 14_420 nanoseconds.
+        Weight::from_parts(15_366_038, 1942)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn remove_expired_approval() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `32`
+        //  Estimated: `1942`
+        // Minimum execution time: 14_420 nanoseconds.
+        Weight::from_parts(15_366_038, 1942)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn set_primary_username() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `32`
+        //  Estimated: `1942`
+        // Minimum execution time: 14_420 nanoseconds.
+        Weight::from_parts(15_366_038, 1942)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
+    fn remove_dangling_username() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `32`
+        //  Estimated: `1942`
+        // Minimum execution time: 14_420 nanoseconds.
+        Weight::from_parts(15_366_038, 1942)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
     /// Storage: `Identity::IdentityOf` (r:1 w:1)
     /// Proof: `Identity::IdentityOf` (`max_values`: None, `max_size`: Some(4872), added: 7347, mode: `MaxEncodedLen`)
     /// The range of component `r` is `[1, 8]`.
