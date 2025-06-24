@@ -299,6 +299,7 @@ std = [
     "cumulus-primitives-storage-weight-reclaim/std",
     "cumulus-primitives-timestamp?/std",
     "cumulus-primitives-utility?/std",
+    "cumulus-primitives-storage-weight-reclaim/std",
     "parachain-info?/std",
     "parachains-common?/std",
 

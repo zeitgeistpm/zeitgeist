@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -129,17 +129,14 @@ impl<T: frame_system::Config> frame_system::weights::WeightInfo for WeightInfo<T
     /// Storage: `Skipped::Metadata` (r:0 w:0)
     /// Proof: `Skipped::Metadata` (`max_values`: None, `max_size`: None, mode: `Measured`)
     /// The range of component `p` is `[0, 1000]`.
-    fn kill_prefix(p: u32) -> Weight {
+    fn kill_prefix(_p: u32) -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `49 + p * (69 ±0)`
-        //  Estimated: `52 + p * (70 ±0)`
-        // Minimum execution time: 2_950 nanoseconds.
-        Weight::from_parts(3_010_000, 52)
-            // Standard Error: 825
-            .saturating_add(Weight::from_parts(872_662, 0).saturating_mul(p.into()))
-            .saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(p.into())))
-            .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(p.into())))
-            .saturating_add(Weight::from_parts(0, 70).saturating_mul(p.into()))
+        //  Measured:  `6 + p * (69 ±0)`
+        //  Estimated: `69742`
+        // Minimum execution time: 6_990 nanoseconds.
+        Weight::from_parts(839_700_000, 69742)
+            .saturating_add(T::DbWeight::get().reads(1000))
+            .saturating_add(T::DbWeight::get().writes(1000))
     }
     /// Storage: `System::AuthorizedUpgrade` (r:0 w:1)
     /// Proof: `System::AuthorizedUpgrade` (`max_values`: Some(1), `max_size`: Some(33), added: 528, mode: `MaxEncodedLen`)
@@ -147,8 +144,8 @@ impl<T: frame_system::Config> frame_system::weights::WeightInfo for WeightInfo<T
         // Proof Size summary in bytes:
         //  Measured:  `0`
         //  Estimated: `0`
-        // Minimum execution time: 5_330 nanoseconds.
-        Weight::from_parts(5_660_000, 0).saturating_add(T::DbWeight::get().writes(1))
+        // Minimum execution time: 10_710 nanoseconds.
+        Weight::from_parts(10_710_000, 0).saturating_add(T::DbWeight::get().writes(1))
     }
     /// Storage: `System::AuthorizedUpgrade` (r:1 w:1)
     /// Proof: `System::AuthorizedUpgrade` (`max_values`: Some(1), `max_size`: Some(33), added: 528, mode: `MaxEncodedLen`)
@@ -158,10 +155,10 @@ impl<T: frame_system::Config> frame_system::weights::WeightInfo for WeightInfo<T
     /// Proof: UNKNOWN KEY `0x3a636f6465` (r:0 w:1)
     fn apply_authorized_upgrade() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `22`
-        //  Estimated: `1518`
-        // Minimum execution time: 127_971_670 nanoseconds.
-        Weight::from_parts(133_329_658_000, 1518)
+        //  Measured:  `49 + p * (69 ±0)`
+        //  Estimated: `52 + p * (70 ±0)`
+        // Minimum execution time: 2_950 nanoseconds.
+        Weight::from_parts(3_010_000, 52)
             .saturating_add(T::DbWeight::get().reads(2))
             .saturating_add(T::DbWeight::get().writes(3))
     }

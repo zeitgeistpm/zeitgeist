@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -58,6 +58,7 @@ impl<T: frame_system::Config> orml_currencies::WeightInfo for WeightInfo<T> {
     fn transfer_non_native_currency() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1656`
+        //  Measured:  `1656`
         //  Estimated: `6214`
         // Minimum execution time: 31_350 nanoseconds.
         Weight::from_parts(32_080_000, 6214)
@@ -68,6 +69,7 @@ impl<T: frame_system::Config> orml_currencies::WeightInfo for WeightInfo<T> {
     /// Proof: `System::Account` (`max_values`: None, `max_size`: Some(132), added: 2607, mode: `MaxEncodedLen`)
     fn transfer_native_currency() -> Weight {
         // Proof Size summary in bytes:
+        //  Measured:  `1511`
         //  Measured:  `1511`
         //  Estimated: `3597`
         // Minimum execution time: 43_440 nanoseconds.
@@ -84,6 +86,7 @@ impl<T: frame_system::Config> orml_currencies::WeightInfo for WeightInfo<T> {
     fn update_balance_non_native_currency() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1327`
+        //  Measured:  `1327`
         //  Estimated: `3602`
         // Minimum execution time: 21_190 nanoseconds.
         Weight::from_parts(21_650_000, 3602)
@@ -95,6 +98,7 @@ impl<T: frame_system::Config> orml_currencies::WeightInfo for WeightInfo<T> {
     fn update_balance_native_currency_creating() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1367`
+        //  Measured:  `1367`
         //  Estimated: `3597`
         // Minimum execution time: 23_350 nanoseconds.
         Weight::from_parts(23_900_000, 3597)
@@ -105,6 +109,7 @@ impl<T: frame_system::Config> orml_currencies::WeightInfo for WeightInfo<T> {
     /// Proof: `System::Account` (`max_values`: None, `max_size`: Some(132), added: 2607, mode: `MaxEncodedLen`)
     fn update_balance_native_currency_killing() -> Weight {
         // Proof Size summary in bytes:
+        //  Measured:  `1459`
         //  Measured:  `1459`
         //  Estimated: `3597`
         // Minimum execution time: 24_600 nanoseconds.
