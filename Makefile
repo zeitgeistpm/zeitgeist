@@ -23,6 +23,7 @@ check-dummy:
 	--runtime=${RUNTIME_PATH} \
 	on-runtime-upgrade \
 	--checks=all \
+	--blocktime=6000 \
 	live \
 	--uri=${TRYRUNTIME_URL}
 

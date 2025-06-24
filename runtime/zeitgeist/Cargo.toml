@@ -187,6 +187,7 @@ parachain = [
 ]
 runtime-benchmarks = [
     "cumulus-pallet-parachain-system?/runtime-benchmarks",
+    "cumulus-pallet-dmp-queue?/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue?/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
@@ -436,7 +437,7 @@ metadata-hash = ["substrate-wasm-builder/metadata-hash"]
 disable-genesis-builder = []
 # Allow to print logs details (no wasm:stripped)
 force-debug = ["sp-debug-derive/force-debug"]
-# This is necessary to benchmark the pallet message queue
+# This is necessary to benchmark the pallet message queue, but will cause `cargo test --all-features` to fail
 use-noop-message-processor = []
 
 [package]

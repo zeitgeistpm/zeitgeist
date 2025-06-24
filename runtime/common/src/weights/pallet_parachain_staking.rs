@@ -810,4 +810,15 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
             .saturating_add(T::DbWeight::get().reads(103))
             .saturating_add(T::DbWeight::get().writes(51))
     }
+    /// Storage: `ParachainStaking::AtStake` (r:1 w:1)
+    /// Proof: `ParachainStaking::AtStake` (`max_values`: None, `max_size`: None, mode: `Measured`)
+    fn migrate_old_collator_snapshot() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `296`
+        //  Estimated: `3761`
+        // Minimum execution time: 14_580 nanoseconds.
+        Weight::from_parts(15_130_000, 3761)
+            .saturating_add(T::DbWeight::get().reads(1))
+            .saturating_add(T::DbWeight::get().writes(1))
+    }
 }

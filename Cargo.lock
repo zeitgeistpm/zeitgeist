@@ -1808,6 +1808,7 @@ name = "common-runtime"
 version = "0.6.0"
 dependencies = [
  "cfg-if",
+ "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-storage-weight-reclaim",
@@ -2428,7 +2429,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-dmp-queue"
 version = "0.17.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
+source = "git+https://github.com/zeitgeistpm/polkadot-sdk?branch=polkadot-stable2409-cumulus-pallet-dmp-queue-deprecation-fix#ad89d589463233def0f48ebb07f03383b66ff599"
 dependencies = [
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -8185,7 +8186,7 @@ dependencies = [
 [[package]]
 name = "pallet-parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=zeitgeist-polkadot-stable2409#ee072f2e2a818e7ee95f8707c36b98b811b65f56"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=zeitgeist-polkadot-stable2409-added-prev-migrations-fix#fd299fe79a78af94db9ac31fcc296db89fae8e62"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

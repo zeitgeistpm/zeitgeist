@@ -120,7 +120,7 @@ hydra-dx-math = { git = "https://github.com/galacticcouncil/HydraDX-node", packa
 moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "zeitgeist-polkadot-stable2409" }
 
 # Moonbeam (wasm)
-pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "zeitgeist-polkadot-stable2409", default-features = false }
+pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "zeitgeist-polkadot-stable2409-added-prev-migrations-fix", default-features = false }
 
 # ORML (wasm)
 orml-asset-registry = { git = "https://github.com/zeitgeistpm/open-runtime-module-library", branch = "zeitgeist-polkadot-stable2409-asset-registry-location-fix", default-features = false }
@@ -384,9 +384,11 @@ sp-std = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-s
 
 [patch."https://github.com/paritytech/polkadot-sdk"]
 pallet-asset-tx-payment = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-asset-tx-payment-asset-id-fix" }
-# Updated `ParachainInherentDataProvider::create_at` parameters to include additional relay keys
+# Updated `ParachainInherentDataProvider::create_at` parameters to include additional relay keys https://github.com/moonbeam-foundation/polkadot-sdk/compare/moonbeam-polkadot-stable2409...zeitgeistpm:polkadot-sdk:polkadot-stable2409-moonbeam-lazy-migrations
 cumulus-client-parachain-inherent = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-moonbeam-lazy-migrations" }
 # Fix Found variants that have duplicate indexes. Both `Consensus` and `RemoteCallResponse` have the index `6`. Use different indexes for each variant.
 sc-network = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "zeitgeist-polkadot-stable2409-sc-network-fix" }
 # Benchmarks failed, because of Token(BelowMinimum) for treasury spend, that's why one should at least transfer the existential deposit 
 pallet-treasury = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-treasury-benchmark-fix" }
+# Remove deprecation warnings for clippy
+cumulus-pallet-dmp-queue = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-cumulus-pallet-dmp-queue-deprecation-fix" }
