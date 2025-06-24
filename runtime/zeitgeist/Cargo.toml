@@ -62,7 +62,6 @@ cumulus-pallet-parachain-system = { workspace = true, optional = true }
 cumulus-pallet-xcm = { workspace = true, optional = true }
 cumulus-pallet-xcmp-queue = { workspace = true, optional = true }
 cumulus-primitives-core = { workspace = true, optional = true }
-cumulus-primitives-storage-weight-reclaim = { workspace = true }
 cumulus-primitives-timestamp = { workspace = true, optional = true }
 cumulus-primitives-utility = { workspace = true, optional = true }
 parachain-info = { workspace = true, optional = true }
@@ -294,7 +293,6 @@ std = [
     "cumulus-pallet-xcm?/std",
     "cumulus-pallet-xcmp-queue?/std",
     "cumulus-primitives-core?/std",
-    "cumulus-primitives-storage-weight-reclaim/std",
     "cumulus-primitives-timestamp?/std",
     "cumulus-primitives-utility?/std",
     "cumulus-primitives-storage-weight-reclaim/std",
