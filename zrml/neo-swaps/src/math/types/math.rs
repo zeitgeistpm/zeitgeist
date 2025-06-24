@@ -132,6 +132,7 @@ mod detail {
     use crate::math::types::common::{from_fixed, protected_exp, to_fixed};
 
     /// Calculate b * ln( e^(x/b) − 1 + e^(−r_i/b) ) + r_i − x.
+    #[allow(dead_code)] // is actually used above
     pub(super) fn calculate_swap_amount_out_for_buy(
         reserve: u128,
         amount_in: u128,
@@ -146,6 +147,7 @@ mod detail {
     }
 
     /// Calculate –1 * b * ln( e^(-x/b) − 1 + e^(r_i/b) ) + r_i.
+    #[allow(dead_code)] // is actually used above
     pub(super) fn calculate_swap_amount_out_for_sell(
         reserve: u128,
         amount_in: u128,

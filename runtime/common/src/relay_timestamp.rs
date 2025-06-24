@@ -1,6 +1,5 @@
 // Copyright 2025 Forecasting Technologies LTD.
 // Copyright 2019-2025 PureStake Inc.
-
 // This file is part of Zeitgeist.
 //
 // Zeitgeist is free software: you can redistribute it and/or modify it
@@ -17,8 +16,6 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 //! A way to get a relyable timestamp
-
-#![cfg(feature = "parachain")]
 
 use cumulus_pallet_parachain_system::{
     consensus_hook::UnincludedSegmentCapacity,

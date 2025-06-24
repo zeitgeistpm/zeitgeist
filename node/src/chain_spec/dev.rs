@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -16,43 +16,32 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "with-battery-station-runtime")]
-
 use super::{
-    battery_station::BatteryStationChainSpec, generate_generic_genesis_function,
-    get_account_id_from_seed, get_from_seed, token_properties, AdditionalChainSpec,
-    EndowedAccountWithBalance,
+    battery_station::BatteryStationChainSpec, generate_generic_genesis_function, token_properties,
+    AdditionalChainSpec, EndowedAccountWithBalance,
 };
 #[cfg(feature = "parachain")]
-use battery_station_runtime::{
-    parachain_params::{
-        DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
-    },
-    EligibilityValue, PolkadotXcmConfig,
-};
+use battery_station_runtime::{EligibilityValue, PolkadotXcmConfig};
 use sc_service::ChainType;
-use sp_core::sr25519;
-use zeitgeist_primitives::types::Balance;
-#[cfg(feature = "parachain")]
-use {
-    super::battery_station::inflation_config,
-    sp_runtime::Perbill,
-    zeitgeist_primitives::constants::{
-        ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
-        BASE,
-    },
-};
+use sp_core::{sr25519, Pair, Public};
+use sp_runtime::traits::{IdentifyAccount, Verify};
+use zeitgeist_primitives::types::{AccountId, Signature};
 
-const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
+#[allow(dead_code)] // used in macros
+type AccountPublic = <Signature as Verify>::Signer;
 
-#[cfg(not(feature = "parachain"))]
-fn authority_keys_from_seed(
-    s: &str,
-) -> (sp_consensus_aura::sr25519::AuthorityId, sp_consensus_grandpa::AuthorityId) {
-    (
-        get_from_seed::<sp_consensus_aura::sr25519::AuthorityId>(s),
-        get_from_seed::<sp_consensus_grandpa::AuthorityId>(s),
-    )
+#[allow(dead_code)] // used in macros
+fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
+where
+    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+{
+    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+}
+
+fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+    TPublic::Pair::from_string(&format!("//{}", seed), None)
+        .expect("static values are valid; qed")
+        .public()
 }
 
 generate_generic_genesis_function! {
@@ -60,51 +49,6 @@ generate_generic_genesis_function! {
     sudo: battery_station_runtime::SudoConfig {
         key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
     },
-}
-
-fn get_genesis_config() -> serde_json::Value {
-    serde_json::to_value(&generic_genesis(
-        #[cfg(feature = "parachain")]
-        AdditionalChainSpec {
-            blocks_per_round: DefaultBlocksPerRound::get(),
-            candidates: vec![(
-                get_account_id_from_seed::<sr25519::Public>("Alice"),
-                get_from_seed::<nimbus_primitives::NimbusId>("Alice"),
-                super::battery_station::DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
-            )],
-            collator_commission: DefaultCollatorCommission::get(),
-            inflation_info: inflation_config(
-                STAKING_PTD * Perbill::from_percent(40),
-                STAKING_PTD * Perbill::from_percent(70),
-                STAKING_PTD,
-                TOTAL_INITIAL_ZTG * BASE,
-            ),
-            nominations: vec![],
-            parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
-            parachain_id: crate::BATTERY_STATION_PARACHAIN_ID.into(),
-            num_selected_candidates: 8,
-        },
-        #[cfg(not(feature = "parachain"))]
-        AdditionalChainSpec { initial_authorities: vec![authority_keys_from_seed("Alice")] },
-        vec![
-            get_account_id_from_seed::<sr25519::Public>("Alice"),
-            get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Bob"),
-            get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Charlie"),
-            get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Dave"),
-            get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Eve"),
-            get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-            get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-            get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-        ]
-        .into_iter()
-        .map(|acc| EndowedAccountWithBalance(acc, INITIAL_BALANCE))
-        .collect(),
-    ))
-    .expect("Could not generate JSON for battery station staging genesis.")
 }
 
 // Dev currently uses battery station runtime for the following reasons:

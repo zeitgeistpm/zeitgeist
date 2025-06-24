@@ -500,10 +500,10 @@ macro_rules! impl_config_traits {
         #[cfg(feature = "parachain")]
         impl pallet_message_queue::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
-            #[cfg(feature = "runtime-benchmarks")]
+            #[cfg(feature = "use-noop-message-processor")]
             type MessageProcessor =
                 pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
-            #[cfg(not(feature = "runtime-benchmarks"))]
+            #[cfg(not(feature = "use-noop-message-processor"))]
             type MessageProcessor = xcm_builder::ProcessXcmMessage<
                 AggregateMessageOrigin,
                 xcm_executor::XcmExecutor<XcmConfig>,
@@ -1177,8 +1177,8 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "runtime-benchmarks")]
         impl pallet_treasury::ArgumentsFactory<(), AccountId> for TreasuryBenchmarkHelper {
-            fn create_asset_kind(_seed: u32) -> () {
-                ()
+            fn create_asset_kind(_seed: u32) {
+                // No-op
             }
 
             fn create_beneficiary(seed: [u8; 32]) -> AccountId {

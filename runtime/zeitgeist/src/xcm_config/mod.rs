@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022, 2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -14,8 +14,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
-
-#![cfg(feature = "parachain")]
 
 pub mod asset_registry;
 pub mod config;

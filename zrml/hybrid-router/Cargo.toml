@@ -20,8 +20,8 @@ pallet-timestamp = { workspace = true, optional = true }
 pallet-treasury = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
-sp-io = { workspace = true, optional = true }
 sp-core = { workspace = true, optional = true }
+sp-io = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
 zrml-authorized = { workspace = true, optional = true }
@@ -75,6 +75,7 @@ runtime-benchmarks = [
     "pallet-xcm/runtime-benchmarks",
     "zrml-combinatorial-tokens/runtime-benchmarks",
     "zrml-prediction-markets/runtime-benchmarks",
+    "orml-asset-registry?/runtime-benchmarks",
 ]
 std = [
     "frame-benchmarking?/std",

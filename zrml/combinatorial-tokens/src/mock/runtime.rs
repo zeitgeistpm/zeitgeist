@@ -33,12 +33,19 @@ use zeitgeist_primitives::{
         AccountIdTest, Amount, Balance, BasicCurrencyAdapter, CurrencyId, Hash, MarketId, Moment,
     },
 };
+#[cfg(feature = "parachain")]
+use {
+    frame_system::EnsureRoot, orml_traits::asset_registry::AssetProcessor,
+    sp_runtime::DispatchError, zeitgeist_primitives::types::CustomMetadata,
+};
 
 #[cfg(feature = "runtime-benchmarks")]
 use crate::mock::types::BenchmarkHelper;
 
 construct_runtime! {
     pub enum Runtime {
+        #[cfg(feature = "parachain")]
+        AssetRegistry: orml_asset_registry::module,
         CombinatorialTokens: zrml_combinatorial_tokens,
         Balances: pallet_balances,
         Currencies: orml_currencies,
@@ -143,3 +150,32 @@ impl orml_tokens::Config for Runtime {
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
+
+cfg_if::cfg_if!(
+    if #[cfg(feature = "parachain")] {
+        pub type AssetMetadata = orml_traits::asset_registry::AssetMetadata<
+            Balance,
+            CustomMetadata,
+            ConstU32<1024>
+        >;
+        pub struct NoopAssetProcessor {}
+
+        impl AssetProcessor<CurrencyId, AssetMetadata> for NoopAssetProcessor {
+            fn pre_register(id: Option<CurrencyId>, asset_metadata: AssetMetadata)
+             -> Result<(CurrencyId, AssetMetadata), DispatchError> {
+                Ok((id.unwrap(), asset_metadata))
+            }
+        }
+
+        impl orml_asset_registry::module::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            type CustomMetadata = CustomMetadata;
+            type AssetId = CurrencyId;
+            type AuthorityOrigin = EnsureRoot<AccountIdTest>;
+            type AssetProcessor = NoopAssetProcessor;
+            type Balance = Balance;
+            type StringLimit = ConstU32<1024>;
+            type WeightInfo = ();
+        }
+    }
+);
