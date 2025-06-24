@@ -58,6 +58,7 @@ impl<T: frame_system::Config> orml_tokens::WeightInfo for WeightInfo<T> {
     fn transfer() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1656`
+        //  Measured:  `1656`
         //  Estimated: `6214`
         // Minimum execution time: 31_430 nanoseconds.
         Weight::from_parts(31_970_000, 6214)
@@ -70,6 +71,7 @@ impl<T: frame_system::Config> orml_tokens::WeightInfo for WeightInfo<T> {
     /// Proof: `System::Account` (`max_values`: None, `max_size`: Some(132), added: 2607, mode: `MaxEncodedLen`)
     fn transfer_all() -> Weight {
         // Proof Size summary in bytes:
+        //  Measured:  `1656`
         //  Measured:  `1656`
         //  Estimated: `6214`
         // Minimum execution time: 33_470 nanoseconds.
@@ -84,6 +86,7 @@ impl<T: frame_system::Config> orml_tokens::WeightInfo for WeightInfo<T> {
     fn transfer_keep_alive() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `1512`
+        //  Measured:  `1512`
         //  Estimated: `6214`
         // Minimum execution time: 25_480 nanoseconds.
         Weight::from_parts(25_950_000, 6214)
@@ -96,6 +99,7 @@ impl<T: frame_system::Config> orml_tokens::WeightInfo for WeightInfo<T> {
     /// Proof: `System::Account` (`max_values`: None, `max_size`: Some(132), added: 2607, mode: `MaxEncodedLen`)
     fn force_transfer() -> Weight {
         // Proof Size summary in bytes:
+        //  Measured:  `1656`
         //  Measured:  `1656`
         //  Estimated: `6214`
         // Minimum execution time: 28_820 nanoseconds.
@@ -111,6 +115,7 @@ impl<T: frame_system::Config> orml_tokens::WeightInfo for WeightInfo<T> {
     /// Proof: `System::Account` (`max_values`: None, `max_size`: Some(132), added: 2607, mode: `MaxEncodedLen`)
     fn set_balance() -> Weight {
         // Proof Size summary in bytes:
+        //  Measured:  `1327`
         //  Measured:  `1327`
         //  Estimated: `3602`
         // Minimum execution time: 20_660 nanoseconds.
