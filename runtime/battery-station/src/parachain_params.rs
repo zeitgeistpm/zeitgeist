@@ -59,7 +59,7 @@ parameter_types! {
 
     // Staking
     /// Average time beetween 2 blocks in milliseconds
-    pub const BlockTime: u64 = 6_000;
+    pub const BlockTime: u64 = 12_000;
     /// Rounds before the candidate bond increase/decrease can be executed
     pub const CandidateBondLessDelay: u32 = 2;
     /// Default fixed percent a collator takes off the top of due rewards
@@ -93,7 +93,7 @@ parameter_types! {
     /// Minimum collators selected per round, default at genesis and minimum forever after
     pub const MinSelectedCandidates: u32 = 8;
     /// Slot duration in milliseconds
-    pub const SlotDuration: u64 = 6_000;
+    pub const SlotDuration: u64 = 12_000;
     /// Rounds before the delegator revocation can be executed
     pub const RevokeDelegationDelay: u32 = 2;
     /// Rounds before the reward is paid
