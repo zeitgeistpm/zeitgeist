@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -40,6 +40,10 @@ use zeitgeist_primitives::{
 parameter_types! {
     // Asset registry
     pub const AssetRegistryStringLimit: u32 = 1024;
+
+    // Async backing
+    pub const AllowMultipleBlocksPerSlot: bool = true;
+    pub const ExpectedBlockTime: u64 = 6_000;
 
     // Author-Mapping
     /// The amount that should be taken as a security deposit when registering a NimbusId

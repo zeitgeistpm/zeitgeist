@@ -48,7 +48,7 @@ bob: reports block height - finalised block is lower than 10 within 60 seconds
 bob: parachain 2101 is registered within 80 seconds
 
 alice: is up
-alice: log line contains regex "Zeitgeist Parachain.*best: #1" within 100 seconds
+alice: log line contains regex "Zeitgeist Parachain.*best: #2" within 100 seconds
 alice: log line contains regex "Zeitgeist Parachain.*finalized #[1-9]+" within 120 seconds
 
 alice: ts-script ./0001-balance-transfer.ts return is equal to 1 within 200 seconds

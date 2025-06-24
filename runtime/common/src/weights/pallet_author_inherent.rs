@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -66,8 +66,11 @@ impl<T: frame_system::Config> pallet_author_inherent::weights::WeightInfo for We
     /// Proof: `RandomnessCollectiveFlip::RandomMaterial` (`max_values`: Some(1), `max_size`: Some(2594), added: 3089, mode: `MaxEncodedLen`)
     /// Storage: `AuthorInherent::InherentIncluded` (r:0 w:1)
     /// Proof: `AuthorInherent::InherentIncluded` (`max_values`: Some(1), `max_size`: Some(1), added: 496, mode: `MaxEncodedLen`)
+    /// Storage: `AuthorInherent::InherentIncluded` (r:0 w:1)
+    /// Proof: `AuthorInherent::InherentIncluded` (`max_values`: Some(1), `max_size`: Some(1), added: 496, mode: `MaxEncodedLen`)
     fn kick_off_authorship_validation() -> Weight {
         // Proof Size summary in bytes:
+        //  Measured:  `507`
         //  Measured:  `507`
         //  Estimated: `4079`
         // Minimum execution time: 12_670 nanoseconds.
