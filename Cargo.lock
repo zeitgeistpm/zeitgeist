@@ -1826,6 +1826,7 @@ dependencies = [
  "pallet-identity",
  "pallet-insecure-randomness-collective-flip",
  "pallet-membership",
+ "pallet-message-queue",
  "pallet-multisig",
  "pallet-parachain-staking",
  "pallet-preimage",
