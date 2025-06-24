@@ -455,7 +455,6 @@ macro_rules! impl_config_traits {
             type WeightInfo = weights::cumulus_pallet_dmp_queue::WeightInfo<Runtime>;
         }
 
-
         // Configure Pallets
         #[cfg(feature = "parachain")]
         impl cumulus_pallet_parachain_system::Config for Runtime {
