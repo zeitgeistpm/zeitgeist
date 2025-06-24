@@ -1,7 +1,8 @@
 endpoint: wss://bsr.zeitgeist.pm
 mock-signature-host: true
 db: ./tmp/bs_db_mba.sqlite
-# wasm-override: battery-station-runtime.compact.compressed.wasm
+runtime-log-level: 5
+# wasm-override: battery_station_runtime.compact.compressed.wasm
 
 import-storage:
     Sudo:
@@ -27,3 +28,5 @@ import-storage:
     AuthorFilter:
         EligibleRatio: 100
         EligibleCount: 100
+    PolkadotXcm:
+        SafeXcmVersion: 3
