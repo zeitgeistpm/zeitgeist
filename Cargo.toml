@@ -215,6 +215,7 @@ sp-consensus-grandpa = { git = "https://github.com/paritytech/polkadot-sdk", tag
 sp-consensus-slots = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 sp-debug-derive = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
+sp-genesis-builder = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 sp-inherents = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 sp-offchain = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
@@ -228,7 +229,6 @@ sp-version = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkad
 polkadot-cli = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 polkadot-emulated-chain = { git = "https://github.com/zeitgeistpm/runtimes", branch = "zeitgeist-polkadot-stable2409-emulated-chain-fix" }
 polkadot-service = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
-polkadot-test-service = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 rococo-emulated-chain = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 xcm-emulator = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409" }
 
@@ -387,3 +387,5 @@ pallet-asset-tx-payment = { git = "https://github.com/zeitgeistpm/polkadot-sdk",
 cumulus-client-parachain-inherent = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-moonbeam-lazy-migrations" }
 # Fix Found variants that have duplicate indexes. Both `Consensus` and `RemoteCallResponse` have the index `6`. Use different indexes for each variant.
 sc-network = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "zeitgeist-polkadot-stable2409-sc-network-fix" }
+# Benchmarks failed, because of Token(BelowMinimum) for treasury spend, that's why one should at least transfer the existential deposit 
+pallet-treasury = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-treasury-benchmark-fix" }

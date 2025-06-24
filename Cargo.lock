@@ -993,6 +993,7 @@ dependencies = [
  "polkadot-runtime-parachains",
  "rococo-emulated-chain",
  "scale-info",
+ "serde_json",
  "session-keys-primitives",
  "sp-api",
  "sp-authority-discovery",
@@ -1004,6 +1005,7 @@ dependencies = [
  "sp-consensus-slots",
  "sp-core",
  "sp-debug-derive",
+ "sp-genesis-builder",
  "sp-inherents",
  "sp-io",
  "sp-offchain",
@@ -1824,6 +1826,7 @@ dependencies = [
  "pallet-identity",
  "pallet-insecure-randomness-collective-flip",
  "pallet-membership",
+ "pallet-message-queue",
  "pallet-multisig",
  "pallet-parachain-staking",
  "pallet-preimage",
@@ -1835,6 +1838,7 @@ dependencies = [
  "pallet-treasury",
  "pallet-utility",
  "pallet-vesting",
+ "serde_json",
  "zeitgeist-primitives",
 ]
 
@@ -8544,13 +8548,14 @@ dependencies = [
 [[package]]
 name = "pallet-treasury"
 version = "37.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
+source = "git+https://github.com/zeitgeistpm/polkadot-sdk?branch=polkadot-stable2409-treasury-benchmark-fix#aef56c98bb23eba121e4be0aa8173e71e14d0a77"
 dependencies = [
  "docify",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
+ "log",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
@@ -17015,6 +17020,7 @@ dependencies = [
  "sp-consensus-aura",
  "sp-consensus-grandpa",
  "sp-core",
+ "sp-genesis-builder",
  "sp-inherents",
  "sp-io",
  "sp-keyring",
@@ -17131,6 +17137,7 @@ dependencies = [
  "polkadot-runtime-common",
  "polkadot-runtime-parachains",
  "scale-info",
+ "serde_json",
  "session-keys-primitives",
  "sp-api",
  "sp-authority-discovery",
@@ -17141,6 +17148,7 @@ dependencies = [
  "sp-consensus-slots",
  "sp-core",
  "sp-debug-derive",
+ "sp-genesis-builder",
  "sp-inherents",
  "sp-io",
  "sp-offchain",

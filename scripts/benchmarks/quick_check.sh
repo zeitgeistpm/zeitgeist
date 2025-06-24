@@ -24,7 +24,6 @@ export ZEITGEIST_PALLETS_RUNS=0
 export PROFILE=release
 export PROFILE_DIR=release
 export ADDITIONAL_PARAMS=--detailed-log-output
-export EXECUTION=native
 # force-debug for no <wasm::stripped> output
 export ADDITIONAL_FEATURES="force-debug"
 
