@@ -151,7 +151,6 @@ macro_rules! decl_common_types {
             // https://docs.rs/pallet-asset-tx-payment/latest/src/pallet_asset_tx_payment/lib.rs.html#32-34
             pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
             frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
-            cumulus_primitives_storage_weight_reclaim::StorageWeightReclaim<Runtime>,
         );
         pub type EventRecord = frame_system::EventRecord<
             <Runtime as frame_system::Config>::RuntimeEvent,
@@ -454,7 +453,6 @@ macro_rules! impl_config_traits {
             type DmpSink = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
             type WeightInfo = weights::cumulus_pallet_dmp_queue::WeightInfo<Runtime>;
         }
-
 
         // Configure Pallets
         #[cfg(feature = "parachain")]

@@ -1,7 +1,8 @@
 endpoint: wss://zeitgeist.api.onfinality.io/public-ws
 mock-signature-host: true
 db: ./tmp/ztg_db_mba.sqlite
-# wasm-override: zeitgeist-runtime.compact.compressed.wasm
+runtime-log-level: 5
+# wasm-override: zeitgeist_runtime.compact.compressed.wasm
 
 import-storage:
     System:
@@ -25,3 +26,5 @@ import-storage:
     AuthorFilter:
         EligibleRatio: 100
         EligibleCount: 100
+    PolkadotXcm:
+        SafeXcmVersion: 3
