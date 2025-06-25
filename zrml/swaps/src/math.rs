@@ -127,7 +127,7 @@ pub fn calc_in_given_out(
 /// tokens of a single asset.
 ///
 /// See _Single-Asset Deposit/Withdrawal_ of Martinelli-Mushegian: Balancer Whitepaper v2019-09-19
-/// (<https://balancer.fi/whitepaper.pdf>) for details.
+/// (<https://docs.balancer.fi/whitepaper.pdf>) for details.
 ///
 /// * `asset_balance_in` - The pool balance of the ingoing asset
 /// * `asset_weight_in` - The weight of the ingoing asset
@@ -166,7 +166,7 @@ pub fn calc_pool_out_given_single_in(
 /// specified amount of pool tokens.
 ///
 /// See _Single-Asset Deposit/Withdrawal_ of Martinelli-Mushegian: Balancer Whitepaper v2019-09-19
-/// (<https://balancer.fi/whitepaper.pdf>) for details.
+/// (<https://docs.balancer.fi/whitepaper.pdf>) for details.
 ///
 /// * `asset_balance_in` - The pool balance of the ingoing asset
 /// * `asset_weight_in` - The weight of the ingoing asset
@@ -203,7 +203,7 @@ pub fn calc_single_in_given_pool_out(
 /// pool tokens.
 ///
 /// See _Single-Asset Deposit/Withdrawal_ of Martinelli-Mushegian: Balancer Whitepaper v2019-09-19
-/// (<https://balancer.fi/whitepaper.pdf>) for details.
+/// (<https://docs.balancer.fi/whitepaper.pdf>) for details.
 ///
 /// * `asset_balance_in` - The pool balance of the ingoing asset
 /// * `asset_weight_in` - The weight of the ingoing asset
@@ -243,7 +243,7 @@ pub fn calc_single_out_given_pool_in(
 /// Calculate the required amount of pool tokens to exit the pool with to receive the specified number of tokens of a single asset.
 ///
 /// See _Single-Asset Deposit/Withdrawal_ of Martinelli-Mushegian: Balancer Whitepaper v2019-09-19
-/// (<https://balancer.fi/whitepaper.pdf>) for details.
+/// (<https://docs.balancer.fi/whitepaper.pdf>) for details.
 ///
 /// * `asset_balance_in` - The pool balance of the ingoing asset
 /// * `asset_weight_in` - The weight of the ingoing asset
