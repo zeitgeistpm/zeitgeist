@@ -123,7 +123,7 @@ export async function canSendXcmTransfer(
     .createType("AccountId32", bob.address)
     .toHex();
   const destination = {
-    V4: {
+    V3: {
       parents: 1,
       interior: {
         X2: [
