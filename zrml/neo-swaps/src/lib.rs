@@ -1259,7 +1259,8 @@ mod pallet {
                 liquidity_parameter >= MIN_LIQUIDITY.saturated_into(),
                 Error::<T>::LiquidityTooLow
             );
-            let pool_account_id = Self::pool_account_id(&market_id);
+            let pool_id = <Self as PoolStorage>::next_pool_id();
+            let pool_account_id = Self::pool_account_id(&pool_id);
             let mut reserves = BTreeMap::new();
             for (&amount_in, &asset) in amounts_in.iter().zip(market.outcome_assets().iter()) {
                 T::MultiCurrency::transfer(asset, &who, &pool_account_id, amount_in)?;
@@ -1284,7 +1285,7 @@ mod pallet {
                 &pool.account_id,
                 T::MultiCurrency::minimum_balance(collateral),
             )?;
-            let pool_id = <Self as PoolStorage>::add(pool)?;
+            let _ = <Self as PoolStorage>::add(pool)?;
             MarketIdToPoolId::<T>::insert(market_id, pool_id);
             Self::deposit_event(Event::<T>::PoolDeployed {
                 who,
