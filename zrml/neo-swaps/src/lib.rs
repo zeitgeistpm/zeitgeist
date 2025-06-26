@@ -1260,7 +1260,6 @@ mod pallet {
                 Error::<T>::LiquidityTooLow
             );
             let pool_id = <Self as PoolStorage>::next_pool_id();
-            // TODO: needs storage migration in worst case to move the funds from potentially wrong pool account based on market id to based on pool id
             let pool_account_id = Self::pool_account_id(&pool_id);
             let mut reserves = BTreeMap::new();
             for (&amount_in, &asset) in amounts_in.iter().zip(market.outcome_assets().iter()) {
