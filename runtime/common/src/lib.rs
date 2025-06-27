@@ -1117,7 +1117,6 @@ macro_rules! impl_config_traits {
         impl MinimumPeriod {
             /// Returns the value of this parameter type.
             pub fn get() -> u64 {
-
                 MinimumPeriodValue::get()
             }
         }
