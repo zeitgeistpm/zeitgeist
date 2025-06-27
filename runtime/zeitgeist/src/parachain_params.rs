@@ -41,10 +41,6 @@ parameter_types! {
     // Asset registry
     pub const AssetRegistryStringLimit: u32 = 1024;
 
-    // Async backing
-    pub const AllowMultipleBlocksPerSlot: bool = true;
-    pub const ExpectedBlockTime: u64 = 6_000;
-
     // Author-Mapping
     /// The amount that should be taken as a security deposit when registering a NimbusId
     pub const CollatorDeposit: Balance = 2 * BASE;

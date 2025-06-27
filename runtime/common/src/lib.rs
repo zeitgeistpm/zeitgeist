@@ -91,10 +91,7 @@ macro_rules! decl_common_types {
             generic, traits::IdentityLookup, DispatchError, DispatchResult, RuntimeDebug,
             SaturatedConversion,
         };
-        use zeitgeist_primitives::{
-            constants::{BLOCK_PROCESSING_VELOCITY, UNINCLUDED_SEGMENT_CAPACITY},
-            traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi},
-        };
+        use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
         use zrml_combinatorial_tokens::types::{CryptographicIdManager, Fuel};
         use zrml_neo_swaps::types::DecisionMarketOracle;
 
@@ -1120,14 +1117,6 @@ macro_rules! impl_config_traits {
         impl MinimumPeriod {
             /// Returns the value of this parameter type.
             pub fn get() -> u64 {
-                // #[cfg(feature = "runtime-benchmarks")]
-                // {
-                //     use frame_benchmarking::benchmarking::get_whitelist;
-                //     // Should that condition be true, we can assume that we are in a benchmark environment.
-                //     if !get_whitelist().is_empty() {
-                //         return u64::MAX;
-                //     }
-                // }
 
                 MinimumPeriodValue::get()
             }
