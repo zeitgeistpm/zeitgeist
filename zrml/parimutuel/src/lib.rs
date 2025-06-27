@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -62,17 +62,17 @@ mod pallet {
 
         /// The way how fees are taken from the market base asset.
         type ExternalFees: DistributeFees<
-                Asset = Asset<MarketIdOf<Self>>,
-                AccountId = AccountIdOf<Self>,
-                Balance = BalanceOf<Self>,
-                MarketId = MarketIdOf<Self>,
-            >;
+            Asset = Asset<MarketIdOf<Self>>,
+            AccountId = AccountIdOf<Self>,
+            Balance = BalanceOf<Self>,
+            MarketId = MarketIdOf<Self>,
+        >;
 
         type MarketCommons: MarketCommonsPalletApi<
-                AccountId = Self::AccountId,
-                BlockNumber = BlockNumberFor<Self>,
-                Balance = BalanceOf<Self>,
-            >;
+            AccountId = Self::AccountId,
+            BlockNumber = BlockNumberFor<Self>,
+            Balance = BalanceOf<Self>,
+        >;
 
         /// The minimum amount each bet must be. Must be larger than or equal to the existential
         /// deposit of parimutuel shares.

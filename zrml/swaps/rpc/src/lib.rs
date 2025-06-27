@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -25,7 +25,7 @@ use core::{fmt::Display, str::FromStr};
 use jsonrpsee::{
     core::{async_trait, RpcResult},
     proc_macros::rpc,
-    types::error::{CallError, ErrorObject},
+    types::error::ErrorObject,
 };
 use parity_scale_codec::{Codec, MaxEncodedLen};
 use sp_api::ProvideRuntimeApi;
@@ -52,7 +52,7 @@ where
 
     #[method(name = "swaps_poolAccountId", aliases = ["swaps_poolAccountIdAt"])]
     async fn pool_account_id(&self, pool_id: PoolId, at: Option<BlockHash>)
-    -> RpcResult<AccountId>;
+        -> RpcResult<AccountId>;
 
     #[method(name = "swaps_getSpotPrice", aliases = ["swaps_getSpotPriceAt"])]
     async fn get_spot_price(
@@ -124,11 +124,11 @@ where
         let api = self.client.runtime_api();
         let hash = at.unwrap_or_else(|| self.client.info().best_hash);
         let res = api.pool_shares_id(hash, pool_id).map_err(|e| {
-            CallError::Custom(ErrorObject::owned(
+            ErrorObject::owned(
                 Error::RuntimeError.into(),
                 "Unable to get pool shares identifier.",
                 Some(e.to_string()),
-            ))
+            )
         })?;
         Ok(res)
     }
@@ -141,11 +141,11 @@ where
         let api = self.client.runtime_api();
         let hash = at.unwrap_or_else(|| self.client.info().best_hash);
         let res = api.pool_account_id(hash, &pool_id).map_err(|e| {
-            CallError::Custom(ErrorObject::owned(
+            ErrorObject::owned(
                 Error::RuntimeError.into(),
                 "Unable to get pool account identifier.",
                 Some(e.to_string()),
-            ))
+            )
         })?;
         Ok(res)
     }
@@ -163,11 +163,11 @@ where
         let hash = at.unwrap_or_else(|| self.client.info().best_hash);
         let res =
             api.get_spot_price(hash, &pool_id, &asset_in, &asset_out, with_fees).map_err(|e| {
-                CallError::Custom(ErrorObject::owned(
+                ErrorObject::owned(
                     Error::RuntimeError.into(),
                     "Unable to get spot price.",
                     Some(e.to_string()),
-                ))
+                )
             })?;
         Ok(res)
     }
@@ -192,11 +192,11 @@ where
                 let res = api
                     .get_spot_price(hash, &pool_id, &asset_in, &asset_out, with_fees)
                     .map_err(|e| {
-                        CallError::Custom(ErrorObject::owned(
+                        ErrorObject::owned(
                             Error::RuntimeError.into(),
                             "Unable to get spot price.",
                             Some(e.to_string()),
-                        ))
+                        )
                     })?;
                 Ok(res)
             })

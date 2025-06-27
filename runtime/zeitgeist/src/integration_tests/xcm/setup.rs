@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -24,8 +24,8 @@ use frame_support::assert_ok;
 use orml_traits::asset_registry::AssetMetadata;
 use sp_core::{sr25519, Pair, Public};
 use xcm::{
-    latest::{Junction::Parachain, Junctions::X2, MultiLocation},
-    VersionedMultiLocation,
+    latest::{Junction::Parachain, Location},
+    VersionedLocation,
 };
 use xcm_emulator::helpers::get_account_id_from_seed;
 use zeitgeist_primitives::types::{Asset, CustomMetadata};
@@ -129,20 +129,20 @@ pub(super) const fn adjusted_balance(foreign_base: Balance, amount: Balance) -> 
     }
 }
 
-// Multilocations that are used to represent tokens from other chains
+// Locations that are used to represent tokens from other chains
 #[inline]
-pub(super) fn foreign_ztg_multilocation() -> MultiLocation {
-    MultiLocation::new(1, X2(Parachain(PARA_ID_ZEITGEIST), general_key(zeitgeist::KEY)))
+pub(super) fn foreign_ztg_location() -> Location {
+    Location::new(1, [Parachain(PARA_ID_ZEITGEIST), general_key(zeitgeist::KEY)])
 }
 
 #[inline]
-pub(super) fn foreign_sibling_multilocation() -> MultiLocation {
-    MultiLocation::new(1, X2(Parachain(PARA_ID_SIBLING), general_key(zeitgeist::KEY)))
+pub(super) fn foreign_sibling_location() -> Location {
+    Location::new(1, [Parachain(PARA_ID_SIBLING), general_key(zeitgeist::KEY)])
 }
 
 #[inline]
-pub(super) fn foreign_parent_multilocation() -> MultiLocation {
-    MultiLocation::parent()
+pub(super) fn foreign_parent_location() -> Location {
+    Location::parent()
 }
 
 pub(super) fn register_foreign_ztg(additional_meta: Option<CustomMetadata>) {
@@ -152,7 +152,7 @@ pub(super) fn register_foreign_ztg(additional_meta: Option<CustomMetadata>) {
         name: "Zeitgeist".as_bytes().to_vec().try_into().unwrap(),
         symbol: "ZTG".as_bytes().to_vec().try_into().unwrap(),
         existential_deposit: ExistentialDeposit::get(),
-        location: Some(VersionedMultiLocation::V3(foreign_ztg_multilocation())),
+        location: Some(VersionedLocation::V4(foreign_ztg_location())),
         additional: additional_meta.unwrap_or_default(),
     };
 
@@ -165,7 +165,7 @@ pub(super) fn register_btc(additional_meta: Option<CustomMetadata>) {
         name: "Bitcoin".as_bytes().to_vec().try_into().unwrap(),
         symbol: "BTC".as_bytes().to_vec().try_into().unwrap(),
         existential_deposit: ExistentialDeposit::get(),
-        location: Some(VersionedMultiLocation::V3(foreign_sibling_multilocation())),
+        location: Some(VersionedLocation::V4(foreign_sibling_location())),
         additional: additional_meta.unwrap_or_default(),
     };
 
@@ -178,7 +178,7 @@ pub(super) fn register_eth(additional_meta: Option<CustomMetadata>) {
         name: "Ethereum".as_bytes().to_vec().try_into().unwrap(),
         symbol: "ETH".as_bytes().to_vec().try_into().unwrap(),
         existential_deposit: ExistentialDeposit::get(),
-        location: Some(VersionedMultiLocation::V3(foreign_sibling_multilocation())),
+        location: Some(VersionedLocation::V4(foreign_sibling_location())),
         additional: additional_meta.unwrap_or_default(),
     };
 
@@ -192,7 +192,7 @@ pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) 
         name: "Sibling".as_bytes().to_vec().try_into().unwrap(),
         symbol: "SBL".as_bytes().to_vec().try_into().unwrap(),
         existential_deposit: ExistentialDeposit::get(),
-        location: Some(VersionedMultiLocation::V3(foreign_sibling_multilocation())),
+        location: Some(VersionedLocation::V4(foreign_sibling_location())),
         additional: additional_meta.unwrap_or_default(),
     };
 
@@ -210,7 +210,7 @@ pub(super) fn register_foreign_parent(additional_meta: Option<CustomMetadata>) {
         name: "Polkadot".as_bytes().to_vec().try_into().unwrap(),
         symbol: "DOT".as_bytes().to_vec().try_into().unwrap(),
         existential_deposit: 10_000_000_000, // 1
-        location: Some(VersionedMultiLocation::V3(foreign_parent_multilocation())),
+        location: Some(VersionedLocation::V4(foreign_parent_location())),
         additional: additional_meta.unwrap_or_default(),
     };
 

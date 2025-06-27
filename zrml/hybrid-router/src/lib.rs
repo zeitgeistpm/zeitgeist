@@ -74,32 +74,32 @@ mod pallet {
 
         #[cfg(feature = "runtime-benchmarks")]
         type AmmPoolDeployer: DeployPoolApi<
-                AccountId = AccountIdOf<Self>,
-                Balance = BalanceOf<Self>,
-                MarketId = MarketIdOf<Self>,
-            >;
+            AccountId = AccountIdOf<Self>,
+            Balance = BalanceOf<Self>,
+            MarketId = MarketIdOf<Self>,
+        >;
 
         #[cfg(feature = "runtime-benchmarks")]
         type CompleteSetOperations: CompleteSetOperationsApi<
-                AccountId = AccountIdOf<Self>,
-                Balance = BalanceOf<Self>,
-                MarketId = MarketIdOf<Self>,
-            >;
+            AccountId = AccountIdOf<Self>,
+            Balance = BalanceOf<Self>,
+            MarketId = MarketIdOf<Self>,
+        >;
 
         /// The identifier of individual markets.
         type MarketCommons: MarketCommonsPalletApi<
-                AccountId = Self::AccountId,
-                BlockNumber = BlockNumberFor<Self>,
-                Balance = BalanceOf<Self>,
-            >;
+            AccountId = Self::AccountId,
+            BlockNumber = BlockNumberFor<Self>,
+            Balance = BalanceOf<Self>,
+        >;
 
         /// The API to handle the Automated Market Maker (AMM).
         type Amm: HybridRouterAmmApi<
-                AccountId = AccountIdOf<Self>,
-                MarketId = MarketIdOf<Self>,
-                Asset = AssetOf<Self>,
-                Balance = BalanceOf<Self>,
-            >;
+            AccountId = AccountIdOf<Self>,
+            MarketId = MarketIdOf<Self>,
+            Asset = AssetOf<Self>,
+            Balance = BalanceOf<Self>,
+        >;
 
         /// The maximum number of orders that can be used to execute a trade.
         #[pallet::constant]
@@ -107,13 +107,13 @@ mod pallet {
 
         /// The API to handle the order book.
         type Orderbook: HybridRouterOrderbookApi<
-                AccountId = AccountIdOf<Self>,
-                MarketId = MarketIdOf<Self>,
-                Balance = BalanceOf<Self>,
-                Asset = AssetOf<Self>,
-                Order = OrderOf<Self>,
-                OrderId = OrderId,
-            >;
+            AccountId = AccountIdOf<Self>,
+            MarketId = MarketIdOf<Self>,
+            Balance = BalanceOf<Self>,
+            Asset = AssetOf<Self>,
+            Order = OrderOf<Self>,
+            OrderId = OrderId,
+        >;
 
         type PalletId: Get<PalletId>;
 

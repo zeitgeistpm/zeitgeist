@@ -4,9 +4,9 @@
         "provider": "native"
     },
     "relaychain": {
-        "chain": "rococo-dev",
+        "chain": "rococo-local",
         "default_command": "./tmp/polkadot",
-        "default_args": ["--no-hardware-benchmarks", "-lparachain=debug", "--database=paritydb", "--no-beefy"],
+        "default_args": ["--no-hardware-benchmarks", "-lparachain=debug", "--database=paritydb", "--no-beefy", "--detailed-log-output"],
         "nodes": [
             {
                 "name": "charlie",
@@ -29,7 +29,7 @@
                     "command": "../target/release/zeitgeist",
                     "ws_port": 9944,
                     "p2p_port": 33049,
-                    "args": ["-lparachain=debug", "--force-authoring"]
+                    "args": ["-lparachain=debug", "--force-authoring", "--detailed-log-output"]
                 }
             ]
         }

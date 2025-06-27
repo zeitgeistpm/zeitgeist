@@ -1,3 +1,7 @@
+[features]
+default = ["std"]
+std = []
+
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true

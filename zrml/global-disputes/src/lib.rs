@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -40,10 +40,9 @@ mod pallet {
     use crate::{types::*, weights::WeightInfoZeitgeist, GlobalDisputesPalletApi, InitialItemOf};
     use core::marker::PhantomData;
     use frame_support::{
+        dispatch::DispatchResultWithPostInfo,
         ensure,
-        pallet_prelude::{
-            DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, StorageMap, ValueQuery,
-        },
+        pallet_prelude::{OptionQuery, StorageDoubleMap, StorageMap, ValueQuery},
         sp_runtime::traits::StaticLookup,
         traits::{
             Currency, ExistenceRequirement, Get, IsType, LockIdentifier, LockableCurrency,
@@ -95,11 +94,11 @@ mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type DisputeResolution: DisputeResolutionApi<
-                AccountId = Self::AccountId,
-                BlockNumber = BlockNumberFor<Self>,
-                MarketId = MarketIdOf<Self>,
-                Moment = MomentOf<Self>,
-            >;
+            AccountId = Self::AccountId,
+            BlockNumber = BlockNumberFor<Self>,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+        >;
 
         /// The vote lock identifier.
         #[pallet::constant]
@@ -111,10 +110,10 @@ mod pallet {
 
         /// To reference the market id type.
         type MarketCommons: MarketCommonsPalletApi<
-                AccountId = Self::AccountId,
-                Balance = BalanceOf<Self>,
-                BlockNumber = BlockNumberFor<Self>,
-            >;
+            AccountId = Self::AccountId,
+            Balance = BalanceOf<Self>,
+            BlockNumber = BlockNumberFor<Self>,
+        >;
 
         /// The maximum numbers of distinct markets
         /// on which one account can simultaneously vote on outcomes.

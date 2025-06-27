@@ -1,4 +1,4 @@
-// Copyright 2022, 2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -21,22 +21,23 @@
 //! used by Substrate nodes. This file extends those RPC definitions with
 //! capabilities that are specific to this project's runtime configuration.
 
-use jsonrpsee::RpcModule;
+use std::sync::Arc;
+
+use zeitgeist_primitives::types::{AccountId, Balance, Block, MarketId, Nonce, PoolId};
+
 use sc_client_api::AuxStore;
-use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
-use std::sync::Arc;
-use zeitgeist_primitives::types::{AccountId, Balance, Block, MarketId, Nonce, PoolId};
+
+/// A type representing all RPC extensions.
+pub type RpcExtension = jsonrpsee::RpcModule<()>;
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
     /// The client instance to use.
     pub client: Arc<C>,
-    /// Whether to deny unsafe calls
-    pub deny_unsafe: DenyUnsafe,
     /// Transaction pool instance.
     pub pool: Arc<P>,
 }
@@ -44,7 +45,7 @@ pub struct FullDeps<C, P> {
 /// Instantiate all full RPC extensions.
 pub fn create_full<C, P>(
     deps: FullDeps<C, P>,
-) -> Result<RpcModule<()>, Box<dyn std::error::Error + Send + Sync>>
+) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
     C: ProvideRuntimeApi<Block>
         + HeaderBackend<Block>
@@ -63,12 +64,12 @@ where
     use substrate_frame_rpc_system::{System, SystemApiServer};
     use zrml_swaps_rpc::{Swaps, SwapsApiServer};
 
-    let mut io = RpcModule::new(());
-    let FullDeps { client, pool, deny_unsafe } = deps;
+    let mut module = RpcExtension::new(());
+    let FullDeps { client, pool } = deps;
 
-    io.merge(System::new(Arc::clone(&client), Arc::clone(&pool), deny_unsafe).into_rpc())?;
-    io.merge(TransactionPayment::new(Arc::clone(&client)).into_rpc())?;
-    io.merge(Swaps::new(client).into_rpc())?;
+    module.merge(System::new(client.clone(), pool).into_rpc())?;
+    module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
+    module.merge(Swaps::new(client).into_rpc())?;
 
-    Ok(io)
+    Ok(module)
 }

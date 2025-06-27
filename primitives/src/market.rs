@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -19,10 +19,11 @@
 use crate::types::{Asset, OutcomeReport, ScalarPosition};
 use alloc::{vec, vec::Vec};
 use core::ops::{Range, RangeInclusive};
+use num_traits::Zero;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Perbill;
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{traits::Saturating, RuntimeDebug};
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Market<AccountId, Balance, BlockNumber, Moment, MarketId> {
@@ -199,9 +200,7 @@ pub struct MarketBonds<AccountId, Balance> {
     pub close_dispute: Option<Bond<AccountId, Balance>>,
 }
 
-impl<AccountId: Ord, Balance: frame_support::traits::tokens::Balance>
-    MarketBonds<AccountId, Balance>
-{
+impl<AccountId: Ord, Balance: Zero + Saturating + Copy> MarketBonds<AccountId, Balance> {
     /// Return the combined value of the open bonds for `who`.
     pub fn total_amount_bonded(&self, who: &AccountId) -> Balance {
         let value_or_default = |bond: &Option<Bond<AccountId, Balance>>| match bond {
@@ -307,11 +306,11 @@ pub enum MarketDisputeMechanism {
 /// Must be an exclusive range because:
 ///
 /// 1. `zrml_predition_markets::Pallet::admin_move_market_to_closed` uses the current block as the
-/// end period.
+///    end period.
 /// 2. The liquidity mining pallet takes into consideration the different between the two blocks.
-/// So 1..5 correctly outputs 4 (`5 - 1`) while 1..=5 would incorrectly output the same 4.
+///    So 1..5 correctly outputs 4 (`5 - 1`) while 1..=5 would incorrectly output the same 4.
 /// 3. With inclusive ranges it is not possible to express empty ranges and this feature
-/// mostly conflicts with existent tests and corner cases.
+///    mostly conflicts with existent tests and corner cases.
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum MarketPeriod<BlockNumber, Moment> {
     Block(Range<BlockNumber>),

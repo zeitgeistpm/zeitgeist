@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -136,17 +136,17 @@ mod pallet {
         type CorrectionPeriod: Get<BlockNumberFor<Self>>;
 
         type DisputeResolution: DisputeResolutionApi<
-                AccountId = Self::AccountId,
-                BlockNumber = BlockNumberFor<Self>,
-                MarketId = MarketIdOf<Self>,
-                Moment = MomentOf<Self>,
-            >;
+            AccountId = Self::AccountId,
+            BlockNumber = BlockNumberFor<Self>,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+        >;
 
         type MarketCommons: MarketCommonsPalletApi<
-                AccountId = Self::AccountId,
-                BlockNumber = BlockNumberFor<Self>,
-                Balance = BalanceOf<Self>,
-            >;
+            AccountId = Self::AccountId,
+            BlockNumber = BlockNumberFor<Self>,
+            Balance = BalanceOf<Self>,
+        >;
 
         /// The origin that is allowed to resolved disupute in Authorized dispute mechanism.
         type AuthorizedDisputeResolutionOrigin: EnsureOrigin<Self::RuntimeOrigin>;

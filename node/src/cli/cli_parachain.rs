@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -91,10 +91,9 @@ impl sc_cli::CliConfiguration<Self> for RelayChainCli {
         _support_url: &String,
         _impl_version: &String,
         _logger_hook: F,
-        _config: &sc_service::Configuration,
     ) -> sc_cli::Result<()>
     where
-        F: FnOnce(&mut sc_cli::LoggerBuilder, &sc_service::Configuration),
+        F: FnOnce(&mut sc_cli::LoggerBuilder),
     {
         unreachable!("PolkadotCli is never initialized; qed");
     }

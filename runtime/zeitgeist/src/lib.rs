@@ -25,8 +25,9 @@ extern crate alloc;
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use common_runtime::{
-    create_common_benchmark_logic, create_common_tests, create_runtime, create_runtime_api,
-    create_runtime_with_additional_pallets, decl_common_types, impl_config_traits,
+    create_common_benchmark_logic, create_common_tests, create_genesis_config_preset,
+    create_runtime, create_runtime_api, create_runtime_with_additional_pallets, decl_common_types,
+    impl_config_traits,
 };
 pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
@@ -41,7 +42,7 @@ pub use crate::parachain_params::*;
 pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
-    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter, Nothing},
+    traits::{ConstU32, Contains, EitherOfDiverse, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee, Weight},
 };
 use frame_system::{EnsureRoot, EnsureWithSuccess};
@@ -62,10 +63,11 @@ use {
 
 use frame_support::construct_runtime;
 
-use sp_api::{impl_runtime_apis, BlockT};
+use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str,
+    traits::Block as BlockT,
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
@@ -99,8 +101,6 @@ pub struct IsCallable;
 
 impl Contains<RuntimeCall> for IsCallable {
     fn contains(runtime_call: &RuntimeCall) -> bool {
-        #[cfg(feature = "parachain")]
-        use cumulus_pallet_dmp_queue::Call::service_overweight;
         use frame_system::Call::{
             kill_prefix, kill_storage, set_code, set_code_without_checks, set_storage,
         };
@@ -135,8 +135,6 @@ impl Contains<RuntimeCall> for IsCallable {
             }
             // Membership is managed by the respective Membership instance
             RuntimeCall::Council(set_members { .. }) => false,
-            #[cfg(feature = "parachain")]
-            RuntimeCall::DmpQueue(service_overweight { .. }) => false,
             RuntimeCall::PredictionMarkets(inner_call) => match inner_call {
                 admin_move_market_to_closed { .. } => false,
                 admin_move_market_to_resolved { .. } => false,
@@ -184,6 +182,7 @@ decl_common_types!();
 create_runtime_with_additional_pallets!();
 
 impl_config_traits!();
+create_genesis_config_preset!();
 create_runtime_api!();
 create_common_benchmark_logic!();
 create_common_tests!();

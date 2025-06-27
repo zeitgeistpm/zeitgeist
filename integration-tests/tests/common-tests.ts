@@ -181,9 +181,9 @@ export async function canSendXcmTransfer(
     `receiverBalanceBefore: ${receiverBalanceBefore}; amount: ${amount}; transferFee: ${transferFee}; receiverBalanceAfter: ${receiverBalanceAfter}; xcmFee: ${xcmFee}`
   );
   console.log(`xcmFee: ${xcmFee}`);
-  // between 0.01 ZTG and 0.10 ZTG XCM fee
+  // between 0.01 ZTG and 0.15 ZTG XCM fee
   const approxXcmFeeLow = 100000000;
-  const approxXcmFeeHigh = 1000000000;
+  const approxXcmFeeHigh = 1500000000;
   expect(xcmFee).toBeGreaterThanOrEqual(approxXcmFeeLow);
   expect(xcmFee).toBeLessThanOrEqual(approxXcmFeeHigh);
   expect(

@@ -27,6 +27,7 @@ pallet-treasury = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 sp-api = { workspace = true, optional = true }
+sp-core = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
@@ -62,6 +63,7 @@ mock = [
     "pallet-balances/default",
     "pallet-timestamp/default",
     "sp-api/default",
+    "sp-core/default",
     "sp-io/default",
     "zrml-combinatorial-tokens/std",
     "zrml-combinatorial-tokens/mock",
@@ -83,6 +85,9 @@ runtime-benchmarks = [
     "xcm-builder/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
     "zrml-combinatorial-tokens/runtime-benchmarks",
+    "orml-asset-registry?/runtime-benchmarks",
+    "pallet-treasury?/runtime-benchmarks",
+    "zrml-prediction-markets?/runtime-benchmarks",
 ]
 std = [
     "frame-benchmarking?/std",

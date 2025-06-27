@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -647,7 +647,7 @@ mod tests {
     #[test_case(_2, _2, _2, _2)]
     #[test_case(_1, _2, _3, _2_3 + 1)]
     #[test_case(_2, _3, _4, _1 + _1_2)]
-    #[test_case(_1 + 1, _2, _3, (_2 + 2) / 3)]
+    #[test_case(_1 + 1, _2, _3, (_2 + 1).div_ceil(3))]
     #[test_case(_5, _6, _7, _5 * _6 / _7)]
     #[test_case(_100, _101, _20, _100 * _101 / _20)] //
 
@@ -728,7 +728,7 @@ mod tests {
     #[test_case(_2, _2, _2, _2)]
     #[test_case(_1, _2, _3, _2_3)] // 0.6666...
     #[test_case(_2, _3, _4, _1 + _1_2)]
-    #[test_case(_1 + 1, _2, _3, (_2 + 2) / 3)]
+    #[test_case(_1 + 1, _2, _3, (_2 + 1).div_ceil(3))]
     #[test_case(_5, _6, _7, _5 * _6 / _7)]
     #[test_case(_100, _101, _20, _100 * _101 / _20)] //
 

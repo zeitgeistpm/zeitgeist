@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -22,7 +22,6 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{utils::*, Pallet as Parimutuel, *};
-use alloc::vec;
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, traits::Get};
 use frame_system::RawOrigin;

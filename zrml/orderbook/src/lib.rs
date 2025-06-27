@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -70,26 +70,26 @@ mod pallet {
     pub trait Config: frame_system::Config {
         /// Shares of outcome assets and native currency
         type AssetManager: NamedMultiReservableCurrency<
-                Self::AccountId,
-                CurrencyId = AssetOf<Self>,
-                ReserveIdentifier = [u8; 8],
-            >;
+            Self::AccountId,
+            CurrencyId = AssetOf<Self>,
+            ReserveIdentifier = [u8; 8],
+        >;
 
         /// The way how fees are taken from the market base asset.
         type ExternalFees: DistributeFees<
-                Asset = AssetOf<Self>,
-                AccountId = AccountIdOf<Self>,
-                Balance = BalanceOf<Self>,
-                MarketId = MarketIdOf<Self>,
-            >;
+            Asset = AssetOf<Self>,
+            AccountId = AccountIdOf<Self>,
+            Balance = BalanceOf<Self>,
+            MarketId = MarketIdOf<Self>,
+        >;
 
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type MarketCommons: MarketCommonsPalletApi<
-                AccountId = Self::AccountId,
-                BlockNumber = BlockNumberFor<Self>,
-                Balance = BalanceOf<Self>,
-            >;
+            AccountId = Self::AccountId,
+            BlockNumber = BlockNumberFor<Self>,
+            Balance = BalanceOf<Self>,
+        >;
 
         #[pallet::constant]
         type PalletId: Get<PalletId>;

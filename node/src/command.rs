@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2019-2022 PureStake Inc.
 //
@@ -20,30 +20,31 @@
 use super::{
     benchmarking::{inherent_benchmark_data, RemarksExtrinsicBuilder, TransferKeepAliveBuilder},
     cli::{Cli, Subcommand},
-    service::{new_chain_ops, new_full, HostFunctions, IdentifyVariant},
+    service::{new_chain_ops, new_full, IdentifyVariant},
+};
+#[cfg(feature = "with-battery-station-runtime")]
+use battery_station_runtime::{
+    ExistentialDeposit as BatteryStationED, RuntimeApi as BatteryStationRuntimeApi,
 };
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
 use sc_cli::SubstrateCli;
 use sp_keyring::Sr25519Keyring;
-#[cfg(feature = "with-battery-station-runtime")]
-use {
-    super::service::BatteryStationExecutor,
-    battery_station_runtime::{
-        ExistentialDeposit as BatteryStationED, RuntimeApi as BatteryStationRuntimeApi,
-    },
-};
-#[cfg(feature = "with-zeitgeist-runtime")]
-use {
-    super::service::ZeitgeistExecutor,
-    zeitgeist_runtime::{ExistentialDeposit as ZeitgeistED, RuntimeApi as ZeitgeistRuntimeApi},
-};
 #[cfg(feature = "parachain")]
 use {
-    sc_client_api::client::BlockBackend,
-    sp_core::hexdisplay::HexDisplay,
+    sc_cli::ChainSpec,
     sp_core::Encode,
-    sp_runtime::traits::{AccountIdConversion, Block as BlockT},
-    std::io::Write,
+    sp_runtime::{
+        traits::{Block as BlockT, Hash as HashT, Header as HeaderT, Zero},
+        StateVersion,
+    },
+};
+
+#[cfg(feature = "with-zeitgeist-runtime")]
+use zeitgeist_runtime::{ExistentialDeposit as ZeitgeistED, RuntimeApi as ZeitgeistRuntimeApi};
+#[cfg(feature = "parachain")]
+use {
+    sc_client_api::client::BlockBackend, sp_core::hexdisplay::HexDisplay,
+    sp_runtime::traits::AccountIdConversion, std::io::Write,
 };
 
 pub fn run() -> sc_cli::Result<()> {
@@ -72,11 +73,11 @@ pub fn run() -> sc_cli::Result<()> {
                         match chain_spec {
                             #[cfg(feature = "with-zeitgeist-runtime")]
                             spec if spec.is_zeitgeist() => runner.sync_run(|config| {
-                                cmd.run::<zeitgeist_runtime::Block, HostFunctions>(config)
+                                cmd.run_with_spec::<sp_runtime::traits::HashingFor<zeitgeist_runtime::Block>, ()>(Some(config.chain_spec))
                             }),
                             #[cfg(feature = "with-battery-station-runtime")]
                             _ => runner.sync_run(|config| {
-                                cmd.run::<battery_station_runtime::Block, HostFunctions>(config)
+                                cmd.run_with_spec::<sp_runtime::traits::HashingFor<battery_station_runtime::Block>, ()>(Some(config.chain_spec))
                             }),
                             #[cfg(not(feature = "with-battery-station-runtime"))]
                             _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
@@ -92,7 +93,6 @@ pub fn run() -> sc_cli::Result<()> {
                     spec if spec.is_zeitgeist() => runner.sync_run(|config| {
                         let params = crate::service::new_partial::<
                             zeitgeist_runtime::RuntimeApi,
-                            ZeitgeistExecutor,
                         >(&config)?;
                         cmd.run(params.client)
                     }),
@@ -100,7 +100,6 @@ pub fn run() -> sc_cli::Result<()> {
                     _ => runner.sync_run(|config| {
                         let params = crate::service::new_partial::<
                             battery_station_runtime::RuntimeApi,
-                            BatteryStationExecutor,
                         >(&config)?;
                         cmd.run(params.client)
                     }),
@@ -124,7 +123,6 @@ pub fn run() -> sc_cli::Result<()> {
                     spec if spec.is_zeitgeist() => runner.sync_run(|config| {
                         let params = crate::service::new_partial::<
                             zeitgeist_runtime::RuntimeApi,
-                            ZeitgeistExecutor,
                         >(&config)?;
 
                         let db = params.backend.expose_db();
@@ -136,7 +134,6 @@ pub fn run() -> sc_cli::Result<()> {
                     _ => runner.sync_run(|config| {
                         let params = crate::service::new_partial::<
                             battery_station_runtime::RuntimeApi,
-                            BatteryStationExecutor,
                         >(&config)?;
 
                         let db = params.backend.expose_db();
@@ -157,7 +154,6 @@ pub fn run() -> sc_cli::Result<()> {
                         spec if spec.is_zeitgeist() => runner.sync_run(|config| {
                             let params = crate::service::new_partial::<
                                 zeitgeist_runtime::RuntimeApi,
-                                ZeitgeistExecutor,
                             >(&config)?;
 
                             let ext_builder =
@@ -174,7 +170,6 @@ pub fn run() -> sc_cli::Result<()> {
                         _ => runner.sync_run(|config| {
                             let params = crate::service::new_partial::<
                                 battery_station_runtime::RuntimeApi,
-                                BatteryStationExecutor,
                             >(&config)?;
 
                             let ext_builder =
@@ -201,7 +196,6 @@ pub fn run() -> sc_cli::Result<()> {
                         spec if spec.is_zeitgeist() => runner.sync_run(|config| {
                             let params = crate::service::new_partial::<
                                 zeitgeist_runtime::RuntimeApi,
-                                ZeitgeistExecutor,
                             >(&config)?;
                             // Register the *Remark* and *TKA* builders.
                             let ext_factory = ExtrinsicFactory(vec![
@@ -224,7 +218,6 @@ pub fn run() -> sc_cli::Result<()> {
                         _ => runner.sync_run(|config| {
                             let params = crate::service::new_partial::<
                                 battery_station_runtime::RuntimeApi,
-                                BatteryStationExecutor,
                             >(&config)?;
                             // Register the *Remark* and *TKA* builders.
                             let ext_factory = ExtrinsicFactory(vec![
@@ -312,7 +305,7 @@ pub fn run() -> sc_cli::Result<()> {
             })
         }
         #[cfg(feature = "parachain")]
-        Some(Subcommand::ExportGenesisState(params)) => {
+        Some(Subcommand::ExportGenesisHead(params)) => {
             let mut builder = sc_cli::LoggerBuilder::new("");
             builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
             let _ = builder.init();
@@ -324,7 +317,7 @@ pub fn run() -> sc_cli::Result<()> {
                 #[cfg(feature = "with-zeitgeist-runtime")]
                 spec if spec.is_zeitgeist() => {
                     let block: zeitgeist_runtime::Block =
-                        cumulus_client_cli::generate_genesis_block(&**chain_spec, state_version)?;
+                        generate_genesis_block(&**chain_spec, state_version)?;
                     let raw_header = block.header().encode();
 
                     if params.raw {
@@ -336,7 +329,7 @@ pub fn run() -> sc_cli::Result<()> {
                 #[cfg(feature = "with-battery-station-runtime")]
                 _ => {
                     let block: battery_station_runtime::Block =
-                        cumulus_client_cli::generate_genesis_block(&**chain_spec, state_version)?;
+                        generate_genesis_block(&**chain_spec, state_version)?;
                     let raw_header = block.header().encode();
 
                     if params.raw {
@@ -471,8 +464,7 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
             );
         let state_version = Cli::runtime_version(chain_spec).state_version();
         let block: zeitgeist_runtime::Block =
-            cumulus_client_cli::generate_genesis_block(&**chain_spec, state_version)
-                .map_err(|e| format!("{:?}", e))?;
+            generate_genesis_block(&**chain_spec, state_version).map_err(|e| format!("{:?}", e))?;
         let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
         let tokio_handle = parachain_config.tokio_handle.clone();
@@ -487,7 +479,7 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
         let hwbench = (!cli.no_hardware_benchmarks)
             .then_some(parachain_config.database.path().map(|database_path| {
                 let _ = std::fs::create_dir_all(database_path);
-                sc_sysinfo::gather_hwbench(Some(database_path))
+                sc_sysinfo::gather_hwbench(Some(database_path), &SUBSTRATE_REFERENCE_HARDWARE)
             }))
             .flatten();
 
@@ -506,10 +498,12 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
 
         match &parachain_config.chain_spec {
             #[cfg(feature = "with-zeitgeist-runtime")]
-            spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
+            spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi>(
                 parachain_config,
                 parachain_id,
                 polkadot_config,
+                false,
+                cli.block_authoring_duration,
                 hwbench,
                 collator_options,
             )
@@ -517,10 +511,12 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
             .map(|r| r.0)
             .map_err(Into::into),
             #[cfg(feature = "with-battery-station-runtime")]
-            _ => new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(
+            _ => new_full::<BatteryStationRuntimeApi>(
                 parachain_config,
                 parachain_id,
                 polkadot_config,
+                false,
+                cli.block_authoring_duration,
                 hwbench,
                 collator_options,
             )
@@ -540,18 +536,22 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
         match &config.chain_spec {
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => {
-                new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(config, cli)
+                new_full::<ZeitgeistRuntimeApi, sc_network::NetworkWorker<_, _>>(config, cli)
                     .map_err(sc_cli::Error::Service)
             }
             #[cfg(feature = "with-battery-station-runtime")]
-            _ => new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(config, cli)
+            _ => new_full::<BatteryStationRuntimeApi, sc_network::NetworkWorker<_, _>>(config, cli)
                 .map_err(sc_cli::Error::Service),
             #[cfg(all(
                 not(feature = "with-battery-station-runtime"),
                 feature = "with-zeitgeist-runtime"
             ))]
-            _ => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(config, cli)
-                .map_err(sc_cli::Error::Service),
+            _ => {
+                new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor, sc_network::NetworkWorker<_, _>>(
+                    config, cli,
+                )
+                .map_err(sc_cli::Error::Service)
+            }
             #[cfg(all(
                 not(feature = "with-battery-station-runtime"),
                 not(feature = "with-zeitgeist-runtime")
@@ -559,4 +559,41 @@ fn none_command(cli: Cli) -> sc_cli::Result<()> {
             _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
         }
     })
+}
+
+/// Generate the genesis block from a given ChainSpec.
+#[cfg(feature = "parachain")]
+pub fn generate_genesis_block<Block: BlockT>(
+    chain_spec: &dyn ChainSpec,
+    genesis_state_version: StateVersion,
+) -> std::result::Result<Block, String> {
+    let storage = chain_spec.build_storage()?;
+
+    let child_roots = storage.children_default.iter().map(|(sk, child_content)| {
+        let state_root = <<<Block as BlockT>::Header as HeaderT>::Hashing as HashT>::trie_root(
+            child_content.data.clone().into_iter().collect(),
+            genesis_state_version,
+        );
+        (sk.clone(), state_root.encode())
+    });
+    let state_root = <<<Block as BlockT>::Header as HeaderT>::Hashing as HashT>::trie_root(
+        storage.top.clone().into_iter().chain(child_roots).collect(),
+        genesis_state_version,
+    );
+
+    let extrinsics_root = <<<Block as BlockT>::Header as HeaderT>::Hashing as HashT>::trie_root(
+        Vec::new(),
+        genesis_state_version,
+    );
+
+    Ok(Block::new(
+        <<Block as BlockT>::Header as HeaderT>::new(
+            Zero::zero(),
+            extrinsics_root,
+            state_root,
+            Default::default(),
+            Default::default(),
+        ),
+        Default::default(),
+    ))
 }

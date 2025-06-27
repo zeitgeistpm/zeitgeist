@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021 Centrifuge Foundation (centrifuge.io).
 //
 // This file is part of Zeitgeist.
@@ -19,7 +19,7 @@
 use crate::{Balance, CurrencyId};
 use core::marker::PhantomData;
 use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND};
-use xcm::latest::MultiLocation;
+use xcm::latest::Location;
 use zeitgeist_primitives::{
     constants::BalanceFractionalDecimals, math::fixed::FixedMul, types::CustomMetadata,
 };
@@ -55,14 +55,14 @@ pub fn cent(decimals: u32) -> Balance {
 pub struct FixedConversionRateProvider<AssetRegistry>(PhantomData<AssetRegistry>);
 
 impl<
-    AssetRegistry: orml_traits::asset_registry::Inspect<
+        AssetRegistry: orml_traits::asset_registry::Inspect<
             AssetId = CurrencyId,
             Balance = Balance,
             CustomMetadata = CustomMetadata,
         >,
-> orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<AssetRegistry>
+    > orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<AssetRegistry>
 {
-    fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
+    fn get_fee_per_second(location: &Location) -> Option<u128> {
         let metadata = AssetRegistry::metadata_by_location(location)?;
         let default_per_second = native_per_second();
         let native_decimals: u32 = BalanceFractionalDecimals::get().into();

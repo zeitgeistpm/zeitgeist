@@ -3,6 +3,7 @@ substrate-wasm-builder = { workspace = true }
 
 [dependencies]
 frame-executive = { workspace = true }
+frame-metadata-hash-extension = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
@@ -14,8 +15,6 @@ pallet-asset-tx-payment = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-bounties = { workspace = true }
 pallet-collective = { workspace = true }
-pallet-contracts = { workspace = true }
-pallet-contracts-primitives = { workspace = true }
 pallet-democracy = { workspace = true }
 pallet-identity = { workspace = true }
 pallet-insecure-randomness-collective-flip = { workspace = true }
@@ -35,8 +34,10 @@ polkadot-primitives = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }
+sp-consensus-slots = { workspace = true }
 sp-core = { workspace = true }
 sp-debug-derive = { workspace = true }
+sp-genesis-builder = { workspace = true }
 sp-inherents = { workspace = true }
 sp-offchain = { workspace = true }
 sp-runtime = { workspace = true }
@@ -64,9 +65,11 @@ cumulus-primitives-core = { workspace = true, optional = true }
 cumulus-primitives-timestamp = { workspace = true, optional = true }
 cumulus-primitives-utility = { workspace = true, optional = true }
 parachain-info = { workspace = true, optional = true }
+parachains-common = { workspace = true, optional = true }
 
 # Parachain
 
+async-backing-primitives = { workspace = true, optional = true }
 nimbus-primitives = { workspace = true, optional = true }
 pallet-author-inherent = { workspace = true, optional = true }
 pallet-author-mapping = { workspace = true, optional = true }
@@ -77,6 +80,7 @@ session-keys-primitives = { workspace = true, optional = true }
 # Polkadot
 
 polkadot-parachain-primitives = { workspace = true, optional = true }
+polkadot-runtime-common = { workspace = true, optional = true }
 
 # Standalone
 
@@ -89,6 +93,7 @@ sp-consensus-grandpa = { workspace = true }
 cfg-if = { workspace = true }
 hex-literal = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
+serde_json = { workspace = true }
 
 # XCM
 orml-asset-registry = { workspace = true, optional = true }
@@ -97,8 +102,6 @@ orml-xcm-support = { workspace = true, optional = true }
 orml-xtokens = { workspace = true, optional = true }
 pallet-message-queue = { workspace = true, optional = true }
 pallet-xcm = { workspace = true, optional = true }
-polkadot-runtime = { workspace = true, optional = true }
-polkadot-runtime-parachains = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
 xcm-executor = { workspace = true, optional = true }
@@ -125,6 +128,9 @@ zrml-swaps-runtime-api = { workspace = true }
 [dev-dependencies]
 env_logger = { workspace = true }
 pallet-im-online = { workspace = true, features = ["default"] }
+polkadot-emulated-chain = { workspace = true }
+polkadot-runtime = { workspace = true }
+polkadot-runtime-parachains = { workspace = true }
 sp-authority-discovery = { workspace = true, features = ["default"] }
 sp-consensus-babe = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
@@ -145,6 +151,7 @@ parachain = [
     "cumulus-primitives-timestamp",
     "cumulus-primitives-utility",
     "parachain-info",
+    "parachains-common",
 
     # Parachain
 
@@ -154,12 +161,12 @@ parachain = [
     "pallet-author-slot-filter",
     "pallet-parachain-staking",
     "polkadot-parachain-primitives",
+    "polkadot-runtime-common",
     "session-keys-primitives",
+    "async-backing-primitives",
 
     # XCM
 
-    "polkadot-runtime",
-    "polkadot-runtime-parachains",
     "orml-asset-registry",
     "orml-unknown-tokens",
     "orml-xcm-support",
@@ -177,13 +184,13 @@ parachain = [
 ]
 runtime-benchmarks = [
     "cumulus-pallet-parachain-system?/runtime-benchmarks",
+    "cumulus-pallet-dmp-queue?/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue?/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system-benchmarking/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "hex-literal",
-    "polkadot-runtime?/runtime-benchmarks",
     "orml-asset-registry?/runtime-benchmarks",
     "orml-benchmarking",
     "orml-tokens/runtime-benchmarks",
@@ -194,7 +201,6 @@ runtime-benchmarks = [
     "pallet-balances/runtime-benchmarks",
     "pallet-bounties/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
-    "pallet-contracts/runtime-benchmarks",
     "pallet-democracy/runtime-benchmarks",
     "pallet-grandpa/runtime-benchmarks",
     "pallet-identity/runtime-benchmarks",
@@ -209,6 +215,7 @@ runtime-benchmarks = [
     "pallet-vesting/runtime-benchmarks",
     "pallet-xcm?/runtime-benchmarks",
     "pallet-parachain-staking?/runtime-benchmarks",
+    "polkadot-runtime/runtime-benchmarks",
     "session-keys-primitives?/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "xcm-builder?/runtime-benchmarks",
@@ -226,7 +233,9 @@ runtime-benchmarks = [
     "zrml-orderbook/runtime-benchmarks",
 ]
 std = [
+    "async-backing-primitives?/std",
     "frame-executive/std",
+    "frame-metadata-hash-extension/std",
     "frame-support/std",
     "frame-system-rpc-runtime-api/std",
     "frame-system/std",
@@ -241,8 +250,6 @@ std = [
     "pallet-balances/std",
     "pallet-bounties/std",
     "pallet-collective/std",
-    "pallet-contracts/std",
-    "pallet-contracts-primitives/std",
     "pallet-democracy/std",
     "pallet-identity/std",
     "pallet-membership/std",
@@ -261,9 +268,12 @@ std = [
     "parity-scale-codec/std",
     "polkadot-primitives/std",
     "scale-info/std",
+    "serde_json/std",
     "sp-api/std",
     "sp-block-builder/std",
+    "sp-consensus-slots/std",
     "sp-core/std",
+    "sp-genesis-builder/std",
     "sp-inherents/std",
     "sp-offchain/std",
     "sp-runtime/std",
@@ -286,6 +296,7 @@ std = [
     "cumulus-primitives-timestamp?/std",
     "cumulus-primitives-utility?/std",
     "parachain-info?/std",
+    "parachains-common?/std",
 
     # Parachain
 
@@ -298,13 +309,13 @@ std = [
 
     # XCM
 
-    "polkadot-runtime?/std",
-    "polkadot-runtime-parachains?/std",
+    "polkadot-runtime-parachains/std",
     "orml-asset-registry?/std",
     "orml-unknown-tokens?/std",
     "orml-xcm-support?/std",
     "orml-xtokens?/std",
     "pallet-xcm?/std",
+    "polkadot-runtime-common?/std",
     "xcm-builder?/std",
     "xcm-executor?/std",
     "xcm?/std",
@@ -333,6 +344,9 @@ std = [
     "zrml-styx/std",
     "zrml-swaps/std",
     "zrml-orderbook/std",
+
+    # Polkadot
+    "polkadot-runtime/std",
 ]
 try-runtime = [
     "frame-executive/try-runtime",
@@ -362,7 +376,6 @@ try-runtime = [
     "pallet-membership/try-runtime",
 
     # Other Parity runtime pallets
-    "pallet-contracts/try-runtime",
     "pallet-identity/try-runtime",
     "pallet-utility/try-runtime",
 
@@ -408,10 +421,17 @@ try-runtime = [
     "parachain-info?/try-runtime",
 
     # Polkadot
-    "polkadot-runtime?/try-runtime",
+    "polkadot-runtime/try-runtime",
 ]
+# Enable the metadata hash generation in the wasm builder.
+metadata-hash = ["substrate-wasm-builder/metadata-hash"]
+# When enabled, the GenesisBuilder API will be supported, GenesisConfig shall be
+# stripped from the final binary
+disable-genesis-builder = []
 # Allow to print logs details (no wasm:stripped)
 force-debug = ["sp-debug-derive/force-debug"]
+# This is necessary to benchmark the pallet message queue, but will cause `cargo test --all-features` to fail
+use-noop-message-processor = []
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]

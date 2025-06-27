@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -34,11 +34,11 @@ use alloc::{
 };
 use core::marker::PhantomData;
 use frame_support::{
-    dispatch::DispatchResult,
+    dispatch::{DispatchResult, DispatchResultWithPostInfo},
     ensure,
     pallet_prelude::{
-        ConstU32, Decode, DispatchResultWithPostInfo, Encode, EnsureOrigin, Hooks, OptionQuery,
-        StorageMap, StorageValue, TypeInfo, ValueQuery,
+        ConstU32, Decode, Encode, EnsureOrigin, Hooks, OptionQuery, StorageMap, StorageValue,
+        TypeInfo, ValueQuery,
     },
     traits::{
         Currency, Get, Imbalance, IsType, LockIdentifier, LockableCurrency,
@@ -129,11 +129,11 @@ mod pallet {
 
         /// The functionality to allow controlling the markets resolution time.
         type DisputeResolution: DisputeResolutionApi<
-                AccountId = Self::AccountId,
-                BlockNumber = BlockNumberFor<Self>,
-                MarketId = MarketIdOf<Self>,
-                Moment = MomentOf<Self>,
-            >;
+            AccountId = Self::AccountId,
+            BlockNumber = BlockNumberFor<Self>,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+        >;
 
         /// Event
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -144,10 +144,10 @@ mod pallet {
 
         /// Market commons
         type MarketCommons: MarketCommonsPalletApi<
-                AccountId = Self::AccountId,
-                BlockNumber = BlockNumberFor<Self>,
-                Balance = BalanceOf<Self>,
-            >;
+            AccountId = Self::AccountId,
+            BlockNumber = BlockNumberFor<Self>,
+            Balance = BalanceOf<Self>,
+        >;
 
         /// The maximum number of appeals until a court fails.
         #[pallet::constant]
@@ -581,7 +581,7 @@ mod pallet {
 
             let pool = CourtPool::<T>::get();
             let is_valid_set = sorted_delegations.iter().all(|pretended_juror| {
-                <Participants<T>>::get(pretended_juror).map_or(false, |pretended_juror_info| {
+                <Participants<T>>::get(pretended_juror).is_some_and(|pretended_juror_info| {
                     match Self::get_pool_item(&pool, pretended_juror_info.stake, pretended_juror) {
                         Ok(Some(_)) => pretended_juror_info.delegations.is_none(),
                         _ => false,

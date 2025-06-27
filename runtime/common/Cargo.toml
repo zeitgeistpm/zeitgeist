@@ -1,5 +1,7 @@
 [dependencies]
 # Pallets
+cumulus-pallet-dmp-queue = { workspace = true, optional = true }
+cumulus-pallet-parachain-system = { workspace = true, optional = true }
 cumulus-pallet-xcmp-queue = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
@@ -12,12 +14,11 @@ pallet-author-slot-filter = { workspace = true, optional = true }
 pallet-balances = { workspace = true }
 pallet-bounties = { workspace = true }
 pallet-collective = { workspace = true }
-pallet-contracts = { workspace = true }
-pallet-contracts-primitives = { workspace = true }
 pallet-democracy = { workspace = true }
 pallet-identity = { workspace = true }
 pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-membership = { workspace = true }
+pallet-message-queue = { workspace = true, optional = true }
 pallet-multisig = { workspace = true }
 pallet-parachain-staking = { workspace = true, optional = true }
 pallet-preimage = { workspace = true }
@@ -33,17 +34,24 @@ zeitgeist-primitives = { workspace = true }
 
 # Utility
 cfg-if = { workspace = true }
+log = { workspace = true }
+serde_json = { workspace = true }
 
 [features]
 default = ["std"]
 parachain = [
+    "cumulus-pallet-parachain-system",
+    "cumulus-pallet-dmp-queue",
     "cumulus-pallet-xcmp-queue",
     "pallet-author-inherent",
     "pallet-author-mapping",
     "pallet-author-slot-filter",
+    "pallet-message-queue",
     "pallet-parachain-staking",
 ]
 std = [
+    "cumulus-pallet-parachain-system?/std",
+    "cumulus-pallet-dmp-queue?/std",
     "cumulus-pallet-xcmp-queue?/std",
     "frame-system/std",
     "frame-support/std",
@@ -56,11 +64,10 @@ std = [
     "pallet-balances/std",
     "pallet-bounties/std",
     "pallet-collective/std",
-    "pallet-contracts/std",
-    "pallet-contracts-primitives/std",
     "pallet-democracy/std",
     "pallet-identity/std",
     "pallet-membership/std",
+    "pallet-message-queue?/std",
     "pallet-multisig/std",
     "pallet-preimage/std",
     "pallet-proxy/std",
@@ -73,6 +80,7 @@ std = [
     "pallet-utility/std",
     "pallet-vesting/std",
     "pallet-parachain-staking?/std",
+    "serde_json/std",
     "zeitgeist-primitives/std",
 ]
 

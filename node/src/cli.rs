@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 // Copyright 2017-2020 Parity Technologies (UK) Ltd.
 //
@@ -21,25 +21,26 @@
 mod cli_parachain;
 
 use super::service::{FullBackend, FullClient, IdentifyVariant};
+#[cfg(feature = "with-battery-station-runtime")]
+use battery_station_runtime::RuntimeApi as BatteryStationRuntimeApi;
 use clap::Parser;
 #[cfg(feature = "parachain")]
 pub use cli_parachain::RelayChainCli;
 use sc_cli::{ChainSpec, SubstrateCli};
 use sc_client_api::{KeysIter, PairsIter};
-use sp_api::NumberFor;
 use sp_consensus::BlockStatus;
-use sp_runtime::{generic::SignedBlock, traits::Block as BlockT, Justifications};
+use sp_runtime::{
+    generic::SignedBlock,
+    traits::{Block as BlockT, NumberFor},
+    Justifications,
+};
 use sp_storage::{ChildInfo, StorageData, StorageKey};
-use std::sync::Arc;
+use sp_trie::MerkleValue;
+use std::{sync::Arc, time::Duration};
 use zeitgeist_primitives::types::{Block, Header};
 pub use zeitgeist_primitives::types::{BlockNumber, Hash};
-#[cfg(feature = "with-battery-station-runtime")]
-use {
-    super::service::BatteryStationExecutor,
-    battery_station_runtime::RuntimeApi as BatteryStationRuntimeApi,
-};
 #[cfg(feature = "with-zeitgeist-runtime")]
-use {super::service::ZeitgeistExecutor, zeitgeist_runtime::RuntimeApi as ZeitgeistRuntimeApi};
+use zeitgeist_runtime::RuntimeApi as ZeitgeistRuntimeApi;
 
 const COPYRIGHT_START_YEAR: i32 = 2021;
 const IMPL_NAME: &str = "Zeitgeist Node";
@@ -132,7 +133,8 @@ pub enum Subcommand {
 
     /// Export the genesis state of the parachain.
     #[cfg(feature = "parachain")]
-    ExportGenesisState(cumulus_client_cli::ExportGenesisStateCommand),
+    #[command(alias = "export-genesis-state")]
+    ExportGenesisHead(cumulus_client_cli::ExportGenesisHeadCommand),
 
     /// Export the genesis wasm of the parachain.
     #[cfg(feature = "parachain")]
@@ -199,6 +201,13 @@ pub struct Cli {
     #[allow(missing_docs)]
     #[clap(flatten)]
     pub storage_monitor: sc_storage_monitor::StorageMonitorParams,
+
+    #[clap(long, default_value = "2000", value_parser=block_authoring_duration_parser)]
+    pub block_authoring_duration: Duration,
+}
+
+fn block_authoring_duration_parser(s: &str) -> Result<Duration, String> {
+    Ok(Duration::from_millis(clap_num::number_range(s, 250, 2_000)?))
 }
 
 #[cfg(feature = "parachain")]
@@ -250,21 +259,21 @@ impl SubstrateCli for Cli {
 #[derive(Clone)]
 pub enum Client {
     #[cfg(feature = "with-battery-station-runtime")]
-    BatteryStation(Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>),
+    BatteryStation(Arc<FullClient<BatteryStationRuntimeApi>>),
     #[cfg(feature = "with-zeitgeist-runtime")]
-    Zeitgeist(Arc<FullClient<ZeitgeistRuntimeApi, ZeitgeistExecutor>>),
+    Zeitgeist(Arc<FullClient<ZeitgeistRuntimeApi>>),
 }
 
 #[cfg(feature = "with-battery-station-runtime")]
-impl From<Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>> for Client {
-    fn from(client: Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>) -> Self {
+impl From<Arc<FullClient<BatteryStationRuntimeApi>>> for Client {
+    fn from(client: Arc<FullClient<BatteryStationRuntimeApi>>) -> Self {
         Self::BatteryStation(client)
     }
 }
 
 #[cfg(feature = "with-zeitgeist-runtime")]
-impl From<Arc<FullClient<ZeitgeistRuntimeApi, ZeitgeistExecutor>>> for Client {
-    fn from(client: Arc<FullClient<ZeitgeistRuntimeApi, ZeitgeistExecutor>>) -> Self {
+impl From<Arc<FullClient<ZeitgeistRuntimeApi>>> for Client {
+    fn from(client: Arc<FullClient<ZeitgeistRuntimeApi>>) -> Self {
         Self::Zeitgeist(client)
     }
 }
@@ -410,6 +419,23 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         key: &StorageKey,
     ) -> sp_blockchain::Result<Option<<Block as BlockT>::Hash>> {
         match_client!(self, child_storage_hash(hash, child_info, key))
+    }
+
+    fn closest_merkle_value(
+        &self,
+        hash: <Block as BlockT>::Hash,
+        key: &StorageKey,
+    ) -> sp_blockchain::Result<Option<MerkleValue<<Block as BlockT>::Hash>>> {
+        match_client!(self, closest_merkle_value(hash, key))
+    }
+
+    fn child_closest_merkle_value(
+        &self,
+        hash: <Block as BlockT>::Hash,
+        child_info: &ChildInfo,
+        key: &StorageKey,
+    ) -> sp_blockchain::Result<Option<MerkleValue<<Block as BlockT>::Hash>>> {
+        match_client!(self, child_closest_merkle_value(hash, child_info, key))
     }
 }
 

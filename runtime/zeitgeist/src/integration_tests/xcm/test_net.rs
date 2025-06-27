@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -16,33 +16,16 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::{
-    genesis::{polkadot, zeitgeist},
+    genesis::zeitgeist,
     setup::{PARA_ID_SIBLING, PARA_ID_ZEITGEIST},
 };
 use crate::{
-    xcm_config::config::LocationToAccountId, AssetManager, Balances, DmpQueue, ParachainInfo,
-    PolkadotXcm, XTokens, XcmpQueue,
+    xcm_config::config::LocationToAccountId, AssetManager, Balances, ParachainInfo, PolkadotXcm,
+    XTokens, XcmpQueue,
 };
-use xcm_emulator::{
-    decl_test_networks, decl_test_parachains, decl_test_relay_chains, DefaultMessageProcessor,
-};
+use polkadot_emulated_chain::Polkadot;
+use xcm_emulator::{decl_test_networks, decl_test_parachains};
 
-decl_test_relay_chains! {
-    #[api_version(5)]
-    pub struct Polkadot {
-        genesis = polkadot::genesis(),
-        on_init = (),
-        runtime = polkadot_runtime,
-        core = {
-            MessageProcessor: DefaultMessageProcessor<Polkadot>,
-            SovereignAccountOf: polkadot_runtime::xcm_config::SovereignAccountOf,
-        },
-        pallets = {
-            XcmPallet: polkadot_runtime::XcmPallet,
-            Balances: polkadot_runtime::Balances,
-        }
-    },
-}
 decl_test_parachains! {
     pub struct Zeitgeist {
         genesis = zeitgeist::genesis(PARA_ID_ZEITGEIST),
@@ -50,9 +33,9 @@ decl_test_parachains! {
         runtime = crate,
         core = {
             XcmpMessageHandler: XcmpQueue,
-            DmpMessageHandler: DmpQueue,
             LocationToAccountId: LocationToAccountId,
             ParachainInfo: ParachainInfo,
+            MessageOrigin: cumulus_primitives_core::AggregateMessageOrigin,
         },
         pallets = {
             PolkadotXcm: PolkadotXcm,
@@ -67,9 +50,9 @@ decl_test_parachains! {
         runtime = crate,
         core = {
             XcmpMessageHandler: XcmpQueue,
-            DmpMessageHandler: DmpQueue,
             LocationToAccountId: LocationToAccountId,
             ParachainInfo: ParachainInfo,
+            MessageOrigin: cumulus_primitives_core::AggregateMessageOrigin,
         },
         pallets = {
             PolkadotXcm: PolkadotXcm,

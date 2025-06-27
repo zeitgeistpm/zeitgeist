@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021 Centrifuge Foundation (centrifuge.io).
 //
 // This file is part of Zeitgeist.
@@ -19,11 +19,11 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            foreign_parent_multilocation, foreign_sibling_multilocation, foreign_ztg_multilocation,
+            foreign_parent_location, foreign_sibling_location, foreign_ztg_location,
             register_foreign_parent, register_foreign_sibling, FOREIGN_PARENT_ID,
             FOREIGN_SIBLING_ID, PARA_ID_BATTERY_STATION,
         },
-        test_net::BatteryStation,
+        test_net::BatteryStationPara,
     },
     xcm_config::config::{battery_station, general_key, AssetConvert},
     CurrencyId,
@@ -31,20 +31,19 @@ use crate::{
 use core::fmt::Debug;
 use sp_runtime::traits::{Convert, MaybeEquivalence};
 use test_case::test_case;
-use xcm::latest::{Junction::*, Junctions::*, MultiLocation};
+use xcm::latest::{Junction::*, Location};
 use xcm_emulator::TestExt;
 use zeitgeist_primitives::types::{Asset, CustomMetadata, ScalarPosition};
 
 fn convert_common_native<T>(expected: T)
 where
     T: Copy + Debug + PartialEq,
-    AssetConvert: MaybeEquivalence<MultiLocation, T> + Convert<T, Option<MultiLocation>>,
+    AssetConvert: MaybeEquivalence<Location, T> + Convert<T, Option<Location>>,
 {
     assert_eq!(battery_station::KEY.to_vec(), vec![0, 1]);
 
     // The way Ztg is represented relative within the Battery Station runtime
-    let ztg_location_inner: MultiLocation =
-        MultiLocation::new(0, X1(general_key(battery_station::KEY)));
+    let ztg_location_inner: Location = Location::new(0, [general_key(battery_station::KEY)]);
 
     assert_eq!(
         <AssetConvert as MaybeEquivalence<_, _>>::convert(&ztg_location_inner),
@@ -52,32 +51,26 @@ where
     );
 
     // The canonical way Ztg is represented out in the wild
-    BatteryStation::execute_with(|| {
-        assert_eq!(
-            <AssetConvert as Convert<_, _>>::convert(expected),
-            Some(foreign_ztg_multilocation())
-        )
+    BatteryStationPara::execute_with(|| {
+        assert_eq!(<AssetConvert as Convert<_, _>>::convert(expected), Some(foreign_ztg_location()))
     });
 }
 
 fn convert_common_non_native<T>(
     expected: T,
-    multilocation: MultiLocation,
+    location: Location,
     register: fn(Option<CustomMetadata>),
 ) where
     T: Copy + Debug + PartialEq,
-    AssetConvert: MaybeEquivalence<MultiLocation, T> + Convert<T, Option<MultiLocation>>,
+    AssetConvert: MaybeEquivalence<Location, T> + Convert<T, Option<Location>>,
 {
-    BatteryStation::execute_with(|| {
-        assert_eq!(<AssetConvert as MaybeEquivalence<_, _>>::convert(&multilocation), None);
+    BatteryStationPara::execute_with(|| {
+        assert_eq!(<AssetConvert as MaybeEquivalence<_, _>>::convert(&location), None);
         assert_eq!(<AssetConvert as Convert<_, _>>::convert(expected), None);
         // Register parent as foreign asset in the Battery Station parachain
         register(None);
-        assert_eq!(
-            <AssetConvert as MaybeEquivalence<_, _>>::convert(&multilocation),
-            Some(expected)
-        );
-        assert_eq!(<AssetConvert as Convert<_, _>>::convert(expected), Some(multilocation));
+        assert_eq!(<AssetConvert as MaybeEquivalence<_, _>>::convert(&location), Some(expected));
+        assert_eq!(<AssetConvert as Convert<_, _>>::convert(expected), Some(location));
     });
 }
 
@@ -87,47 +80,47 @@ fn convert_native_assets() {
 }
 
 #[test]
-fn convert_any_registered_parent_multilocation_assets() {
+fn convert_any_registered_parent_location_assets() {
     convert_common_non_native(
         FOREIGN_PARENT_ID,
-        foreign_parent_multilocation(),
+        foreign_parent_location(),
         register_foreign_parent,
     );
 }
 
 #[test]
-fn convert_any_registered_parent_multilocation_xcm_assets() {
+fn convert_any_registered_parent_location_xcm_assets() {
     convert_common_non_native(
         FOREIGN_PARENT_ID,
-        foreign_parent_multilocation(),
+        foreign_parent_location(),
         register_foreign_parent,
     );
 }
 
 #[test]
-fn convert_any_registered_sibling_multilocation_assets() {
+fn convert_any_registered_sibling_location_assets() {
     convert_common_non_native(
         FOREIGN_SIBLING_ID,
-        foreign_sibling_multilocation(),
+        foreign_sibling_location(),
         register_foreign_sibling,
     );
 }
 
 #[test]
-fn convert_any_registered_sibling_multilocation_xcm_assets() {
+fn convert_any_registered_sibling_location_xcm_assets() {
     convert_common_non_native(
         FOREIGN_SIBLING_ID,
-        foreign_sibling_multilocation(),
+        foreign_sibling_location(),
         register_foreign_sibling,
     );
 }
 
 #[test]
-fn convert_unkown_multilocation() {
-    let unknown_location: MultiLocation =
-        MultiLocation::new(1, X2(Parachain(PARA_ID_BATTERY_STATION), general_key(&[42])));
+fn convert_unkown_location() {
+    let unknown_location: Location =
+        Location::new(1, [Parachain(PARA_ID_BATTERY_STATION), general_key(&[42])]);
 
-    BatteryStation::execute_with(|| {
+    BatteryStationPara::execute_with(|| {
         assert!(
             <AssetConvert as MaybeEquivalence<_, CurrencyId>>::convert(&unknown_location).is_none()
         );
@@ -142,9 +135,9 @@ fn convert_unkown_multilocation() {
 fn convert_unsupported_asset<T>(asset: T)
 where
     T: Copy + Debug + PartialEq,
-    AssetConvert: Convert<T, Option<MultiLocation>>,
+    AssetConvert: Convert<T, Option<Location>>,
 {
-    BatteryStation::execute_with(|| {
+    BatteryStationPara::execute_with(|| {
         assert_eq!(<AssetConvert as Convert<_, _>>::convert(asset), None)
     });
 }

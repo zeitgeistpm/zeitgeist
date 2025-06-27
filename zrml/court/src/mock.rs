@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -23,7 +23,10 @@ use frame_support::{
     construct_runtime, ord_parameter_types,
     pallet_prelude::{DispatchError, Weight},
     parameter_types,
-    traits::{Everything, Hooks, NeverEnsureOrigin},
+    traits::{
+        tokens::{PayFromAccount, UnityAssetBalanceConversion},
+        Everything, Hooks, NeverEnsureOrigin,
+    },
     PalletId,
 };
 use frame_system::{mocking::MockBlock, EnsureRoot, EnsureSignedBy};
@@ -57,6 +60,7 @@ ord_parameter_types! {
 
 parameter_types! {
     pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
+    pub TreasuryAccount: AccountIdTest = Treasury::account_id();
 }
 
 construct_runtime!(
@@ -158,6 +162,7 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
+    type RuntimeTask = RuntimeTask;
     type DbWeight = ();
     type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
@@ -165,10 +170,15 @@ impl frame_system::Config for Runtime {
     type Lookup = IdentityLookup<Self::AccountId>;
     type Nonce = u64;
     type MaxConsumers = frame_support::traits::ConstU32<16>;
+    type MultiBlockMigrator = ();
     type OnKilledAccount = ();
     type OnNewAccount = ();
     type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
+    type PreInherents = ();
+    type PostInherents = ();
+    type PostTransactions = ();
+    type SingleBlockMigrations = ();
     type SS58Prefix = ();
     type SystemWeightInfo = ();
     type Version = ();
@@ -183,11 +193,11 @@ impl pallet_balances::Config for Runtime {
     type RuntimeHoldReason = ();
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
-    type MaxHolds = ();
     type MaxFreezes = ();
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
+    type RuntimeFreezeReason = ();
     type WeightInfo = ();
 }
 
@@ -205,22 +215,25 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 impl pallet_treasury::Config for Runtime {
-    type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type AssetKind = ();
+    type BalanceConverter = UnityAssetBalanceConversion;
+    type Beneficiary = AccountIdTest;
+    type BeneficiaryLookup = IdentityLookup<AccountIdTest>;
     type Burn = ();
     type BurnDestination = ();
     type Currency = Balances;
     type RuntimeEvent = RuntimeEvent;
     type MaxApprovals = MaxApprovals;
-    type OnSlash = ();
     type PalletId = TreasuryPalletId;
-    type ProposalBond = ();
-    type ProposalBondMinimum = ();
-    type ProposalBondMaximum = ();
+    type Paymaster = PayFromAccount<Balances, TreasuryAccount>;
+    type PayoutPeriod = ();
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type SpendFunds = ();
     type SpendOrigin = NeverEnsureOrigin<Balance>;
     type SpendPeriod = ();
     type WeightInfo = ();
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = ();
 }
 
 pub struct ExtBuilder {

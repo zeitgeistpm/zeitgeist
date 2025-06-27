@@ -28,7 +28,10 @@ use crate::{consts::*, AssetOf, MarketIdOf};
 use core::marker::PhantomData;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{Contains, Everything, NeverEnsureOrigin},
+    traits::{
+        tokens::{PayFromAccount, UnityAssetBalanceConversion},
+        Contains, Everything, NeverEnsureOrigin,
+    },
     Blake2_256,
 };
 use frame_system::{mocking::MockBlock, EnsureRoot, EnsureSignedBy};
@@ -110,6 +113,7 @@ parameter_types! {
     pub const ValidityBond: Balance = 0;
     pub const DisputeBond: Balance = 0;
     pub const MaxCategories: u16 = MAX_ASSETS + 1;
+    pub TreasuryAccount: AccountIdTest = Treasury::account_id();
 }
 
 pub struct DeployPoolNoop;
@@ -172,7 +176,7 @@ construct_runtime!(
         NeoSwaps: zrml_neo_swaps,
         AssetManager: orml_currencies,
         #[cfg(feature = "parachain")]
-        AssetRegistry: orml_asset_registry,
+        AssetRegistry: orml_asset_registry::module,
         Authorized: zrml_authorized,
         Balances: pallet_balances,
         CombinatorialTokens: zrml_combinatorial_tokens,
@@ -315,15 +319,21 @@ impl frame_system::Config for Runtime {
     type RuntimeCall = RuntimeCall;
     type DbWeight = ();
     type RuntimeEvent = RuntimeEvent;
+    type RuntimeTask = RuntimeTask;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Nonce = u64;
     type MaxConsumers = ConstU32<16>;
+    type MultiBlockMigrator = ();
     type OnKilledAccount = ();
     type OnNewAccount = ();
     type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
+    type PreInherents = ();
+    type PostInherents = ();
+    type PostTransactions = ();
+    type SingleBlockMigrations = ();
     type SS58Prefix = ();
     type SystemWeightInfo = ();
     type Version = ();
@@ -359,11 +369,11 @@ impl pallet_balances::Config for Runtime {
     type RuntimeHoldReason = ();
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
-    type MaxHolds = ();
     type MaxFreezes = ();
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
+    type RuntimeFreezeReason = ();
     type WeightInfo = ();
 }
 
@@ -398,22 +408,25 @@ impl zrml_global_disputes::Config for Runtime {
 }
 
 impl pallet_treasury::Config for Runtime {
-    type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type AssetKind = ();
+    type BalanceConverter = UnityAssetBalanceConversion;
+    type Beneficiary = AccountIdTest;
+    type BeneficiaryLookup = IdentityLookup<AccountIdTest>;
     type Burn = ();
     type BurnDestination = ();
     type Currency = Balances;
     type RuntimeEvent = RuntimeEvent;
     type MaxApprovals = MaxApprovals;
-    type OnSlash = ();
     type PalletId = TreasuryPalletId;
-    type ProposalBond = ();
-    type ProposalBondMinimum = ();
-    type ProposalBondMaximum = ();
+    type Paymaster = PayFromAccount<Balances, TreasuryAccount>;
+    type PayoutPeriod = ();
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type SpendFunds = ();
     type SpendOrigin = NeverEnsureOrigin<Balance>;
     type SpendPeriod = ();
     type WeightInfo = ();
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = ();
 }
 
 cfg_if::cfg_if!(
@@ -432,7 +445,7 @@ cfg_if::cfg_if!(
             }
         }
 
-        impl orml_asset_registry::Config for Runtime {
+        impl orml_asset_registry::module::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
             type CustomMetadata = CustomMetadata;
             type AssetId = CurrencyId;
@@ -478,7 +491,7 @@ impl ExtBuilder {
                 allow_as_base_asset: true,
                 ..Default::default()
             };
-            orml_asset_registry::GenesisConfig::<Runtime> {
+            orml_asset_registry::module::GenesisConfig::<Runtime> {
                 assets: vec![(
                     FOREIGN_ASSET,
                     AssetMetadata {
