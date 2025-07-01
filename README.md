@@ -9,6 +9,7 @@
 [![Discord](https://img.shields.io/badge/-Zeitgeist-blue?logo=discord&logoColor=ffffff&style=flat)](https://discord.gg/XhAcFWYUej)
 [![Telegram](https://img.shields.io/badge/-zeitgeist_official-blue?logo=telegram&style=flat)](https://t.me/zeitgeist_official)
 [![X](https://img.shields.io/badge/-zeitgeistpm-blue?logo=X&style=flat)](https://twitter.com/zeitgeistpm)
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/zeitgeistpm/zeitgeist?utm_source=oss&utm_medium=github&utm_campaign=zeitgeistpm%2Fzeitgeist&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 Zeitgeist is a decentralized network for creating, betting on, and resolving
 prediction markets, allowing traders to create complex financial contracts on
