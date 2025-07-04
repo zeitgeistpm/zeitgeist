@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Forecasting Technologies LTD.
+// Copyright 2022-2023, 2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#[cfg(not(feature = "metadata-hash"))]
 fn main() {
     #[cfg(feature = "std")]
     substrate_wasm_builder::WasmBuilder::new()
@@ -23,4 +24,15 @@ fn main() {
         .export_heap_base()
         .import_memory()
         .build();
+}
+
+#[cfg(feature = "metadata-hash")]
+fn main() {
+    #[cfg(feature = "std")]
+    substrate_wasm_builder::WasmBuilder::new()
+        .with_current_project()
+        .export_heap_base()
+        .import_memory()
+        .enable_metadata_hash("ZTG", 10)
+        .build()
 }

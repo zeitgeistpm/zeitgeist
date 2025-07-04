@@ -26,6 +26,7 @@ use {
     arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured},
     frame_support::traits::Bounded,
     sp_core::H256,
+    sp_runtime::traits::Hash,
 };
 
 // TODO Make config a generic, keeps things simple.
@@ -58,8 +59,9 @@ where
 
         let raw: [u8; 32] = Arbitrary::arbitrary(u)?;
         let hash = H256(raw);
+        let frame_system_hash = <T as frame_system::Config>::Hashing::hash_of(&hash);
         let len = u32::arbitrary(u)?;
-        let call = Bounded::Lookup { hash, len };
+        let call = Bounded::Lookup { hash: frame_system_hash, len };
 
         let oracle = Arbitrary::arbitrary(u)?;
 

@@ -17,6 +17,7 @@
 
 #![cfg(feature = "mock")]
 
+pub mod consts;
 pub mod ext_builder;
 pub mod runtime;
 pub mod types;

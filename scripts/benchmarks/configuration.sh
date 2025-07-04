@@ -15,7 +15,8 @@ export FRAME_WEIGHT_TEMPLATE="./misc/frame_weight_template.hbs"
 
 export FRAME_PALLETS_PARACHAIN=( 
     cumulus_pallet_xcmp_queue pallet_author_inherent pallet_author_slot_filter \
-    pallet_author_mapping pallet_parachain_staking \
+    pallet_author_mapping pallet_parachain_staking cumulus_pallet_parachain_system \
+    pallet_message_queue \
 )
 export FRAME_PALLETS_PARACHAIN_RUNS="${FRAME_PALLETS_PARACHAIN_RUNS:-$FRAME_PALLETS_RUNS}"
 export FRAME_PALLETS_PARACHAIN_STEPS="${FRAME_PALLETS_PARACHAIN_STEPS:-$FRAME_PALLETS_STEPS}"
@@ -41,7 +42,6 @@ if [ "$PROFILE" = "dev" ]; then
 else
     export PROFILE_DIR="$PROFILE"
 fi
-export EXECUTION="${EXECUTION:-wasm}"
 export ADDITIONAL_PARAMS="${ADDITIONAL:-}"
 export ADDITIONAL_FEATURES="${ADDITIONAL_FEATURES:-}"
 export HEADER="${HEADER:-./HEADER_GPL3}"

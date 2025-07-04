@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -151,7 +151,11 @@ where
 
 /// Calculate the distance between `x` and `y`.
 fn dist<T: AtLeast32BitUnsigned>(x: T, y: T) -> T {
-    if x > y { x - y } else { y - x }
+    if x > y {
+        x - y
+    } else {
+        y - x
+    }
 }
 
 #[cfg(test)]

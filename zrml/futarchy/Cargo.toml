@@ -9,7 +9,11 @@ zeitgeist-primitives = { workspace = true }
 
 # mock
 
+cfg-if = { workspace = true, optional = true }
 env_logger = { workspace = true, optional = true }
+orml-asset-registry = { workspace = true, optional = true }
+orml-tokens = { workspace = true, optional = true }
+orml-traits = { workspace = true, optional = true }
 pallet-balances = { workspace = true, optional = true }
 sp-io = { workspace = true, optional = true }
 
@@ -26,15 +30,21 @@ zrml-futarchy = { workspace = true, features = ["default", "mock"] }
 default = ["std"]
 fuzzing = ["arbitrary", "sp-core"]
 mock = [
+    "cfg-if",
+    "orml-asset-registry/default",
+    "orml-tokens/default",
+    "orml-traits/default",
     "env_logger/default",
     "sp-io/default",
     "pallet-balances/default",
     "zeitgeist-primitives/mock",
 ]
+parachain = []
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "orml-asset-registry?/runtime-benchmarks",
 ]
 std = [
     "frame-benchmarking?/std",

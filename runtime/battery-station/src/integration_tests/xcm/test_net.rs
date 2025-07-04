@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -16,34 +16,15 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use super::{
-    genesis::{battery_station, rococo},
+    genesis::battery_station,
     setup::{PARA_ID_BATTERY_STATION, PARA_ID_SIBLING},
 };
 use crate::{
-    xcm_config::config::LocationToAccountId, AssetManager, Balances, DmpQueue, ParachainInfo,
-    PolkadotXcm, XTokens, XcmpQueue,
+    xcm_config::config::LocationToAccountId, AssetManager, Balances, ParachainInfo, PolkadotXcm,
+    XTokens, XcmpQueue,
 };
-use xcm_emulator::{
-    decl_test_networks, decl_test_parachains, decl_test_relay_chains, DefaultMessageProcessor,
-};
-
-decl_test_relay_chains! {
-    #[api_version(5)]
-    pub struct Rococo {
-        genesis = rococo::genesis(),
-        on_init = (),
-        runtime = rococo_runtime,
-        core = {
-            MessageProcessor: DefaultMessageProcessor<Rococo>,
-            SovereignAccountOf: rococo_runtime::xcm_config::LocationConverter,
-        },
-        pallets = {
-            XcmPallet: rococo_runtime::XcmPallet,
-            Sudo: rococo_runtime::Sudo,
-            Balances: rococo_runtime::Balances,
-        }
-    },
-}
+use rococo_emulated_chain::Rococo;
+use xcm_emulator::{decl_test_networks, decl_test_parachains};
 
 decl_test_parachains! {
     pub struct BatteryStation {
@@ -52,9 +33,9 @@ decl_test_parachains! {
         runtime = crate,
         core = {
             XcmpMessageHandler: XcmpQueue,
-            DmpMessageHandler: DmpQueue,
             LocationToAccountId: LocationToAccountId,
             ParachainInfo: ParachainInfo,
+            MessageOrigin: cumulus_primitives_core::AggregateMessageOrigin,
         },
         pallets = {
             PolkadotXcm: PolkadotXcm,
@@ -69,9 +50,9 @@ decl_test_parachains! {
         runtime = crate,
         core = {
             XcmpMessageHandler: XcmpQueue,
-            DmpMessageHandler: DmpQueue,
             LocationToAccountId: LocationToAccountId,
             ParachainInfo: ParachainInfo,
+            MessageOrigin: cumulus_primitives_core::AggregateMessageOrigin,
         },
         pallets = {
             PolkadotXcm: PolkadotXcm,

@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -20,7 +20,6 @@
     // Auto-generated code is a no man's land
     clippy::arithmetic_side_effects
 )]
-#![cfg(feature = "runtime-benchmarks")]
 #![allow(clippy::type_complexity)]
 
 use super::*;

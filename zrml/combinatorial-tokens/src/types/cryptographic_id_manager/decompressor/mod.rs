@@ -183,7 +183,11 @@ fn matching_y_coordinate(x: Fq) -> Option<Fq> {
     let yy = xxx + Fq::from(3);
     let y = pow_magic_number(yy);
 
-    if y * y == yy { Some(y) } else { None }
+    if y * y == yy {
+        Some(y)
+    } else {
+        None
+    }
 }
 
 /// Returns `x` to the power of `(P + 1) / 4` where `P` is the base field modulus of `alt_bn128`.

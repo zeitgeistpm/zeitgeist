@@ -1,4 +1,4 @@
-// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2024-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -16,4 +16,3 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 pub(super) mod battery_station;
-pub(super) mod rococo;

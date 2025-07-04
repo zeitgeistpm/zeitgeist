@@ -71,17 +71,25 @@ macro_rules! decl_common_types {
             pallet_prelude::StorageVersion,
             parameter_types,
             storage::child,
-            traits::{Currency, Get, Imbalance, NeverEnsureOrigin, OnRuntimeUpgrade, OnUnbalanced},
+            traits::{
+                fungible::HoldConsideration,
+                fungibles::Imbalance as FImbalance,
+                tokens::{PayFromAccount, UnityAssetBalanceConversion},
+                Currency, Get, Imbalance, LinearStoragePrice, NeverEnsureOrigin, OnRuntimeUpgrade,
+                OnUnbalanced, TransformOrigin,
+            },
             Blake2_256, BoundedVec, Twox64Concat,
         };
         use frame_system::EnsureSigned;
         use orml_traits::MultiCurrency;
-        use pallet_balances::CreditOf;
+        use pallet_balances::{CreditOf, NegativeImbalance};
         use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
         use scale_info::TypeInfo;
+        use sp_consensus_slots::Slot;
         use sp_core::storage::ChildInfo;
         use sp_runtime::{
-            generic, DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
+            generic, traits::IdentityLookup, DispatchError, DispatchResult, RuntimeDebug,
+            SaturatedConversion,
         };
         use zeitgeist_primitives::traits::{DeployPoolApi, DistributeFees, MarketCommonsPalletApi};
         use zrml_combinatorial_tokens::types::{CryptographicIdManager, Fuel};
@@ -100,7 +108,23 @@ macro_rules! decl_common_types {
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-        type Migrations = ();
+        #[cfg(feature = "parachain")]
+        type Migrations = (
+            pallet_parachain_staking::migrations::MigrateRoundWithFirstSlot<Runtime>,
+            pallet_parachain_staking::migrations::MigrateParachainBondConfig<Runtime>,
+            cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
+            cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
+            // This `MigrateToLatestXcmVersion` migration can be permanently added to the runtime migrations. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/polkadot/xcm/pallet-xcm/src/migration.rs#L83
+            pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+            // u64::MAX from here: https://github.com/paritytech/polkadot-sdk/blob/304bbb8711f61503ae7afa3a5bfd4f78af5cbd62/polkadot/runtime/rococo/src/lib.rs#L1629-L1630
+            pallet_identity::migration::versioned::V0ToV1<Runtime, { u64::MAX }>,
+        );
+        #[cfg(not(feature = "parachain"))]
+        type Migrations = (
+            pallet_grandpa::migrations::MigrateV4ToV5<Runtime>,
+            // u64::MAX from here: https://github.com/paritytech/polkadot-sdk/blob/304bbb8711f61503ae7afa3a5bfd4f78af5cbd62/polkadot/runtime/rococo/src/lib.rs#L1629-L1630
+            pallet_identity::migration::versioned::V0ToV1<Runtime, { u64::MAX }>,
+        );
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -123,6 +147,7 @@ macro_rules! decl_common_types {
             CheckWeight<Runtime>,
             // https://docs.rs/pallet-asset-tx-payment/latest/src/pallet_asset_tx_payment/lib.rs.html#32-34
             pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
+            frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
         );
         pub type EventRecord = frame_system::EventRecord<
             <Runtime as frame_system::Config>::RuntimeEvent,
@@ -314,7 +339,7 @@ macro_rules! create_runtime {
                 Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent} = 1,
                 RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 2,
                 Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 3,
-                Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 4,
+                Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>, HoldReason} = 4,
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
@@ -370,7 +395,7 @@ macro_rules! create_runtime_with_additional_pallets {
         #[cfg(feature = "parachain")]
         create_runtime!(
             // System
-            ParachainSystem: cumulus_pallet_parachain_system::{Call, Config<T>, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
+            ParachainSystem: cumulus_pallet_parachain_system::{Call, Config<T>, Event<T>, Inherent, Pallet, Storage} = 100,
             ParachainInfo: parachain_info::{Config<T>, Pallet, Storage} = 101,
 
             // Consensus
@@ -381,12 +406,14 @@ macro_rules! create_runtime_with_additional_pallets {
 
             // XCM
             CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
+            // TODO Remove this pallet once the lazy migration is complete. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/cumulus/pallets/dmp-queue/src/lib.rs#L45
             DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
             PolkadotXcm: pallet_xcm::{Call, Config<T>, Event<T>, Origin, Pallet, Storage} = 122,
             XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 123,
-            AssetRegistry: orml_asset_registry::{Call, Config<T>, Event<T>, Pallet, Storage} = 124,
+            AssetRegistry: orml_asset_registry::module::{Call, Config<T>, Event<T>, Pallet, Storage} = 124,
             UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 125,
             XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 126,
+            MessageQueue: pallet_message_queue::{Pallet, Call, Storage, Event<T>} = 127,
 
             // Others
             $($additional_pallets)*
@@ -409,21 +436,24 @@ macro_rules! impl_config_traits {
     () => {
         use common_runtime::weights;
         #[cfg(feature = "parachain")]
-        use xcm_config::config::*;
+        use {
+            cumulus_primitives_core::{AggregateMessageOrigin, ParaId},
+            frame_support::traits::Nothing,
+            parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling},
+            xcm_config::config::*,
+        };
 
-        // Configure Pallets
+        // TODO: Remove this pallet once the lazy migration is complete. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/cumulus/pallets/dmp-queue/src/lib.rs#L45
         #[cfg(feature = "parachain")]
         impl cumulus_pallet_dmp_queue::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
-            type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
-            type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
+            type DmpSink = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
+            type WeightInfo = weights::cumulus_pallet_dmp_queue::WeightInfo<Runtime>;
         }
 
+        // Configure Pallets
         #[cfg(feature = "parachain")]
         impl cumulus_pallet_parachain_system::Config for Runtime {
-            type CheckAssociatedRelayNumber =
-                cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
-            type DmpMessageHandler = DmpQueue;
             type RuntimeEvent = RuntimeEvent;
             type OnSystemEvent = ();
             type OutboundXcmpMessageSource = XcmpQueue;
@@ -431,6 +461,11 @@ macro_rules! impl_config_traits {
             type ReservedXcmpWeight = crate::parachain_params::ReservedXcmpWeight;
             type SelfParaId = parachain_info::Pallet<Runtime>;
             type XcmpMessageHandler = XcmpQueue;
+            type CheckAssociatedRelayNumber =
+                cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+            type ConsensusHook = cumulus_pallet_parachain_system::ExpectParentIncluded;
+            type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
+            type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -444,12 +479,47 @@ macro_rules! impl_config_traits {
             type ChannelInfo = ParachainSystem;
             type ControllerOrigin = EnsureRootOrThreeFifthsTechnicalCommittee;
             type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-            type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
-            type PriceForSiblingDelivery = ();
+            type PriceForSiblingDelivery =
+                polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery<ParaId>;
+            type MaxActiveOutboundChannels = MaxActiveOutboundChannels;
+            // Most on-chain HRMP channels are configured to use 102400 bytes of max message size, so we
+            // need to set the page size larger than that until we reduce the channel size on-chain.
+            type MaxPageSize = MessageQueueHeapSize;
             type RuntimeEvent = RuntimeEvent;
-            type VersionWrapper = ();
+            type VersionWrapper = PolkadotXcm;
+            type XcmpQueue =
+                TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
+            type MaxInboundSuspended = MaxInboundSuspended;
             type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
-            type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
+        }
+
+        #[cfg(feature = "parachain")]
+        impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
+            // This must be the same as the `ChannelInfo` from the `Config`:
+            type ChannelList = ParachainSystem;
+        }
+
+        #[cfg(feature = "parachain")]
+        impl pallet_message_queue::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            #[cfg(feature = "use-noop-message-processor")]
+            type MessageProcessor =
+                pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
+            #[cfg(not(feature = "use-noop-message-processor"))]
+            type MessageProcessor = xcm_builder::ProcessXcmMessage<
+                AggregateMessageOrigin,
+                xcm_executor::XcmExecutor<XcmConfig>,
+                RuntimeCall,
+            >;
+            type Size = u32;
+            type HeapSize = MessageQueueHeapSize;
+            type MaxStale = MessageQueueMaxStale;
+            type ServiceWeight = MessageQueueServiceWeight;
+            // The XCMP queue pallet is only ever able to handle the `Sibling(ParaId)` origin:
+            type QueueChangeHandler = NarrowOriginToSibling<XcmpQueue>;
+            type QueuePausedQuery = NarrowOriginToSibling<XcmpQueue>;
+            type WeightInfo = weights::pallet_message_queue::WeightInfo<Runtime>;
+            type IdleMaxServiceWeight = MessageQueueServiceWeight;
         }
 
         impl frame_system::Config for Runtime {
@@ -475,10 +545,16 @@ macro_rules! impl_config_traits {
             #[cfg(not(feature = "parachain"))]
             type OnSetCode = ();
             type RuntimeOrigin = RuntimeOrigin;
+            type RuntimeTask = RuntimeTask;
             type PalletInfo = PalletInfo;
             type SS58Prefix = SS58Prefix;
             type SystemWeightInfo = weights::frame_system::WeightInfo<Runtime>;
             type Version = Version;
+            type SingleBlockMigrations = ();
+            type MultiBlockMigrator = ();
+            type PreInherents = ();
+            type PostInherents = ();
+            type PostTransactions = ();
         }
 
         #[cfg(not(feature = "parachain"))]
@@ -487,6 +563,7 @@ macro_rules! impl_config_traits {
             type AuthorityId = sp_consensus_aura::sr25519::AuthorityId;
             type DisabledValidators = ();
             type MaxAuthorities = MaxAuthorities;
+            type SlotDuration = pallet_aura::MinimumPeriodTimesTwo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -556,9 +633,8 @@ macro_rules! impl_config_traits {
             type SovereignAccountOf = LocationToAccountId;
             type MaxLockers = MaxLockers;
             type MaxRemoteLockConsumers = MaxRemoteLockConsumers;
+            // TODO(#1425) use correct weight info after benchmarking
             type WeightInfo = pallet_xcm::TestWeightInfo;
-            #[cfg(feature = "runtime-benchmarks")]
-            type ReachableDest = ReachableDest;
             type RemoteLockConsumerIdentifier = ();
 
             const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
@@ -590,10 +666,22 @@ macro_rules! impl_config_traits {
                     .saturating_add(extra_weight))
             }
         }
+        #[cfg(feature = "parachain")]
+        pub struct StakingRoundSlotProvider;
+
+        #[cfg(feature = "parachain")]
+        impl Get<Slot> for StakingRoundSlotProvider {
+            fn get() -> Slot {
+                let block_number: u64 =
+                    frame_system::pallet::Pallet::<Runtime>::block_number().into();
+                Slot::from(block_number)
+            }
+        }
 
         #[cfg(feature = "parachain")]
         impl pallet_parachain_staking::Config for Runtime {
             type BlockAuthor = AuthorInherent;
+            type BlockTime = BlockTime;
             type CandidateBondLessDelay = CandidateBondLessDelay;
             type Currency = Balances;
             type DelegationBondLessDelay = DelegationBondLessDelay;
@@ -616,11 +704,13 @@ macro_rules! impl_config_traits {
             type OnNewRound = ();
             type RevokeDelegationDelay = RevokeDelegationDelay;
             type RewardPaymentDelay = RewardPaymentDelay;
+            type SlotDuration = SlotDuration;
+            type SlotProvider = StakingRoundSlotProvider;
             type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
-        impl orml_asset_registry::Config for Runtime {
+        impl orml_asset_registry::module::Config for Runtime {
             type AssetId = CurrencyId;
             type AssetProcessor = CustomAssetProcessor;
             type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrThreeFifthsCouncil>;
@@ -674,7 +764,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl orml_xtokens::Config for Runtime {
-            type AccountIdToMultiLocation = AccountIdToMultiLocation;
+            type AccountIdToLocation = AccountIdToLocation;
             type Balance = Balance;
             type BaseXcmWeight = BaseXcmWeight;
             type CurrencyId = CurrencyId;
@@ -682,7 +772,9 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type MaxAssetsForTransfer = MaxAssetsForTransfer;
             type MinXcmFee = ParachainMinFee;
-            type MultiLocationsFilter = Everything;
+            type LocationsFilter = Everything;
+            type RateLimiter = ();
+            type RateLimiterId = ();
             type ReserveProvider = orml_traits::location::AbsoluteReserveProvider;
             type SelfLocation = SelfLocation;
             type UniversalLocation = UniversalLocation;
@@ -708,12 +800,12 @@ macro_rules! impl_config_traits {
             type ExistentialDeposit = ExistentialDeposit;
             type FreezeIdentifier = ();
             type MaxFreezes = MaxFreezes;
-            type MaxHolds = MaxHolds;
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
             type ReserveIdentifier = [u8; 8];
             type RuntimeEvent = RuntimeEvent;
             type RuntimeHoldReason = RuntimeHoldReason;
+            type RuntimeFreezeReason = RuntimeFreezeReason;
             type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
         }
 
@@ -803,16 +895,22 @@ macro_rules! impl_config_traits {
 
         impl pallet_identity::Config for Runtime {
             type BasicDeposit = BasicDeposit;
+            type ByteDeposit = IdentityByteDeposit;
             type Currency = Balances;
+            type IdentityInformation = pallet_identity::legacy::IdentityInfo<MaxAdditionalFields>;
             type RuntimeEvent = RuntimeEvent;
-            type FieldDeposit = FieldDeposit;
-            type ForceOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
-            type MaxAdditionalFields = MaxAdditionalFields;
+            type ForceOrigin = EnsureRootOrHalfCouncil;
             type MaxRegistrars = MaxRegistrars;
             type MaxSubAccounts = MaxSubAccounts;
+            type MaxSuffixLength = MaxSuffixLength;
+            type MaxUsernameLength = MaxUsernameLength;
+            type OffchainSignature = Signature;
+            type PendingUsernameExpiration = PendingUsernameExpiration;
             type RegistrarOrigin = EnsureRootOrHalfCouncil;
             type Slashed = Treasury;
             type SubAccountDeposit = SubAccountDeposit;
+            type SigningPublicKey = <Signature as sp_runtime::traits::Verify>::Signer;
+            type UsernameAuthorityOrigin = EnsureRoot<AccountId>;
             type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
         }
 
@@ -870,8 +968,12 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type Currency = Balances;
             type ManagerOrigin = EnsureRoot<AccountId>;
-            type BaseDeposit = PreimageBaseDeposit;
-            type ByteDeposit = PreimageByteDeposit;
+            type Consideration = HoldConsideration<
+                AccountId,
+                Balances,
+                PreimageHoldReason,
+                LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
+            >;
         }
 
         impl InstanceFilter<RuntimeCall> for ProxyType {
@@ -1015,15 +1117,6 @@ macro_rules! impl_config_traits {
         impl MinimumPeriod {
             /// Returns the value of this parameter type.
             pub fn get() -> u64 {
-                #[cfg(feature = "runtime-benchmarks")]
-                {
-                    use frame_benchmarking::benchmarking::get_whitelist;
-                    // Should that condition be true, we can assume that we are in a benchmark environment.
-                    if !get_whitelist().is_empty() {
-                        return u64::MAX;
-                    }
-                }
-
                 MinimumPeriodValue::get()
             }
         }
@@ -1042,10 +1135,7 @@ macro_rules! impl_config_traits {
         impl pallet_timestamp::Config for Runtime {
             type MinimumPeriod = MinimumPeriod;
             type Moment = u64;
-            #[cfg(feature = "parachain")]
             type OnTimestampSet = ();
-            #[cfg(not(feature = "parachain"))]
-            type OnTimestampSet = Aura;
             type WeightInfo = weights::pallet_timestamp::WeightInfo<Runtime>;
         }
 
@@ -1061,30 +1151,49 @@ macro_rules! impl_config_traits {
             type RuntimeEvent = RuntimeEvent;
             type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
             type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-            type OnChargeTransaction =
-                pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
+            type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<
+                Balances,
+                DealWithSubstrateFeesAndTip<Runtime, FeesTreasuryProportion>,
+            >;
             type OperationalFeeMultiplier = OperationalFeeMultiplier;
             type WeightToFee = IdentityFee<Balance>;
         }
 
+        #[cfg(feature = "runtime-benchmarks")]
+        pub struct TreasuryBenchmarkHelper;
+
+        #[cfg(feature = "runtime-benchmarks")]
+        impl pallet_treasury::ArgumentsFactory<(), AccountId> for TreasuryBenchmarkHelper {
+            fn create_asset_kind(_seed: u32) {
+                // No-op
+            }
+
+            fn create_beneficiary(seed: [u8; 32]) -> AccountId {
+                AccountId::from(seed)
+            }
+        }
+
         impl pallet_treasury::Config for Runtime {
-            type ApproveOrigin = EnsureRootOrTwoThirdsCouncil;
+            type AssetKind = ();
+            type BalanceConverter = UnityAssetBalanceConversion;
+            type Beneficiary = AccountId;
+            type BeneficiaryLookup = IdentityLookup<AccountId>;
             type Burn = Burn;
             type BurnDestination = ();
             type Currency = Balances;
             type RuntimeEvent = RuntimeEvent;
             type MaxApprovals = MaxApprovals;
-            type OnSlash = Treasury;
             type PalletId = TreasuryPalletId;
-            type ProposalBond = ProposalBond;
-            type ProposalBondMinimum = ProposalBondMinimum;
-            type ProposalBondMaximum = ProposalBondMaximum;
+            type Paymaster = PayFromAccount<Balances, ZeitgeistTreasuryAccount>;
+            type PayoutPeriod = PayoutPeriod;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
             type SpendFunds = Bounties;
             type SpendOrigin =
                 EnsureWithSuccess<EnsureRoot<AccountId>, AccountId, MaxTreasurySpend>;
             type SpendPeriod = SpendPeriod;
             type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
+            #[cfg(feature = "runtime-benchmarks")]
+            type BenchmarkHelper = TreasuryBenchmarkHelper;
         }
 
         impl pallet_bounties::Config for Runtime {
@@ -1099,6 +1208,7 @@ macro_rules! impl_config_traits {
             type DataDepositPerByte = DataDepositPerByte;
             type RuntimeEvent = RuntimeEvent;
             type MaximumReasonLength = MaximumReasonLength;
+            type OnSlash = Treasury;
             type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
         }
 
@@ -1110,6 +1220,7 @@ macro_rules! impl_config_traits {
         }
 
         impl pallet_vesting::Config for Runtime {
+            type BlockNumberProvider = System;
             type RuntimeEvent = RuntimeEvent;
             type Currency = Balances;
             type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
@@ -1332,6 +1443,268 @@ macro_rules! impl_config_traits {
     };
 }
 
+#[macro_export]
+macro_rules! create_genesis_config_preset {
+    ($($additional_genesis_config:tt)*) => {
+        use sp_core::{sr25519, Pair, Public};
+        use sp_genesis_builder::PresetId;
+        use sp_runtime::traits::{IdentifyAccount, Verify};
+        use zeitgeist_primitives::types::{AccountId, Balance, Signature};
+        #[cfg(feature = "parachain")]
+        use {
+            crate::{
+                DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
+            },
+            nimbus_primitives::NimbusId,
+            pallet_parachain_staking::InflationInfo,
+            sp_runtime::Percent,
+            zeitgeist_primitives::constants::{
+                ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
+                BASE,
+            },
+        };
+
+        const BATTERY_STATION_PARACHAIN_ID: u32 = 2101;
+        #[cfg(feature = "parachain")]
+        const DEFAULT_STAKING_AMOUNT_BATTERY_STATION: u128 = 2_000 * BASE;
+
+        #[cfg(feature = "parachain")]
+        pub fn inflation_config(
+            annual_inflation_min: Perbill,
+            annual_inflation_ideal: Perbill,
+            annual_inflation_max: Perbill,
+            total_supply: zeitgeist_primitives::types::Balance,
+        ) -> pallet_parachain_staking::inflation::InflationInfo<zeitgeist_primitives::types::Balance> {
+            fn to_round_inflation(
+                annual: pallet_parachain_staking::inflation::Range<Perbill>,
+            ) -> pallet_parachain_staking::inflation::Range<Perbill> {
+                use crate::parachain_params::DefaultBlocksPerRound;
+                use pallet_parachain_staking::inflation::perbill_annual_to_perbill_round;
+
+                perbill_annual_to_perbill_round(
+                    annual,
+                    // rounds per year
+                    u32::try_from(zeitgeist_primitives::constants::BLOCKS_PER_YEAR).unwrap()
+                        / DefaultBlocksPerRound::get(),
+                )
+            }
+            let annual = pallet_parachain_staking::inflation::Range {
+                min: annual_inflation_min,
+                ideal: annual_inflation_ideal,
+                max: annual_inflation_max,
+            };
+            pallet_parachain_staking::inflation::InflationInfo {
+                // staking expectations
+                expect: pallet_parachain_staking::inflation::Range {
+                    min: Perbill::from_percent(5).mul_floor(total_supply),
+                    ideal: Perbill::from_percent(10).mul_floor(total_supply),
+                    max: Perbill::from_percent(15).mul_floor(total_supply),
+                },
+                // annual inflation
+                annual,
+                round: to_round_inflation(annual),
+            }
+        }
+
+        #[cfg(feature = "parachain")]
+        pub struct AdditionalChainSpec {
+            pub blocks_per_round: u32,
+            pub candidates: Vec<(AccountId, NimbusId, Balance)>,
+            pub collator_commission: Perbill,
+            pub inflation_info: InflationInfo<Balance>,
+            pub nominations: Vec<(AccountId, AccountId, Balance, Percent)>,
+            pub parachain_bond_reserve_percent: Percent,
+            pub parachain_id: ParaId,
+            pub num_selected_candidates: u32,
+        }
+
+        #[cfg(not(feature = "parachain"))]
+        pub struct AdditionalChainSpec {
+            pub initial_authorities:
+                Vec<(sp_consensus_aura::sr25519::AuthorityId, sp_consensus_grandpa::AuthorityId)>,
+        }
+
+        type AccountPublic = <Signature as Verify>::Signer;
+        #[inline]
+        fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
+        where
+            AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+        {
+            AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+        }
+
+        fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+            TPublic::Pair::from_string(&alloc::format!("//{}", seed), None)
+                .expect("static values are valid; qed")
+                .public()
+        }
+
+        #[derive(Clone)]
+        pub struct EndowedAccountWithBalance(AccountId, Balance);
+
+        pub fn generic_genesis(
+            acs: AdditionalChainSpec,
+            endowed_accounts: Vec<EndowedAccountWithBalance>,
+        ) -> crate::RuntimeGenesisConfig {
+            crate::RuntimeGenesisConfig {
+                // Common genesis
+                advisory_committee: Default::default(),
+                advisory_committee_membership: crate::AdvisoryCommitteeMembershipConfig {
+                    members: vec![].try_into().unwrap(),
+                    phantom: Default::default(),
+                },
+                #[cfg(feature = "parachain")]
+                asset_registry: Default::default(),
+                #[cfg(not(feature = "parachain"))]
+                aura: crate::AuraConfig {
+                    authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),
+                },
+                #[cfg(feature = "parachain")]
+                author_filter: crate::AuthorFilterConfig {
+                    eligible_count: EligibilityValue::new_unchecked(1),
+                    ..Default::default()
+                },
+                #[cfg(feature = "parachain")]
+                author_mapping: crate::AuthorMappingConfig {
+                    mappings: acs
+                        .candidates
+                        .iter()
+                        .cloned()
+                        .map(|(account_id, author_id, _)| (author_id, account_id))
+                        .collect(),
+                },
+                balances: crate::BalancesConfig {
+                    balances: endowed_accounts.iter().cloned().map(|k| (k.0, k.1)).collect(),
+                },
+                council: Default::default(),
+                council_membership: crate::CouncilMembershipConfig {
+                    members: vec![].try_into().unwrap(),
+                    phantom: Default::default(),
+                },
+                democracy: Default::default(),
+                #[cfg(not(feature = "parachain"))]
+                grandpa: crate::GrandpaConfig {
+                    authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
+                    ..Default::default()
+                },
+                #[cfg(feature = "parachain")]
+                parachain_info: crate::ParachainInfoConfig {
+                    parachain_id: acs.parachain_id,
+                    ..Default::default()
+                },
+                #[cfg(feature = "parachain")]
+                parachain_staking: crate::ParachainStakingConfig {
+                    blocks_per_round: acs.blocks_per_round,
+                    candidates: acs
+                        .candidates
+                        .iter()
+                        .cloned()
+                        .map(|(account, _, bond)| (account, bond))
+                        .collect(),
+                    collator_commission: acs.collator_commission,
+                    inflation_config: acs.inflation_info,
+                    delegations: acs.nominations,
+                    parachain_bond_reserve_percent: acs.parachain_bond_reserve_percent,
+                    num_selected_candidates: acs.num_selected_candidates,
+                },
+                #[cfg(feature = "parachain")]
+                parachain_system: Default::default(),
+                #[cfg(feature = "parachain")]
+                // Default should use the pallet configuration
+                polkadot_xcm: PolkadotXcmConfig::default(),
+                system: crate::SystemConfig::default(),
+                technical_committee: Default::default(),
+                technical_committee_membership: crate::TechnicalCommitteeMembershipConfig {
+                    members: vec![].try_into().unwrap(),
+                    phantom: Default::default(),
+                },
+                treasury: Default::default(),
+                transaction_payment: Default::default(),
+                tokens: Default::default(),
+                vesting: Default::default(),
+
+                // Additional genesis
+                $($additional_genesis_config)*
+            }
+        }
+
+        const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
+
+        #[cfg(not(feature = "parachain"))]
+        fn authority_keys_from_seed(
+            s: &str,
+        ) -> (sp_consensus_aura::sr25519::AuthorityId, sp_consensus_grandpa::AuthorityId) {
+            (
+                get_from_seed::<sp_consensus_aura::sr25519::AuthorityId>(s),
+                get_from_seed::<sp_consensus_grandpa::AuthorityId>(s),
+            )
+        }
+
+        fn get_genesis_config() -> serde_json::Value {
+            serde_json::to_value(&generic_genesis(
+                #[cfg(feature = "parachain")]
+                AdditionalChainSpec {
+                    blocks_per_round: DefaultBlocksPerRound::get(),
+                    candidates: vec![(
+                        get_account_id_from_seed::<sr25519::Public>("Alice"),
+                        get_from_seed::<nimbus_primitives::NimbusId>("Alice"),
+                        DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
+                    )],
+                    collator_commission: DefaultCollatorCommission::get(),
+                    inflation_info: inflation_config(
+                        STAKING_PTD * Perbill::from_percent(40),
+                        STAKING_PTD * Perbill::from_percent(70),
+                        STAKING_PTD,
+                        TOTAL_INITIAL_ZTG * BASE,
+                    ),
+                    nominations: vec![],
+                    parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
+                    parachain_id: BATTERY_STATION_PARACHAIN_ID.into(),
+                    num_selected_candidates: 8,
+                },
+                #[cfg(not(feature = "parachain"))]
+                AdditionalChainSpec { initial_authorities: vec![authority_keys_from_seed("Alice")] },
+                vec![
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Eve"),
+                    get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+                    get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+                ]
+                .into_iter()
+                .map(|acc| EndowedAccountWithBalance(acc, INITIAL_BALANCE))
+                .collect(),
+            ))
+            .expect("Could not generate JSON for battery station staging genesis.")
+        }
+
+        /// Provides the JSON representation of predefined genesis config for given `id`.
+        pub fn get_genesis_config_preset(id: &PresetId) -> Option<Vec<u8>> {
+            let patch = match id.try_into() {
+                Ok(sp_genesis_builder::DEV_RUNTIME_PRESET) => get_genesis_config(),
+                _ => return None,
+            };
+            Some(
+                serde_json::to_string(&patch)
+                    .expect("serialization to json is expected to work. qed.")
+                    .into_bytes(),
+            )
+        }
+
+        /// List of supported presets.
+        pub fn get_genesis_config_preset_names() -> Vec<PresetId> {
+            vec![PresetId::from(sp_genesis_builder::DEV_RUNTIME_PRESET)]
+        }
+    };
+}
+
 // Implement runtime apis
 #[macro_export]
 macro_rules! create_runtime_api {
@@ -1453,10 +1826,13 @@ macro_rules! create_runtime_api {
 
                     cfg_if::cfg_if! {
                         if #[cfg(feature = "parachain")] {
+                            list_benchmark!(list, extra, cumulus_pallet_parachain_system, ParachainSystem);
                             list_benchmark!(list, extra, cumulus_pallet_xcmp_queue, XcmpQueue);
+                            list_benchmark!(list, extra, cumulus_pallet_dmp_queue, DmpQueue);
                             list_benchmark!(list, extra, pallet_author_inherent, AuthorInherent);
                             list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                             list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
+                            list_benchmark!(list, extra, pallet_message_queue, MessageQueue);
                             list_benchmark!(list, extra, pallet_parachain_staking, ParachainStaking);
                         } else {
                             list_benchmark!(list, extra, pallet_grandpa, Grandpa);
@@ -1544,10 +1920,13 @@ macro_rules! create_runtime_api {
 
                     cfg_if::cfg_if! {
                         if #[cfg(feature = "parachain")] {
+                            add_benchmark!(params, batches, cumulus_pallet_parachain_system, ParachainSystem);
                             add_benchmark!(params, batches, cumulus_pallet_xcmp_queue, XcmpQueue);
+                            add_benchmark!(params, batches, cumulus_pallet_dmp_queue, DmpQueue);
                             add_benchmark!(params, batches, pallet_author_inherent, AuthorInherent);
                             add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
+                            add_benchmark!(params, batches, pallet_message_queue, MessageQueue);
                             add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
 
                         } else {
@@ -1569,24 +1948,21 @@ macro_rules! create_runtime_api {
             }
 
             impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
-                fn query_fee_details(
-                    uxt: <Block as BlockT>::Extrinsic,
-                    len: u32,
-                ) -> pallet_transaction_payment::FeeDetails<Balance> {
-                    TransactionPayment::query_fee_details(uxt, len)
-                }
-
                 fn query_info(
                     uxt: <Block as BlockT>::Extrinsic,
                     len: u32,
                 ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
                     TransactionPayment::query_info(uxt, len)
                 }
-
+                fn query_fee_details(
+                    uxt: <Block as BlockT>::Extrinsic,
+                    len: u32,
+                ) -> pallet_transaction_payment::FeeDetails<Balance> {
+                    TransactionPayment::query_fee_details(uxt, len)
+                }
                 fn query_weight_to_fee(weight: Weight) -> Balance {
                     TransactionPayment::weight_to_fee(weight)
                 }
-
                 fn query_length_to_fee(length: u32) -> Balance {
                     TransactionPayment::length_to_fee(length)
                 }
@@ -1632,16 +2008,16 @@ macro_rules! create_runtime_api {
             }
 
             impl sp_api::Core<Block> for Runtime {
-                fn execute_block(block: Block) {
-                    Executive::execute_block(block)
-                }
-
-                fn initialize_block(header: &<Block as BlockT>::Header) {
-                    Executive::initialize_block(header)
-                }
-
                 fn version() -> RuntimeVersion {
                     VERSION
+                }
+
+                fn execute_block(block: Block) {
+                    Executive::execute_block(block);
+                }
+
+                fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode {
+                    Executive::initialize_block(header)
                 }
             }
 
@@ -1664,13 +2040,6 @@ macro_rules! create_runtime_api {
                     Executive::apply_extrinsic(extrinsic)
                 }
 
-                fn check_inherents(
-                    block: Block,
-                    data: sp_inherents::InherentData,
-                ) -> sp_inherents::CheckInherentsResult {
-                    data.check_extrinsics(&block)
-                }
-
                 fn finalize_block() -> <Block as BlockT>::Header {
                     Executive::finalize_block()
                 }
@@ -1678,16 +2047,23 @@ macro_rules! create_runtime_api {
                 fn inherent_extrinsics(data: sp_inherents::InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
                     data.create_extrinsics()
                 }
+
+                fn check_inherents(
+                    block: Block,
+                    data: sp_inherents::InherentData,
+                ) -> sp_inherents::CheckInherentsResult {
+                    data.check_extrinsics(&block)
+                }
             }
 
             #[cfg(not(feature = "parachain"))]
             impl sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId> for Runtime {
-                fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
-                    Aura::authorities().into_inner()
-                }
-
                 fn slot_duration() -> sp_consensus_aura::SlotDuration {
                     sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
+                }
+
+                fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
+                    pallet_aura::Authorities::<Runtime>::get().into_inner()
                 }
             }
 
@@ -1704,7 +2080,7 @@ macro_rules! create_runtime_api {
                 fn submit_report_equivocation_unsigned_extrinsic(
                     _equivocation_proof: sp_consensus_grandpa::EquivocationProof<
                         <Block as BlockT>::Hash,
-                        sp_api::NumberFor<Block>,
+                        sp_runtime::traits::NumberFor<Block>,
                     >,
                     _key_owner_proof: sp_consensus_grandpa::OpaqueKeyOwnershipProof,
                 ) -> Option<()> {
@@ -1729,14 +2105,31 @@ macro_rules! create_runtime_api {
             }
 
             impl sp_session::SessionKeys<Block> for Runtime {
-                fn decode_session_keys(encoded: Vec<u8>) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
-                    opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
-                }
-
                 fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
                     opaque::SessionKeys::generate(seed)
                 }
+
+                fn decode_session_keys(
+                    encoded: Vec<u8>,
+                ) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
+                    opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
+                }
             }
+
+            #[cfg(not(feature = "disable-genesis-builder"))]
+            impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
+				fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
+					frame_support::genesis_builder_helper::build_state::<RuntimeGenesisConfig>(config)
+				}
+
+				fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
+					frame_support::genesis_builder_helper::get_preset::<RuntimeGenesisConfig>(id, get_genesis_config_preset)
+				}
+
+				fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
+					get_genesis_config_preset_names()
+				}
+			}
 
             impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
                 fn validate_transaction(
@@ -1778,6 +2171,9 @@ macro_rules! create_runtime_api {
             #[cfg(feature = "try-runtime")]
             impl frame_try_runtime::TryRuntime<Block> for Runtime {
                 fn on_runtime_upgrade(checks: UpgradeCheckSelect) -> (Weight, Weight) {
+                    // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+                    // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
+                    // right here and right now.
                     let weight = Executive::try_runtime_upgrade(checks).unwrap();
                     (weight, RuntimeBlockWeights::get().max_block)
                 }
@@ -1794,6 +2190,18 @@ macro_rules! create_runtime_api {
                 }
             }
 
+            #[cfg(feature = "parachain")]
+            impl async_backing_primitives::UnincludedSegmentApi<Block> for Runtime {
+                fn can_build_upon(
+                    _included_hash: <Block as BlockT>::Hash,
+                    _slot: async_backing_primitives::Slot,
+                ) -> bool {
+                    // This runtime API can be called only when asynchronous backing is enabled client-side
+                    // We return false here to force the client to not use async backing.
+                    false
+                }
+            }
+
             $($additional_apis)*
         }
 
@@ -1801,6 +2209,10 @@ macro_rules! create_runtime_api {
         #[cfg(feature = "parachain")]
         struct CheckInherents;
 
+
+        // Parity has decided to depreciate this trait, but does not offer a satisfactory replacement,
+        // see issue: https://github.com/paritytech/polkadot-sdk/issues/2841
+        #[allow(deprecated)]
         #[cfg(feature = "parachain")]
         impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
             fn check_inherents(

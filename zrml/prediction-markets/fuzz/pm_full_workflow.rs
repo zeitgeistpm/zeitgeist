@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -126,7 +126,11 @@ struct Data {
 
 #[inline]
 fn market_creation(seed: u8) -> MarketCreation {
-    if seed % 2 == 0 { MarketCreation::Advised } else { MarketCreation::Permissionless }
+    if seed % 2 == 0 {
+        MarketCreation::Advised
+    } else {
+        MarketCreation::Permissionless
+    }
 }
 
 #[inline]

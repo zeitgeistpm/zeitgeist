@@ -30,9 +30,11 @@ jobs:
       - name: Install rust toolchain
         run: rustup show
 
+# TODO: remove version requirement for grcov as soon as zip support is available: https://github.com/mozilla/grcov/issues/1351
       - uses: actions-rs/install@v0.1
         with:
           crate: grcov
+          version: "0.8.20"
           use-tool-cache: false
       
       - name: Cache Dependencies

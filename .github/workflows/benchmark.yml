@@ -35,6 +35,9 @@ jobs:
 
       - name: Install build tools
         run: ./scripts/init.sh
+      
+      - name: Install frame-omni-bencher
+        run: cargo install frame-omni-bencher --version 0.10.0
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
@@ -110,9 +113,11 @@ jobs:
             # Execute benchmark
             pallet_folder_name=${pallet//zrml_/}
             pallet_folder_name=${pallet_folder_name//_/-}
-            command="./target/release/zeitgeist benchmark --chain=dev "
+            command="frame-omni-bencher v1 benchmark "
+            command+="--runtime=target/release/wbuild/battery-station-runtime/battery_station_runtime.wasm "
+            command+="--genesis-builder=runtime --genesis-builder-preset=development "
             command+="--steps=$ZEITGEIST_PALLETS_STEPS --repeat=$ZEITGEIST_PALLETS_RUNS "
-            command+="--pallet=$pallet --extrinsic=* --execution=wasm --wasm-execution=compiled "
+            command+="--pallet=$pallet --extrinsic=* --wasm-execution=compiled "
             command+="--heap-pages=4096 --template=./misc/weight_template.hbs "
             command+="--output=./zrml/$pallet_folder_name/src/weights.rs"
             echo "Executing: $command"

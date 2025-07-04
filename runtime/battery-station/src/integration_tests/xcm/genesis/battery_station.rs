@@ -1,4 +1,4 @@
-// Copyright 2024 Forecasting Technologies LTD.
+// Copyright 2024-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -27,7 +27,7 @@ use sp_core::storage::Storage;
 use sp_runtime::BuildStorage;
 
 const ENDOWMENT: u128 = ztg(1_000_000);
-const SAFE_XCM_VERSION: u32 = 2;
+const SAFE_XCM_VERSION: u32 = 3;
 
 pub(crate) fn genesis(parachain_id: u32) -> Storage {
     let genesis_config = crate::RuntimeGenesisConfig {
@@ -52,10 +52,7 @@ pub(crate) fn genesis(parachain_id: u32) -> Storage {
             safe_xcm_version: Some(SAFE_XCM_VERSION),
             ..Default::default()
         },
-        system: crate::SystemConfig {
-            code: crate::WASM_BINARY.unwrap().to_vec(),
-            ..Default::default()
-        },
+        system: crate::SystemConfig { ..Default::default() },
         tokens: crate::TokensConfig {
             balances: accounts::init_balances()
                 .iter()

@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -24,7 +24,6 @@ mod service_standalone;
 use zeitgeist_primitives::types::{AccountId, Balance, Block, MarketId, Nonce, PoolId};
 
 use super::cli::Client;
-use sc_executor::NativeExecutionDispatch;
 use sc_service::{
     error::Error as ServiceError, ChainSpec, Configuration, PartialComponents, TaskManager,
 };
@@ -34,44 +33,6 @@ pub use service_parachain::{new_full, new_partial, FullBackend, FullClient};
 pub use service_standalone::{new_full, new_partial, FullBackend, FullClient};
 use sp_api::ConstructRuntimeApi;
 use std::sync::Arc;
-
-#[cfg(feature = "runtime-benchmarks")]
-pub type HostFunctions =
-    (frame_benchmarking::benchmarking::HostFunctions, sp_io::SubstrateHostFunctions);
-#[cfg(not(feature = "runtime-benchmarks"))]
-pub type HostFunctions = (sp_io::SubstrateHostFunctions,);
-
-#[cfg(feature = "with-battery-station-runtime")]
-pub struct BatteryStationExecutor;
-
-#[cfg(feature = "with-battery-station-runtime")]
-impl sc_executor::NativeExecutionDispatch for BatteryStationExecutor {
-    type ExtendHostFunctions = HostFunctions;
-
-    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-        battery_station_runtime::api::dispatch(method, data)
-    }
-
-    fn native_version() -> sc_executor::NativeVersion {
-        battery_station_runtime::native_version()
-    }
-}
-
-#[cfg(feature = "with-zeitgeist-runtime")]
-pub struct ZeitgeistExecutor;
-
-#[cfg(feature = "with-zeitgeist-runtime")]
-impl sc_executor::NativeExecutionDispatch for ZeitgeistExecutor {
-    type ExtendHostFunctions = HostFunctions;
-
-    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-        zeitgeist_runtime::api::dispatch(method, data)
-    }
-
-    fn native_version() -> sc_executor::NativeVersion {
-        zeitgeist_runtime::native_version()
-    }
-}
 
 /// Can be called for a `Configuration` to check if it is a configuration for
 /// the `Zeitgeist` network.
@@ -121,6 +82,7 @@ cfg_if::cfg_if! {
             + nimbus_primitives::NimbusApi<Block>
             + cumulus_primitives_core::CollectCollationInfo<Block>
             + session_keys_primitives::VrfApi<Block>
+            + async_backing_primitives::UnincludedSegmentApi<Block>
         {
         }
 
@@ -129,7 +91,8 @@ cfg_if::cfg_if! {
             Api: sp_api::ApiExt<Block>
                 + nimbus_primitives::NimbusApi<Block>
                 + cumulus_primitives_core::CollectCollationInfo<Block>
-                + session_keys_primitives::VrfApi<Block>,
+                + session_keys_primitives::VrfApi<Block>
+                + async_backing_primitives::UnincludedSegmentApi<Block>,
         {
         }
     } else {
@@ -162,34 +125,28 @@ pub fn new_chain_ops(
 > {
     match &config.chain_spec {
         #[cfg(feature = "with-zeitgeist-runtime")]
-        spec if spec.is_zeitgeist() => {
-            new_chain_ops_inner::<zeitgeist_runtime::RuntimeApi, ZeitgeistExecutor>(config)
-        }
+        spec if spec.is_zeitgeist() => new_chain_ops_inner::<zeitgeist_runtime::RuntimeApi>(config),
         #[cfg(feature = "with-battery-station-runtime")]
-        _ => new_chain_ops_inner::<battery_station_runtime::RuntimeApi, BatteryStationExecutor>(
-            config,
-        ),
+        _ => new_chain_ops_inner::<battery_station_runtime::RuntimeApi>(config),
         #[cfg(not(feature = "with-battery-station-runtime"))]
         _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
     }
 }
 
 #[allow(clippy::type_complexity)]
-fn new_chain_ops_inner<RuntimeApi, Executor>(
+fn new_chain_ops_inner<RuntimeApi>(
     config: &mut Configuration,
 ) -> Result<
     (Arc<Client>, Arc<FullBackend>, sc_consensus::BasicQueue<Block>, TaskManager),
     ServiceError,
 >
 where
-    Client: From<Arc<FullClient<RuntimeApi, Executor>>>,
-    RuntimeApi:
-        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    Client: From<Arc<FullClient<RuntimeApi>>>,
+    RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi>> + Send + Sync + 'static,
     RuntimeApi::RuntimeApi: RuntimeApiCollection + AdditionalRuntimeApiCollection,
-    Executor: NativeExecutionDispatch + 'static,
 {
     config.keystore = sc_service::config::KeystoreConfig::InMemory;
     let PartialComponents { client, backend, import_queue, task_manager, .. } =
-        new_partial::<RuntimeApi, Executor>(config)?;
+        new_partial::<RuntimeApi>(config)?;
     Ok((Arc::new(Client::from(client)), backend, import_queue, task_manager))
 }

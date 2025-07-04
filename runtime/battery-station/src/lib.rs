@@ -25,8 +25,9 @@ extern crate alloc;
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use common_runtime::{
-    create_common_benchmark_logic, create_common_tests, create_runtime, create_runtime_api,
-    create_runtime_with_additional_pallets, decl_common_types, impl_config_traits,
+    create_common_benchmark_logic, create_common_tests, create_genesis_config_preset,
+    create_runtime, create_runtime_api, create_runtime_with_additional_pallets, decl_common_types,
+    impl_config_traits,
 };
 pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
@@ -54,7 +55,7 @@ use zeitgeist_primitives::types::*;
 use zrml_swaps::Call::force_pool_exit;
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
+    frame_support::traits::{AsEnsureOriginWithArg, Everything},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds},
     xcm_config::{
         asset_registry::CustomAssetProcessor,
@@ -64,10 +65,11 @@ use {
 
 use frame_support::construct_runtime;
 
-use sp_api::{impl_runtime_apis, BlockT};
+use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str,
+    traits::Block as BlockT,
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
@@ -129,6 +131,11 @@ impl pallet_sudo::Config for Runtime {
 }
 
 impl_config_traits!();
+create_genesis_config_preset!(
+    sudo: SudoConfig {
+        key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+    },
+);
 create_runtime_api!();
 create_common_benchmark_logic!();
 create_common_tests!();

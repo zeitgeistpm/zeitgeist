@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -155,8 +155,8 @@ where
                 node.account = Some(who.clone());
                 node.stake = stake;
                 node.fees = Zero::zero(); // Not necessary, but better safe than sorry.
-                // Don't change `descendant_stake`; we're still maintaining it for abandoned
-                // nodes.
+                                          // Don't change `descendant_stake`; we're still maintaining it for abandoned
+                                          // nodes.
                 node.lazy_fees = Zero::zero();
                 (index, BenchmarkInfo::Reassigned)
             } else if let Some(index) = self.peek_next_free_leaf() {
@@ -326,7 +326,11 @@ where
     }
 
     fn parent_index(&self, index: u32) -> Option<u32> {
-        if index == 0 { None } else { index.checked_sub(1)?.checked_div(2) }
+        if index == 0 {
+            None
+        } else {
+            index.checked_sub(1)?.checked_div(2)
+        }
     }
 
     fn path_to_node(
@@ -354,7 +358,11 @@ where
 
     fn peek_next_free_leaf(&self) -> Option<u32> {
         let node_count = self.node_count();
-        if node_count < Self::max_node_count() { Some(node_count) } else { None }
+        if node_count < Self::max_node_count() {
+            Some(node_count)
+        } else {
+            None
+        }
     }
 
     fn update_descendant_stake_of_ancestors(

@@ -3,7 +3,7 @@ provider = "native"
 timeout = 1000
 
 [relaychain]
-chain = "rococo-dev"
+chain = "rococo-local"
 default_args = ["--no-hardware-benchmarks", "-lparachain=debug", "--database=paritydb"]
 default_command = "./tmp/polkadot"
 

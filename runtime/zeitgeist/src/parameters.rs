@@ -22,7 +22,9 @@
     clippy::arithmetic_side_effects
 )]
 
-use super::{Runtime, VERSION};
+#[cfg(feature = "parachain")]
+use super::Runtime;
+use super::{RuntimeHoldReason, VERSION};
 use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
@@ -45,12 +47,11 @@ use zeitgeist_primitives::{constants::*, types::*};
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
-    WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
+    // previously the block weight was 500ms, the updated execution time is 2000ms weight
+    WEIGHT_REF_TIME_PER_SECOND.saturating_mul(2),
     polkadot_primitives::MAX_POV_SIZE as u64,
 );
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
-pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 100;
-pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 0;
 
 #[cfg(not(feature = "parachain"))]
 parameter_types! {
@@ -70,7 +71,6 @@ parameter_types! {
 
     // Balance
     pub const ExistentialDeposit: u128 = BASE / 2;
-    pub const MaxHolds: u32 = 1;
     pub const MaxFreezes: u32 = 1;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
@@ -170,8 +170,8 @@ parameter_types! {
     // Identity
     /// The amount held on deposit for a registered identity
     pub const BasicDeposit: Balance = deposit(1, 258);
-    /// The amount held on deposit per additional field for a registered identity.
-    pub const FieldDeposit: Balance = deposit(0, 66);
+    /// The amount held on deposit per encoded byte for a registered identity.
+    pub const IdentityByteDeposit: Balance = deposit(0, 1);
     /// Maximum number of additional fields that may be stored in an ID. Needed to bound the I/O
     /// required to access an identity, but can be pretty high.
     pub const MaxAdditionalFields: u32 = 16;
@@ -180,6 +180,12 @@ parameter_types! {
     pub const MaxRegistrars: u32 = 4;
     /// The maximum number of sub-accounts allowed per identified account.
     pub const MaxSubAccounts: u32 = 128;
+    /// The maximum length of a suffix.
+    pub const MaxSuffixLength: u32 = 7;
+    /// The maximum length of a username, including its suffix and any system-added delimiters.
+    pub const MaxUsernameLength: u32 = 32;
+    /// The number of blocks within which a username grant must be accepted.
+    pub const PendingUsernameExpiration: u64 = 7 * BLOCKS_PER_DAY;
     /// The amount held on deposit for a registered subaccount. This should account for the fact
     /// that one storage item's value will increase by the size of an account ID, and there will
     /// be another trie item whose value is the size of an account ID plus 32 bytes.
@@ -269,6 +275,7 @@ parameter_types! {
     pub const PreimageMaxSize: u32 = 4096 * 1024;
     pub PreimageBaseDeposit: Balance = deposit(2, 64);
     pub PreimageByteDeposit: Balance = deposit(0, 1);
+    pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
 
     // Proxy
     // One storage item; key size 32, value size 8; .
@@ -354,6 +361,8 @@ parameter_types! {
     pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000u128);
     /// Maximum amount of the multiplier.
     pub MaximumMultiplier: Multiplier = Bounded::max_value();
+    /// The percentage of the fees that are paid to the treasury.
+    pub FeesTreasuryProportion: Perbill = Perbill::from_percent(100);
 
     // Timestamp
     /// MinimumPeriod for Timestamp
@@ -366,13 +375,11 @@ parameter_types! {
     pub const MaxApprovals: u32 = 100;
     /// Maximum amount a verified origin can spend
     pub const MaxTreasurySpend: Balance = Balance::MAX;
+    /// The period during which an approved treasury spend has to be claimed.
+    pub const PayoutPeriod: BlockNumber = 30 * BLOCKS_PER_DAY;
     /// Fraction of a proposal's value that should be bonded in order to place the proposal.
     /// An accepted proposal gets these back. A rejected proposal does not.
     pub const ProposalBond: Permill = Permill::from_percent(5);
-    /// Minimum amount of funds that should be placed in a deposit for making a proposal.
-    pub const ProposalBondMinimum: Balance = 10 * BASE;
-    /// Maximum amount of funds that should be placed in a deposit for making a proposal.
-    pub const ProposalBondMaximum: Balance = 500 * BASE;
     /// Period between successive spends.
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
@@ -454,7 +461,7 @@ parameter_type_with_key! {
             #[cfg(feature = "parachain")]
             Asset::ForeignAsset(id) => {
                 let maybe_metadata = <
-                    orml_asset_registry::Pallet<Runtime> as orml_traits::asset_registry::Inspect
+                    orml_asset_registry::module::Pallet<Runtime> as orml_traits::asset_registry::Inspect
                 >::metadata(&Asset::ForeignAsset(*id));
 
                 if let Some(metadata) = maybe_metadata {

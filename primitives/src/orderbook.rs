@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -36,10 +36,10 @@ pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen + HasCompact> {
 }
 
 impl<
-    AccountId,
-    Balance: AtLeast32BitUnsigned + Copy,
-    MarketId: MaxEncodedLen + HasCompact + PartialEq,
-> Order<AccountId, Balance, MarketId>
+        AccountId,
+        Balance: AtLeast32BitUnsigned + Copy,
+        MarketId: MaxEncodedLen + HasCompact + PartialEq,
+    > Order<AccountId, Balance, MarketId>
 {
     /// Return the price of the order.
     pub fn price(&self, base_asset: Asset<MarketId>) -> Result<Balance, DispatchError> {

@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -31,14 +31,8 @@ pub use battery_station::battery_station_staging_config;
 pub use dev::dev_config;
 use sc_service::Properties;
 use sc_telemetry::TelemetryEndpoints;
-#[cfg(feature = "with-battery-station-runtime")]
-use sp_core::{Pair, Public};
-#[cfg(feature = "with-battery-station-runtime")]
-use sp_runtime::traits::{IdentifyAccount, Verify};
 #[cfg(feature = "with-zeitgeist-runtime")]
 pub use zeitgeist::zeitgeist_staging_config;
-#[cfg(feature = "with-battery-station-runtime")]
-use zeitgeist_primitives::types::Signature;
 use zeitgeist_primitives::{
     constants::BalanceFractionalDecimals,
     types::{AccountId, Balance},
@@ -90,9 +84,9 @@ cfg_if::cfg_if! {
         }
 
         pub(crate) use generate_inflation_config_function;
-        pub type DummyChainSpec = sc_service::GenericChainSpec<(), Extensions>;
+        pub type DummyChainSpec = sc_service::GenericChainSpec<Extensions>;
     } else {
-        pub type DummyChainSpec = sc_service::GenericChainSpec<()>;
+        pub type DummyChainSpec = sc_service::GenericChainSpec;
     }
 }
 
@@ -104,10 +98,10 @@ pub(crate) struct EndowedAccountWithBalance(AccountId, Balance);
 
 macro_rules! generate_generic_genesis_function {
     ($runtime:ident, $($additional_genesis:tt)*) => {
+        #[allow(dead_code)] // used in submodules
         pub(super) fn generic_genesis(
             acs: AdditionalChainSpec,
             endowed_accounts: Vec<EndowedAccountWithBalance>,
-            wasm_binary: &[u8],
         ) -> $runtime::RuntimeGenesisConfig {
             $runtime::RuntimeGenesisConfig {
                 // Common genesis
@@ -175,7 +169,7 @@ macro_rules! generate_generic_genesis_function {
                 #[cfg(feature = "parachain")]
                 // Default should use the pallet configuration
                 polkadot_xcm: PolkadotXcmConfig::default(),
-                system: $runtime::SystemConfig { code: wasm_binary.to_vec(), ..Default::default() },
+                system: $runtime::SystemConfig::default(),
                 technical_committee: Default::default(),
                 technical_committee_membership: $runtime::TechnicalCommitteeMembershipConfig {
                     members: vec![].try_into().unwrap(),
@@ -194,24 +188,6 @@ macro_rules! generate_generic_genesis_function {
 }
 
 pub(crate) use generate_generic_genesis_function;
-
-#[cfg(feature = "with-battery-station-runtime")]
-type AccountPublic = <Signature as Verify>::Signer;
-#[cfg(feature = "with-battery-station-runtime")]
-#[inline]
-fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-where
-    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
-}
-
-#[cfg(feature = "with-battery-station-runtime")]
-fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
-        .expect("static values are valid; qed")
-        .public()
-}
 
 /// The extensions for the [`ChainSpec`].
 #[cfg(feature = "parachain")]

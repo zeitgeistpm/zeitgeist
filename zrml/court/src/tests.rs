@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -200,7 +200,7 @@ fn exit_court_successfully_removes_a_juror_and_frees_balances() {
         assert_ok!(Court::exit_court(RuntimeOrigin::signed(ALICE), ALICE));
         assert_eq!(Participants::<Runtime>::iter().count(), 0);
         assert_eq!(Balances::free_balance(ALICE), INITIAL_BALANCE);
-        assert_eq!(Balances::locks(ALICE), vec![]);
+        assert_eq!(Balances::locks(&ALICE), vec![]);
     });
 }
 
@@ -225,7 +225,7 @@ fn join_court_successfully_stores_required_data() {
             )
         );
         assert_eq!(Balances::free_balance(ALICE), alice_free_balance_before);
-        assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
+        assert_eq!(Balances::locks(&ALICE), vec![the_lock(amount)]);
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
             vec![CourtPoolItem {
@@ -247,7 +247,7 @@ fn join_court_works_multiple_joins() {
         let amount = 2 * min;
         let joined_at_0 = <frame_system::Pallet<Runtime>>::block_number();
         assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), amount));
-        assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
+        assert_eq!(Balances::locks(&ALICE), vec![the_lock(amount)]);
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
             vec![CourtPoolItem {
@@ -277,7 +277,7 @@ fn join_court_works_multiple_joins() {
 
         let joined_at_1 = <frame_system::Pallet<Runtime>>::block_number();
         assert_ok!(Court::join_court(RuntimeOrigin::signed(BOB), amount));
-        assert_eq!(Balances::locks(BOB), vec![the_lock(amount)]);
+        assert_eq!(Balances::locks(&BOB), vec![the_lock(amount)]);
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
             vec![
@@ -323,8 +323,8 @@ fn join_court_works_multiple_joins() {
 
         let higher_amount = amount + 1;
         assert_ok!(Court::join_court(RuntimeOrigin::signed(ALICE), higher_amount));
-        assert_eq!(Balances::locks(BOB), vec![the_lock(amount)]);
-        assert_eq!(Balances::locks(ALICE), vec![the_lock(higher_amount)]);
+        assert_eq!(Balances::locks(&BOB), vec![the_lock(amount)]);
+        assert_eq!(Balances::locks(&ALICE), vec![the_lock(higher_amount)]);
         assert_eq!(
             CourtPool::<Runtime>::get().into_inner(),
             vec![
@@ -522,12 +522,10 @@ fn prepare_exit_court_removes_lowest_staked_juror() {
         }
 
         let len = CourtPool::<Runtime>::get().into_inner().len();
-        assert!(
-            CourtPool::<Runtime>::get()
-                .into_inner()
-                .iter()
-                .any(|item| item.court_participant == 0u128)
-        );
+        assert!(CourtPool::<Runtime>::get()
+            .into_inner()
+            .iter()
+            .any(|item| item.court_participant == 0u128));
         assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(0u128)));
         assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
         CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
@@ -552,12 +550,10 @@ fn prepare_exit_court_removes_middle_staked_juror() {
         let middle_index = (CourtPoolOf::<Runtime>::bound() / 2) as u128;
 
         let len = CourtPool::<Runtime>::get().into_inner().len();
-        assert!(
-            CourtPool::<Runtime>::get()
-                .into_inner()
-                .iter()
-                .any(|item| item.court_participant == middle_index)
-        );
+        assert!(CourtPool::<Runtime>::get()
+            .into_inner()
+            .iter()
+            .any(|item| item.court_participant == middle_index));
         assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(middle_index)));
         assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
         CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
@@ -582,12 +578,10 @@ fn prepare_exit_court_removes_highest_staked_juror() {
         let last_index = (CourtPoolOf::<Runtime>::bound() - 1) as u128;
 
         let len = CourtPool::<Runtime>::get().into_inner().len();
-        assert!(
-            CourtPool::<Runtime>::get()
-                .into_inner()
-                .iter()
-                .any(|item| item.court_participant == last_index)
-        );
+        assert!(CourtPool::<Runtime>::get()
+            .into_inner()
+            .iter()
+            .any(|item| item.court_participant == last_index));
         assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(last_index)));
         assert_eq!(CourtPool::<Runtime>::get().into_inner().len(), len - 1);
         CourtPool::<Runtime>::get().into_inner().iter().for_each(|item| {
@@ -674,7 +668,7 @@ fn exit_court_works_without_active_lock() {
 
         run_blocks(InflationPeriod::get());
 
-        assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
+        assert_eq!(Balances::locks(&ALICE), vec![the_lock(amount)]);
         assert_ok!(Court::exit_court(RuntimeOrigin::signed(ALICE), ALICE));
         System::assert_last_event(
             Event::ExitedCourt {
@@ -685,7 +679,7 @@ fn exit_court_works_without_active_lock() {
             .into(),
         );
         assert!(Participants::<Runtime>::iter().next().is_none());
-        assert!(Balances::locks(ALICE).is_empty());
+        assert!(Balances::locks(&ALICE).is_empty());
     });
 }
 
@@ -717,7 +711,7 @@ fn exit_court_works_with_active_lock() {
             },
         );
 
-        assert_eq!(Balances::locks(ALICE), vec![the_lock(amount)]);
+        assert_eq!(Balances::locks(&ALICE), vec![the_lock(amount)]);
 
         let now = <frame_system::Pallet<Runtime>>::block_number();
         assert_ok!(Court::prepare_exit_court(RuntimeOrigin::signed(ALICE)));
@@ -743,7 +737,7 @@ fn exit_court_works_with_active_lock() {
                 delegations: Default::default()
             }
         );
-        assert_eq!(Balances::locks(ALICE), vec![the_lock(active_lock)]);
+        assert_eq!(Balances::locks(&ALICE), vec![the_lock(active_lock)]);
     });
 }
 

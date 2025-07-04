@@ -33,6 +33,7 @@ sp-block-builder = { workspace = true, features = ["default"] }
 sp-blockchain = { workspace = true }
 sp-consensus = { workspace = true }
 sp-core = { workspace = true, features = ["default"] }
+sp-genesis-builder = { workspace = true, features = ["std"] }
 sp-inherents = { workspace = true, features = ["default"] }
 sp-io = { workspace = true, features = ["default"] }
 sp-keyring = { workspace = true }
@@ -45,20 +46,18 @@ sp-transaction-pool = { workspace = true, features = ["default"] }
 sp-trie = { workspace = true }
 substrate-frame-rpc-system = { workspace = true }
 
-# Try-Runtime
-
-try-runtime-cli = { workspace = true, optional = true }
-
 # Benchmark
 
 frame-benchmarking = { workspace = true, features = ["default"], optional = true }
 frame-benchmarking-cli = { workspace = true }
+frame-metadata-hash-extension = { workspace = true }
 
 # Cumulus
 
 cumulus-client-cli = { workspace = true, optional = true }
 cumulus-client-collator = { workspace = true, optional = true }
 cumulus-client-consensus-common = { workspace = true, optional = true }
+cumulus-client-consensus-proposer = { workspace = true, optional = true }
 cumulus-client-consensus-relay-chain = { workspace = true, optional = true }
 cumulus-client-network = { workspace = true, optional = true }
 cumulus-client-service = { workspace = true, optional = true }
@@ -71,6 +70,7 @@ cumulus-relay-chain-rpc-interface = { workspace = true, optional = true }
 
 # Parachain
 
+async-backing-primitives = { workspace = true, optional = true }
 moonbeam-vrf = { workspace = true, optional = true }
 nimbus-consensus = { workspace = true, optional = true }
 nimbus-primitives = { workspace = true, features = ["default"], optional = true }
@@ -81,6 +81,7 @@ sc-chain-spec = { workspace = true, optional = true }
 sc-network-sync = { workspace = true, optional = true }
 sc-tracing = { workspace = true, optional = true }
 serde = { workspace = true, features = ["default"], optional = true }
+serde_json = { workspace = true }
 session-keys-primitives = { workspace = true, features = ["default"], optional = true }
 sp-keystore = { workspace = true, optional = true }
 substrate-prometheus-endpoint = { workspace = true, optional = true }
@@ -91,7 +92,6 @@ polkadot-cli = { workspace = true, optional = true }
 polkadot-parachain-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-primitives = { workspace = true, features = ["default"], optional = true }
 polkadot-service = { workspace = true, optional = true }
-polkadot-test-service = { workspace = true, optional = true }
 
 # Standalone
 
@@ -103,10 +103,11 @@ sp-consensus-grandpa = { workspace = true, features = ["default"] }
 # Utility
 cfg-if = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
+clap-num = { workspace = true }
 futures = { workspace = true, features = ["thread-pool"] }
 hex-literal = { workspace = true }
 jsonrpsee = { workspace = true, features = ["server"] }
-log = { workspace = true, optional = true }
+log = { workspace = true }
 url = { workspace = true }
 
 # Zeitgeist
@@ -118,6 +119,10 @@ zrml-swaps-rpc = { workspace = true }
 
 [features]
 default = ["with-battery-station-runtime", "with-zeitgeist-runtime"]
+metadata-hash = [
+    "battery-station-runtime?/metadata-hash",
+    "zeitgeist-runtime?/metadata-hash",
+]
 parachain = [
     "battery-station-runtime?/parachain",
     "zeitgeist-runtime?/parachain",
@@ -127,6 +132,7 @@ parachain = [
     "cumulus-client-cli",
     "cumulus-client-collator",
     "cumulus-client-consensus-common",
+    "cumulus-client-consensus-proposer",
     "cumulus-client-consensus-relay-chain",
     "cumulus-client-network",
     "cumulus-client-service",
@@ -140,7 +146,7 @@ parachain = [
 
     # Parachain
 
-    "log",
+    "async-backing-primitives",
     "moonbeam-vrf",
     "nimbus-consensus",
     "nimbus-primitives",
@@ -161,7 +167,6 @@ parachain = [
     "polkadot-parachain-primitives",
     "polkadot-primitives",
     "polkadot-service",
-    "polkadot-test-service",
 ]
 runtime-benchmarks = [
     "battery-station-runtime?/runtime-benchmarks",
@@ -169,13 +174,11 @@ runtime-benchmarks = [
     "frame-benchmarking-cli/runtime-benchmarks",
     "polkadot-cli?/runtime-benchmarks",
     "polkadot-service?/runtime-benchmarks",
-    "polkadot-test-service?/runtime-benchmarks",
     "zeitgeist-runtime?/runtime-benchmarks",
 ]
 try-runtime = [
     "battery-station-runtime?/try-runtime",
     "zeitgeist-runtime?/try-runtime",
-    "try-runtime-cli/try-runtime",
 ]
 with-battery-station-runtime = ["battery-station-runtime"]
 with-zeitgeist-runtime = ["zeitgeist-runtime"]

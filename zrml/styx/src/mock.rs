@@ -1,4 +1,4 @@
-// Copyright 2023-2024 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -63,6 +63,7 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type BlockWeights = ();
     type RuntimeCall = RuntimeCall;
+    type RuntimeTask = RuntimeTask;
     type DbWeight = ();
     type RuntimeEvent = RuntimeEvent;
     type Hash = Hash;
@@ -70,10 +71,15 @@ impl frame_system::Config for Runtime {
     type Lookup = IdentityLookup<Self::AccountId>;
     type Nonce = u64;
     type MaxConsumers = frame_support::traits::ConstU32<16>;
+    type MultiBlockMigrator = ();
     type OnKilledAccount = ();
     type OnNewAccount = ();
     type RuntimeOrigin = RuntimeOrigin;
     type PalletInfo = PalletInfo;
+    type PreInherents = ();
+    type PostInherents = ();
+    type PostTransactions = ();
+    type SingleBlockMigrations = ();
     type SS58Prefix = ();
     type SystemWeightInfo = ();
     type Version = ();
@@ -88,11 +94,11 @@ impl pallet_balances::Config for Runtime {
     type RuntimeHoldReason = ();
     type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ();
-    type MaxHolds = ();
     type MaxFreezes = ();
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
+    type RuntimeFreezeReason = ();
     type WeightInfo = ();
 }
 

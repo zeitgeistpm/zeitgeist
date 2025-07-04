@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "with-battery-station-runtime")]
-
 use super::{AdditionalChainSpec, EndowedAccountWithBalance};
 use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
 use battery_station_runtime::parameters::SS58Prefix;
@@ -31,8 +29,10 @@ use {
     super::{generate_inflation_config_function, Extensions},
     crate::BATTERY_STATION_PARACHAIN_ID,
     battery_station_runtime::{
-        CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
-        DefaultParachainBondReservePercent, EligibilityValue, PolkadotXcmConfig,
+        parachain_params::{
+            DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
+        },
+        CollatorDeposit, EligibilityValue, PolkadotXcmConfig,
     },
     zeitgeist_primitives::constants::ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
 };
@@ -42,10 +42,10 @@ cfg_if::cfg_if! {
         pub(super) const DEFAULT_STAKING_AMOUNT_BATTERY_STATION: u128 = 2_000 * BASE;
         const DEFAULT_COLLATOR_BALANCE_BATTERY_STATION: Option<u128> =
             DEFAULT_STAKING_AMOUNT_BATTERY_STATION.checked_add(CollatorDeposit::get());
-        pub type BatteryStationChainSpec = sc_service::GenericChainSpec<battery_station_runtime::RuntimeGenesisConfig, Extensions>;
+        pub type BatteryStationChainSpec = sc_service::GenericChainSpec<Extensions>;
         const NUM_SELECTED_CANDIDATES: u32 = 8;
     } else {
-        pub type BatteryStationChainSpec = sc_service::GenericChainSpec<battery_station_runtime::RuntimeGenesisConfig>;
+        pub type BatteryStationChainSpec = sc_service::GenericChainSpec;
     }
 }
 
@@ -130,28 +130,22 @@ generate_generic_genesis_function!(
 #[cfg(feature = "parachain")]
 generate_inflation_config_function!(battery_station_runtime);
 
+fn get_genesis_config() -> serde_json::Value {
+    serde_json::to_value(generic_genesis(
+        additional_chain_spec_staging_battery_station(
+            #[cfg(feature = "parachain")]
+            BATTERY_STATION_PARACHAIN_ID.into(),
+        ),
+        endowed_accounts_staging_battery_station(),
+    ))
+    .expect("Could not generate JSON for battery station staging genesis.")
+}
+
 pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, String> {
     let wasm = get_wasm()?;
 
-    Ok(BatteryStationChainSpec::from_genesis(
-        "Battery Station Staging",
-        "battery_station_staging",
-        ChainType::Live,
-        move || {
-            generic_genesis(
-                additional_chain_spec_staging_battery_station(
-                    #[cfg(feature = "parachain")]
-                    BATTERY_STATION_PARACHAIN_ID.into(),
-                ),
-                endowed_accounts_staging_battery_station(),
-                wasm,
-            )
-        },
-        vec![],
-        telemetry_endpoints(),
-        Some("battery_station"),
-        None,
-        Some(token_properties("ZBS", SS58Prefix::get())),
+    Ok(BatteryStationChainSpec::builder(
+        wasm,
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "rococo".into(),
@@ -160,5 +154,13 @@ pub fn battery_station_staging_config() -> Result<BatteryStationChainSpec, Strin
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),
-    ))
+    )
+    .with_name("Battery Station Staging")
+    .with_id("battery_station_staging")
+    .with_chain_type(ChainType::Live)
+    .with_properties(token_properties("ZBS", SS58Prefix::get()))
+    .with_telemetry_endpoints(telemetry_endpoints().expect("Telemetry endpoints should be set"))
+    .with_protocol_id("battery_station")
+    .with_genesis_config(get_genesis_config())
+    .build())
 }

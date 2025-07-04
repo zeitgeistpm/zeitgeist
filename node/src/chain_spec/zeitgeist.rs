@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "with-zeitgeist-runtime")]
-
 use super::{
     generate_generic_genesis_function, telemetry_endpoints, token_properties, AdditionalChainSpec,
     EndowedAccountWithBalance,
@@ -33,8 +31,10 @@ use {
     crate::POLKADOT_PARACHAIN_ID,
     zeitgeist_primitives::constants::ztg::{STAKING_PTD, TOTAL_INITIAL_ZTG},
     zeitgeist_runtime::{
-        CollatorDeposit, DefaultBlocksPerRound, DefaultCollatorCommission,
-        DefaultParachainBondReservePercent, EligibilityValue, MinCandidateStk, PolkadotXcmConfig,
+        parachain_params::{
+            DefaultBlocksPerRound, DefaultCollatorCommission, DefaultParachainBondReservePercent,
+        },
+        CollatorDeposit, EligibilityValue, MinCandidateStk, PolkadotXcmConfig,
     },
 };
 
@@ -44,9 +44,9 @@ cfg_if::cfg_if! {
         const DEFAULT_COLLATOR_BALANCE_ZEITGEIST: Option<u128> =
             DEFAULT_STAKING_AMOUNT_ZEITGEIST.checked_add(CollatorDeposit::get());
         const NUM_SELECTED_CANDIDATES: u32 = 8;
-        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::RuntimeGenesisConfig, Extensions>;
+        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<Extensions>;
     } else {
-        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::RuntimeGenesisConfig>;
+        pub type ZeitgeistChainSpec = sc_service::GenericChainSpec;
     }
 }
 
@@ -138,28 +138,22 @@ generate_generic_genesis_function!(zeitgeist_runtime,);
 #[cfg(feature = "parachain")]
 generate_inflation_config_function!(zeitgeist_runtime);
 
+fn get_genesis_config() -> serde_json::Value {
+    serde_json::to_value(generic_genesis(
+        additional_chain_spec_staging_zeitgeist(
+            #[cfg(feature = "parachain")]
+            POLKADOT_PARACHAIN_ID.into(),
+        ),
+        endowed_accounts_staging_zeitgeist(),
+    ))
+    .expect("Could not generate JSON for battery station staging genesis.")
+}
+
 pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
     let wasm = get_wasm()?;
 
-    Ok(ZeitgeistChainSpec::from_genesis(
-        "Zeitgeist Staging",
-        "zeitgeist_staging",
-        ChainType::Live,
-        move || {
-            generic_genesis(
-                additional_chain_spec_staging_zeitgeist(
-                    #[cfg(feature = "parachain")]
-                    POLKADOT_PARACHAIN_ID.into(),
-                ),
-                endowed_accounts_staging_zeitgeist(),
-                wasm,
-            )
-        },
-        vec![],
-        telemetry_endpoints(),
-        Some("zeitgeist"),
-        None,
-        Some(token_properties("ZTG", SS58Prefix::get())),
+    Ok(ZeitgeistChainSpec::builder(
+        wasm,
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "polkadot".into(),
@@ -168,5 +162,13 @@ pub fn zeitgeist_staging_config() -> Result<ZeitgeistChainSpec, String> {
         },
         #[cfg(not(feature = "parachain"))]
         Default::default(),
-    ))
+    )
+    .with_name("Zeitgeist Staging")
+    .with_id("zeitgeist_staging")
+    .with_chain_type(ChainType::Live)
+    .with_properties(token_properties("ZTG", SS58Prefix::get()))
+    .with_telemetry_endpoints(telemetry_endpoints().expect("Telemetry endpoints should be set"))
+    .with_protocol_id("zeitgeist")
+    .with_genesis_config(get_genesis_config())
+    .build())
 }

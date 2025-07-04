@@ -1,4 +1,4 @@
-// Copyright 2023 Forecasting Technologies LTD.
+// Copyright 2023-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -20,7 +20,6 @@ use super::service::FullClient;
 
 use sc_cli::Result;
 use sc_client_api::BlockBackend;
-use sc_executor::NativeExecutionDispatch;
 use sp_core::{Encode, Pair};
 use sp_inherents::{InherentData, InherentDataProvider};
 use sp_keyring::Sr25519Keyring;
@@ -31,23 +30,19 @@ use zeitgeist_primitives::types::{AccountId, Balance, Signature};
 /// Generates extrinsics for the `benchmark overhead` command.
 ///
 /// Note: Should only be used for benchmarking.
-pub struct RemarksExtrinsicBuilder<RuntimeApi, Executor: NativeExecutionDispatch + 'static> {
-    client: Arc<FullClient<RuntimeApi, Executor>>,
+pub struct RemarksExtrinsicBuilder<RuntimeApi> {
+    client: Arc<FullClient<RuntimeApi>>,
     is_zeitgeist: bool,
 }
 
-impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
-    RemarksExtrinsicBuilder<RuntimeApi, Executor>
-{
+impl<RuntimeApi> RemarksExtrinsicBuilder<RuntimeApi> {
     /// Creates a new [`Self`] from the given client.
-    pub fn new(client: Arc<FullClient<RuntimeApi, Executor>>, is_zeitgeist: bool) -> Self {
+    pub fn new(client: Arc<FullClient<RuntimeApi>>, is_zeitgeist: bool) -> Self {
         Self { client, is_zeitgeist }
     }
 }
 
-impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
-    frame_benchmarking_cli::ExtrinsicBuilder for RemarksExtrinsicBuilder<RuntimeApi, Executor>
-{
+impl<RuntimeApi> frame_benchmarking_cli::ExtrinsicBuilder for RemarksExtrinsicBuilder<RuntimeApi> {
     fn pallet(&self) -> &str {
         "system"
     }
@@ -87,19 +82,17 @@ impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
 /// Generates `Balances::TransferKeepAlive` extrinsics for the benchmarks.
 ///
 /// Note: Should only be used for benchmarking.
-pub struct TransferKeepAliveBuilder<RuntimeApi, Executor: NativeExecutionDispatch + 'static> {
-    client: Arc<FullClient<RuntimeApi, Executor>>,
+pub struct TransferKeepAliveBuilder<RuntimeApi> {
+    client: Arc<FullClient<RuntimeApi>>,
     dest: AccountId,
     value: Balance,
     is_zeitgeist: bool,
 }
 
-impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
-    TransferKeepAliveBuilder<RuntimeApi, Executor>
-{
+impl<RuntimeApi> TransferKeepAliveBuilder<RuntimeApi> {
     /// Creates a new [`Self`] from the given client.
     pub fn new(
-        client: Arc<FullClient<RuntimeApi, Executor>>,
+        client: Arc<FullClient<RuntimeApi>>,
         dest: AccountId,
         value: Balance,
         is_zeitgeist: bool,
@@ -108,9 +101,7 @@ impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
     }
 }
 
-impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
-    frame_benchmarking_cli::ExtrinsicBuilder for TransferKeepAliveBuilder<RuntimeApi, Executor>
-{
+impl<RuntimeApi> frame_benchmarking_cli::ExtrinsicBuilder for TransferKeepAliveBuilder<RuntimeApi> {
     fn pallet(&self) -> &str {
         "balances"
     }
@@ -158,11 +149,8 @@ impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
 ///
 /// Note: Should only be used for benchmarking.
 #[cfg(feature = "with-zeitgeist-runtime")]
-pub fn create_benchmark_extrinsic_zeitgeist<
-    RuntimeApi,
-    Executor: NativeExecutionDispatch + 'static,
->(
-    client: &FullClient<RuntimeApi, Executor>,
+pub fn create_benchmark_extrinsic_zeitgeist<RuntimeApi>(
+    client: &FullClient<RuntimeApi>,
     sender: sp_core::sr25519::Pair,
     call: zeitgeist_runtime::RuntimeCall,
     nonce: u32,
@@ -187,6 +175,7 @@ pub fn create_benchmark_extrinsic_zeitgeist<
         zeitgeist_runtime::CheckNonce::<zeitgeist_runtime::Runtime>::from(nonce.into()),
         zeitgeist_runtime::CheckWeight::<zeitgeist_runtime::Runtime>::new(),
         pallet_asset_tx_payment::ChargeAssetTxPayment::<zeitgeist_runtime::Runtime>::from(0, None),
+        frame_metadata_hash_extension::CheckMetadataHash::<zeitgeist_runtime::Runtime>::new(true),
     );
 
     let raw_payload = zeitgeist_runtime::SignedPayload::from_raw(
@@ -201,6 +190,7 @@ pub fn create_benchmark_extrinsic_zeitgeist<
             (),
             (),
             (),
+            None,
         ),
     );
     let signature = raw_payload.using_encoded(|e| sender.sign(e));
@@ -217,11 +207,8 @@ pub fn create_benchmark_extrinsic_zeitgeist<
 ///
 /// Note: Should only be used for benchmarking.
 #[cfg(feature = "with-battery-station-runtime")]
-pub fn create_benchmark_extrinsic_battery_station<
-    RuntimeApi,
-    Executor: NativeExecutionDispatch + 'static,
->(
-    client: &FullClient<RuntimeApi, Executor>,
+pub fn create_benchmark_extrinsic_battery_station<RuntimeApi>(
+    client: &FullClient<RuntimeApi>,
     sender: sp_core::sr25519::Pair,
     call: battery_station_runtime::RuntimeCall,
     nonce: u32,
@@ -248,6 +235,9 @@ pub fn create_benchmark_extrinsic_battery_station<
         pallet_asset_tx_payment::ChargeAssetTxPayment::<battery_station_runtime::Runtime>::from(
             0, None,
         ),
+        frame_metadata_hash_extension::CheckMetadataHash::<battery_station_runtime::Runtime>::new(
+            true,
+        ),
     );
 
     let raw_payload = battery_station_runtime::SignedPayload::from_raw(
@@ -262,6 +252,7 @@ pub fn create_benchmark_extrinsic_battery_station<
             (),
             (),
             (),
+            None,
         ),
     );
     let signature = raw_payload.using_encoded(|e| sender.sign(e));

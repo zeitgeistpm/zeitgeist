@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Forecasting Technologies LTD.
+// Copyright 2022-2025 Forecasting Technologies LTD.
 // Copyright 2021-2022 Zeitgeist PM LLC.
 //
 // This file is part of Zeitgeist.
@@ -18,10 +18,13 @@
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
+        pub mod cumulus_pallet_parachain_system;
+        pub mod cumulus_pallet_dmp_queue;
         pub mod cumulus_pallet_xcmp_queue;
         pub mod pallet_author_mapping;
         pub mod pallet_author_inherent;
         pub mod pallet_author_slot_filter;
+        pub mod pallet_message_queue;
         pub mod pallet_parachain_staking;
     } else {
         // Currently the benchmark does yield an invalid weight implementation
@@ -35,7 +38,6 @@ pub mod orml_tokens;
 pub mod pallet_balances;
 pub mod pallet_bounties;
 pub mod pallet_collective;
-pub mod pallet_contracts;
 pub mod pallet_democracy;
 pub mod pallet_identity;
 pub mod pallet_membership;
