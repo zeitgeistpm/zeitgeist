@@ -923,7 +923,7 @@ checksum = "89e25b6adfb930f02d1981565a6e5d9c547ac15a96606256d3b59040e5cd4ca3"
 
 [[package]]
 name = "battery-station-runtime"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "async-backing-primitives",
  "cfg-if",
@@ -1803,7 +1803,7 @@ checksum = "2382f75942f4b3be3690fe4f86365e9c853c1587d6ee58212cebf6e2a9ccd101"
 
 [[package]]
 name = "common-runtime"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "cfg-if",
  "cumulus-pallet-dmp-queue",
@@ -16904,11 +16904,11 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-macros"
-version = "0.6.0"
+version = "0.6.1"
 
 [[package]]
 name = "zeitgeist-node"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "async-backing-primitives",
  "battery-station-runtime",
@@ -17005,7 +17005,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-primitives"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "fixed",
@@ -17029,7 +17029,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-runtime"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "async-backing-primitives",
  "cfg-if",
@@ -17246,7 +17246,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-authorized"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-benchmarking",
@@ -17264,7 +17264,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-combinatorial-tokens"
-version = "0.5.5"
+version = "0.6.1"
 dependencies = [
  "ark-bn254",
  "ark-ff 0.5.0",
@@ -17292,7 +17292,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-combinatorial-tokens-fuzz"
-version = "0.5.5"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -17307,7 +17307,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-court"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "arrayvec 0.7.6",
  "env_logger 0.11.8",
@@ -17334,7 +17334,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-futarchy"
-version = "0.5.5"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "cfg-if",
@@ -17358,7 +17358,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-futarchy-fuzz"
-version = "0.5.5"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -17373,7 +17373,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-global-disputes"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-benchmarking",
@@ -17395,7 +17395,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-hybrid-router"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "cfg-if",
  "env_logger 0.11.8",
@@ -17434,7 +17434,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-market-commons"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-support",
@@ -17453,7 +17453,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-neo-swaps"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "cfg-if",
  "env_logger 0.11.8",
@@ -17497,7 +17497,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-neo-swaps-fuzz"
-version = "0.5.5"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -17512,7 +17512,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-orderbook"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-benchmarking",
@@ -17536,7 +17536,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-orderbook-fuzz"
-version = "0.0.0"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "frame-system",
@@ -17547,7 +17547,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-parimutuel"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-benchmarking",
@@ -17570,7 +17570,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "cfg-if",
  "env_logger 0.11.8",
@@ -17608,7 +17608,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-fuzz"
-version = "0.0.0"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -17620,7 +17620,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-runtime-api"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -17629,7 +17629,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-styx"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-benchmarking",
@@ -17646,7 +17646,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-benchmarking",
@@ -17675,7 +17675,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-fuzz"
-version = "0.0.0"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -17689,7 +17689,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-rpc"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -17702,7 +17702,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-runtime-api"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

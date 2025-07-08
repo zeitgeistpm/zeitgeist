@@ -437,7 +437,7 @@ use-noop-message-processor = []
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "zeitgeist-runtime"
-version = "0.6.0"
+version = "0.6.1"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
