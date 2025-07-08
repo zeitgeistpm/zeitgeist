@@ -38,7 +38,7 @@ jobs:
           use-tool-cache: false
       
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Generate coverage report
         run: ./scripts/tests/coverage.sh

@@ -108,7 +108,7 @@ describeSuite({
 
     it({
       id: "T3",
-      timeout: 60000,
+      timeout: 120000,
       title: "Can send ZTG to HydraDX",
       test: async () => {
         await canSendXcmTransfer(

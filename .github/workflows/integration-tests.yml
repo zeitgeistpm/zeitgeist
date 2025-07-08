@@ -72,7 +72,7 @@ jobs:
           pnpm install
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Create local folders
         run: |
@@ -129,7 +129,7 @@ jobs:
           pnpm install
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Create local folders
         run: |
@@ -185,7 +185,7 @@ jobs:
           pnpm install
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Create local folders
         run: |
@@ -240,7 +240,7 @@ jobs:
           pnpm install
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Create local folders
         run: |
