@@ -944,7 +944,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
- "hex-literal 1.0.0",
+ "hex-literal",
  "log",
  "nimbus-primitives",
  "orml-asset-registry",
@@ -4504,12 +4504,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
 
 [[package]]
-name = "hex-literal"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcaaec4551594c969335c98c903c1397853d4198408ea609190f420500f6be71"
-
-[[package]]
 name = "hkdf"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6097,7 +6091,7 @@ dependencies = [
  "ed25519-dalek",
  "futures 0.3.31",
  "futures-timer",
- "hex-literal 0.4.1",
+ "hex-literal",
  "indexmap 2.9.0",
  "libc",
  "mockall 0.12.1",
@@ -9815,7 +9809,7 @@ version = "16.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
 dependencies = [
  "bitvec",
- "hex-literal 0.4.1",
+ "hex-literal",
  "log",
  "parity-scale-codec",
  "polkadot-core-primitives",
@@ -9885,7 +9879,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
- "hex-literal 0.4.1",
+ "hex-literal",
  "log",
  "pallet-asset-rate",
  "pallet-authority-discovery",
@@ -11218,7 +11212,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
- "hex-literal 0.4.1",
+ "hex-literal",
  "log",
  "pallet-asset-rate",
  "pallet-authority-discovery",
@@ -16200,7 +16194,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
- "hex-literal 0.4.1",
+ "hex-literal",
  "log",
  "pallet-asset-rate",
  "pallet-authority-discovery",
@@ -16932,7 +16926,7 @@ dependencies = [
  "frame-benchmarking-cli",
  "frame-metadata-hash-extension",
  "futures 0.3.31",
- "hex-literal 1.0.0",
+ "hex-literal",
  "jsonrpsee",
  "log",
  "moonbeam-vrf",
@@ -17011,7 +17005,7 @@ dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
- "hex-literal 1.0.0",
+ "hex-literal",
  "more-asserts",
  "num-traits",
  "orml-currencies",
@@ -17050,7 +17044,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
- "hex-literal 1.0.0",
+ "hex-literal",
  "log",
  "nimbus-primitives",
  "orml-asset-registry",
