@@ -923,7 +923,7 @@ checksum = "89e25b6adfb930f02d1981565a6e5d9c547ac15a96606256d3b59040e5cd4ca3"
 
 [[package]]
 name = "battery-station-runtime"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "async-backing-primitives",
  "cfg-if",
@@ -944,7 +944,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
- "hex-literal 1.0.0",
+ "hex-literal",
  "log",
  "nimbus-primitives",
  "orml-asset-registry",
@@ -1803,7 +1803,7 @@ checksum = "2382f75942f4b3be3690fe4f86365e9c853c1587d6ee58212cebf6e2a9ccd101"
 
 [[package]]
 name = "common-runtime"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "cfg-if",
  "cumulus-pallet-dmp-queue",
@@ -4504,12 +4504,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
 
 [[package]]
-name = "hex-literal"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcaaec4551594c969335c98c903c1397853d4198408ea609190f420500f6be71"
-
-[[package]]
 name = "hkdf"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6097,7 +6091,7 @@ dependencies = [
  "ed25519-dalek",
  "futures 0.3.31",
  "futures-timer",
- "hex-literal 0.4.1",
+ "hex-literal",
  "indexmap 2.9.0",
  "libc",
  "mockall 0.12.1",
@@ -9815,7 +9809,7 @@ version = "16.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
 dependencies = [
  "bitvec",
- "hex-literal 0.4.1",
+ "hex-literal",
  "log",
  "parity-scale-codec",
  "polkadot-core-primitives",
@@ -9885,7 +9879,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
- "hex-literal 0.4.1",
+ "hex-literal",
  "log",
  "pallet-asset-rate",
  "pallet-authority-discovery",
@@ -11218,7 +11212,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
- "hex-literal 0.4.1",
+ "hex-literal",
  "log",
  "pallet-asset-rate",
  "pallet-authority-discovery",
@@ -16200,7 +16194,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
- "hex-literal 0.4.1",
+ "hex-literal",
  "log",
  "pallet-asset-rate",
  "pallet-authority-discovery",
@@ -16904,11 +16898,11 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-macros"
-version = "0.6.0"
+version = "0.6.1"
 
 [[package]]
 name = "zeitgeist-node"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "async-backing-primitives",
  "battery-station-runtime",
@@ -16932,7 +16926,7 @@ dependencies = [
  "frame-benchmarking-cli",
  "frame-metadata-hash-extension",
  "futures 0.3.31",
- "hex-literal 1.0.0",
+ "hex-literal",
  "jsonrpsee",
  "log",
  "moonbeam-vrf",
@@ -17005,13 +16999,13 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-primitives"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "fixed",
  "frame-support",
  "frame-system",
- "hex-literal 1.0.0",
+ "hex-literal",
  "more-asserts",
  "num-traits",
  "orml-currencies",
@@ -17029,7 +17023,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-runtime"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "async-backing-primitives",
  "cfg-if",
@@ -17050,7 +17044,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
- "hex-literal 1.0.0",
+ "hex-literal",
  "log",
  "nimbus-primitives",
  "orml-asset-registry",
@@ -17246,7 +17240,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-authorized"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-benchmarking",
@@ -17264,7 +17258,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-combinatorial-tokens"
-version = "0.5.5"
+version = "0.6.1"
 dependencies = [
  "ark-bn254",
  "ark-ff 0.5.0",
@@ -17292,7 +17286,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-combinatorial-tokens-fuzz"
-version = "0.5.5"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -17307,7 +17301,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-court"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "arrayvec 0.7.6",
  "env_logger 0.11.8",
@@ -17334,7 +17328,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-futarchy"
-version = "0.5.5"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "cfg-if",
@@ -17358,7 +17352,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-futarchy-fuzz"
-version = "0.5.5"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -17373,7 +17367,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-global-disputes"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-benchmarking",
@@ -17395,7 +17389,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-hybrid-router"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "cfg-if",
  "env_logger 0.11.8",
@@ -17434,7 +17428,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-market-commons"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-support",
@@ -17453,7 +17447,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-neo-swaps"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "cfg-if",
  "env_logger 0.11.8",
@@ -17497,7 +17491,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-neo-swaps-fuzz"
-version = "0.5.5"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -17512,7 +17506,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-orderbook"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-benchmarking",
@@ -17536,7 +17530,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-orderbook-fuzz"
-version = "0.0.0"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "frame-system",
@@ -17547,7 +17541,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-parimutuel"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-benchmarking",
@@ -17570,7 +17564,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "cfg-if",
  "env_logger 0.11.8",
@@ -17608,7 +17602,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-fuzz"
-version = "0.0.0"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -17620,7 +17614,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-runtime-api"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -17629,7 +17623,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-styx"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-benchmarking",
@@ -17646,7 +17640,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger 0.11.8",
  "frame-benchmarking",
@@ -17675,7 +17669,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-fuzz"
-version = "0.0.0"
+version = "0.6.1"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -17689,7 +17683,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-rpc"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -17702,7 +17696,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-runtime-api"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

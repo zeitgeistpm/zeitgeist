@@ -31,7 +31,7 @@ jobs:
 #          crate: taplo-cli
       
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Format
         run: ./scripts/tests/format.sh --check
@@ -115,7 +115,7 @@ jobs:
         run: ./scripts/init.sh
       
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Tests
         run: ./scripts/tests/test_standalone.sh
@@ -141,7 +141,7 @@ jobs:
         run: ./scripts/init.sh
       
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Tests
         run: ./scripts/tests/test_parachain.sh
@@ -172,6 +172,6 @@ jobs:
           use-tool-cache: true
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - run: ./scripts/tests/fuzz.sh --verbose

@@ -16,7 +16,7 @@ authors = ["Automatically generated"]
 edition.workspace = true
 name = "zrml-orderbook-fuzz"
 publish = false
-version = "0.0.0"
+version = "0.6.1"
 
 [package.metadata]
 cargo-fuzz = true

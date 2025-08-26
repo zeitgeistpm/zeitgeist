@@ -62,4 +62,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "zrml-futarchy"
-version = "0.5.5"
+version = "0.6.1"

@@ -46,4 +46,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
 name = "zrml-parimutuel"
-version = "0.6.0"
+version = "0.6.1"

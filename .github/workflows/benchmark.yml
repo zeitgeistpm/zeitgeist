@@ -40,7 +40,7 @@ jobs:
         run: cargo install frame-omni-bencher --version 0.10.0
 
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Test runtime-benchmarks
         run: cargo test --release --features runtime-benchmarks

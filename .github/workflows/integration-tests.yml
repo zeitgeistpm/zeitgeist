@@ -12,7 +12,7 @@ env:
 jobs:
   build_parachain:
     name: Build Parachain
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -48,7 +48,7 @@ jobs:
 
   zombienet_zndsl:
     name: ZNDSL Tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: ["build_parachain"]
     steps:
       - name: Checkout repository
@@ -72,7 +72,7 @@ jobs:
           pnpm install
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Create local folders
         run: |
@@ -105,7 +105,7 @@ jobs:
 
   zombienet_zeitgeist_upgrade:
     name: Zeitgeist Zombienet Post-Upgrade Tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: ["build_parachain"]
     steps:
       - name: Checkout repository
@@ -129,7 +129,7 @@ jobs:
           pnpm install
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Create local folders
         run: |
@@ -161,7 +161,7 @@ jobs:
 
   chopsticks_battery_station_upgrade:
     name: Battery Station Chopsticks Post-Upgrade Tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: ["build_parachain"]
     steps:
       - name: Checkout repository
@@ -185,7 +185,7 @@ jobs:
           pnpm install
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Create local folders
         run: |
@@ -216,7 +216,7 @@ jobs:
 
   chopsticks_zeitgeist_upgrade:
     name: Zeitgeist Chopsticks Post-Upgrade Tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: ["build_parachain"]
     steps:
       - name: Checkout repository
@@ -240,7 +240,7 @@ jobs:
           pnpm install
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
 
       - name: Create local folders
         run: |

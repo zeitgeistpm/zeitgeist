@@ -17,7 +17,7 @@ authors = ["Automatically generated"]
 edition.workspace = true
 name = "zrml-prediction-markets-fuzz"
 publish = false
-version = "0.0.0"
+version = "0.6.1"
 
 [package.metadata]
 cargo-fuzz = true
