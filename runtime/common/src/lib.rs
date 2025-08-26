@@ -110,20 +110,8 @@ macro_rules! decl_common_types {
 
         #[cfg(feature = "parachain")]
         type Migrations = (
-            pallet_parachain_staking::migrations::MigrateRoundWithFirstSlot<Runtime>,
-            pallet_parachain_staking::migrations::MigrateParachainBondConfig<Runtime>,
-            cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
-            cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
             // This `MigrateToLatestXcmVersion` migration can be permanently added to the runtime migrations. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/polkadot/xcm/pallet-xcm/src/migration.rs#L83
             pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
-            // u64::MAX from here: https://github.com/paritytech/polkadot-sdk/blob/304bbb8711f61503ae7afa3a5bfd4f78af5cbd62/polkadot/runtime/rococo/src/lib.rs#L1629-L1630
-            pallet_identity::migration::versioned::V0ToV1<Runtime, { u64::MAX }>,
-        );
-        #[cfg(not(feature = "parachain"))]
-        type Migrations = (
-            pallet_grandpa::migrations::MigrateV4ToV5<Runtime>,
-            // u64::MAX from here: https://github.com/paritytech/polkadot-sdk/blob/304bbb8711f61503ae7afa3a5bfd4f78af5cbd62/polkadot/runtime/rococo/src/lib.rs#L1629-L1630
-            pallet_identity::migration::versioned::V0ToV1<Runtime, { u64::MAX }>,
         );
 
         pub type Executive = frame_executive::Executive<
