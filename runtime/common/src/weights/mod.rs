@@ -19,7 +19,6 @@
 cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
         pub mod cumulus_pallet_parachain_system;
-        pub mod cumulus_pallet_dmp_queue;
         pub mod cumulus_pallet_xcmp_queue;
         pub mod pallet_author_mapping;
         pub mod pallet_author_inherent;
