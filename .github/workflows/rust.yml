@@ -90,7 +90,7 @@ jobs:
         run: ./scripts/init.sh
 
       - name: Install frame-omni-bencher
-        run: cargo install frame-omni-bencher --version 0.10.0
+        run: cargo install frame-omni-bencher --locked
       
       - run: ./scripts/benchmarks/quick_check.sh
 
