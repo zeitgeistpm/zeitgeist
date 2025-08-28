@@ -96,7 +96,6 @@ nimbus-consensus = { git = "https://github.com/zeitgeistpm/moonkit", branch = "z
 
 # Cumulus / Nimbus (wasm)
 async-backing-primitives = { git = "https://github.com/zeitgeistpm/moonkit", branch = "zeitgeist-polkadot-stable2409", default-features = false }
-cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 cumulus-pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
@@ -388,5 +387,3 @@ cumulus-client-parachain-inherent = { git = "https://github.com/zeitgeistpm/polk
 sc-network = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "zeitgeist-polkadot-stable2409-sc-network-fix" }
 # Benchmarks failed, because of Token(BelowMinimum) for treasury spend, that's why one should at least transfer the existential deposit 
 pallet-treasury = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-treasury-benchmark-fix" }
-# Remove deprecation warnings for clippy
-cumulus-pallet-dmp-queue = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-cumulus-pallet-dmp-queue-deprecation-fix" }

@@ -928,7 +928,6 @@ dependencies = [
  "async-backing-primitives",
  "cfg-if",
  "common-runtime",
- "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
@@ -1806,7 +1805,6 @@ name = "common-runtime"
 version = "0.6.1"
 dependencies = [
  "cfg-if",
- "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcmp-queue",
  "frame-support",
@@ -2421,23 +2419,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-transaction-pool",
-]
-
-[[package]]
-name = "cumulus-pallet-dmp-queue"
-version = "0.17.0"
-source = "git+https://github.com/zeitgeistpm/polkadot-sdk?branch=polkadot-stable2409-cumulus-pallet-dmp-queue-deprecation-fix#ad89d589463233def0f48ebb07f03383b66ff599"
-dependencies = [
- "cumulus-primitives-core",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
- "staging-xcm",
 ]
 
 [[package]]
@@ -17028,7 +17009,6 @@ dependencies = [
  "async-backing-primitives",
  "cfg-if",
  "common-runtime",
- "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",

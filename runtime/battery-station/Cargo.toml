@@ -58,7 +58,6 @@ frame-system-benchmarking = { workspace = true, optional = true }
 
 # Cumulus
 
-cumulus-pallet-dmp-queue = { workspace = true, optional = true }
 cumulus-pallet-parachain-system = { workspace = true, optional = true }
 cumulus-pallet-xcm = { workspace = true, optional = true }
 cumulus-pallet-xcmp-queue = { workspace = true, optional = true }
@@ -145,7 +144,6 @@ parachain = [
     "zrml-prediction-markets/parachain",
     # Cumulus
 
-    "cumulus-pallet-dmp-queue",
     "cumulus-pallet-parachain-system",
     "cumulus-pallet-xcm",
     "cumulus-pallet-xcmp-queue",
@@ -187,7 +185,6 @@ parachain = [
 ]
 runtime-benchmarks = [
     "cumulus-pallet-parachain-system?/runtime-benchmarks",
-    "cumulus-pallet-dmp-queue?/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue?/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
@@ -294,7 +291,6 @@ std = [
 
     # Cumulus
 
-    "cumulus-pallet-dmp-queue?/std",
     "cumulus-pallet-parachain-system?/std",
     "cumulus-pallet-xcm?/std",
     "cumulus-pallet-xcmp-queue?/std",
@@ -427,7 +423,6 @@ try-runtime = [
     # Cumulus
     "cumulus-pallet-parachain-system?/try-runtime",
     "cumulus-pallet-xcm?/try-runtime",
-    "cumulus-pallet-dmp-queue?/try-runtime",
     "cumulus-pallet-xcmp-queue?/try-runtime",
     "parachain-info?/try-runtime",
 ]
