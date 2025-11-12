@@ -441,6 +441,9 @@ macro_rules! impl_config_traits {
             frame_support::traits::Nothing,
             parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling},
             xcm_config::config::*,
+            zeitgeist_primitives::constants::{
+                BLOCK_PROCESSING_VELOCITY, UNINCLUDED_SEGMENT_CAPACITY,
+            },
         };
 
         #[cfg(feature = "parachain")]
@@ -460,7 +463,8 @@ macro_rules! impl_config_traits {
             type ReservedXcmpWeight = crate::parachain_params::ReservedXcmpWeight;
             type SelfParaId = parachain_info::Pallet<Runtime>;
             type XcmpMessageHandler = XcmpQueue;
-            type CheckAssociatedRelayNumber = cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
+            type CheckAssociatedRelayNumber =
+                cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
             #[cfg(not(test))]
             type ConsensusHook =
                 common_runtime::relay_timestamp::ConsensusHookWrapperForRelayTimestamp<
