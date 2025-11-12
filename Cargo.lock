@@ -955,6 +955,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-tx-payment",
+ "pallet-async-backing",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -7370,6 +7371,26 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-runtime",
+]
+
+[[package]]
+name = "pallet-async-backing"
+version = "0.9.0"
+source = "git+https://github.com/zeitgeistpm/moonkit?branch=zeitgeist-polkadot-stable2409#42bb0e730597514973940a24dc80538edef69557"
+dependencies = [
+ "cumulus-pallet-parachain-system",
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "log",
+ "nimbus-primitives",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-consensus-slots",
+ "sp-core",
+ "sp-runtime",
+ "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409)",
 ]
 
 [[package]]
@@ -17036,6 +17057,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-tx-payment",
+ "pallet-async-backing",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
