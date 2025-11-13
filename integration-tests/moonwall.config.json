@@ -61,7 +61,11 @@
           }
         ]
       },
-      "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG=true"],
+      "envVars": [
+        "LOG_LEVEL=debug",
+        "VERBOSE_LOG=true",
+        "NODE_OPTIONS=--require=./scripts/chopsticks-relay-timestamp-hook.js"
+      ],
       "buildBlockMode": "manual",
       "connections": [
         {
@@ -106,7 +110,11 @@
           }
         ]
       },
-      "envVars": ["LOG_LEVEL=debug", "VERBOSE_LOG=true"],
+      "envVars": [
+        "LOG_LEVEL=debug",
+        "VERBOSE_LOG=true",
+        "NODE_OPTIONS=--require=./scripts/chopsticks-relay-timestamp-hook.js"
+      ],
       "buildBlockMode": "manual",
       "connections": [
         {
