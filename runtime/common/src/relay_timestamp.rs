@@ -63,8 +63,26 @@ where
                     panic!("Corrupted relay storage: fail to decode value TIMESTAMP_NOW");
                 }
                 Err(relay_state_snapshot::Error::ReadEntry(ReadEntryErr::Absent)) => {
-                    log::error!("Corrupted relay storage: value TIMESTAMP_NOW is absent!");
-                    panic!("Corrupted relay storage: value TIMESTAMP_NOW is absent!");
+                    #[cfg(feature = "try-runtime")]
+                    {
+                        let fallback_timestamp = RelayTimestampNow::get();
+                        if fallback_timestamp == 0 {
+                            log::warn!(
+                                "Relay storage proof missing TIMESTAMP_NOW; falling back to default value (0)"
+                            );
+                        } else {
+                            log::warn!(
+                                "Relay storage proof missing TIMESTAMP_NOW; re-using last known value {}",
+                                fallback_timestamp
+                            );
+                        }
+                        fallback_timestamp
+                    }
+                    #[cfg(not(feature = "try-runtime"))]
+                    {
+                        log::error!("Corrupted relay storage: value TIMESTAMP_NOW is absent!");
+                        panic!("Corrupted relay storage: value TIMESTAMP_NOW is absent!");
+                    }
                 }
                 // Can't return another kind of error, the blokc is invalid anyway, so we should panic
                 _ => unreachable!(),

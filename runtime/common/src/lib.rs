@@ -119,6 +119,7 @@ macro_rules! decl_common_types {
         #[cfg(feature = "parachain")]
         type Migrations = (
             RemoveDmpQueue,
+            pallet_parachain_staking::migrations::MultiplyRoundLenBy2<Runtime>,
             // This `MigrateToLatestXcmVersion` migration can be permanently added to the runtime migrations. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/polkadot/xcm/pallet-xcm/src/migration.rs#L83
             pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
         );

@@ -1011,6 +1011,7 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409)",
+ "sp-timestamp",
  "sp-transaction-pool",
  "sp-version",
  "staging-parachain-info",
@@ -8143,7 +8144,7 @@ dependencies = [
 [[package]]
 name = "pallet-parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=zeitgeist-polkadot-stable2409-added-prev-migrations-fix#fd299fe79a78af94db9ac31fcc296db89fae8e62"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=zeitgeist-polkadot-stable2409-modified-migrations#e4ab6086fe32156d053d08ec986fb546b783671c"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -17111,6 +17112,7 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409)",
+ "sp-timestamp",
  "sp-transaction-pool",
  "sp-version",
  "staging-parachain-info",
