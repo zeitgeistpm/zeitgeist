@@ -142,6 +142,8 @@ xcm-emulator = { workspace = true }
 
 [features]
 default = ["std"]
+battery-legacy-migration = ["common-runtime/battery-legacy-migration"]
+zeitgeist-legacy-migration = ["common-runtime/zeitgeist-legacy-migration"]
 parachain = [
     "zrml-prediction-markets/parachain",
     # Cumulus

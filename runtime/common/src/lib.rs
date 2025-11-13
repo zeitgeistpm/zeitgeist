@@ -59,6 +59,7 @@
 #![allow(clippy::crate_in_macro_def)]
 
 pub mod fees;
+pub mod migrations;
 #[cfg(feature = "parachain")]
 pub mod relay_timestamp;
 pub mod weights;
@@ -116,12 +117,40 @@ macro_rules! decl_common_types {
 
         type RemoveDmpQueue = RemovePallet<DmpQueueStr, RocksDbWeight>;
 
+        // TODO: remove requirement for feature flags for the AtStake migrations
+        #[cfg(feature = "battery-legacy-migration")]
+        const BATTERY_STATION_MIGRATION_BATCH: u32 = 2_000;
+        #[cfg(feature = "zeitgeist-legacy-migration")]
+        const ZEITGEIST_MIGRATION_BATCH: u32 = 2_000;
+
+        #[cfg(feature = "battery-legacy-migration")]
+        type BatteryStationLegacyMigration =
+            pallet_parachain_staking::migrations::LegacyAtStakeCursorMigration<
+                Runtime,
+                migrations::battery_station::BatteryStationLegacyKeys,
+                BATTERY_STATION_MIGRATION_BATCH,
+            >;
+        #[cfg(not(feature = "battery-legacy-migration"))]
+        type BatteryStationLegacyMigration = migrations::NoopMigration;
+
+        #[cfg(feature = "zeitgeist-legacy-migration")]
+        type ZeitgeistLegacyMigration =
+            pallet_parachain_staking::migrations::LegacyAtStakeCursorMigration<
+                Runtime,
+                migrations::zeitgeist::ZeitgeistLegacyKeys,
+                ZEITGEIST_MIGRATION_BATCH,
+            >;
+        #[cfg(not(feature = "zeitgeist-legacy-migration"))]
+        type ZeitgeistLegacyMigration = migrations::NoopMigration;
+
         #[cfg(feature = "parachain")]
         type Migrations = (
             RemoveDmpQueue,
             pallet_parachain_staking::migrations::MultiplyRoundLenBy2<Runtime>,
             // This `MigrateToLatestXcmVersion` migration can be permanently added to the runtime migrations. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/polkadot/xcm/pallet-xcm/src/migration.rs#L83
             pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+            BatteryStationLegacyMigration,
+            ZeitgeistLegacyMigration,
         );
 
         #[cfg(not(feature = "parachain"))]

@@ -38,6 +38,8 @@ serde_json = { workspace = true }
 
 [features]
 default = ["std"]
+battery-legacy-migration = ["pallet-parachain-staking"]
+zeitgeist-legacy-migration = ["pallet-parachain-staking"]
 parachain = [
     "cumulus-pallet-parachain-system",
     "cumulus-pallet-xcmp-queue",

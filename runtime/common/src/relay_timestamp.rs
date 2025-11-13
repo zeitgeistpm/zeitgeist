@@ -68,11 +68,13 @@ where
                         let fallback_timestamp = RelayTimestampNow::get();
                         if fallback_timestamp == 0 {
                             log::warn!(
-                                "Relay storage proof missing TIMESTAMP_NOW; falling back to default value (0)"
+                                "Relay storage proof missing TIMESTAMP_NOW; falling back to \
+                                 default value (0)"
                             );
                         } else {
                             log::warn!(
-                                "Relay storage proof missing TIMESTAMP_NOW; re-using last known value {}",
+                                "Relay storage proof missing TIMESTAMP_NOW; re-using last known \
+                                 value {}",
                                 fallback_timestamp
                             );
                         }

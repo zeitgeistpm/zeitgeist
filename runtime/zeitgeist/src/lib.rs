@@ -27,7 +27,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use common_runtime::{
     create_common_benchmark_logic, create_common_tests, create_genesis_config_preset,
     create_runtime, create_runtime_api, create_runtime_with_additional_pallets, decl_common_types,
-    impl_config_traits,
+    impl_config_traits, migrations,
 };
 pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,

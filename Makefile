@@ -18,7 +18,7 @@ check-dummy:
 # Pseudo private target is invoked by public targets for different chains
 --execute-try-runtime:
 	RUST_LOG=runtime=trace,try-runtime::cli=trace,executor=info \
-	cargo build --release --features=parachain,try-runtime,force-debug
+	cargo build --release --features=parachain,try-runtime,force-debug,battery-legacy-migration,zeitgeist-legacy-migration
 	try-runtime \
 	--runtime=${RUNTIME_PATH} \
 	on-runtime-upgrade \
