@@ -27,7 +27,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use common_runtime::{
     create_common_benchmark_logic, create_common_tests, create_genesis_config_preset,
     create_runtime, create_runtime_api, create_runtime_with_additional_pallets, decl_common_types,
-    impl_config_traits, migrations,
+    impl_config_traits,
 };
 pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
@@ -81,6 +81,8 @@ pub mod integration_tests;
 #[cfg(feature = "parachain")]
 pub mod parachain_params;
 pub mod parameters;
+#[cfg(feature = "parachain")]
+mod runtime_migrations;
 #[cfg(feature = "parachain")]
 pub mod xcm_config;
 
@@ -176,6 +178,11 @@ impl Contains<RuntimeCall> for IsCallable {
 parameter_types! {
     pub RemovableMarketIds: Vec<u32> = vec![];
 }
+
+#[cfg(feature = "parachain")]
+type MultiBlockMigrations = runtime_migrations::LegacyMigrations;
+#[cfg(not(feature = "parachain"))]
+type MultiBlockMigrations = ();
 
 decl_common_types!();
 

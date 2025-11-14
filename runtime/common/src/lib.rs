@@ -59,7 +59,6 @@
 #![allow(clippy::crate_in_macro_def)]
 
 pub mod fees;
-pub mod migrations;
 #[cfg(feature = "parachain")]
 pub mod relay_timestamp;
 pub mod weights;
@@ -117,39 +116,21 @@ macro_rules! decl_common_types {
 
         type RemoveDmpQueue = RemovePallet<DmpQueueStr, RocksDbWeight>;
 
-        #[cfg(feature = "parachain")]
-        const BATTERY_STATION_MIGRATION_BATCH: u32 = 2_000;
-        #[cfg(feature = "parachain")]
-        const ZEITGEIST_MIGRATION_BATCH: u32 = 2_000;
+        frame_support::parameter_types! {
+            pub MigrationsMaxServiceWeight: frame_support::weights::Weight =
+                RuntimeBlockWeights::get().max_block;
+        }
 
         #[cfg(feature = "parachain")]
-        type BatteryStationLegacyMigration =
-            pallet_parachain_staking::migrations::LegacyAtStakeCursorMigration<
-                Runtime,
-                migrations::battery_station::BatteryStationLegacyKeys,
-                BATTERY_STATION_MIGRATION_BATCH,
-            >;
-
-        #[cfg(feature = "parachain")]
-        type ZeitgeistLegacyMigration =
-            pallet_parachain_staking::migrations::LegacyAtStakeCursorMigration<
-                Runtime,
-                migrations::zeitgeist::ZeitgeistLegacyKeys,
-                ZEITGEIST_MIGRATION_BATCH,
-            >;
-
-        #[cfg(feature = "parachain")]
-        type Migrations = (
+        type SingleBlockMigrations = (
             RemoveDmpQueue,
             pallet_parachain_staking::migrations::MultiplyRoundLenBy2<Runtime>,
             // This `MigrateToLatestXcmVersion` migration can be permanently added to the runtime migrations. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/polkadot/xcm/pallet-xcm/src/migration.rs#L83
             pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
-            BatteryStationLegacyMigration,
-            ZeitgeistLegacyMigration,
         );
 
         #[cfg(not(feature = "parachain"))]
-        type Migrations = ();
+        type SingleBlockMigrations = ();
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -157,7 +138,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            Migrations,
+            SingleBlockMigrations,
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -365,6 +346,7 @@ macro_rules! create_runtime {
                 RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 2,
                 Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 3,
                 Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>, HoldReason} = 4,
+                Migrations: pallet_migrations::{Call, Event<T>, Pallet, Storage} = 5,
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
@@ -592,10 +574,21 @@ macro_rules! impl_config_traits {
             type SystemWeightInfo = weights::frame_system::WeightInfo<Runtime>;
             type Version = Version;
             type SingleBlockMigrations = ();
-            type MultiBlockMigrator = ();
+            type MultiBlockMigrator = pallet_migrations::Pallet<Runtime>;
             type PreInherents = ();
             type PostInherents = ();
             type PostTransactions = ();
+        }
+
+        impl pallet_migrations::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            type Migrations = MultiBlockMigrations;
+            type CursorMaxLen = ConstU32<8>;
+            type IdentifierMaxLen = ConstU32<8>;
+            type MigrationStatusHandler = ();
+            type FailedMigrationHandler = frame_support::migrations::FreezeChainOnFailedMigration;
+            type MaxServiceWeight = MigrationsMaxServiceWeight;
+            type WeightInfo = pallet_migrations::weights::SubstrateWeight<Runtime>;
         }
 
         #[cfg(feature = "parachain")]

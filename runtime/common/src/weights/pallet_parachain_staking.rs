@@ -863,18 +863,4 @@ impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for 
             .saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(x.into())))
             .saturating_add(Weight::from_parts(0, 2606).saturating_mul(x.into()))
     }
-    // TODO: Copy this weight to parachain staking pallet weight file
-    /// Storage: `ParachainStaking::AtStake` (r:1 w:1)
-    /// Proof: `ParachainStaking::AtStake` (`max_values`: None, `max_size`: None, mode: `Measured`)
-    fn migrate_old_collator_snapshot(x: u32) -> Weight {
-        let items = x.max(1) as u64;
-        // Proof Size summary in bytes:
-        //  Measured:  `296`
-        //  Estimated: `3761`
-        // Minimum execution time: 58_352 nanoseconds.
-        Weight::from_parts(60_422_000, 3761)
-            .saturating_mul(items)
-            .saturating_add(T::DbWeight::get().reads(items))
-            .saturating_add(T::DbWeight::get().writes(items))
-    }
 }
