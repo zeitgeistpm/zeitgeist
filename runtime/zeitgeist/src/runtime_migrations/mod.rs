@@ -1,5 +1,3 @@
-#![cfg(feature = "parachain")]
-
 use frame_support::migrations::MigrationId;
 use pallet_parachain_staking::migrations::{
     LegacyAtStakeCursorMigration, LegacyAtStakeMigrationKey, LegacyAtStakeMigrationList,
