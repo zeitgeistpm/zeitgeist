@@ -47,11 +47,6 @@ parachain = [
     "pallet-message-queue",
     "pallet-parachain-staking",
 ]
-try-runtime = [
-    "frame-system/try-runtime",
-    "frame-support/try-runtime",
-    "pallet-timestamp/try-runtime",
-]
 std = [
     "cumulus-pallet-parachain-system?/std",
     "cumulus-pallet-xcmp-queue?/std",
@@ -84,6 +79,11 @@ std = [
     "pallet-parachain-staking?/std",
     "serde_json/std",
     "zeitgeist-primitives/std",
+]
+try-runtime = [
+    "frame-system/try-runtime",
+    "frame-support/try-runtime",
+    "pallet-timestamp/try-runtime",
 ]
 
 [package]
