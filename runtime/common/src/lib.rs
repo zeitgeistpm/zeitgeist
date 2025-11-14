@@ -117,31 +117,26 @@ macro_rules! decl_common_types {
 
         type RemoveDmpQueue = RemovePallet<DmpQueueStr, RocksDbWeight>;
 
-        // TODO: remove requirement for feature flags for the AtStake migrations
-        #[cfg(feature = "battery-legacy-migration")]
+        #[cfg(feature = "parachain")]
         const BATTERY_STATION_MIGRATION_BATCH: u32 = 2_000;
-        #[cfg(feature = "zeitgeist-legacy-migration")]
+        #[cfg(feature = "parachain")]
         const ZEITGEIST_MIGRATION_BATCH: u32 = 2_000;
 
-        #[cfg(feature = "battery-legacy-migration")]
+        #[cfg(feature = "parachain")]
         type BatteryStationLegacyMigration =
             pallet_parachain_staking::migrations::LegacyAtStakeCursorMigration<
                 Runtime,
                 migrations::battery_station::BatteryStationLegacyKeys,
                 BATTERY_STATION_MIGRATION_BATCH,
             >;
-        #[cfg(not(feature = "battery-legacy-migration"))]
-        type BatteryStationLegacyMigration = migrations::NoopMigration;
 
-        #[cfg(feature = "zeitgeist-legacy-migration")]
+        #[cfg(feature = "parachain")]
         type ZeitgeistLegacyMigration =
             pallet_parachain_staking::migrations::LegacyAtStakeCursorMigration<
                 Runtime,
                 migrations::zeitgeist::ZeitgeistLegacyKeys,
                 ZEITGEIST_MIGRATION_BATCH,
             >;
-        #[cfg(not(feature = "zeitgeist-legacy-migration"))]
-        type ZeitgeistLegacyMigration = migrations::NoopMigration;
 
         #[cfg(feature = "parachain")]
         type Migrations = (

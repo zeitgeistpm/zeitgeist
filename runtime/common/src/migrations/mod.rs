@@ -16,9 +16,7 @@
 
 //! Helper modules that expose the legacy collator snapshot keys for each runtime.
 
-use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
-
-#[cfg(feature = "battery-legacy-migration")]
+#[cfg(feature = "parachain")]
 pub mod battery_station {
     use pallet_parachain_staking::migrations::{
         LegacyAtStakeMigrationKey, LegacyAtStakeMigrationList,
@@ -37,7 +35,7 @@ pub mod battery_station {
     }
 }
 
-#[cfg(feature = "zeitgeist-legacy-migration")]
+#[cfg(feature = "parachain")]
 pub mod zeitgeist {
     use pallet_parachain_staking::migrations::{
         LegacyAtStakeMigrationKey, LegacyAtStakeMigrationList,
@@ -53,14 +51,5 @@ pub mod zeitgeist {
         fn get_key(index: u32) -> Option<LegacyAtStakeMigrationKey> {
             ZEITGEIST_LEGACY_KEYS.get(index as usize).copied()
         }
-    }
-}
-
-/// No-op migration used when a runtime does not opt into the legacy snapshot migration.
-pub struct NoopMigration;
-
-impl OnRuntimeUpgrade for NoopMigration {
-    fn on_runtime_upgrade() -> Weight {
-        Weight::zero()
     }
 }
