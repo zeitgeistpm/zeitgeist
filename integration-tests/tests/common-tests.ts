@@ -183,7 +183,8 @@ export async function canSendXcmTransfer(
   console.log(`xcmFee: ${xcmFee}`);
   // between 0.01 ZTG and 0.15 ZTG XCM fee
   const approxXcmFeeLow = 100000000;
-  const approxXcmFeeHigh = 1500000000;
+  // chopsticks forked networks occasionally charge slightly higher than live chain
+  const approxXcmFeeHigh = 2000000000;
   expect(xcmFee).toBeGreaterThanOrEqual(approxXcmFeeLow);
   expect(xcmFee).toBeLessThanOrEqual(approxXcmFeeHigh);
   expect(

@@ -57,7 +57,7 @@
           {
             "name": "PolkadotDB",
             "type": "relaychain",
-            "configPath": "polkadot"
+            "configPath": "./configs/polkadot.yml"
           }
         ]
       },

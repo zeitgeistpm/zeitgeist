@@ -10,11 +10,12 @@
         "nodes": [
             {
                 "name": "charlie",
-                "ws_port": 9947,
+                "rpc_port": 9947,
                 "validator": true
             },
             {
                 "name": "bob",
+                "rpc_port": 9950,
                 "validator": true
             }
         ]
@@ -27,7 +28,7 @@
                 {
                     "name": "alice",
                     "command": "../target/release/zeitgeist",
-                    "ws_port": 9944,
+                    "rpc_port": 9944,
                     "p2p_port": 33049,
                     "args": ["-lparachain=debug", "--force-authoring", "--detailed-log-output"]
                 }
