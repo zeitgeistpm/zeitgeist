@@ -1,6 +1,6 @@
 // Copyright 2025 Forecasting Technologies LTD.
 // Copyright 2019-2025 PureStake Inc.
-// 
+//
 // This file is part of Zeitgeist.
 //
 // Zeitgeist is free software: you can redistribute it and/or modify it
@@ -51,21 +51,22 @@ where
     Inner: ConsensusHook,
 {
     fn on_state_proof(state_proof: &RelayChainStateProof) -> (Weight, UnincludedSegmentCapacity) {
-        let relay_timestamp: u64 =
-            match state_proof.read_entry(well_known_relay_keys::TIMESTAMP_NOW, None) {
-                Ok(relay_timestamp) => relay_timestamp,
-                // Log the read entry error
-                Err(relay_state_snapshot::Error::ReadEntry(ReadEntryErr::Proof)) => {
-                    log::error!("Invalid relay storage proof: fail to read key TIMESTAMP_NOW");
-                    panic!("Invalid realy storage proof: fail to read key TIMESTAMP_NOW");
-                }
-                Err(relay_state_snapshot::Error::ReadEntry(ReadEntryErr::Decode)) => {
-                    log::error!("Corrupted relay storage: fail to decode value TIMESTAMP_NOW");
-                    panic!("Corrupted relay storage: fail to decode value TIMESTAMP_NOW");
-                }
-                Err(relay_state_snapshot::Error::ReadEntry(ReadEntryErr::Absent)) => {
-                    #[cfg(feature = "try-runtime")]
-                    {
+        let relay_timestamp: u64 = match state_proof
+            .read_entry(well_known_relay_keys::TIMESTAMP_NOW, None)
+        {
+            Ok(relay_timestamp) => relay_timestamp,
+            // Log the read entry error
+            Err(relay_state_snapshot::Error::ReadEntry(ReadEntryErr::Proof)) => {
+                log::error!("Invalid relay storage proof: fail to read key TIMESTAMP_NOW");
+                panic!("Invalid realy storage proof: fail to read key TIMESTAMP_NOW");
+            }
+            Err(relay_state_snapshot::Error::ReadEntry(ReadEntryErr::Decode)) => {
+                log::error!("Corrupted relay storage: fail to decode value TIMESTAMP_NOW");
+                panic!("Corrupted relay storage: fail to decode value TIMESTAMP_NOW");
+            }
+            Err(relay_state_snapshot::Error::ReadEntry(ReadEntryErr::Absent)) => {
+                cfg_if::cfg_if! {
+                    if #[cfg(any(feature = "try-runtime", test, feature = "std"))] {
                         let fallback_timestamp = RelayTimestampNow::get();
                         if fallback_timestamp == 0 {
                             log::warn!(
@@ -80,16 +81,15 @@ where
                             );
                         }
                         fallback_timestamp
-                    }
-                    #[cfg(not(feature = "try-runtime"))]
-                    {
+                    } else {
                         log::error!("Corrupted relay storage: value TIMESTAMP_NOW is absent!");
                         panic!("Corrupted relay storage: value TIMESTAMP_NOW is absent!");
                     }
                 }
-                // Can't return another kind of error, the blokc is invalid anyway, so we should panic
-                _ => unreachable!(),
-            };
+            }
+            // Can't return another kind of error, the blokc is invalid anyway, so we should panic
+            _ => unreachable!(),
+        };
 
         let wrapper_weight = <Runtime as frame_system::Config>::DbWeight::get().writes(1);
 

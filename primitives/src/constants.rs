@@ -141,4 +141,11 @@ pub const TREASURY_PALLET_ID: PalletId = PalletId(*b"zge/tsry");
 pub const UNINCLUDED_SEGMENT_CAPACITY: u32 = 3;
 /// How many parachain blocks are processed by the relay chain per parent. Limits the
 /// number of blocks authored per slot.
+///
+/// In std builds (used by the emulator/tests) the relay slot stays constant, so we allow a
+/// few more authored blocks to prevent async-backing panics while keeping the production
+/// limit unchanged in `no_std`/Wasm builds.
+#[cfg(feature = "std")]
+pub const BLOCK_PROCESSING_VELOCITY: u32 = 3;
+#[cfg(not(feature = "std"))]
 pub const BLOCK_PROCESSING_VELOCITY: u32 = 1;
