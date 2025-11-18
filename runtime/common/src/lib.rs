@@ -575,12 +575,12 @@ macro_rules! impl_config_traits {
         impl pallet_migrations::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
             type Migrations = MultiBlockMigrations;
-            type CursorMaxLen = ConstU32<8>;
-            type IdentifierMaxLen = ConstU32<8>;
+            type CursorMaxLen = MigrationsCursorMaxLen;
+            type IdentifierMaxLen = MigrationsIdentifierMaxLen;
             type MigrationStatusHandler = ();
             type FailedMigrationHandler = frame_support::migrations::FreezeChainOnFailedMigration;
             type MaxServiceWeight = MigrationsMaxServiceWeight;
-            type WeightInfo = pallet_migrations::weights::SubstrateWeight<Runtime>;
+            type WeightInfo = weights::pallet_migrations::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -1842,6 +1842,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, pallet_treasury, Treasury);
                     list_benchmark!(list, extra, pallet_utility, Utility);
                     list_benchmark!(list, extra, pallet_vesting, Vesting);
+                    list_benchmark!(list, extra, pallet_migrations, Migrations);
                     list_benchmark!(list, extra, zrml_swaps, Swaps);
                     list_benchmark!(list, extra, zrml_authorized, Authorized);
                     list_benchmark!(list, extra, zrml_combinatorial_tokens, CombinatorialTokens);
@@ -1934,6 +1935,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, pallet_treasury, Treasury);
                     add_benchmark!(params, batches, pallet_utility, Utility);
                     add_benchmark!(params, batches, pallet_vesting, Vesting);
+                    add_benchmark!(params, batches, pallet_migrations, Migrations);
                     add_benchmark!(params, batches, zrml_swaps, Swaps);
                     add_benchmark!(params, batches, zrml_authorized, Authorized);
                     add_benchmark!(params, batches, zrml_combinatorial_tokens, CombinatorialTokens);
