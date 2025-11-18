@@ -1,5 +1,7 @@
+#!/usr/bin/env bash
+
 # Copyright (C) Moondance Labs Ltd.
-# Copyright 2022-2024 Forecasting Technologies LTD.
+# Copyright 2022-2025 Forecasting Technologies LTD.
 #
 # This file is part of Zeitgeist.
 #
@@ -16,44 +18,134 @@
 # You should have received a copy of the GNU General Public License
 # along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#!/bin/bash
-
 # Exit on any error
-set -e
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INTEGRATION_DIR="${SCRIPT_DIR}/.."
+REPO_ROOT="${INTEGRATION_DIR}/.."
+CARGO_LOCK="${REPO_ROOT}/Cargo.lock"
+TMP_DIR="${INTEGRATION_DIR}/tmp"
+GITHUB_REPO="https://github.com/paritytech/polkadot-sdk"
+
+# Always run the commands from the "integration-tests" dir
+cd "${INTEGRATION_DIR}"
 
 # Check if the operating system is macOS
 if [[ $(uname) == "Darwin" ]]; then
-    echo "This script is not intended for MacOS, since the prebuild binaries are meant to be executed on Linux. But keep in mind you need to have 'polkadot', 'polkadot-execute-worker', 'polkadot-prepare-worker' in any case! So compile those yourself! Exiting..."
+    echo "This script is not intended for macOS, since the prebuilt binaries are meant to be executed on Linux."
     exit 1
 fi
 
-# branch=$(egrep -o '/polkadot.*#([^\"]*)' $(dirname $0)/../../Cargo.lock | head -1 | sed 's/.*release-//#')
-# polkadot_release=$(echo $branch | sed 's/#.*//' | sed 's/\/polkadot-sdk?branch=polkadot-v//' | sed 's/-.*//')
-polkadot_release="polkadot-stable2409"
+mkdir -p "${TMP_DIR}"
 
-# Always run the commands from the "integration-tests" dir
-cd $(dirname $0)/..
+determine_release() {
+	local release="${POLKADOT_RELEASE_OVERRIDE:-}"
+	if [[ -n "${release}" ]]; then
+		printf "%s" "${release}"
+		return
+	fi
 
-if [[ -f tmp/polkadot ]]; then
-	POLKADOT_VERSION=$(tmp/polkadot --version)
-	if [[ $POLKADOT_VERSION == *$polkadot_release* ]]; then
-		echo "Polkadot binary has correct version"
+	if [[ -f "${CARGO_LOCK}" ]]; then
+		local lock_line
+		lock_line=$(grep -m1 -oE 'git\+https://github\.com/[^\?]+\?[^"]+' "${CARGO_LOCK}" | grep -m1 'paritytech/polkadot-sdk' || true)
+		if [[ -n "${lock_line}" ]]; then
+			if [[ "${lock_line}" =~ tag=([^&#]+) ]]; then
+				printf "%s" "${BASH_REMATCH[1]}"
+				return
+			elif [[ "${lock_line}" =~ branch=([^&#]+) ]]; then
+				printf "%s" "${BASH_REMATCH[1]}"
+				return
+			fi
+		fi
+	fi
+
+	printf "latest"
+}
+
+delete_if_not_binary() {
+	local file_path="$1"
+	if [[ -f "${file_path}" ]] && ! file "${file_path}" | grep -q 'executable'; then
+		rm -f "${file_path}"
+	fi
+}
+
+run_moonwall_download() {
+	local name="$1"
+	local version="$2"
+	local log_file
+	log_file=$(mktemp)
+
+	if pnpm moonwall download "${name}" "${version}" tmp |& tee "${log_file}"; then
+		rm -f "${log_file}"
+		chmod +x "tmp/${name}"
+		return 0
+	fi
+
+	LAST_ERROR_LOG=$(cat "${log_file}")
+	rm -f "${log_file}"
+	return 1
+}
+
+download_from_github() {
+	local name="$1"
+	local version="$2"
+	local url="${GITHUB_REPO}/releases/download/${version}/${name}"
+	local temp_file="${TMP_DIR}/${name}.download"
+
+	echo "Downloading ${name} ${version} from ${url}"
+	if curl --fail --location --progress-bar -o "${temp_file}" "${url}"; then
+		mv "${temp_file}" "tmp/${name}"
+		chmod +x "tmp/${name}"
+		return 0
+	fi
+
+	rm -f "${temp_file}"
+	return 1
+}
+
+download_binary() {
+	local name="$1"
+	local version="$2"
+	if [[ "${version}" != "latest" ]]; then
+		if download_from_github "${name}" "${version}"; then
+			return
+		fi
+
+		echo "Failed to download ${name} ${version} from ${GITHUB_REPO}."
+		exit 1
+	fi
+
+	if run_moonwall_download "${name}" "${version}"; then
+		return
+	fi
+
+	echo "Failed to download ${name}:"
+	echo "${LAST_ERROR_LOG}"
+	exit 1
+}
+
+POLKADOT_RELEASE="$(determine_release)"
+echo "Using Polkadot release \"${POLKADOT_RELEASE}\""
+
+delete_if_not_binary "tmp/polkadot"
+delete_if_not_binary "tmp/polkadot-execute-worker"
+delete_if_not_binary "tmp/polkadot-prepare-worker"
+
+if [[ -x tmp/polkadot && -x tmp/polkadot-execute-worker && -x tmp/polkadot-prepare-worker ]]; then
+	POLKADOT_VERSION=$(tmp/polkadot --version || true)
+	if [[ "${POLKADOT_RELEASE}" == "latest" || "${POLKADOT_VERSION}" == *"${POLKADOT_RELEASE}"* ]]; then
+		echo "Polkadot binaries already match the requested release."
 		exit 0
 	else
-		echo "Updating polkadot binary..."
-
-		pnpm moonwall download polkadot $polkadot_release tmp
-
-		pnpm moonwall download polkadot-execute-worker $polkadot_release tmp
-
-		pnpm moonwall download polkadot-prepare-worker $polkadot_release tmp
+		echo "Updating polkadot binary from \"${POLKADOT_VERSION}\" to \"${POLKADOT_RELEASE}\"..."
 	fi
 else
 	echo "Polkadot binary not found, downloading..."
-
-	pnpm moonwall download polkadot $polkadot_release tmp
-
-	pnpm moonwall download polkadot-execute-worker $polkadot_release tmp
-
-	pnpm moonwall download polkadot-prepare-worker $polkadot_release tmp
 fi
+
+download_binary "polkadot" "${POLKADOT_RELEASE}"
+download_binary "polkadot-execute-worker" "${POLKADOT_RELEASE}"
+download_binary "polkadot-prepare-worker" "${POLKADOT_RELEASE}"
+
+echo "Polkadot binaries downloaded to ${TMP_DIR}"

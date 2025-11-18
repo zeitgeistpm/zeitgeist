@@ -1,4 +1,5 @@
 endpoint: wss://zeitgeist.api.onfinality.io/public-ws
+build-block-mode: Manual
 mock-signature-host: true
 db: ./tmp/ztg_db_mba.sqlite
 runtime-log-level: 5

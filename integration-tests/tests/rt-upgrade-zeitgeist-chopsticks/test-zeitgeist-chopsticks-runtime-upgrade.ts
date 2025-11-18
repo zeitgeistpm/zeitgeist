@@ -38,21 +38,33 @@ describeSuite({
   title: "Chopsticks Zeitgeist Post-Upgrade Tests",
   foundationMethods: "chopsticks",
   testCases: function ({ it, context, log }) {
+    const hookLog = (message: string) => {
+      const formatted = `[CAN beforeAll] ${message}`;
+      console.log(formatted);
+      log(formatted);
+    };
     let zeitgeistParaApi: ApiPromise;
     let relayApi: ApiPromise;
     let hydradxParaApi: ApiPromise;
     let alice: KeyringPair;
 
     beforeAll(async () => {
+      hookLog("Starting chopsticks runtime upgrade beforeAll hook");
       const keyring = new Keyring({ type: "sr25519" });
       alice = keyring.addFromUri("//Alice", { name: "Alice default" });
+      hookLog("Keyring initialised and Alice loaded");
+
+      hookLog("Connecting to Zeitgeist parachain API");
       zeitgeistParaApi = context.polkadotJs("ZeitgeistPara");
+      hookLog("Connecting to Polkadot relay API");
       relayApi = context.polkadotJs("PolkadotRelay");
+      hookLog("Connecting to HydraDX parachain API");
       hydradxParaApi = context.polkadotJs("HydraDXPara");
 
       const paraZeitgeistNetwork = (
         zeitgeistParaApi.consts.system.version as unknown as RuntimeVersion
       ).specName.toString();
+      hookLog(`Zeitgeist parachain specName detected: ${paraZeitgeistNetwork}`);
       expect(paraZeitgeistNetwork, "Para API incorrect").to.contain(
         "zeitgeist"
       );
@@ -60,26 +72,32 @@ describeSuite({
       const relayNetwork = (
         relayApi.consts.system.version as unknown as RuntimeVersion
       ).specName.toString();
+      hookLog(`Relaychain specName detected: ${relayNetwork}`);
       expect(relayNetwork, "Relay API incorrect").to.contain("polkadot");
 
       const paraHydraDXNetwork = (
         hydradxParaApi.consts.system.version as unknown as RuntimeVersion
       ).specName.toString();
+      hookLog(`HydraDX parachain specName detected: ${paraHydraDXNetwork}`);
       expect(paraHydraDXNetwork, "Para API incorrect").to.contain("hydradx");
 
       const rtBefore = (
         zeitgeistParaApi.consts.system.version as unknown as RuntimeVersion
       ).specVersion.toNumber();
-      log(`About to upgrade to runtime at:`);
+      hookLog(
+        `Captured current specVersion ${rtBefore}. About to upgrade to runtime at:`
+      );
       const moonwallContext = await MoonwallContext.getContext();
-      log(moonwallContext.rtUpgradePath);
+      hookLog(moonwallContext.rtUpgradePath);
 
+      hookLog("Invoking context.upgradeRuntime on ZeitgeistPara");
       await context.upgradeRuntime("ZeitgeistPara");
+      hookLog("context.upgradeRuntime call resolved");
 
       const rtafter = (
         zeitgeistParaApi.consts.system.version as unknown as RuntimeVersion
       ).specVersion.toNumber();
-      log(
+      hookLog(
         `RT upgrade has increased specVersion from ${rtBefore} to ${rtafter}`
       );
     }, 120000);

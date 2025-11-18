@@ -9,9 +9,11 @@ default_command = "./tmp/polkadot"
 
 [[relaychain.nodes]]
 name = "charlie"
+rpc_port = 9947
 
 [[relaychain.nodes]]
 name = "bob"
+rpc_port = 9950
 
 [[parachains]]
 id = 2101
@@ -20,4 +22,4 @@ id = 2101
 args = ["-lparachain=debug"]
 command = "../target/release/zeitgeist"
 name = "alice"
-ws_port = 9945
+rpc_port = 9944

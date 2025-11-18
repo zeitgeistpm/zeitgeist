@@ -472,21 +472,11 @@ macro_rules! impl_config_traits {
             type XcmpMessageHandler = XcmpQueue;
             type CheckAssociatedRelayNumber =
                 cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
-            #[cfg(not(test))]
             type ConsensusHook =
                 common_runtime::relay_timestamp::ConsensusHookWrapperForRelayTimestamp<
                     Runtime,
                     ConsensusHook,
                 >;
-            // TODO(#1426): figure out a way to have the integration tests work with the relay timestamp and BLOCK_PROCESSING_VELOCITY of 1
-            // Use normal consensus hook for xcm integration tests to avoid relay timestamp setting
-            #[cfg(test)]
-            type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<
-                Runtime,
-                // The xcm integration tests require to process two blocks in a single slot
-                2,
-                UNINCLUDED_SEGMENT_CAPACITY,
-            >;
             type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
             type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
         }
@@ -525,10 +515,12 @@ macro_rules! impl_config_traits {
         #[cfg(feature = "parachain")]
         impl pallet_message_queue::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
-            #[cfg(feature = "use-noop-message-processor")]
+            // For testing we always want full XCM processing so cross-chain assertions run, even
+            // when the `use-noop-message-processor` flag is enabled for benchmarks.
+            #[cfg(all(feature = "use-noop-message-processor", not(test)))]
             type MessageProcessor =
                 pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
-            #[cfg(not(feature = "use-noop-message-processor"))]
+            #[cfg(any(not(feature = "use-noop-message-processor"), test))]
             type MessageProcessor = xcm_builder::ProcessXcmMessage<
                 AggregateMessageOrigin,
                 xcm_executor::XcmExecutor<XcmConfig>,

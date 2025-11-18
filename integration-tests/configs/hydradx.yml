@@ -1,7 +1,9 @@
-endpoint: wss://hydradx-rpc.dwellir.com
+endpoint: wss://rpc.hydradx.cloud/public-ws
+build-block-mode: Manual
 mock-signature-host: true
 block: ${env.HYDRADX_BLOCK_NUMBER}
 db: ./tmp/hydradx_db_mba.sqlite
+runtime-log-level: 5
 # wasm-override: hydradx_runtime.compact.compressed.wasm
 
 import-storage:
@@ -105,7 +107,3 @@ import-storage:
           - 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
           - 17 # Interlay
         - free: '100000000000000000000000'
-  TechnicalCommittee:
-    Members: ["5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"]
-  Council:
-    Members: ["5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"]

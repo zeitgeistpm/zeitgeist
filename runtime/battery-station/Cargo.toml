@@ -252,6 +252,7 @@ std = [
     "orml-traits/std",
     "pallet-asset-tx-payment/std",
     "pallet-async-backing?/std",
+    "common-runtime/std",
     "pallet-balances/std",
     "pallet-bounties/std",
     "pallet-collective/std",
