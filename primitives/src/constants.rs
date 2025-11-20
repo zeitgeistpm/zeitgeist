@@ -34,7 +34,6 @@ use frame_support::{parameter_types, PalletId};
 // Definitions for time
 pub const BLOCKS_PER_YEAR: BlockNumber = (BLOCKS_PER_DAY * 36525) / 100; // 5_259_600
 pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24; // 14_400
-                                                              // TODO: Check what effect the updated block time has on the zeitgeist pallet implementations (block durations are then faster as originally assumed)
 pub const MILLISECS_PER_BLOCK: u32 = 6000;
 pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber); // 10
 pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60; // 600
