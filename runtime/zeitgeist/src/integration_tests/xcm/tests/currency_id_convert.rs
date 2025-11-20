@@ -30,7 +30,6 @@ use core::fmt::Debug;
 use sp_runtime::traits::{Convert, MaybeEquivalence};
 use test_case::test_case;
 use xcm::latest::{Junction::*, Location};
-use xcm_emulator::TestExt;
 use zeitgeist_primitives::types::Asset;
 
 fn convert_common_native<T>(expected: T)

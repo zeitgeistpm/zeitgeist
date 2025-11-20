@@ -24,7 +24,7 @@ use crate::{
     XTokens, XcmpQueue,
 };
 use rococo_emulated_chain::Rococo;
-use xcm_emulator::{decl_test_networks, decl_test_parachains, TestExt};
+use xcm_emulator::{decl_test_networks, decl_test_parachains};
 
 decl_test_parachains! {
     pub struct BatteryStation {
