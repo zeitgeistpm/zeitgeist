@@ -1,6 +1,5 @@
-// Copyright 2025 Forecasting Technologies LTD.
-// Copyright 2019-2025 PureStake Inc.
-//
+// Copyright 2022-2025 Forecasting Technologies LTD.
+// Copyright 2021-2022 Zeitgeist PM LLC.
 // This file is part of Zeitgeist.
 //
 // Zeitgeist is free software: you can redistribute it and/or modify it
@@ -16,7 +15,26 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-//! A way to get a relyable timestamp
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//     Copyright 2019-2025 PureStake Inc.
+//     This file is part of Moonbeam.
+//
+//     Moonbeam is free software: you can redistribute it and/or modify
+//     it under the terms of the GNU General Public License as published by
+//     the Free Software Foundation, either version 3 of the License, or
+//     (at your option) any later version.
+//
+//     Moonbeam is distributed in the hope that it will be useful,
+//     but WITHOUT ANY WARRANTY; without even the implied warranty of
+//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//     GNU General Public License for more details.
+//
+//     You should have received a copy of the GNU General Public License
+//     along with Moonbeam.  If not, see <http://www.gnu.org/licenses/>.
+
+//! A way to get a reliable timestamp
 use cumulus_pallet_parachain_system::{
     consensus_hook::UnincludedSegmentCapacity,
     relay_state_snapshot::{self, ReadEntryErr},
@@ -30,7 +48,7 @@ use frame_support::{
 use zeitgeist_primitives::types::well_known_relay_keys;
 
 /// Get the relay timestamp.
-/// Noe that the relay timestamp is populated at the parachain system inherent.
+/// Note that the relay timestamp is populated at the parachain system inherent.
 /// If you fetch the timestamp before, you will get the timestamp of the parent block.
 pub struct RelayTimestamp;
 impl Time for RelayTimestamp {
@@ -58,7 +76,7 @@ where
             // Log the read entry error
             Err(relay_state_snapshot::Error::ReadEntry(ReadEntryErr::Proof)) => {
                 log::error!("Invalid relay storage proof: fail to read key TIMESTAMP_NOW");
-                panic!("Invalid realy storage proof: fail to read key TIMESTAMP_NOW");
+                panic!("Invalid relay storage proof: fail to read key TIMESTAMP_NOW");
             }
             Err(relay_state_snapshot::Error::ReadEntry(ReadEntryErr::Decode)) => {
                 log::error!("Corrupted relay storage: fail to decode value TIMESTAMP_NOW");
@@ -87,7 +105,7 @@ where
                     }
                 }
             }
-            // Can't return another kind of error, the blokc is invalid anyway, so we should panic
+            // Can't return another kind of error, the block is invalid anyway, so we should panic
             _ => unreachable!(),
         };
 

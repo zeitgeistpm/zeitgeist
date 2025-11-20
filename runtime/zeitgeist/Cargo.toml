@@ -128,6 +128,7 @@ zrml-swaps-runtime-api = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
+once_cell = "1.20.2"
 pallet-im-online = { workspace = true, features = ["default"] }
 polkadot-emulated-chain = { workspace = true }
 polkadot-runtime = { workspace = true }

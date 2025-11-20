@@ -31,13 +31,25 @@ GITHUB_REPO="https://github.com/paritytech/polkadot-sdk"
 # Always run the commands from the "integration-tests" dir
 cd "${INTEGRATION_DIR}"
 
-# Check if the operating system is macOS
-if [[ $(uname) == "Darwin" ]]; then
-    echo "This script is not intended for macOS, since the prebuilt binaries are meant to be executed on Linux."
-    exit 1
+IS_MACOS=0
+if [[ "$(uname)" == "Darwin" ]]; then
+	IS_MACOS=1
 fi
 
 mkdir -p "${TMP_DIR}"
+
+POLKADOT_SOURCE_LINE=""
+POLKADOT_SOURCE_COMMIT=""
+
+get_polkadot_source_line() {
+	if [[ -n "${POLKADOT_SOURCE_LINE}" || ! -f "${CARGO_LOCK}" ]]; then
+		printf "%s" "${POLKADOT_SOURCE_LINE}"
+		return
+	fi
+
+	POLKADOT_SOURCE_LINE=$(grep -m1 'git+https://github.com/paritytech/polkadot-sdk' "${CARGO_LOCK}" || true)
+	printf "%s" "${POLKADOT_SOURCE_LINE}"
+}
 
 determine_release() {
 	local release="${POLKADOT_RELEASE_OVERRIDE:-}"
@@ -46,21 +58,65 @@ determine_release() {
 		return
 	fi
 
-	if [[ -f "${CARGO_LOCK}" ]]; then
-		local lock_line
-		lock_line=$(grep -m1 -oE 'git\+https://github\.com/[^\?]+\?[^"]+' "${CARGO_LOCK}" | grep -m1 'paritytech/polkadot-sdk' || true)
-		if [[ -n "${lock_line}" ]]; then
-			if [[ "${lock_line}" =~ tag=([^&#]+) ]]; then
-				printf "%s" "${BASH_REMATCH[1]}"
-				return
-			elif [[ "${lock_line}" =~ branch=([^&#]+) ]]; then
-				printf "%s" "${BASH_REMATCH[1]}"
-				return
+	local lock_line
+	lock_line=$(get_polkadot_source_line)
+	if [[ -n "${lock_line}" ]]; then
+		if [[ "${lock_line}" =~ tag=([^&#\"]+) ]]; then
+			printf "%s" "${BASH_REMATCH[1]}"
+			if [[ "${lock_line}" =~ \#([0-9a-f]+)\" ]]; then
+				POLKADOT_SOURCE_COMMIT="${BASH_REMATCH[1]}"
 			fi
+			return
+		elif [[ "${lock_line}" =~ branch=([^&#\"]+) ]]; then
+			printf "%s" "${BASH_REMATCH[1]}"
+			if [[ "${lock_line}" =~ \#([0-9a-f]+)\" ]]; then
+				POLKADOT_SOURCE_COMMIT="${BASH_REMATCH[1]}"
+			fi
+			return
+		elif [[ "${lock_line}" =~ \#([0-9a-f]+)\" ]]; then
+			# Fallback to commit-only references.
+			POLKADOT_SOURCE_COMMIT="${BASH_REMATCH[1]}"
 		fi
 	fi
 
 	printf "latest"
+}
+
+build_from_source_macos() {
+	local release="$1"
+	local commit="$2"
+	local repo_dir="${TMP_DIR}/polkadot-sdk-src"
+
+	if [[ "${release}" == "latest" ]]; then
+		echo "Unable to determine Polkadot release for macOS builds. Set POLKADOT_RELEASE_OVERRIDE to a concrete tag or branch."
+		exit 1
+	fi
+
+	if [[ ! -d "${repo_dir}/.git" ]]; then
+		echo "Cloning Polkadot SDK into ${repo_dir}"
+		git clone "${GITHUB_REPO}" "${repo_dir}"
+	fi
+
+	(
+		cd "${repo_dir}"
+		# Fetch only from origin to avoid hitting private remotes like "benchmarks".
+		git fetch origin --tags --prune
+		local target="${commit:-${release}}"
+		echo "Checking out ${target}"
+		git checkout "${target}"
+		echo "Building Polkadot binaries from source (this may take a while)..."
+		cargo build --locked --release -p polkadot
+	)
+
+	for bin in polkadot polkadot-execute-worker polkadot-prepare-worker; do
+		local source_binary="${repo_dir}/target/release/${bin}"
+		if [[ ! -x "${source_binary}" ]]; then
+			echo "Failed to build ${bin} at ${source_binary}"
+			exit 1
+		fi
+		cp "${source_binary}" "tmp/${bin}"
+		chmod +x "tmp/${bin}"
+	done
 }
 
 delete_if_not_binary() {
@@ -76,7 +132,7 @@ run_moonwall_download() {
 	local log_file
 	log_file=$(mktemp)
 
-	if pnpm moonwall download "${name}" "${version}" tmp |& tee "${log_file}"; then
+	if pnpm moonwall download "${name}" "${version}" tmp 2>&1 | tee "${log_file}"; then
 		rm -f "${log_file}"
 		chmod +x "tmp/${name}"
 		return 0
@@ -144,8 +200,12 @@ else
 	echo "Polkadot binary not found, downloading..."
 fi
 
-download_binary "polkadot" "${POLKADOT_RELEASE}"
-download_binary "polkadot-execute-worker" "${POLKADOT_RELEASE}"
-download_binary "polkadot-prepare-worker" "${POLKADOT_RELEASE}"
+if [[ "${IS_MACOS}" -eq 1 ]]; then
+	build_from_source_macos "${POLKADOT_RELEASE}" "${POLKADOT_SOURCE_COMMIT}"
+else
+	download_binary "polkadot" "${POLKADOT_RELEASE}"
+	download_binary "polkadot-execute-worker" "${POLKADOT_RELEASE}"
+	download_binary "polkadot-prepare-worker" "${POLKADOT_RELEASE}"
+fi
 
 echo "Polkadot binaries downloaded to ${TMP_DIR}"

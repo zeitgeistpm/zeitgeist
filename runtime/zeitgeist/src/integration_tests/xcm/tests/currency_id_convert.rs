@@ -16,14 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use super::{reset_test_net, with_zeitgeist};
 use crate::{
-    integration_tests::xcm::{
-        setup::{
-            foreign_parent_location, foreign_sibling_location, foreign_ztg_location,
-            register_foreign_parent, register_foreign_sibling, FOREIGN_PARENT_ID,
-            FOREIGN_SIBLING_ID, PARA_ID_ZEITGEIST,
-        },
-        test_net::ZeitgeistPara,
+    integration_tests::xcm::setup::{
+        foreign_parent_location, foreign_sibling_location, foreign_ztg_location,
+        register_foreign_parent, register_foreign_sibling, FOREIGN_PARENT_ID, FOREIGN_SIBLING_ID,
+        PARA_ID_ZEITGEIST,
     },
     xcm_config::config::{general_key, zeitgeist, AssetConvert},
     CurrencyId, CustomMetadata, ScalarPosition,
@@ -51,7 +49,7 @@ where
     );
 
     // The canonical way Ztg is represented out in the wild
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         assert_eq!(<AssetConvert as Convert<_, _>>::convert(expected), Some(foreign_ztg_location()))
     });
 }
@@ -64,7 +62,7 @@ fn convert_common_non_native<T>(
     T: Copy + Debug + PartialEq,
     AssetConvert: MaybeEquivalence<Location, T> + Convert<T, Option<Location>>,
 {
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         assert_eq!(<AssetConvert as MaybeEquivalence<_, _>>::convert(&location), None);
         assert_eq!(<AssetConvert as Convert<_, _>>::convert(expected), None);
         // Register parent as foreign asset in the Zeitgeist parachain
@@ -76,11 +74,13 @@ fn convert_common_non_native<T>(
 
 #[test]
 fn convert_native_assets() {
+    let _test_net = reset_test_net();
     convert_common_native(Asset::Ztg);
 }
 
 #[test]
 fn convert_any_registered_parent_location_assets() {
+    let _test_net = reset_test_net();
     convert_common_non_native(
         FOREIGN_PARENT_ID,
         foreign_parent_location(),
@@ -90,6 +90,7 @@ fn convert_any_registered_parent_location_assets() {
 
 #[test]
 fn convert_any_registered_parent_location_xcm_assets() {
+    let _test_net = reset_test_net();
     convert_common_non_native(
         FOREIGN_PARENT_ID,
         foreign_parent_location(),
@@ -99,6 +100,7 @@ fn convert_any_registered_parent_location_xcm_assets() {
 
 #[test]
 fn convert_any_registered_sibling_location_assets() {
+    let _test_net = reset_test_net();
     convert_common_non_native(
         FOREIGN_SIBLING_ID,
         foreign_sibling_location(),
@@ -108,6 +110,7 @@ fn convert_any_registered_sibling_location_assets() {
 
 #[test]
 fn convert_any_registered_sibling_location_xcm_assets() {
+    let _test_net = reset_test_net();
     convert_common_non_native(
         FOREIGN_SIBLING_ID,
         foreign_sibling_location(),
@@ -117,10 +120,11 @@ fn convert_any_registered_sibling_location_xcm_assets() {
 
 #[test]
 fn convert_unkown_location() {
+    let _test_net = reset_test_net();
     let unknown_location: Location =
         Location::new(1, [Parachain(PARA_ID_ZEITGEIST), general_key(&[42])]);
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         assert!(
             <AssetConvert as MaybeEquivalence<_, CurrencyId>>::convert(&unknown_location).is_none()
         );
@@ -137,7 +141,6 @@ where
     T: Copy + Debug + PartialEq,
     AssetConvert: Convert<T, Option<Location>>,
 {
-    ZeitgeistPara::execute_with(|| {
-        assert_eq!(<AssetConvert as Convert<_, _>>::convert(asset), None)
-    });
+    let _test_net = reset_test_net();
+    with_zeitgeist(|| assert_eq!(<AssetConvert as Convert<_, _>>::convert(asset), None));
 }
