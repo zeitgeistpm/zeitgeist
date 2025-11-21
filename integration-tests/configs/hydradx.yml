@@ -1,5 +1,4 @@
 endpoint: wss://rpc.hydradx.cloud/public-ws
-build-block-mode: Manual
 mock-signature-host: true
 block: ${env.HYDRADX_BLOCK_NUMBER}
 db: ./tmp/hydradx_db_mba.sqlite
