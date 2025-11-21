@@ -1,7 +1,6 @@
 endpoint:
   - wss://rpc.ibp.network/polkadot
   - wss://polkadot-rpc.n.dwellir.com
-build-block-mode: Manual
 mock-signature-host: true
 db: ./tmp/polkadot_db_mba.sqlite
 runtime-log-level: 5

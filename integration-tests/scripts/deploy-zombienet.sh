@@ -42,9 +42,10 @@ fi
 
 function download_zombienet {
     # Get the appropriate download link based on the OS
+    ARCHITECTURE="$(uname -m)"
+
     case "$(uname -s)" in
         Linux)
-            ARCHITECTURE="$(uname -m)"
             if [[ "${ARCHITECTURE}" == "x86_64" ]]; then
                 FILE_NAME="zombienet-linux-x64"
             elif [[ "${ARCHITECTURE}" == "aarch64" ]]; then
@@ -55,7 +56,14 @@ function download_zombienet {
             fi
             ;;
         Darwin)
-            FILE_NAME="zombienet-macos"
+            if [[ "${ARCHITECTURE}" == "x86_64" ]]; then
+                FILE_NAME="zombienet-macos-x64"
+            elif [[ "${ARCHITECTURE}" == "arm64" ]]; then
+                FILE_NAME="zombienet-macos-arm64"
+            else
+                echo "Unsupported macOS architecture."
+                exit 1
+            fi
             ;;
         *)
             echo "Unsupported operating system."

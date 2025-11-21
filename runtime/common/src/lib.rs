@@ -509,12 +509,10 @@ macro_rules! impl_config_traits {
         #[cfg(feature = "parachain")]
         impl pallet_message_queue::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
-            // For testing we always want full XCM processing so cross-chain assertions run, even
-            // when the `use-noop-message-processor` flag is enabled for benchmarks.
-            #[cfg(all(feature = "use-noop-message-processor", not(test)))]
+            #[cfg(all(feature = "runtime-benchmarks", not(test)))]
             type MessageProcessor =
                 pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
-            #[cfg(any(not(feature = "use-noop-message-processor"), test))]
+            #[cfg(any(not(feature = "runtime-benchmarks"), test))]
             type MessageProcessor = xcm_builder::ProcessXcmMessage<
                 AggregateMessageOrigin,
                 xcm_executor::XcmExecutor<XcmConfig>,
