@@ -78,7 +78,7 @@ done
 
 cargo build \
     --profile=$PROFILE \
-    --features=use-noop-message-processor,runtime-benchmarks,parachain,$ADDITIONAL_FEATURES \
+    --features=runtime-benchmarks,parachain,$ADDITIONAL_FEATURES \
     --bin=zeitgeist
 
 for pallet in ${FRAME_PALLETS_PARACHAIN[@]}; do
