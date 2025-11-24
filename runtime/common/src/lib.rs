@@ -613,6 +613,9 @@ macro_rules! impl_config_traits {
             // Needs to be `Everything` for local testing.
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
             type XcmTeleportFilter = Everything;
+            #[cfg(feature = "runtime-benchmarks")]
+            type XcmReserveTransferFilter = Everything;
+            #[cfg(not(feature = "runtime-benchmarks"))]
             type XcmReserveTransferFilter = Nothing;
             type XcmRouter = XcmRouter;
 
@@ -622,8 +625,7 @@ macro_rules! impl_config_traits {
             type SovereignAccountOf = LocationToAccountId;
             type MaxLockers = MaxLockers;
             type MaxRemoteLockConsumers = MaxRemoteLockConsumers;
-            // TODO(#1425) use correct weight info after benchmarking
-            type WeightInfo = pallet_xcm::TestWeightInfo;
+            type WeightInfo = weights::pallet_xcm::WeightInfo<Runtime>;
             type RemoteLockConsumerIdentifier = ();
 
             const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
@@ -1778,6 +1780,8 @@ macro_rules! create_runtime_api {
                     use frame_support::traits::StorageInfoTrait;
                     use frame_system_benchmarking::Pallet as SystemBench;
                     use orml_benchmarking::list_benchmark as orml_list_benchmark;
+                    #[cfg(feature = "parachain")]
+                    use pallet_xcm::benchmarking::Pallet as PalletXcmExtrinsicsBenchmark;
 
                     let mut list = Vec::<BenchmarkList>::new();
 
@@ -1821,6 +1825,7 @@ macro_rules! create_runtime_api {
                             list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                             list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
                             list_benchmark!(list, extra, pallet_message_queue, MessageQueue);
+                            list_benchmark!(list, extra, pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>);
                             list_benchmark!(list, extra, pallet_parachain_staking, ParachainStaking);
                         } else {
                             list_benchmark!(list, extra, pallet_grandpa, Grandpa);
@@ -1838,17 +1843,173 @@ macro_rules! create_runtime_api {
                         baseline::{
                             Pallet as BaselineBench, Config as BaselineConfig
                         },
-                        BenchmarkBatch, Benchmarking
+                        BenchmarkBatch, BenchmarkError, Benchmarking
                     };
-                    use alloc::{vec, vec::Vec};
+                    use alloc::{boxed::Box, vec, vec::Vec};
                     use frame_support::traits::{TrackedStorageKey, WhitelistedStorageKeys};
                     use frame_system_benchmarking::Pallet as SystemBench;
                     use orml_benchmarking::{add_benchmark as orml_add_benchmark};
+                    #[cfg(feature = "parachain")]
+                    use pallet_xcm::benchmarking::Pallet as PalletXcmExtrinsicsBenchmark;
+                    #[cfg(feature = "parachain")]
+                    use xcm::latest::prelude::*;
+                    #[cfg(feature = "parachain")]
+                    use crate::parachain_params::RelayLocation;
+                    #[cfg(feature = "parachain")]
+                    use xcm_executor::traits::ConvertLocation;
+                    #[cfg(feature = "parachain")]
+                    use zeitgeist_primitives::types::CurrencyId;
 
                     #[allow(non_local_definitions)]
                     impl frame_system_benchmarking::Config for Runtime {}
                     #[allow(non_local_definitions)]
                     impl BaselineConfig for Runtime {}
+
+                    #[cfg(feature = "parachain")]
+                    frame_support::parameter_types! {
+                        pub ExistentialDepositAsset: Option<Asset> = Some((
+                            Location::here(),
+                            crate::parameters::ExistentialDeposit::get()
+                        ).into());
+                        pub const RandomParaId: ParaId = ParaId::new(43211234);
+                        pub const CheckedAccount: Option<(AccountId, xcm_builder::MintLocation)> = None;
+                        pub const TrustedTeleporter: Option<(Location, Asset)> = None;
+                        pub const TrustedReserve: Option<(Location, Asset)> = None;
+                    }
+
+                    #[cfg(feature = "parachain")]
+                    pub struct TestDeliveryHelper;
+                    #[cfg(feature = "parachain")]
+                    impl xcm_builder::EnsureDelivery for TestDeliveryHelper {
+                        fn ensure_successful_delivery(
+                            origin_ref: &Location,
+                            _dest: &Location,
+                            _fee_reason: xcm_executor::traits::FeeReason,
+                        ) -> (Option<xcm_executor::FeesMode>, Option<Assets>) {
+                            if let Some(acc) = xcm_config::config::LocationToAccountId::convert_location(origin_ref) {
+                                let balance = crate::parameters::ExistentialDeposit::get();
+                                let _ = <Balances as frame_support::traits::Currency<_>>::make_free_balance_be(&acc, balance);
+                            }
+                            (None, None)
+                        }
+                    }
+
+                    #[cfg(feature = "parachain")]
+                    impl pallet_xcm::benchmarking::Config for Runtime {
+                        type DeliveryHelper = TestDeliveryHelper;
+
+                        fn reachable_dest() -> Option<Location> {
+                            Some(Location::parent())
+                        }
+
+                        fn teleportable_asset_and_dest() -> Option<(Asset, Location)> {
+                            None
+                        }
+
+                        fn reserve_transferable_asset_and_dest() -> Option<(Asset, Location)> {
+                            let native_location = xcm_config::config::AssetConvert::convert(CurrencyId::Ztg)
+                                .and_then(|loc| {
+                                    let (_parents, interior) = loc.unpack();
+                                    match interior {
+                                        [GeneralKey { data, length }] => {
+                                            let len = (*length as usize).min(data.len());
+                                            Some(Location::new(0, [xcm_config::config::general_key(
+                                                &data[..len],
+                                            )]))
+                                        }
+                                        [Junction::Parachain(_), GeneralKey { data, length }] => {
+                                            let len = (*length as usize).min(data.len());
+                                            Some(Location::new(0, [xcm_config::config::general_key(
+                                                &data[..len],
+                                            )]))
+                                        }
+                                        _ => None,
+                                    }
+                                })
+                                .unwrap_or(Location::here());
+                            Some((
+                                Asset { id: AssetId(native_location), fun: Fungible(crate::parameters::ExistentialDeposit::get()) },
+                                Location::parent(),
+                            ))
+                        }
+
+                        fn set_up_complex_asset_transfer(
+                        ) -> Option<(Assets, u32, Location, alloc::boxed::Box<dyn FnOnce()>)> {
+                            let native_location = xcm_config::config::AssetConvert::convert(CurrencyId::Ztg)
+                                .and_then(|loc| {
+                                    let (_parents, interior) = loc.unpack();
+                                    match interior {
+                                        [GeneralKey { data, length }] => {
+                                            let len = (*length as usize).min(data.len());
+                                            Some(Location::new(0, [xcm_config::config::general_key(
+                                                &data[..len],
+                                            )]))
+                                        }
+                                        [Junction::Parachain(_), GeneralKey { data, length }] => {
+                                            let len = (*length as usize).min(data.len());
+                                            Some(Location::new(0, [xcm_config::config::general_key(
+                                                &data[..len],
+                                            )]))
+                                        }
+                                        _ => None,
+                                    }
+                                })
+                                .unwrap_or(Location::here());
+                            let destination: Location = Parent.into();
+                            let fee_amount: u128 = crate::parameters::ExistentialDeposit::get();
+                            let fee_asset: Asset = (native_location.clone(), fee_amount).into();
+
+                            let who = frame_benchmarking::whitelisted_caller();
+                            let balance = fee_amount.saturating_mul(1000);
+                            let _ = <Balances as frame_support::traits::Currency<_>>::make_free_balance_be(&who, balance);
+
+                            let transfer_amount: u128 = fee_amount.saturating_mul(10);
+                            let transfer_asset: Asset = (native_location, transfer_amount).into();
+
+                            let assets: Assets = vec![fee_asset.clone(), transfer_asset].into();
+                            let fee_index: u32 = 0;
+
+                            let verify: Box<dyn FnOnce()> = Box::new(move || {
+                                assert!(Balances::free_balance(&who) <= balance - transfer_amount);
+                            });
+
+                            Some((assets, fee_index, destination, verify))
+                        }
+
+                        fn get_asset() -> Asset {
+                            Asset {
+                                id: AssetId(
+                                    xcm_config::config::AssetConvert::convert(CurrencyId::Ztg)
+                                        .and_then(|loc| {
+                                            let (_parents, interior) = loc.unpack();
+                                            match interior {
+                                                [GeneralKey { data, length }] => {
+                                                    let len = (*length as usize).min(data.len());
+                                                    Some(Location::new(
+                                                        0,
+                                                        [xcm_config::config::general_key(
+                                                            &data[..len],
+                                                        )],
+                                                    ))
+                                                }
+                                                [Junction::Parachain(_), GeneralKey { data, length }] => {
+                                                    let len = (*length as usize).min(data.len());
+                                                    Some(Location::new(
+                                                        0,
+                                                        [xcm_config::config::general_key(
+                                                            &data[..len],
+                                                        )],
+                                                    ))
+                                                }
+                                                _ => None,
+                                            }
+                                        })
+                                        .unwrap_or(Location::here()),
+                                ),
+                                fun: Fungible(crate::parameters::ExistentialDeposit::get()),
+                            }
+                        }
+                    }
 
                     let mut whitelist: Vec<TrackedStorageKey> = AllPalletsWithSystem::whitelisted_storage_keys();
                     let additional_whitelist: Vec<TrackedStorageKey> = vec![
@@ -1914,6 +2075,7 @@ macro_rules! create_runtime_api {
                             add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                             add_benchmark!(params, batches, pallet_message_queue, MessageQueue);
+                            add_benchmark!(params, batches, pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>);
                             add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
 
                         } else {
