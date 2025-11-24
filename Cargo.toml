@@ -387,3 +387,5 @@ cumulus-client-parachain-inherent = { git = "https://github.com/zeitgeistpm/polk
 sc-network = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "zeitgeist-polkadot-stable2409-sc-network-fix" }
 # Benchmarks failed, because of Token(BelowMinimum) for treasury spend, that's why one should at least transfer the existential deposit 
 pallet-treasury = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-treasury-benchmark-fix" }
+# Fixes https://github.com/zeitgeistpm/zeitgeist/issues/1417
+cumulus-relay-chain-rpc-interface = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-external-rpc-fix" }

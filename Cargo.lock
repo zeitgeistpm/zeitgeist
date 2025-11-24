@@ -2656,7 +2656,7 @@ dependencies = [
 [[package]]
 name = "cumulus-relay-chain-rpc-interface"
 version = "0.18.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
+source = "git+https://github.com/zeitgeistpm/polkadot-sdk?branch=polkadot-stable2409-external-rpc-fix#96b23ae77ec4125d4b0c3e218f1b538c293d8e6c"
 dependencies = [
  "async-trait",
  "cumulus-primitives-core",
