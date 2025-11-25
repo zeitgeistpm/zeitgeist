@@ -1,0 +1,88 @@
+[advisories]
+db-path = ".cargo-deny/advisory-dbs"
+ignore = [
+    "RUSTSEC-2020-0168",
+    "RUSTSEC-2022-0061",
+    "RUSTSEC-2022-0080",
+    "RUSTSEC-2023-0091",
+    "RUSTSEC-2024-0336",
+    "RUSTSEC-2024-0370",
+    "RUSTSEC-2024-0384",
+    "RUSTSEC-2024-0388",
+    "RUSTSEC-2024-0421",
+    "RUSTSEC-2024-0436",
+    "RUSTSEC-2024-0438",
+    "RUSTSEC-2024-0442",
+    "RUSTSEC-2025-0009",
+    "RUSTSEC-2025-0010",
+    "RUSTSEC-2025-0017",
+    "RUSTSEC-2025-0055",
+    "RUSTSEC-2025-0057",
+    "RUSTSEC-2025-0118",
+]
+
+[bans]
+allow = []
+allow-wildcard-paths = true
+deny = []
+highlight = "all"
+multiple-versions = "warn"
+skip = []
+skip-tree = []
+wildcards = "deny"
+
+[licenses]
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "BSD-3-Clause",
+    "BSD-2-Clause",
+    "ISC",
+    "CC0-1.0",
+    "MPL-2.0",
+    "NCSA",
+    "Zlib",
+    "GPL-3.0-only",
+    "GPL-3.0-or-later",
+    "Unicode-3.0",
+    "GPL-3.0-or-later WITH Classpath-exception-2.0",
+]
+confidence-threshold = 0.8
+exceptions = []
+
+[[licenses.clarify]]
+crate = "ring"
+expression = "BSD-3-Clause OR OpenSSL"
+license-files = [
+    { path = "LICENSE", hash = 0xbd0eed23 },
+]
+
+[[licenses.clarify]]
+crate = "array-bytes"
+expression = "Apache-2.0 OR GPL-3.0-or-later"
+license-files = []
+
+[[licenses.clarify]]
+crate = "proc-macro-warning"
+expression = "GPL-3.0-only OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+crate = "webpki"
+expression = "ISC AND BSD-3-Clause"
+license-files = []
+
+[sources]
+allow-git = [
+    "https://github.com/paritytech/polkadot-sdk",
+    "https://github.com/zeitgeistpm/moonkit",
+    "https://github.com/zeitgeistpm/open-runtime-module-library",
+    "https://github.com/zeitgeistpm/polkadot-sdk",
+    "https://github.com/zeitgeistpm/runtimes",
+    "https://github.com/zeitgeistpm/moonbeam",
+    "https://github.com/galacticcouncil/HydraDX-node",
+    "https://github.com/zeitgeistpm/zeitgeist",
+]
+unknown-git = "warn"
+unknown-registry = "deny"

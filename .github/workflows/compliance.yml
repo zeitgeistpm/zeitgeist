@@ -1,0 +1,110 @@
+name: Compliance
+
+on:
+  pull_request:
+    types: [ labeled ]
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: compliance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cargo-deny:
+    name: Cargo Deny
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - name: Run cargo-deny
+        run: |
+          cargo deny check licenses bans sources advisories
+
+  semgrep:
+    name: Semgrep
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: .github/semgrep-rules.yml
+
+  node-licenses:
+    name: Node Licenses
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: integration-tests
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: npm ci
+      - name: Check licenses
+        run: npx license-checker --production --summary
+      - name: Audit npm
+        run: npm audit --production
+
+  gitleaks:
+    name: Gitleaks
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          args: detect --redact
+
+  sbom-vuln:
+    name: SBOM and Vulnerability Scan
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          output-file: sbom.json
+          format: cyclonedx-json
+      - name: Scan SBOM
+        uses: anchore/scan-action@v3
+        env:
+          GRYPE_CONFIG: ${{ github.workspace }}/.grype.yaml
+        with:
+          sbom: sbom.json
+          fail-build: true
+          severity-cutoff: medium

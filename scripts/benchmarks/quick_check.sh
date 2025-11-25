@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 # This script benchmarks every pallet that is used within Zeitgeist.
 # Execute from the root of the project.

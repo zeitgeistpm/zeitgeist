@@ -189,7 +189,9 @@ build = "build.rs"
 description = "An evolving blockchain for prediction markets and futarchy."
 edition.workspace = true
 homepage = "https://zeitgeist.pm"
+license = "GPL-3.0-or-later"
 name = "zeitgeist-node"
+publish = false
 version = "0.6.1"
 
 [package.metadata.docs.rs]

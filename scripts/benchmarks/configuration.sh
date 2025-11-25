@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 EXTERNAL_WEIGHTS_PATH="./runtime/common/src/weights/"
 

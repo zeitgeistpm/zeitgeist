@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) Moondance Labs Ltd.
 
 import { expect, ChopsticksContext } from "@moonwall/cli";

@@ -160,3 +160,6 @@ dmypy.json
 /integration-tests/tmp
 
 /integration-tests/specs
+
+# Compliance artifacts
+sbom.json

@@ -2,7 +2,7 @@
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 homepage = "https://zeitgeist.pm/"
-license = "GPL-3.0"
+license = "GPL-3.0-or-later"
 repository = "https://github.com/zeitgeistpm/zeitgeist"
 
 [workspace]
