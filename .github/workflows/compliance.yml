@@ -95,12 +95,7 @@ jobs:
         run: |
           set -euo pipefail
           arch="$(uname -m)"
-          case "$arch" in
-            x86_64) arch="x64" ;;
-            arm64|aarch64) arch="arm64" ;;
-            *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
-          esac
-          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          os="$(uname -s)"
           curl -sSfL "https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_${os}_${arch}.tar.gz" \
             | tar -xz -C /tmp
           chmod +x /tmp/gitleaks
