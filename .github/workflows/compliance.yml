@@ -60,17 +60,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+          version: 9
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
           cache-dependency-path: integration-tests/pnpm-lock.yaml
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-          version: 9
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Check licenses
@@ -91,26 +91,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Check for gitleaks license
-        id: gitleaks-license
-        env:
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+      - name: Install gitleaks (OSS)
         run: |
-          if [ -n "$GITLEAKS_LICENSE" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
+          curl -sL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_$(uname -s)_$(uname -m).tar.gz \
+            | tar -xz -C /tmp
+          /tmp/gitleaks version
       - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
-        if: steps.gitleaks-license.outputs.present == 'true'
-        with:
-          args: detect --redact
-      - name: Skip gitleaks (no license provided)
-        if: steps.gitleaks-license.outputs.present == 'false'
-        run: echo "Skipping gitleaks because GITLEAKS_LICENSE secret is not set."
+        run: /tmp/gitleaks detect --redact
 
   sbom-vuln:
     name: SBOM and Vulnerability Scan
