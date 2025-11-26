@@ -94,10 +94,32 @@ jobs:
       - name: Install gitleaks (OSS)
         run: |
           set -euo pipefail
+          version="$(
+            curl -sI https://github.com/gitleaks/gitleaks/releases/latest \
+              | tr -d '\r' \
+              | awk 'tolower($1) == "location:" {print $2}' \
+              | sed -E 's#.*/tag/v?##; s#^v##'
+          )"
+
+          if [[ -z "${version}" || "${version}" == "null" ]]; then
+            echo "Failed to determine gitleaks version" >&2
+            exit 1
+          fi
+
           arch="$(uname -m)"
-          os="$(uname -s)"
-          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_${os}_${arch}.tar.gz" \
-            | tar -xz -C /tmp
+          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+
+          case "${arch}" in
+            x86_64) arch="x64" ;;
+            aarch64 | arm64) arch="arm64" ;;
+            *)
+              echo "Unsupported architecture: ${arch}" >&2
+              exit 1
+              ;;
+          esac
+
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_${os}_${arch}.tar.gz" \
+            | tar -xz -C /tmp gitleaks
           chmod +x /tmp/gitleaks
           /tmp/gitleaks version
       - name: Run gitleaks
