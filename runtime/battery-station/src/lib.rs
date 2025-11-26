@@ -18,6 +18,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "1024"]
+#![allow(non_local_definitions)]
 
 extern crate alloc;
 

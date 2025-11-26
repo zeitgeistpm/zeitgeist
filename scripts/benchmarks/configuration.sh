@@ -16,7 +16,7 @@ export FRAME_WEIGHT_TEMPLATE="./misc/frame_weight_template.hbs"
 export FRAME_PALLETS_PARACHAIN=( 
     cumulus_pallet_xcmp_queue pallet_author_inherent pallet_author_slot_filter \
     pallet_author_mapping pallet_parachain_staking cumulus_pallet_parachain_system \
-    pallet_message_queue \
+    pallet_message_queue pallet_xcm \
 )
 export FRAME_PALLETS_PARACHAIN_RUNS="${FRAME_PALLETS_PARACHAIN_RUNS:-$FRAME_PALLETS_RUNS}"
 export FRAME_PALLETS_PARACHAIN_STEPS="${FRAME_PALLETS_PARACHAIN_STEPS:-$FRAME_PALLETS_STEPS}"
