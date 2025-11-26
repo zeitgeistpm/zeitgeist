@@ -1023,6 +1023,7 @@ dependencies = [
  "substrate-wasm-builder",
  "test-case",
  "xcm-emulator",
+ "xcm-runtime-apis",
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-combinatorial-tokens",
@@ -1811,9 +1812,12 @@ dependencies = [
  "cfg-if",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcmp-queue",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "frame-system-benchmarking",
  "log",
+ "orml-benchmarking",
  "orml-currencies",
  "orml-tokens",
  "pallet-asset-tx-payment",
@@ -1840,7 +1844,11 @@ dependencies = [
  "pallet-treasury",
  "pallet-utility",
  "pallet-vesting",
+ "pallet-xcm",
  "serde_json",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
  "zeitgeist-primitives",
 ]
 
@@ -2661,7 +2669,7 @@ dependencies = [
 [[package]]
 name = "cumulus-relay-chain-rpc-interface"
 version = "0.18.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
+source = "git+https://github.com/zeitgeistpm/polkadot-sdk?branch=polkadot-stable2409-external-rpc-fix#96b23ae77ec4125d4b0c3e218f1b538c293d8e6c"
 dependencies = [
  "async-trait",
  "cumulus-primitives-core",
@@ -17015,6 +17023,7 @@ dependencies = [
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint 0.17.0 (git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409)",
  "url",
+ "xcm-runtime-apis",
  "zeitgeist-primitives",
  "zeitgeist-runtime",
  "zrml-swaps-rpc",
@@ -17144,6 +17153,7 @@ dependencies = [
  "substrate-wasm-builder",
  "test-case",
  "xcm-emulator",
+ "xcm-runtime-apis",
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-combinatorial-tokens",

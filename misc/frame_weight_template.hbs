@@ -20,7 +20,7 @@ use core::marker::PhantomData;
 
 /// Weight functions for {{pallet}} (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> {{pallet}}::weights::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> {{#if (ne pallet "pallet_xcm")}}{{pallet}}::weights::WeightInfo{{else}}{{pallet}}::WeightInfo{{/if}} for WeightInfo<T> {
     {{#each benchmarks as |benchmark|}}
     {{#each benchmark.comments as |comment|}}
     /// {{comment}}

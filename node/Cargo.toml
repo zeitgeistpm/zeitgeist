@@ -99,6 +99,7 @@ sc-consensus-aura = { workspace = true }
 sc-consensus-grandpa = { workspace = true }
 sp-consensus-aura = { workspace = true }
 sp-consensus-grandpa = { workspace = true, features = ["default"] }
+xcm-runtime-apis = { workspace = true, features = ["std"] }
 
 # Utility
 cfg-if = { workspace = true }

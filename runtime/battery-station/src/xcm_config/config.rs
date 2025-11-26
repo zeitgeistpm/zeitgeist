@@ -231,7 +231,7 @@ parameter_types! {
             [general_key(battery_station::KEY)],
         ).into(),
         native_per_second(),
-        0,
+        native_per_second(),
     );
     /// The amount of ZTG charged per second of execution.
     pub ZtgPerSecond: (XcmAssetId, u128, u128) = (
@@ -240,7 +240,7 @@ parameter_types! {
             [Junction::Parachain(ParachainInfo::parachain_id().into()), general_key(battery_station::KEY)],
         ).into(),
         native_per_second(),
-        0,
+        native_per_second(),
     );
 }
 

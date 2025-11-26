@@ -107,6 +107,7 @@ pallet-xcm = { workspace = true, optional = true }
 xcm = { workspace = true, optional = true }
 xcm-builder = { workspace = true, optional = true }
 xcm-executor = { workspace = true, optional = true }
+xcm-runtime-apis = { workspace = true, optional = true }
 
 # Zeitgeist
 
@@ -179,6 +180,7 @@ parachain = [
     "xcm-builder",
     "xcm-executor",
     "xcm",
+    "xcm-runtime-apis",
 
     # Misc
 
@@ -324,6 +326,7 @@ std = [
     "xcm-builder?/std",
     "xcm-executor?/std",
     "xcm?/std",
+    "xcm-runtime-apis?/std",
 
     # Standalone
 

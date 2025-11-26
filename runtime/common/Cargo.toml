@@ -2,8 +2,11 @@
 # Pallets
 cumulus-pallet-parachain-system = { workspace = true, optional = true }
 cumulus-pallet-xcmp-queue = { workspace = true, optional = true }
+frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+frame-system-benchmarking = { workspace = true, optional = true }
+orml-benchmarking = { workspace = true, optional = true }
 orml-currencies = { workspace = true }
 orml-tokens = { workspace = true }
 pallet-asset-tx-payment = { workspace = true }
@@ -30,6 +33,10 @@ pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 pallet-treasury = { workspace = true }
 pallet-utility = { workspace = true }
 pallet-vesting = { workspace = true }
+pallet-xcm = { workspace = true, optional = true }
+xcm = { workspace = true, optional = true }
+xcm-builder = { workspace = true, optional = true }
+xcm-executor = { workspace = true, optional = true }
 zeitgeist-primitives = { workspace = true }
 
 # Utility
@@ -46,14 +53,29 @@ parachain = [
     "pallet-author-mapping",
     "pallet-author-slot-filter",
     "pallet-message-queue",
+    "pallet-xcm",
+    "xcm",
+    "xcm-builder",
+    "xcm-executor",
     "pallet-parachain-staking",
+]
+runtime-benchmarks = [
+    "frame-benchmarking?/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "orml-benchmarking",
+    "pallet-xcm?/runtime-benchmarks",
+    "xcm-builder?/runtime-benchmarks",
 ]
 std = [
     "cumulus-pallet-parachain-system?/std",
     "cumulus-pallet-xcmp-queue?/std",
     "frame-system/std",
+    "frame-benchmarking?/std",
+    "frame-system-benchmarking?/std",
     "frame-support/std",
     "orml-currencies/std",
+    "orml-benchmarking?/std",
     "orml-tokens/std",
     "pallet-asset-tx-payment/std",
     "pallet-author-inherent?/std",
@@ -67,6 +89,7 @@ std = [
     "pallet-membership/std",
     "pallet-message-queue?/std",
     "pallet-multisig/std",
+    "pallet-xcm?/std",
     "pallet-preimage/std",
     "pallet-proxy/std",
     "pallet-insecure-randomness-collective-flip/std",
@@ -79,6 +102,9 @@ std = [
     "pallet-vesting/std",
     "pallet-parachain-staking?/std",
     "pallet-migrations/std",
+    "xcm-builder?/std",
+    "xcm-executor?/std",
+    "xcm?/std",
     "serde_json/std",
     "zeitgeist-primitives/std",
 ]

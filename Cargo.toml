@@ -243,6 +243,7 @@ polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot-sd
 xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 xcm-builder = { package = "staging-xcm-builder", git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 xcm-executor = { package = "staging-xcm-executor", git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
+xcm-runtime-apis = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 
 # Zeitgeist (client)
 battery-station-runtime = { path = "runtime/battery-station" }
@@ -389,3 +390,5 @@ cumulus-client-parachain-inherent = { git = "https://github.com/zeitgeistpm/polk
 sc-network = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "zeitgeist-polkadot-stable2409-sc-network-fix" }
 # Benchmarks failed, because of Token(BelowMinimum) for treasury spend, that's why one should at least transfer the existential deposit 
 pallet-treasury = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-treasury-benchmark-fix" }
+# Fixes https://github.com/zeitgeistpm/zeitgeist/issues/1417
+cumulus-relay-chain-rpc-interface = { git = "https://github.com/zeitgeistpm/polkadot-sdk", branch = "polkadot-stable2409-external-rpc-fix" }

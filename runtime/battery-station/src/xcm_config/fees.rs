@@ -18,7 +18,10 @@
 
 use crate::{Balance, CurrencyId};
 use core::marker::PhantomData;
-use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND};
+use frame_support::weights::{
+    constants::{ExtrinsicBaseWeight, WEIGHT_PROOF_SIZE_PER_MB, WEIGHT_REF_TIME_PER_SECOND},
+    Weight,
+};
 use xcm::latest::Location;
 use zeitgeist_primitives::{
     constants::BalanceFractionalDecimals, math::fixed::FixedMul, types::CustomMetadata,
@@ -33,6 +36,21 @@ pub fn default_per_second(decimals: u32) -> Balance {
     let base_weight = ExtrinsicBaseWeight::get().ref_time() as u128;
     let default_per_second = (WEIGHT_REF_TIME_PER_SECOND as u128) / base_weight;
     default_per_second * base_fee(decimals)
+}
+
+/// Convert a multi-dimensional `Weight` into a fee using per-second and per-megabyte rates.
+pub fn weight_to_fee(weight: Weight, units_per_second: u128, units_per_mb: u128) -> u128 {
+    let ref_time_fee = units_per_second
+        .saturating_mul(weight.ref_time() as u128)
+        .checked_div(WEIGHT_REF_TIME_PER_SECOND as u128)
+        .unwrap_or(0);
+
+    let proof_fee = units_per_mb
+        .saturating_mul(weight.proof_size() as u128)
+        .checked_div(WEIGHT_PROOF_SIZE_PER_MB as u128)
+        .unwrap_or(0);
+
+    ref_time_fee.saturating_add(proof_fee)
 }
 
 fn base_fee(decimals: u32) -> Balance {

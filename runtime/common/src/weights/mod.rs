@@ -24,6 +24,7 @@ cfg_if::cfg_if! {
         pub mod pallet_author_inherent;
         pub mod pallet_author_slot_filter;
         pub mod pallet_message_queue;
+        pub mod pallet_xcm;
         pub mod pallet_parachain_staking;
     } else {
         // Currently the benchmark does yield an invalid weight implementation
