@@ -18,6 +18,7 @@ pallet-identity = { workspace = true }
 pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-membership = { workspace = true }
 pallet-message-queue = { workspace = true, optional = true }
+pallet-migrations = { workspace = true }
 pallet-multisig = { workspace = true }
 pallet-parachain-staking = { workspace = true, optional = true }
 pallet-preimage = { workspace = true }
@@ -77,6 +78,7 @@ std = [
     "pallet-utility/std",
     "pallet-vesting/std",
     "pallet-parachain-staking?/std",
+    "pallet-migrations/std",
     "serde_json/std",
     "zeitgeist-primitives/std",
 ]
@@ -84,6 +86,7 @@ try-runtime = [
     "frame-system/try-runtime",
     "frame-support/try-runtime",
     "pallet-timestamp/try-runtime",
+    "pallet-migrations/try-runtime",
 ]
 
 [package]

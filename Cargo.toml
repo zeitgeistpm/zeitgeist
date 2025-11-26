@@ -188,6 +188,7 @@ pallet-identity = { git = "https://github.com/paritytech/polkadot-sdk", tag = "p
 pallet-im-online = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 pallet-insecure-randomness-collective-flip = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 pallet-membership = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
+pallet-migrations = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 pallet-multisig = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 pallet-preimage = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }
 pallet-proxy = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2409", default-features = false }

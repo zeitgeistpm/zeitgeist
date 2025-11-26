@@ -971,6 +971,7 @@ dependencies = [
  "pallet-insecure-randomness-collective-flip",
  "pallet-membership",
  "pallet-message-queue",
+ "pallet-migrations",
  "pallet-multisig",
  "pallet-parachain-staking",
  "pallet-preimage",
@@ -1827,6 +1828,7 @@ dependencies = [
  "pallet-insecure-randomness-collective-flip",
  "pallet-membership",
  "pallet-message-queue",
+ "pallet-migrations",
  "pallet-multisig",
  "pallet-parachain-staking",
  "pallet-preimage",
@@ -8006,6 +8008,23 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-weights",
+]
+
+[[package]]
+name = "pallet-migrations"
+version = "8.0.0"
+source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
+dependencies = [
+ "docify",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -17075,6 +17094,7 @@ dependencies = [
  "pallet-insecure-randomness-collective-flip",
  "pallet-membership",
  "pallet-message-queue",
+ "pallet-migrations",
  "pallet-multisig",
  "pallet-parachain-staking",
  "pallet-preimage",

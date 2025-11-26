@@ -19,6 +19,7 @@ pallet-democracy = { workspace = true }
 pallet-identity = { workspace = true }
 pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-membership = { workspace = true }
+pallet-migrations = { workspace = true }
 pallet-multisig = { workspace = true }
 pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
@@ -209,6 +210,7 @@ runtime-benchmarks = [
     "pallet-grandpa/runtime-benchmarks",
     "pallet-identity/runtime-benchmarks",
     "pallet-membership/runtime-benchmarks",
+    "pallet-migrations/runtime-benchmarks",
     "pallet-multisig/runtime-benchmarks",
     "pallet-preimage/runtime-benchmarks",
     "pallet-proxy/runtime-benchmarks",
@@ -259,6 +261,7 @@ std = [
     "pallet-democracy/std",
     "pallet-identity/std",
     "pallet-membership/std",
+    "pallet-migrations/std",
     "pallet-multisig/std",
     "pallet-preimage/std",
     "pallet-proxy/std",
@@ -374,6 +377,7 @@ try-runtime = [
     "pallet-insecure-randomness-collective-flip/try-runtime",
     "pallet-scheduler/try-runtime",
     "pallet-preimage/try-runtime",
+    "pallet-migrations/try-runtime",
 
     # Money runtime pallets
     "pallet-asset-tx-payment/try-runtime",
