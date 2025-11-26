@@ -83,6 +83,7 @@ cfg_if::cfg_if! {
             + cumulus_primitives_core::CollectCollationInfo<Block>
             + session_keys_primitives::VrfApi<Block>
             + async_backing_primitives::UnincludedSegmentApi<Block>
+            + xcm_runtime_apis::fees::XcmPaymentApi<Block>
         {
         }
 
@@ -92,7 +93,8 @@ cfg_if::cfg_if! {
                 + nimbus_primitives::NimbusApi<Block>
                 + cumulus_primitives_core::CollectCollationInfo<Block>
                 + session_keys_primitives::VrfApi<Block>
-                + async_backing_primitives::UnincludedSegmentApi<Block>,
+                + async_backing_primitives::UnincludedSegmentApi<Block>
+                + xcm_runtime_apis::fees::XcmPaymentApi<Block>,
         {
         }
     } else {

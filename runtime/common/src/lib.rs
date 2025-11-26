@@ -2144,6 +2144,91 @@ macro_rules! create_runtime_api {
             }
 
             #[cfg(feature = "parachain")]
+            impl xcm_runtime_apis::fees::XcmPaymentApi<Block> for Runtime {
+                fn query_acceptable_payment_assets(
+                    xcm_version: xcm::Version,
+                ) -> Result<Vec<xcm::VersionedAssetId>, xcm_runtime_apis::fees::Error> {
+                    use sp_std::collections::btree_set::BTreeSet;
+
+                    let (ztg_asset, _, _) = xcm_config::config::ZtgPerSecond::get();
+                    let (ztg_asset_canonical, _, _) = xcm_config::config::ZtgPerSecondCanonical::get();
+
+                    let mut acceptable_assets: BTreeSet<xcm::latest::AssetId> =
+                        [ztg_asset, ztg_asset_canonical].into_iter().collect();
+
+                    acceptable_assets.extend(
+                        orml_asset_registry::module::LocationToAssetId::<Runtime>::iter_keys()
+                            .map(xcm::latest::AssetId),
+                    );
+
+                    PolkadotXcm::query_acceptable_payment_assets(
+                        xcm_version,
+                        acceptable_assets.into_iter().collect(),
+                    )
+                }
+
+                fn query_weight_to_asset_fee(
+                    weight: Weight,
+                    asset: xcm::VersionedAssetId,
+                ) -> Result<u128, xcm_runtime_apis::fees::Error> {
+                    use xcm_config::fees::weight_to_fee;
+
+                    let asset_id: xcm::latest::AssetId = asset
+                        .try_into()
+                        .map_err(|_| xcm_runtime_apis::fees::Error::VersionedConversionFailed)?;
+
+                    let (ztg_asset, ztg_units_per_second, ztg_units_per_mb) =
+                        xcm_config::config::ZtgPerSecond::get();
+                    if asset_id == ztg_asset {
+                        return Ok(weight_to_fee(weight, ztg_units_per_second, ztg_units_per_mb));
+                    }
+
+                    let (ztg_asset_canonical, ztg_canonical_per_second, ztg_canonical_per_mb) =
+                        xcm_config::config::ZtgPerSecondCanonical::get();
+                    if asset_id == ztg_asset_canonical {
+                        return Ok(weight_to_fee(
+                            weight,
+                            ztg_canonical_per_second,
+                            ztg_canonical_per_mb,
+                        ));
+                    }
+
+                    let asset_location = asset_id.0.clone();
+                    let fee_per_second = <xcm_config::fees::FixedConversionRateProvider<
+                        AssetRegistry,
+                    > as orml_traits::FixedConversionRateProvider>::get_fee_per_second(
+                        &asset_location,
+                    )
+                        .ok_or_else(|| {
+                            log::trace!(
+                                target: "xcm::xcm_runtime_apis",
+                                "query_weight_to_asset_fee - unhandled asset_id: {asset_id:?}!"
+                            );
+                            xcm_runtime_apis::fees::Error::AssetNotFound
+                        })?;
+
+                    // For assets priced via the asset registry, charge proof-size
+                    // at the same rate as ref_time by default.
+                    let fee_per_mb = fee_per_second;
+
+                    Ok(weight_to_fee(weight, fee_per_second, fee_per_mb))
+                }
+
+                fn query_xcm_weight(
+                    message: xcm::VersionedXcm<()>,
+                ) -> Result<Weight, xcm_runtime_apis::fees::Error> {
+                    PolkadotXcm::query_xcm_weight(message)
+                }
+
+                fn query_delivery_fees(
+                    destination: xcm::VersionedLocation,
+                    message: xcm::VersionedXcm<()>,
+                ) -> Result<xcm::VersionedAssets, xcm_runtime_apis::fees::Error> {
+                    PolkadotXcm::query_delivery_fees(destination, message)
+                }
+            }
+
+            #[cfg(feature = "parachain")]
             impl session_keys_primitives::VrfApi<Block> for Runtime {
                 fn get_last_vrf_output() -> Option<<Block as BlockT>::Hash> {
                     None
