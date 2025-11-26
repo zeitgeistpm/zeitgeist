@@ -87,8 +87,8 @@ mod pallet {
     /// The maximum number of blocks between the [`LastTimeFrame`]
     /// and the current timestamp in block number allowed to recover
     /// the automatic market openings and closings from a chain stall.
-    /// Currently 10 blocks is 2 minutes (assuming block time is 12 seconds).
-    pub(crate) const MAX_RECOVERY_TIME_FRAMES: TimeFrame = 10;
+    /// Currently 20 blocks is 2 minutes (assuming block time is 6 seconds).
+    pub(crate) const MAX_RECOVERY_TIME_FRAMES: TimeFrame = 20;
 
     pub(crate) type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
     pub(crate) type AssetOf<T> = Asset<MarketIdOf<T>>;

@@ -59,6 +59,8 @@
 #![allow(clippy::crate_in_macro_def)]
 
 pub mod fees;
+#[cfg(feature = "parachain")]
+pub mod relay_timestamp;
 pub mod weights;
 
 #[macro_export]
@@ -114,15 +116,21 @@ macro_rules! decl_common_types {
 
         type RemoveDmpQueue = RemovePallet<DmpQueueStr, RocksDbWeight>;
 
+        frame_support::parameter_types! {
+            pub MigrationsMaxServiceWeight: frame_support::weights::Weight =
+                RuntimeBlockWeights::get().max_block;
+        }
+
         #[cfg(feature = "parachain")]
-        type Migrations = (
+        type SingleBlockMigrations = (
             RemoveDmpQueue,
+            pallet_parachain_staking::migrations::MultiplyRoundLenBy2<Runtime>,
             // This `MigrateToLatestXcmVersion` migration can be permanently added to the runtime migrations. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/polkadot/xcm/pallet-xcm/src/migration.rs#L83
             pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
         );
 
         #[cfg(not(feature = "parachain"))]
-        type Migrations = ();
+        type SingleBlockMigrations = ();
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -130,7 +138,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            Migrations,
+            SingleBlockMigrations,
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -338,6 +346,7 @@ macro_rules! create_runtime {
                 RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 2,
                 Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 3,
                 Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>, HoldReason} = 4,
+                Migrations: pallet_migrations::{Call, Event<T>, Pallet, Storage} = 5,
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
@@ -401,6 +410,7 @@ macro_rules! create_runtime_with_additional_pallets {
             AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
             AuthorFilter: pallet_author_slot_filter::{Call, Config<T>, Event, Pallet, Storage} = 112,
             AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
+            AsyncBacking: pallet_async_backing::{Pallet, Storage} = 114,
 
             // XCM
             CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
@@ -438,7 +448,17 @@ macro_rules! impl_config_traits {
             frame_support::traits::Nothing,
             parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling},
             xcm_config::config::*,
+            zeitgeist_primitives::constants::{
+                BLOCK_PROCESSING_VELOCITY, UNINCLUDED_SEGMENT_CAPACITY,
+            },
         };
+
+        #[cfg(feature = "parachain")]
+        type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<
+            Runtime,
+            BLOCK_PROCESSING_VELOCITY,
+            UNINCLUDED_SEGMENT_CAPACITY,
+        >;
 
         // Configure Pallets
         #[cfg(feature = "parachain")]
@@ -451,8 +471,12 @@ macro_rules! impl_config_traits {
             type SelfParaId = parachain_info::Pallet<Runtime>;
             type XcmpMessageHandler = XcmpQueue;
             type CheckAssociatedRelayNumber =
-                cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
-            type ConsensusHook = cumulus_pallet_parachain_system::ExpectParentIncluded;
+                cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
+            type ConsensusHook =
+                common_runtime::relay_timestamp::ConsensusHookWrapperForRelayTimestamp<
+                    Runtime,
+                    ConsensusHook,
+                >;
             type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
             type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
         }
@@ -491,10 +515,10 @@ macro_rules! impl_config_traits {
         #[cfg(feature = "parachain")]
         impl pallet_message_queue::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
-            #[cfg(feature = "use-noop-message-processor")]
+            #[cfg(all(feature = "runtime-benchmarks", not(test)))]
             type MessageProcessor =
                 pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
-            #[cfg(not(feature = "use-noop-message-processor"))]
+            #[cfg(any(not(feature = "runtime-benchmarks"), test))]
             type MessageProcessor = xcm_builder::ProcessXcmMessage<
                 AggregateMessageOrigin,
                 xcm_executor::XcmExecutor<XcmConfig>,
@@ -540,10 +564,28 @@ macro_rules! impl_config_traits {
             type SystemWeightInfo = weights::frame_system::WeightInfo<Runtime>;
             type Version = Version;
             type SingleBlockMigrations = ();
-            type MultiBlockMigrator = ();
+            type MultiBlockMigrator = pallet_migrations::Pallet<Runtime>;
             type PreInherents = ();
             type PostInherents = ();
             type PostTransactions = ();
+        }
+
+        impl pallet_migrations::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            type Migrations = MultiBlockMigrations;
+            type CursorMaxLen = MigrationsCursorMaxLen;
+            type IdentifierMaxLen = MigrationsIdentifierMaxLen;
+            type MigrationStatusHandler = ();
+            type FailedMigrationHandler = frame_support::migrations::FreezeChainOnFailedMigration;
+            type MaxServiceWeight = MigrationsMaxServiceWeight;
+            type WeightInfo = weights::pallet_migrations::WeightInfo<Runtime>;
+        }
+
+        #[cfg(feature = "parachain")]
+        impl pallet_async_backing::Config for Runtime {
+            type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
+            type GetAndVerifySlot = pallet_async_backing::RelaySlot;
+            type ExpectedBlockTime = ExpectedBlockTime;
         }
 
         #[cfg(not(feature = "parachain"))]
@@ -658,14 +700,13 @@ macro_rules! impl_config_traits {
             }
         }
         #[cfg(feature = "parachain")]
-        pub struct StakingRoundSlotProvider;
+        pub struct RelayChainSlotProvider;
 
         #[cfg(feature = "parachain")]
-        impl Get<Slot> for StakingRoundSlotProvider {
+        impl Get<Slot> for RelayChainSlotProvider {
             fn get() -> Slot {
-                let block_number: u64 =
-                    frame_system::pallet::Pallet::<Runtime>::block_number().into();
-                Slot::from(block_number)
+                let slot_info = pallet_async_backing::pallet::Pallet::<Runtime>::slot_info();
+                slot_info.unwrap_or_default().0
             }
         }
 
@@ -696,7 +737,7 @@ macro_rules! impl_config_traits {
             type RevokeDelegationDelay = RevokeDelegationDelay;
             type RewardPaymentDelay = RewardPaymentDelay;
             type SlotDuration = SlotDuration;
-            type SlotProvider = StakingRoundSlotProvider;
+            type SlotProvider = RelayChainSlotProvider;
             type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
         }
 
@@ -1803,6 +1844,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, pallet_treasury, Treasury);
                     list_benchmark!(list, extra, pallet_utility, Utility);
                     list_benchmark!(list, extra, pallet_vesting, Vesting);
+                    list_benchmark!(list, extra, pallet_migrations, Migrations);
                     list_benchmark!(list, extra, zrml_swaps, Swaps);
                     list_benchmark!(list, extra, zrml_authorized, Authorized);
                     list_benchmark!(list, extra, zrml_combinatorial_tokens, CombinatorialTokens);
@@ -2052,6 +2094,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, pallet_treasury, Treasury);
                     add_benchmark!(params, batches, pallet_utility, Utility);
                     add_benchmark!(params, batches, pallet_vesting, Vesting);
+                    add_benchmark!(params, batches, pallet_migrations, Migrations);
                     add_benchmark!(params, batches, zrml_swaps, Swaps);
                     add_benchmark!(params, batches, zrml_authorized, Authorized);
                     add_benchmark!(params, batches, zrml_combinatorial_tokens, CombinatorialTokens);
@@ -2427,12 +2470,10 @@ macro_rules! create_runtime_api {
             #[cfg(feature = "parachain")]
             impl async_backing_primitives::UnincludedSegmentApi<Block> for Runtime {
                 fn can_build_upon(
-                    _included_hash: <Block as BlockT>::Hash,
-                    _slot: async_backing_primitives::Slot,
+                    included_hash: <Block as BlockT>::Hash,
+                    slot: async_backing_primitives::Slot,
                 ) -> bool {
-                    // This runtime API can be called only when asynchronous backing is enabled client-side
-                    // We return false here to force the client to not use async backing.
-                    false
+                    ConsensusHook::can_build_upon(included_hash, slot)
                 }
             }
 

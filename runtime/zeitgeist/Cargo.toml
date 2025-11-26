@@ -19,6 +19,7 @@ pallet-democracy = { workspace = true }
 pallet-identity = { workspace = true }
 pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-membership = { workspace = true }
+pallet-migrations = { workspace = true }
 pallet-multisig = { workspace = true }
 pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
@@ -43,6 +44,7 @@ sp-offchain = { workspace = true }
 sp-runtime = { workspace = true }
 sp-session = { workspace = true }
 sp-std = { workspace = true }
+sp-timestamp = { workspace = true }
 sp-transaction-pool = { workspace = true }
 sp-version = { workspace = true }
 
@@ -70,6 +72,7 @@ parachains-common = { workspace = true, optional = true }
 
 async-backing-primitives = { workspace = true, optional = true }
 nimbus-primitives = { workspace = true, optional = true }
+pallet-async-backing = { workspace = true, optional = true }
 pallet-author-inherent = { workspace = true, optional = true }
 pallet-author-mapping = { workspace = true, optional = true }
 pallet-author-slot-filter = { workspace = true, optional = true }
@@ -127,6 +130,7 @@ zrml-swaps-runtime-api = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
+once_cell = "1.20.2"
 pallet-im-online = { workspace = true, features = ["default"] }
 polkadot-emulated-chain = { workspace = true }
 polkadot-runtime = { workspace = true }
@@ -162,6 +166,7 @@ parachain = [
     "polkadot-parachain-primitives",
     "polkadot-runtime-common",
     "session-keys-primitives",
+    "pallet-async-backing",
     "async-backing-primitives",
 
     # XCM
@@ -204,6 +209,7 @@ runtime-benchmarks = [
     "pallet-grandpa/runtime-benchmarks",
     "pallet-identity/runtime-benchmarks",
     "pallet-membership/runtime-benchmarks",
+    "pallet-migrations/runtime-benchmarks",
     "pallet-multisig/runtime-benchmarks",
     "pallet-preimage/runtime-benchmarks",
     "pallet-proxy/runtime-benchmarks",
@@ -246,6 +252,7 @@ std = [
     "orml-tokens/std",
     "orml-traits/std",
     "pallet-asset-tx-payment/std",
+    "pallet-async-backing?/std",
     "pallet-balances/std",
     "pallet-bounties/std",
     "pallet-collective/std",
@@ -253,6 +260,7 @@ std = [
     "pallet-identity/std",
     "pallet-membership/std",
     "pallet-message-queue?/std",
+    "pallet-migrations/std",
     "pallet-multisig/std",
     "pallet-preimage/std",
     "pallet-proxy/std",
@@ -277,6 +285,7 @@ std = [
     "sp-offchain/std",
     "sp-runtime/std",
     "sp-session/std",
+    "sp-timestamp/std",
     "sp-transaction-pool/std",
     "sp-version/std",
 
@@ -356,9 +365,11 @@ try-runtime = [
     "frame-support/try-runtime",
     "frame-system/try-runtime",
     "pallet-timestamp/try-runtime",
+    "common-runtime/try-runtime",
     "pallet-insecure-randomness-collective-flip/try-runtime",
     "pallet-scheduler/try-runtime",
     "pallet-preimage/try-runtime",
+    "pallet-migrations/try-runtime",
 
     # Money runtime pallets
     "pallet-asset-tx-payment/try-runtime",
@@ -401,6 +412,7 @@ try-runtime = [
     "zrml-orderbook/try-runtime",
 
     # Parachain
+    "pallet-async-backing?/try-runtime",
     "pallet-author-inherent?/try-runtime",
     "pallet-author-mapping?/try-runtime",
     "pallet-author-slot-filter?/try-runtime",
@@ -428,8 +440,6 @@ metadata-hash = ["substrate-wasm-builder/metadata-hash"]
 disable-genesis-builder = []
 # Allow to print logs details (no wasm:stripped)
 force-debug = ["sp-debug-derive/force-debug"]
-# This is necessary to benchmark the pallet message queue, but will cause `cargo test --all-features` to fail
-use-noop-message-processor = []
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]

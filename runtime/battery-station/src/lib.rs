@@ -84,6 +84,8 @@ pub mod integration_tests;
 #[cfg(feature = "parachain")]
 pub mod parachain_params;
 pub mod parameters;
+#[cfg(all(feature = "parachain", not(feature = "runtime-benchmarks")))]
+mod runtime_migrations;
 #[cfg(feature = "parachain")]
 pub mod xcm_config;
 
@@ -92,10 +94,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 61,
+    spec_version: 62,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 34,
+    transaction_version: 35,
     state_version: 1,
 };
 
@@ -118,6 +120,23 @@ impl Contains<RuntimeCall> for IsCallable {
 parameter_types! {
     pub RemovableMarketIds: Vec<u32> = vec![879u32, 877u32, 878u32, 880u32, 882u32];
 }
+
+#[cfg(feature = "runtime-benchmarks")]
+type MultiBlockMigrations = pallet_migrations::mock_helpers::MockedMigrations;
+#[cfg(all(feature = "parachain", not(feature = "runtime-benchmarks")))]
+type MultiBlockMigrations = runtime_migrations::LegacyMigrations;
+#[cfg(all(not(feature = "parachain"), not(feature = "runtime-benchmarks")))]
+type MultiBlockMigrations = ();
+
+#[cfg(feature = "runtime-benchmarks")]
+type MigrationsCursorMaxLen = ConstU32<65_536>;
+#[cfg(not(feature = "runtime-benchmarks"))]
+type MigrationsCursorMaxLen = ConstU32<8>;
+
+#[cfg(feature = "runtime-benchmarks")]
+type MigrationsIdentifierMaxLen = ConstU32<256>;
+#[cfg(not(feature = "runtime-benchmarks"))]
+type MigrationsIdentifierMaxLen = ConstU32<8>;
 
 decl_common_types!();
 

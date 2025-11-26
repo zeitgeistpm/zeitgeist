@@ -41,6 +41,10 @@ parameter_types! {
     // Asset registry
     pub const AssetRegistryStringLimit: u32 = 1024;
 
+    // Async backing
+    pub const AllowMultipleBlocksPerSlot: bool = true;
+    pub const ExpectedBlockTime: u64 = 6_000;
+
     // Author-Mapping
     /// The amount that should be taken as a security deposit when registering a NimbusId
     pub const CollatorDeposit: Balance = 2 * BASE;
@@ -55,7 +59,7 @@ parameter_types! {
 
     // Staking
     /// Average time beetween 2 blocks in milliseconds
-    pub const BlockTime: u64 = 12_000;
+    pub const BlockTime: u64 = 6_000;
     /// Rounds before the candidate bond increase/decrease can be executed
     pub const CandidateBondLessDelay: u32 = 2;
     /// Default fixed percent a collator takes off the top of due rewards
@@ -89,7 +93,7 @@ parameter_types! {
     /// Minimum collators selected per round, default at genesis and minimum forever after
     pub const MinSelectedCandidates: u32 = 8;
     /// Slot duration in milliseconds
-    pub const SlotDuration: u64 = 12_000;
+    pub const SlotDuration: u64 = 6_000;
     /// Rounds before the delegator revocation can be executed
     pub const RevokeDelegationDelay: u32 = 2;
     /// Rounds before the reward is paid
