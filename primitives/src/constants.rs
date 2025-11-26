@@ -32,11 +32,11 @@ use crate::types::{Balance, BlockNumber};
 use frame_support::{parameter_types, PalletId};
 
 // Definitions for time
-pub const BLOCKS_PER_YEAR: BlockNumber = (BLOCKS_PER_DAY * 36525) / 100; // 2_629_800
-pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24; // 7_200
-pub const MILLISECS_PER_BLOCK: u32 = 12000;
-pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber); // 5
-pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60; // 300
+pub const BLOCKS_PER_YEAR: BlockNumber = (BLOCKS_PER_DAY * 36525) / 100; // 5_259_600
+pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24; // 14_400
+pub const MILLISECS_PER_BLOCK: u32 = 6000;
+pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber); // 10
+pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60; // 600
 
 // Definitions for currency
 pub const DECIMALS: u8 = 10;
@@ -133,3 +133,11 @@ pub const PARIMUTUEL_PALLET_ID: PalletId = PalletId(*b"zge/prmt");
 // Treasury
 /// Pallet identifier, used to derive treasury account
 pub const TREASURY_PALLET_ID: PalletId = PalletId(*b"zge/tsry");
+
+// ParachainSystem
+/// Maximum number of blocks simultaneously accepted by the Runtime, not yet included
+/// into the relay chain.
+pub const UNINCLUDED_SEGMENT_CAPACITY: u32 = 3;
+/// How many parachain blocks are processed by the relay chain per parent. Limits the
+/// number of blocks authored per slot.
+pub const BLOCK_PROCESSING_VELOCITY: u32 = 1;

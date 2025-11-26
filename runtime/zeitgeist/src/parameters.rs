@@ -352,10 +352,10 @@ parameter_types! {
     /// Once the dispatchables in a block consume that percentage of the total weight
     /// that's available for dispatchables in a block, the fee adjustment will start.
     pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(10);
-    // With a target block time of 12 seconds (7200 blocks per day)
+    // With a target block time of 6 seconds (14400 blocks per day)
     // the weight fees can increase by at most ~21.46% per day, given extreme congestion.
     /// See https://paritytech.github.io/substrate/master/pallet_transaction_payment/struct.TargetedFeeAdjustment.html for details.
-    pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(3, 100_000);
+    pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(3, 200_000);
     /// Minimum amount of the multiplier. The test `multiplier_can_grow_from_zero` ensures
     /// that this value is not too low.
     pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000u128);

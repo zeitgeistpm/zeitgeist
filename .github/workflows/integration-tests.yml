@@ -157,7 +157,7 @@ jobs:
           chmod uog+x target/release/zeitgeist
 
           cd integration-tests
-          pnpm exec moonwall test zombienet_zeitgeist_upgrade
+          pnpm exec moonwall test zombienet_zeitgeist_upgrade --runInBand
 
   chopsticks_battery_station_upgrade:
     name: Battery Station Chopsticks Post-Upgrade Tests
@@ -205,7 +205,7 @@ jobs:
       - name: Battery Station post-upgrade tests using Chopsticks
         run: |
           cd integration-tests
-          pnpm exec moonwall test chopsticks_battery_station_upgrade
+          pnpm exec moonwall test chopsticks_battery_station_upgrade --runInBand
 
       - name: Show chopsticks logs
         if: ${{ failure() }}
@@ -260,7 +260,7 @@ jobs:
       - name: Zeitgeist post-upgrade tests using Chopsticks
         run: |
           cd integration-tests
-          pnpm exec moonwall test chopsticks_zeitgeist_upgrade
+          pnpm exec moonwall test chopsticks_zeitgeist_upgrade --runInBand
 
       - name: Show chopsticks logs
         if: ${{ failure() }}

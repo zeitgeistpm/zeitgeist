@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use super::{reset_test_net, with_sibling, with_zeitgeist};
 use crate::{
     integration_tests::xcm::{
         setup::{
@@ -24,7 +25,7 @@ use crate::{
             register_foreign_ztg, sibling_parachain_account, zeitgeist_parachain_account, ztg,
             BTC_ID, ETH_ID, FOREIGN_PARENT_ID, FOREIGN_ZTG_ID, PARA_ID_SIBLING, PARA_ID_ZEITGEIST,
         },
-        test_net::{PolkadotRelay, SiblingPara, ZeitgeistPara},
+        test_net::PolkadotRelay,
     },
     xcm_config::fees::default_per_second,
     AssetManager, Balance, Balances, CurrencyId, RuntimeOrigin, Tokens, XTokens,
@@ -42,19 +43,20 @@ use zeitgeist_primitives::{
 
 #[test]
 fn transfer_ztg_to_sibling() {
+    let _test_net = reset_test_net();
     let mut alice_initial_balance = 0;
     let mut bob_initial_balance = 0;
     let transfer_amount = ztg(5);
     let mut treasury_initial_balance = 0;
 
-    SiblingPara::execute_with(|| {
+    with_sibling(|| {
         treasury_initial_balance =
             AssetManager::free_balance(FOREIGN_ZTG_ID, &ZeitgeistTreasuryAccount::get());
         bob_initial_balance = AssetManager::free_balance(FOREIGN_ZTG_ID, &bob());
         register_foreign_ztg(None);
     });
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         alice_initial_balance = Balances::free_balance(alice());
         assert_eq!(Balances::free_balance(sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
@@ -80,7 +82,7 @@ fn transfer_ztg_to_sibling() {
         assert_eq!(Balances::free_balance(sibling_parachain_account()), transfer_amount);
     });
 
-    SiblingPara::execute_with(|| {
+    with_sibling(|| {
         let current_balance = AssetManager::free_balance(FOREIGN_ZTG_ID, &bob());
         let bob_expected = bob_initial_balance + transfer_amount - ztg_fee();
         let treasury_expected = treasury_initial_balance + ztg_fee();
@@ -94,13 +96,14 @@ fn transfer_ztg_to_sibling() {
 
 #[test]
 fn transfer_ztg_to_sibling_with_custom_fee() {
+    let _test_net = reset_test_net();
     // 10x fee factor, so ZTG has 10x the worth of sibling currency.
     let fee_factor = 100_000_000_000;
     let transfer_amount = ztg(5);
     let mut treasury_initial_balance = 0;
     let mut bob_initial_balance = 0;
 
-    SiblingPara::execute_with(|| {
+    with_sibling(|| {
         treasury_initial_balance =
             AssetManager::free_balance(FOREIGN_ZTG_ID, &ZeitgeistTreasuryAccount::get());
         bob_initial_balance = AssetManager::free_balance(FOREIGN_ZTG_ID, &bob());
@@ -111,7 +114,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
         register_foreign_ztg(Some(custom_metadata));
     });
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         let alice_initial_balance = Balances::free_balance(alice());
         assert_eq!(Balances::free_balance(sibling_parachain_account()), 0);
         assert_ok!(XTokens::transfer(
@@ -136,7 +139,7 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
         assert_eq!(Balances::free_balance(sibling_parachain_account()), transfer_amount);
     });
 
-    SiblingPara::execute_with(|| {
+    with_sibling(|| {
         let current_balance = AssetManager::free_balance(FOREIGN_ZTG_ID, &bob());
         let custom_fee = ztg_fee() * fee_factor / BASE;
         let bob_expected = bob_initial_balance + transfer_amount - custom_fee;
@@ -154,12 +157,13 @@ fn transfer_ztg_to_sibling_with_custom_fee() {
 
 #[test]
 fn transfer_ztg_sibling_to_zeitgeist() {
+    let _test_net = reset_test_net();
     let mut alice_initial_balance = 0;
     let mut treasury_initial_balance = 0;
     let transfer_amount = ztg(1);
     let sibling_initial_balance = transfer_amount;
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         treasury_initial_balance = Balances::free_balance(ZeitgeistTreasuryAccount::get());
         alice_initial_balance = Balances::free_balance(alice());
         assert_eq!(
@@ -168,7 +172,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
         );
     });
 
-    SiblingPara::execute_with(|| {
+    with_sibling(|| {
         register_foreign_ztg(None);
         let bob_initial_balance = AssetManager::free_balance(FOREIGN_ZTG_ID, &bob());
 
@@ -195,7 +199,7 @@ fn transfer_ztg_sibling_to_zeitgeist() {
         );
     });
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         // Verify that alice() now has initial balance + amount transferred - fee
         assert_eq!(
             Balances::free_balance(alice()),
@@ -216,18 +220,19 @@ fn transfer_ztg_sibling_to_zeitgeist() {
 
 #[test]
 fn transfer_btc_sibling_to_zeitgeist() {
+    let _test_net = reset_test_net();
     let mut zeitgeist_alice_initial_balance = 0;
     let transfer_amount = btc(100);
     let mut treasury_initial_balance = 0;
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         register_btc(None);
         treasury_initial_balance =
             AssetManager::free_balance(BTC_ID, &ZeitgeistTreasuryAccount::get());
         zeitgeist_alice_initial_balance = AssetManager::free_balance(BTC_ID, &alice());
     });
 
-    SiblingPara::execute_with(|| {
+    with_sibling(|| {
         let alice_initial_balance = Balances::free_balance(alice());
         let initial_sovereign_balance = transfer_amount;
 
@@ -262,7 +267,7 @@ fn transfer_btc_sibling_to_zeitgeist() {
         );
     });
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         let expected = transfer_amount - btc_fee();
         let expected_adjusted = adjusted_balance(btc(1), expected);
         let expected_treasury = treasury_initial_balance + adjusted_balance(btc(1), btc_fee());
@@ -283,11 +288,12 @@ fn transfer_btc_sibling_to_zeitgeist() {
 
 #[test]
 fn transfer_btc_zeitgeist_to_sibling() {
+    let _test_net = reset_test_net();
     let transfer_amount = btc(100);
     let initial_sovereign_balance = transfer_amount;
     let mut bob_initial_balance = 0;
 
-    SiblingPara::execute_with(|| {
+    with_sibling(|| {
         bob_initial_balance = Balances::free_balance(bob());
         // Set the sovereign balance such that it is not subject to dust collection
         assert_eq!(
@@ -296,7 +302,7 @@ fn transfer_btc_zeitgeist_to_sibling() {
         );
     });
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         register_btc(None);
         let alice_initial_balance = AssetManager::free_balance(BTC_ID, &alice());
 
@@ -323,7 +329,7 @@ fn transfer_btc_zeitgeist_to_sibling() {
         assert_eq!(alice_balance, alice_expected);
     });
 
-    SiblingPara::execute_with(|| {
+    with_sibling(|| {
         let expected = bob_initial_balance + transfer_amount - adjusted_balance(btc(1), btc_fee());
         let expected_sovereign = initial_sovereign_balance - transfer_amount;
 
@@ -336,18 +342,19 @@ fn transfer_btc_zeitgeist_to_sibling() {
 
 #[test]
 fn transfer_eth_sibling_to_zeitgeist() {
+    let _test_net = reset_test_net();
     let mut zeitgeist_alice_initial_balance = 0;
     let transfer_amount = eth(100);
     let mut treasury_initial_balance = 0;
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         register_eth(None);
         treasury_initial_balance =
             AssetManager::free_balance(ETH_ID, &ZeitgeistTreasuryAccount::get());
         zeitgeist_alice_initial_balance = AssetManager::free_balance(ETH_ID, &alice());
     });
 
-    SiblingPara::execute_with(|| {
+    with_sibling(|| {
         let alice_initial_balance = Balances::free_balance(alice());
         let initial_sovereign_balance = transfer_amount;
 
@@ -382,7 +389,7 @@ fn transfer_eth_sibling_to_zeitgeist() {
         );
     });
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         let expected = transfer_amount - eth_fee();
         let expected_adjusted = adjusted_balance(eth(1), expected);
         let expected_treasury = treasury_initial_balance + adjusted_balance(eth(1), eth_fee());
@@ -403,11 +410,12 @@ fn transfer_eth_sibling_to_zeitgeist() {
 
 #[test]
 fn transfer_eth_zeitgeist_to_sibling() {
+    let _test_net = reset_test_net();
     let transfer_amount = eth(100);
     let initial_sovereign_balance = transfer_amount;
     let mut bob_initial_balance = 0;
 
-    SiblingPara::execute_with(|| {
+    with_sibling(|| {
         bob_initial_balance = Balances::free_balance(bob());
         // Set the sovereign balance such that it is not subject to dust collection
         assert_eq!(
@@ -416,7 +424,7 @@ fn transfer_eth_zeitgeist_to_sibling() {
         );
     });
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         register_eth(None);
         let alice_initial_balance = AssetManager::free_balance(ETH_ID, &alice());
 
@@ -443,7 +451,7 @@ fn transfer_eth_zeitgeist_to_sibling() {
         assert_eq!(alice_balance, alice_expected);
     });
 
-    SiblingPara::execute_with(|| {
+    with_sibling(|| {
         let expected = bob_initial_balance + transfer_amount - adjusted_balance(eth(1), eth_fee());
         let expected_sovereign = initial_sovereign_balance - transfer_amount;
 
@@ -456,11 +464,12 @@ fn transfer_eth_zeitgeist_to_sibling() {
 
 #[test]
 fn transfer_dot_from_relay_chain() {
+    let _test_net = reset_test_net();
     let transfer_amount: Balance = dot(1);
     let mut treasury_initial_balance = 0;
     let mut bob_initial_balance = 0;
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         register_foreign_parent(None);
         treasury_initial_balance =
             AssetManager::free_balance(FOREIGN_PARENT_ID, &ZeitgeistTreasuryAccount::get());
@@ -481,7 +490,7 @@ fn transfer_dot_from_relay_chain() {
         ));
     });
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         let expected = transfer_amount - dot_fee();
         let bob_expected = bob_initial_balance + adjusted_balance(dot(1), expected);
         let treasury_expected = treasury_initial_balance + adjusted_balance(dot(1), dot_fee());
@@ -497,6 +506,7 @@ fn transfer_dot_from_relay_chain() {
 
 #[test]
 fn transfer_dot_to_relay_chain() {
+    let _test_net = reset_test_net();
     let transfer_amount: Balance = dot(1);
     let transfer_amount_local: Balance = adjusted_balance(dot(1), transfer_amount);
     let mut initial_balance_bob = 0;
@@ -510,7 +520,7 @@ fn transfer_dot_to_relay_chain() {
         );
     });
 
-    ZeitgeistPara::execute_with(|| {
+    with_zeitgeist(|| {
         register_foreign_parent(None);
         let initial_balance = AssetManager::free_balance(FOREIGN_PARENT_ID, &alice());
         assert!(initial_balance >= transfer_amount_local);
@@ -544,6 +554,7 @@ fn transfer_dot_to_relay_chain() {
 
 #[test]
 fn test_total_fee() {
+    let _test_net = reset_test_net();
     assert_eq!(btc_fee(), 933_900);
     assert_eq!(dot_fee(), 93_390_000);
     assert_eq!(ztg_fee(), 93_390_000);

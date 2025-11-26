@@ -89,17 +89,17 @@ Unable to map [u8; 32] to a lookup index
 #### Test the upgrade to the WASM from `./target/release/wbuild/zeitgeist-runtime` on zombienet:
 
 ```bash
-pnpm exec moonwall test zombienet_zeitgeist_upgrade
+pnpm exec moonwall test zombienet_zeitgeist_upgrade --runInBand
 ```
 
 #### Test the upgrade to the WASM from `./target/release/wbuild/zeitgeist-runtime` on the live main-net fork using chopsticks:
 
 ```bash
-pnpm exec moonwall test chopsticks_zeitgeist_upgrade
+pnpm exec moonwall test chopsticks_zeitgeist_upgrade --runInBand
 ```
 
 #### Test the upgrade to the WASM from `./target/release/wbuild/battery-station-runtime` on the live test-net fork using chopsticks:
 
 ```bash
-pnpm exec moonwall test chopsticks_battery_station_upgrade
+pnpm exec moonwall test chopsticks_battery_station_upgrade --runInBand
 ```

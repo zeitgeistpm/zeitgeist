@@ -946,6 +946,7 @@ dependencies = [
  "hex-literal",
  "log",
  "nimbus-primitives",
+ "once_cell",
  "orml-asset-registry",
  "orml-benchmarking",
  "orml-currencies",
@@ -955,6 +956,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-tx-payment",
+ "pallet-async-backing",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -969,6 +971,7 @@ dependencies = [
  "pallet-insecure-randomness-collective-flip",
  "pallet-membership",
  "pallet-message-queue",
+ "pallet-migrations",
  "pallet-multisig",
  "pallet-parachain-staking",
  "pallet-preimage",
@@ -1010,6 +1013,7 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409)",
+ "sp-timestamp",
  "sp-transaction-pool",
  "sp-version",
  "staging-parachain-info",
@@ -1019,6 +1023,7 @@ dependencies = [
  "substrate-wasm-builder",
  "test-case",
  "xcm-emulator",
+ "xcm-runtime-apis",
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-combinatorial-tokens",
@@ -1807,9 +1812,12 @@ dependencies = [
  "cfg-if",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcmp-queue",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "frame-system-benchmarking",
  "log",
+ "orml-benchmarking",
  "orml-currencies",
  "orml-tokens",
  "pallet-asset-tx-payment",
@@ -1824,6 +1832,7 @@ dependencies = [
  "pallet-insecure-randomness-collective-flip",
  "pallet-membership",
  "pallet-message-queue",
+ "pallet-migrations",
  "pallet-multisig",
  "pallet-parachain-staking",
  "pallet-preimage",
@@ -1835,7 +1844,11 @@ dependencies = [
  "pallet-treasury",
  "pallet-utility",
  "pallet-vesting",
+ "pallet-xcm",
  "serde_json",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
  "zeitgeist-primitives",
 ]
 
@@ -2656,7 +2669,7 @@ dependencies = [
 [[package]]
 name = "cumulus-relay-chain-rpc-interface"
 version = "0.18.0"
-source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
+source = "git+https://github.com/zeitgeistpm/polkadot-sdk?branch=polkadot-stable2409-external-rpc-fix#96b23ae77ec4125d4b0c3e218f1b538c293d8e6c"
 dependencies = [
  "async-trait",
  "cumulus-primitives-core",
@@ -7366,6 +7379,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-async-backing"
+version = "0.9.0"
+source = "git+https://github.com/zeitgeistpm/moonkit?branch=zeitgeist-polkadot-stable2409#42bb0e730597514973940a24dc80538edef69557"
+dependencies = [
+ "cumulus-pallet-parachain-system",
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "log",
+ "nimbus-primitives",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-consensus-slots",
+ "sp-core",
+ "sp-runtime",
+ "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409)",
+]
+
+[[package]]
 name = "pallet-aura"
 version = "37.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
@@ -7979,6 +8012,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-migrations"
+version = "8.0.0"
+source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
+dependencies = [
+ "docify",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-mmr"
 version = "38.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409#87971b3e92721bdf10bf40b410eaae779d494ca0"
@@ -8115,7 +8165,7 @@ dependencies = [
 [[package]]
 name = "pallet-parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=zeitgeist-polkadot-stable2409-added-prev-migrations-fix#fd299fe79a78af94db9ac31fcc296db89fae8e62"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=zeitgeist-polkadot-stable2409-modified-migrations#c3e150d9dba8606404735f8c3c3312d63f800ed5"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -16951,6 +17001,7 @@ dependencies = [
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint 0.17.0 (git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409)",
  "url",
+ "xcm-runtime-apis",
  "zeitgeist-primitives",
  "zeitgeist-runtime",
  "zrml-swaps-rpc",
@@ -17005,6 +17056,7 @@ dependencies = [
  "hex-literal",
  "log",
  "nimbus-primitives",
+ "once_cell",
  "orml-asset-registry",
  "orml-benchmarking",
  "orml-currencies",
@@ -17014,6 +17066,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-tx-payment",
+ "pallet-async-backing",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -17028,6 +17081,7 @@ dependencies = [
  "pallet-insecure-randomness-collective-flip",
  "pallet-membership",
  "pallet-message-queue",
+ "pallet-migrations",
  "pallet-multisig",
  "pallet-parachain-staking",
  "pallet-preimage",
@@ -17067,6 +17121,7 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?tag=polkadot-stable2409)",
+ "sp-timestamp",
  "sp-transaction-pool",
  "sp-version",
  "staging-parachain-info",
@@ -17076,6 +17131,7 @@ dependencies = [
  "substrate-wasm-builder",
  "test-case",
  "xcm-emulator",
+ "xcm-runtime-apis",
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-combinatorial-tokens",

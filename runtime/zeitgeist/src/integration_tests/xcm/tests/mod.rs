@@ -1,4 +1,4 @@
-// Copyright 2022 Forecasting Technologies LTD.
+// Copyright 2022, 2025 Forecasting Technologies LTD.
 //
 // This file is part of Zeitgeist.
 //
@@ -17,3 +17,39 @@
 
 mod currency_id_convert;
 mod transfers;
+
+use once_cell::sync::Lazy;
+use std::sync::{Mutex, MutexGuard};
+use xcm_emulator::{Network, TestExt};
+
+static TEST_NET_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
+pub(crate) fn reset_test_net() -> MutexGuard<'static, ()> {
+    let guard = TEST_NET_MUTEX.lock().expect("Test net mutex poisoned");
+    crate::integration_tests::xcm::test_net::TestNet::reset();
+    guard
+}
+
+#[cfg(feature = "parachain")]
+fn clear_async_backing_slot_info() {
+    use pallet_async_backing::SlotInfo;
+    SlotInfo::<crate::Runtime>::kill();
+}
+
+pub(crate) fn with_zeitgeist<R>(f: impl FnOnce() -> R) -> R {
+    crate::integration_tests::xcm::test_net::ZeitgeistPara::execute_with(|| {
+        let res = f();
+        #[cfg(feature = "parachain")]
+        clear_async_backing_slot_info();
+        res
+    })
+}
+
+pub(crate) fn with_sibling<R>(f: impl FnOnce() -> R) -> R {
+    crate::integration_tests::xcm::test_net::SiblingPara::execute_with(|| {
+        let res = f();
+        #[cfg(feature = "parachain")]
+        clear_async_backing_slot_info();
+        res
+    })
+}

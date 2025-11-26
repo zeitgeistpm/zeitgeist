@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import datetime
 import re
 
 
@@ -8,37 +9,46 @@ import re
 class Copyright:
     owner: str
     years: list[Years]
+    literal: str | None = None
 
     @classmethod
     def from_string(cls, s) -> Copyright:
         """Create ``Copyright`` object from the string ``s``."""
-        match = re.match(r"^Copyright ([0-9,\- ]*) (.*)\.$", s)
+        match = re.match(r"^Copyright ([0-9,\- ]+|\(C\)) (.*)\.$", s)
         if not match:
             raise ParseError()
-        years, holder = match.group(1, 2)
-        years = years.split(", ")
-        years = [Years.from_string(y) for y in years]
+        years, holder = (group.strip() for group in match.group(1, 2))
+        if years == "(C)":
+            return Copyright(holder, [], years)
+        years_split = years.split(", ")
+        years_ranges = [Years.from_string(y) for y in years_split]
         # Check that year ranges don't overlap and are ordered correctly.
-        for prev, curr in zip(years, years[1:]):
+        for prev, curr in zip(years_ranges, years_ranges[1:]):
             if curr.start <= prev.end:
                 raise IllegalYearRange()
-        return Copyright(holder, years)
+        return Copyright(holder, years_ranges)
 
     @classmethod
     def from_year(cls, owner: str, year: int) -> Copyright:
         return Copyright(owner, [Years(year)])
 
     def __str__(self) -> str:
+        if self.literal:
+            return f"Copyright {self.literal} {self.owner}."
         dates = ", ".join(str(y) for y in self.years)
         return f"Copyright {dates} {self.owner}."
 
     @property
     def end(self) -> int:
+        if self.literal:
+            return datetime.MAXYEAR
         return self.years[-1].end
 
     def push_year(self, year: int) -> None:
         """Safely add ``year`` to this copyright."""
         # `year` must not be contained in the copyright yet.
+        if self.literal:
+            raise IllegalYearRange()
         if year <= self.years[-1].end:
             raise IllegalYearRange()
         if year == self.years[-1].end + 1:

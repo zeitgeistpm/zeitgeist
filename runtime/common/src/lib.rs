@@ -59,6 +59,8 @@
 #![allow(clippy::crate_in_macro_def)]
 
 pub mod fees;
+#[cfg(feature = "parachain")]
+pub mod relay_timestamp;
 pub mod weights;
 
 #[macro_export]
@@ -114,15 +116,21 @@ macro_rules! decl_common_types {
 
         type RemoveDmpQueue = RemovePallet<DmpQueueStr, RocksDbWeight>;
 
+        frame_support::parameter_types! {
+            pub MigrationsMaxServiceWeight: frame_support::weights::Weight =
+                RuntimeBlockWeights::get().max_block;
+        }
+
         #[cfg(feature = "parachain")]
-        type Migrations = (
+        type SingleBlockMigrations = (
             RemoveDmpQueue,
+            pallet_parachain_staking::migrations::MultiplyRoundLenBy2<Runtime>,
             // This `MigrateToLatestXcmVersion` migration can be permanently added to the runtime migrations. https://github.com/paritytech/polkadot-sdk/blob/87971b3e92721bdf10bf40b410eaae779d494ca0/polkadot/xcm/pallet-xcm/src/migration.rs#L83
             pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
         );
 
         #[cfg(not(feature = "parachain"))]
-        type Migrations = ();
+        type SingleBlockMigrations = ();
 
         pub type Executive = frame_executive::Executive<
             Runtime,
@@ -130,7 +138,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            Migrations,
+            SingleBlockMigrations,
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -338,6 +346,7 @@ macro_rules! create_runtime {
                 RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip::{Pallet, Storage} = 2,
                 Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 3,
                 Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>, HoldReason} = 4,
+                Migrations: pallet_migrations::{Call, Event<T>, Pallet, Storage} = 5,
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
@@ -401,6 +410,7 @@ macro_rules! create_runtime_with_additional_pallets {
             AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
             AuthorFilter: pallet_author_slot_filter::{Call, Config<T>, Event, Pallet, Storage} = 112,
             AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
+            AsyncBacking: pallet_async_backing::{Pallet, Storage} = 114,
 
             // XCM
             CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
@@ -438,7 +448,17 @@ macro_rules! impl_config_traits {
             frame_support::traits::Nothing,
             parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling},
             xcm_config::config::*,
+            zeitgeist_primitives::constants::{
+                BLOCK_PROCESSING_VELOCITY, UNINCLUDED_SEGMENT_CAPACITY,
+            },
         };
+
+        #[cfg(feature = "parachain")]
+        type ConsensusHook = pallet_async_backing::consensus_hook::FixedVelocityConsensusHook<
+            Runtime,
+            BLOCK_PROCESSING_VELOCITY,
+            UNINCLUDED_SEGMENT_CAPACITY,
+        >;
 
         // Configure Pallets
         #[cfg(feature = "parachain")]
@@ -451,8 +471,12 @@ macro_rules! impl_config_traits {
             type SelfParaId = parachain_info::Pallet<Runtime>;
             type XcmpMessageHandler = XcmpQueue;
             type CheckAssociatedRelayNumber =
-                cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
-            type ConsensusHook = cumulus_pallet_parachain_system::ExpectParentIncluded;
+                cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
+            type ConsensusHook =
+                common_runtime::relay_timestamp::ConsensusHookWrapperForRelayTimestamp<
+                    Runtime,
+                    ConsensusHook,
+                >;
             type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
             type WeightInfo = weights::cumulus_pallet_parachain_system::WeightInfo<Runtime>;
         }
@@ -491,10 +515,10 @@ macro_rules! impl_config_traits {
         #[cfg(feature = "parachain")]
         impl pallet_message_queue::Config for Runtime {
             type RuntimeEvent = RuntimeEvent;
-            #[cfg(feature = "use-noop-message-processor")]
+            #[cfg(all(feature = "runtime-benchmarks", not(test)))]
             type MessageProcessor =
                 pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
-            #[cfg(not(feature = "use-noop-message-processor"))]
+            #[cfg(any(not(feature = "runtime-benchmarks"), test))]
             type MessageProcessor = xcm_builder::ProcessXcmMessage<
                 AggregateMessageOrigin,
                 xcm_executor::XcmExecutor<XcmConfig>,
@@ -540,10 +564,28 @@ macro_rules! impl_config_traits {
             type SystemWeightInfo = weights::frame_system::WeightInfo<Runtime>;
             type Version = Version;
             type SingleBlockMigrations = ();
-            type MultiBlockMigrator = ();
+            type MultiBlockMigrator = pallet_migrations::Pallet<Runtime>;
             type PreInherents = ();
             type PostInherents = ();
             type PostTransactions = ();
+        }
+
+        impl pallet_migrations::Config for Runtime {
+            type RuntimeEvent = RuntimeEvent;
+            type Migrations = MultiBlockMigrations;
+            type CursorMaxLen = MigrationsCursorMaxLen;
+            type IdentifierMaxLen = MigrationsIdentifierMaxLen;
+            type MigrationStatusHandler = ();
+            type FailedMigrationHandler = frame_support::migrations::FreezeChainOnFailedMigration;
+            type MaxServiceWeight = MigrationsMaxServiceWeight;
+            type WeightInfo = weights::pallet_migrations::WeightInfo<Runtime>;
+        }
+
+        #[cfg(feature = "parachain")]
+        impl pallet_async_backing::Config for Runtime {
+            type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
+            type GetAndVerifySlot = pallet_async_backing::RelaySlot;
+            type ExpectedBlockTime = ExpectedBlockTime;
         }
 
         #[cfg(not(feature = "parachain"))]
@@ -613,6 +655,9 @@ macro_rules! impl_config_traits {
             // Needs to be `Everything` for local testing.
             type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
             type XcmTeleportFilter = Everything;
+            #[cfg(feature = "runtime-benchmarks")]
+            type XcmReserveTransferFilter = Everything;
+            #[cfg(not(feature = "runtime-benchmarks"))]
             type XcmReserveTransferFilter = Nothing;
             type XcmRouter = XcmRouter;
 
@@ -622,8 +667,7 @@ macro_rules! impl_config_traits {
             type SovereignAccountOf = LocationToAccountId;
             type MaxLockers = MaxLockers;
             type MaxRemoteLockConsumers = MaxRemoteLockConsumers;
-            // TODO(#1425) use correct weight info after benchmarking
-            type WeightInfo = pallet_xcm::TestWeightInfo;
+            type WeightInfo = weights::pallet_xcm::WeightInfo<Runtime>;
             type RemoteLockConsumerIdentifier = ();
 
             const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
@@ -656,14 +700,13 @@ macro_rules! impl_config_traits {
             }
         }
         #[cfg(feature = "parachain")]
-        pub struct StakingRoundSlotProvider;
+        pub struct RelayChainSlotProvider;
 
         #[cfg(feature = "parachain")]
-        impl Get<Slot> for StakingRoundSlotProvider {
+        impl Get<Slot> for RelayChainSlotProvider {
             fn get() -> Slot {
-                let block_number: u64 =
-                    frame_system::pallet::Pallet::<Runtime>::block_number().into();
-                Slot::from(block_number)
+                let slot_info = pallet_async_backing::pallet::Pallet::<Runtime>::slot_info();
+                slot_info.unwrap_or_default().0
             }
         }
 
@@ -694,7 +737,7 @@ macro_rules! impl_config_traits {
             type RevokeDelegationDelay = RevokeDelegationDelay;
             type RewardPaymentDelay = RewardPaymentDelay;
             type SlotDuration = SlotDuration;
-            type SlotProvider = StakingRoundSlotProvider;
+            type SlotProvider = RelayChainSlotProvider;
             type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
         }
 
@@ -1778,6 +1821,8 @@ macro_rules! create_runtime_api {
                     use frame_support::traits::StorageInfoTrait;
                     use frame_system_benchmarking::Pallet as SystemBench;
                     use orml_benchmarking::list_benchmark as orml_list_benchmark;
+                    #[cfg(feature = "parachain")]
+                    use pallet_xcm::benchmarking::Pallet as PalletXcmExtrinsicsBenchmark;
 
                     let mut list = Vec::<BenchmarkList>::new();
 
@@ -1799,6 +1844,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, pallet_treasury, Treasury);
                     list_benchmark!(list, extra, pallet_utility, Utility);
                     list_benchmark!(list, extra, pallet_vesting, Vesting);
+                    list_benchmark!(list, extra, pallet_migrations, Migrations);
                     list_benchmark!(list, extra, zrml_swaps, Swaps);
                     list_benchmark!(list, extra, zrml_authorized, Authorized);
                     list_benchmark!(list, extra, zrml_combinatorial_tokens, CombinatorialTokens);
@@ -1821,6 +1867,7 @@ macro_rules! create_runtime_api {
                             list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                             list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
                             list_benchmark!(list, extra, pallet_message_queue, MessageQueue);
+                            list_benchmark!(list, extra, pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>);
                             list_benchmark!(list, extra, pallet_parachain_staking, ParachainStaking);
                         } else {
                             list_benchmark!(list, extra, pallet_grandpa, Grandpa);
@@ -1838,17 +1885,173 @@ macro_rules! create_runtime_api {
                         baseline::{
                             Pallet as BaselineBench, Config as BaselineConfig
                         },
-                        BenchmarkBatch, Benchmarking
+                        BenchmarkBatch, BenchmarkError, Benchmarking
                     };
-                    use alloc::{vec, vec::Vec};
+                    use alloc::{boxed::Box, vec, vec::Vec};
                     use frame_support::traits::{TrackedStorageKey, WhitelistedStorageKeys};
                     use frame_system_benchmarking::Pallet as SystemBench;
                     use orml_benchmarking::{add_benchmark as orml_add_benchmark};
+                    #[cfg(feature = "parachain")]
+                    use pallet_xcm::benchmarking::Pallet as PalletXcmExtrinsicsBenchmark;
+                    #[cfg(feature = "parachain")]
+                    use xcm::latest::prelude::*;
+                    #[cfg(feature = "parachain")]
+                    use crate::parachain_params::RelayLocation;
+                    #[cfg(feature = "parachain")]
+                    use xcm_executor::traits::ConvertLocation;
+                    #[cfg(feature = "parachain")]
+                    use zeitgeist_primitives::types::CurrencyId;
 
                     #[allow(non_local_definitions)]
                     impl frame_system_benchmarking::Config for Runtime {}
                     #[allow(non_local_definitions)]
                     impl BaselineConfig for Runtime {}
+
+                    #[cfg(feature = "parachain")]
+                    frame_support::parameter_types! {
+                        pub ExistentialDepositAsset: Option<Asset> = Some((
+                            Location::here(),
+                            crate::parameters::ExistentialDeposit::get()
+                        ).into());
+                        pub const RandomParaId: ParaId = ParaId::new(43211234);
+                        pub const CheckedAccount: Option<(AccountId, xcm_builder::MintLocation)> = None;
+                        pub const TrustedTeleporter: Option<(Location, Asset)> = None;
+                        pub const TrustedReserve: Option<(Location, Asset)> = None;
+                    }
+
+                    #[cfg(feature = "parachain")]
+                    pub struct TestDeliveryHelper;
+                    #[cfg(feature = "parachain")]
+                    impl xcm_builder::EnsureDelivery for TestDeliveryHelper {
+                        fn ensure_successful_delivery(
+                            origin_ref: &Location,
+                            _dest: &Location,
+                            _fee_reason: xcm_executor::traits::FeeReason,
+                        ) -> (Option<xcm_executor::FeesMode>, Option<Assets>) {
+                            if let Some(acc) = xcm_config::config::LocationToAccountId::convert_location(origin_ref) {
+                                let balance = crate::parameters::ExistentialDeposit::get();
+                                let _ = <Balances as frame_support::traits::Currency<_>>::make_free_balance_be(&acc, balance);
+                            }
+                            (None, None)
+                        }
+                    }
+
+                    #[cfg(feature = "parachain")]
+                    impl pallet_xcm::benchmarking::Config for Runtime {
+                        type DeliveryHelper = TestDeliveryHelper;
+
+                        fn reachable_dest() -> Option<Location> {
+                            Some(Location::parent())
+                        }
+
+                        fn teleportable_asset_and_dest() -> Option<(Asset, Location)> {
+                            None
+                        }
+
+                        fn reserve_transferable_asset_and_dest() -> Option<(Asset, Location)> {
+                            let native_location = xcm_config::config::AssetConvert::convert(CurrencyId::Ztg)
+                                .and_then(|loc| {
+                                    let (_parents, interior) = loc.unpack();
+                                    match interior {
+                                        [GeneralKey { data, length }] => {
+                                            let len = (*length as usize).min(data.len());
+                                            Some(Location::new(0, [xcm_config::config::general_key(
+                                                &data[..len],
+                                            )]))
+                                        }
+                                        [Junction::Parachain(_), GeneralKey { data, length }] => {
+                                            let len = (*length as usize).min(data.len());
+                                            Some(Location::new(0, [xcm_config::config::general_key(
+                                                &data[..len],
+                                            )]))
+                                        }
+                                        _ => None,
+                                    }
+                                })
+                                .unwrap_or(Location::here());
+                            Some((
+                                Asset { id: AssetId(native_location), fun: Fungible(crate::parameters::ExistentialDeposit::get()) },
+                                Location::parent(),
+                            ))
+                        }
+
+                        fn set_up_complex_asset_transfer(
+                        ) -> Option<(Assets, u32, Location, alloc::boxed::Box<dyn FnOnce()>)> {
+                            let native_location = xcm_config::config::AssetConvert::convert(CurrencyId::Ztg)
+                                .and_then(|loc| {
+                                    let (_parents, interior) = loc.unpack();
+                                    match interior {
+                                        [GeneralKey { data, length }] => {
+                                            let len = (*length as usize).min(data.len());
+                                            Some(Location::new(0, [xcm_config::config::general_key(
+                                                &data[..len],
+                                            )]))
+                                        }
+                                        [Junction::Parachain(_), GeneralKey { data, length }] => {
+                                            let len = (*length as usize).min(data.len());
+                                            Some(Location::new(0, [xcm_config::config::general_key(
+                                                &data[..len],
+                                            )]))
+                                        }
+                                        _ => None,
+                                    }
+                                })
+                                .unwrap_or(Location::here());
+                            let destination: Location = Parent.into();
+                            let fee_amount: u128 = crate::parameters::ExistentialDeposit::get();
+                            let fee_asset: Asset = (native_location.clone(), fee_amount).into();
+
+                            let who = frame_benchmarking::whitelisted_caller();
+                            let balance = fee_amount.saturating_mul(1000);
+                            let _ = <Balances as frame_support::traits::Currency<_>>::make_free_balance_be(&who, balance);
+
+                            let transfer_amount: u128 = fee_amount.saturating_mul(10);
+                            let transfer_asset: Asset = (native_location, transfer_amount).into();
+
+                            let assets: Assets = vec![fee_asset.clone(), transfer_asset].into();
+                            let fee_index: u32 = 0;
+
+                            let verify: Box<dyn FnOnce()> = Box::new(move || {
+                                assert!(Balances::free_balance(&who) <= balance - transfer_amount);
+                            });
+
+                            Some((assets, fee_index, destination, verify))
+                        }
+
+                        fn get_asset() -> Asset {
+                            Asset {
+                                id: AssetId(
+                                    xcm_config::config::AssetConvert::convert(CurrencyId::Ztg)
+                                        .and_then(|loc| {
+                                            let (_parents, interior) = loc.unpack();
+                                            match interior {
+                                                [GeneralKey { data, length }] => {
+                                                    let len = (*length as usize).min(data.len());
+                                                    Some(Location::new(
+                                                        0,
+                                                        [xcm_config::config::general_key(
+                                                            &data[..len],
+                                                        )],
+                                                    ))
+                                                }
+                                                [Junction::Parachain(_), GeneralKey { data, length }] => {
+                                                    let len = (*length as usize).min(data.len());
+                                                    Some(Location::new(
+                                                        0,
+                                                        [xcm_config::config::general_key(
+                                                            &data[..len],
+                                                        )],
+                                                    ))
+                                                }
+                                                _ => None,
+                                            }
+                                        })
+                                        .unwrap_or(Location::here()),
+                                ),
+                                fun: Fungible(crate::parameters::ExistentialDeposit::get()),
+                            }
+                        }
+                    }
 
                     let mut whitelist: Vec<TrackedStorageKey> = AllPalletsWithSystem::whitelisted_storage_keys();
                     let additional_whitelist: Vec<TrackedStorageKey> = vec![
@@ -1891,6 +2094,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, pallet_treasury, Treasury);
                     add_benchmark!(params, batches, pallet_utility, Utility);
                     add_benchmark!(params, batches, pallet_vesting, Vesting);
+                    add_benchmark!(params, batches, pallet_migrations, Migrations);
                     add_benchmark!(params, batches, zrml_swaps, Swaps);
                     add_benchmark!(params, batches, zrml_authorized, Authorized);
                     add_benchmark!(params, batches, zrml_combinatorial_tokens, CombinatorialTokens);
@@ -1914,6 +2118,7 @@ macro_rules! create_runtime_api {
                             add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                             add_benchmark!(params, batches, pallet_message_queue, MessageQueue);
+                            add_benchmark!(params, batches, pallet_xcm, PalletXcmExtrinsicsBenchmark::<Runtime>);
                             add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
 
                         } else {
@@ -1978,6 +2183,91 @@ macro_rules! create_runtime_api {
 
                 fn query_length_to_fee(length: u32) -> Balance {
                     TransactionPayment::length_to_fee(length)
+                }
+            }
+
+            #[cfg(feature = "parachain")]
+            impl xcm_runtime_apis::fees::XcmPaymentApi<Block> for Runtime {
+                fn query_acceptable_payment_assets(
+                    xcm_version: xcm::Version,
+                ) -> Result<Vec<xcm::VersionedAssetId>, xcm_runtime_apis::fees::Error> {
+                    use sp_std::collections::btree_set::BTreeSet;
+
+                    let (ztg_asset, _, _) = xcm_config::config::ZtgPerSecond::get();
+                    let (ztg_asset_canonical, _, _) = xcm_config::config::ZtgPerSecondCanonical::get();
+
+                    let mut acceptable_assets: BTreeSet<xcm::latest::AssetId> =
+                        [ztg_asset, ztg_asset_canonical].into_iter().collect();
+
+                    acceptable_assets.extend(
+                        orml_asset_registry::module::LocationToAssetId::<Runtime>::iter_keys()
+                            .map(xcm::latest::AssetId),
+                    );
+
+                    PolkadotXcm::query_acceptable_payment_assets(
+                        xcm_version,
+                        acceptable_assets.into_iter().collect(),
+                    )
+                }
+
+                fn query_weight_to_asset_fee(
+                    weight: Weight,
+                    asset: xcm::VersionedAssetId,
+                ) -> Result<u128, xcm_runtime_apis::fees::Error> {
+                    use xcm_config::fees::weight_to_fee;
+
+                    let asset_id: xcm::latest::AssetId = asset
+                        .try_into()
+                        .map_err(|_| xcm_runtime_apis::fees::Error::VersionedConversionFailed)?;
+
+                    let (ztg_asset, ztg_units_per_second, ztg_units_per_mb) =
+                        xcm_config::config::ZtgPerSecond::get();
+                    if asset_id == ztg_asset {
+                        return Ok(weight_to_fee(weight, ztg_units_per_second, ztg_units_per_mb));
+                    }
+
+                    let (ztg_asset_canonical, ztg_canonical_per_second, ztg_canonical_per_mb) =
+                        xcm_config::config::ZtgPerSecondCanonical::get();
+                    if asset_id == ztg_asset_canonical {
+                        return Ok(weight_to_fee(
+                            weight,
+                            ztg_canonical_per_second,
+                            ztg_canonical_per_mb,
+                        ));
+                    }
+
+                    let asset_location = asset_id.0.clone();
+                    let fee_per_second = <xcm_config::fees::FixedConversionRateProvider<
+                        AssetRegistry,
+                    > as orml_traits::FixedConversionRateProvider>::get_fee_per_second(
+                        &asset_location,
+                    )
+                        .ok_or_else(|| {
+                            log::trace!(
+                                target: "xcm::xcm_runtime_apis",
+                                "query_weight_to_asset_fee - unhandled asset_id: {asset_id:?}!"
+                            );
+                            xcm_runtime_apis::fees::Error::AssetNotFound
+                        })?;
+
+                    // For assets priced via the asset registry, charge proof-size
+                    // at the same rate as ref_time by default.
+                    let fee_per_mb = fee_per_second;
+
+                    Ok(weight_to_fee(weight, fee_per_second, fee_per_mb))
+                }
+
+                fn query_xcm_weight(
+                    message: xcm::VersionedXcm<()>,
+                ) -> Result<Weight, xcm_runtime_apis::fees::Error> {
+                    PolkadotXcm::query_xcm_weight(message)
+                }
+
+                fn query_delivery_fees(
+                    destination: xcm::VersionedLocation,
+                    message: xcm::VersionedXcm<()>,
+                ) -> Result<xcm::VersionedAssets, xcm_runtime_apis::fees::Error> {
+                    PolkadotXcm::query_delivery_fees(destination, message)
                 }
             }
 
@@ -2180,12 +2470,10 @@ macro_rules! create_runtime_api {
             #[cfg(feature = "parachain")]
             impl async_backing_primitives::UnincludedSegmentApi<Block> for Runtime {
                 fn can_build_upon(
-                    _included_hash: <Block as BlockT>::Hash,
-                    _slot: async_backing_primitives::Slot,
+                    included_hash: <Block as BlockT>::Hash,
+                    slot: async_backing_primitives::Slot,
                 ) -> bool {
-                    // This runtime API can be called only when asynchronous backing is enabled client-side
-                    // We return false here to force the client to not use async backing.
-                    false
+                    ConsensusHook::can_build_upon(included_hash, slot)
                 }
             }
 
