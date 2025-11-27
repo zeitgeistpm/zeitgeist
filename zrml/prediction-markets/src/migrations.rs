@@ -17,8 +17,9 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 pub mod mbm {
-    use crate::{Config, LastTimeFrame, MarketIdsPerCloseTimeFrame, MarketIdOf, TimeFrame};
+    use crate::{Config, LastTimeFrame, MarketIdOf, MarketIdsPerCloseTimeFrame, TimeFrame};
     use alloc::vec::Vec;
+    use core::marker::PhantomData;
     use frame_support::{
         migrations::{SteppedMigration, SteppedMigrationError},
         pallet_prelude::ConstU32,
@@ -27,14 +28,12 @@ pub mod mbm {
         BoundedVec,
     };
     use sp_runtime::codec::{Decode, Encode, MaxEncodedLen};
-    use core::marker::PhantomData;
 
     /// Block time (ms) used before the AsyncBacking upgrade halved block time.
     pub const PREVIOUS_MILLISECS_PER_BLOCK: u32 = 12_000;
     /// Ratio between the previous and current block times, used to rescale timestamp frames.
-    pub const TIME_FRAME_SCALE_FACTOR: TimeFrame =
-        PREVIOUS_MILLISECS_PER_BLOCK as TimeFrame
-            / zeitgeist_primitives::constants::MILLISECS_PER_BLOCK as TimeFrame;
+    pub const TIME_FRAME_SCALE_FACTOR: TimeFrame = PREVIOUS_MILLISECS_PER_BLOCK as TimeFrame
+        / zeitgeist_primitives::constants::MILLISECS_PER_BLOCK as TimeFrame;
 
     /// Target pallet storage version after migration.
     const TARGET_STORAGE_VERSION: u16 = 9;
@@ -70,9 +69,7 @@ pub mod mbm {
                 .map_err(|_| SteppedMigrationError::InsufficientWeight { required: weight })
         }
 
-        fn rescale_last_time_frame(
-            meter: &mut WeightMeter,
-        ) -> Result<(), SteppedMigrationError> {
+        fn rescale_last_time_frame(meter: &mut WeightMeter) -> Result<(), SteppedMigrationError> {
             Self::weight_or_insufficient(meter, Self::db_weight().reads_writes(1, 1))?;
             if let Some(last_time_frame) = LastTimeFrame::<T>::get() {
                 LastTimeFrame::<T>::set(Some(
@@ -82,10 +79,7 @@ pub mod mbm {
             Ok(())
         }
 
-        fn insert_with_shift(
-            market_id: MarketIdOf<T>,
-            mut target_time_frame: TimeFrame,
-        ) {
+        fn insert_with_shift(market_id: MarketIdOf<T>, mut target_time_frame: TimeFrame) {
             loop {
                 let mut bucket = MarketIdsPerCloseTimeFrame::<T>::get(target_time_frame);
                 if bucket.contains(&market_id) {
@@ -152,9 +146,8 @@ pub mod mbm {
                 }
             };
 
-            let mut start_tf = state
-                .current_time_frame
-                .or_else(|| Self::next_start_time_frame(0, max_source));
+            let mut start_tf =
+                state.current_time_frame.or_else(|| Self::next_start_time_frame(0, max_source));
 
             while let Some(current_tf) = start_tf {
                 let ids: Vec<_> = MarketIdsPerCloseTimeFrame::<T>::get(current_tf).into();
@@ -248,15 +241,11 @@ mod tests {
             let mut cursor = None;
             // Give plenty of weight to finish in one go.
             let mut meter = WeightMeter::with_limit(Weight::from_parts(u64::MAX, u64::MAX));
-            cursor =
-                TimeFrameRescaleMigration::<Runtime>::step(cursor, &mut meter).unwrap();
+            cursor = TimeFrameRescaleMigration::<Runtime>::step(cursor, &mut meter).unwrap();
             assert!(cursor.is_none());
 
             assert_eq!(StorageVersion::get::<crate::Pallet<Runtime>>(), StorageVersion::new(9));
-            assert_eq!(
-                LastTimeFrame::<Runtime>::get(),
-                Some(5 * TIME_FRAME_SCALE_FACTOR)
-            );
+            assert_eq!(LastTimeFrame::<Runtime>::get(), Some(5 * TIME_FRAME_SCALE_FACTOR));
             assert_eq!(
                 MarketIdsPerCloseTimeFrame::<Runtime>::get(10),
                 BoundedVec::<u128, CacheSize>::new()
