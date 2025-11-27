@@ -21,6 +21,7 @@ use pallet_parachain_staking::migrations::{
     LegacyAtStakeCursorMigration, LegacyAtStakeMigrationKey, LegacyAtStakeMigrationList,
     LEGACY_AT_STAKE_MIGRATION_ID_LEN,
 };
+use zrml_prediction_markets::migrations::mbm::TimeFrameRescaleMigration;
 
 mod legacy_keys;
 use legacy_keys::BATTERY_STATION_LEGACY_KEYS;
@@ -45,4 +46,5 @@ pub type LegacyMigrations = (
         BatteryStationLegacyKeys,
         BATTERY_STATION_MIGRATION_BATCH,
     >,
+    TimeFrameRescaleMigration<crate::Runtime>,
 );

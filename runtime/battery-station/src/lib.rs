@@ -131,12 +131,12 @@ type MultiBlockMigrations = ();
 #[cfg(feature = "runtime-benchmarks")]
 type MigrationsCursorMaxLen = ConstU32<65_536>;
 #[cfg(not(feature = "runtime-benchmarks"))]
-type MigrationsCursorMaxLen = ConstU32<8>;
+type MigrationsCursorMaxLen = ConstU32<64>;
 
 #[cfg(feature = "runtime-benchmarks")]
 type MigrationsIdentifierMaxLen = ConstU32<256>;
 #[cfg(not(feature = "runtime-benchmarks"))]
-type MigrationsIdentifierMaxLen = ConstU32<8>;
+type MigrationsIdentifierMaxLen = ConstU32<128>;
 
 decl_common_types!();
 

@@ -82,7 +82,7 @@ mod pallet {
     use zrml_market_commons::{types::MarketBuilder, MarketCommonsPalletApi};
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(8);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(9);
     const LOG_TARGET: &str = "runtime::zrml-prediction-markets";
     /// The maximum number of blocks between the [`LastTimeFrame`]
     /// and the current timestamp in block number allowed to recover
