@@ -1883,9 +1883,15 @@ mod pallet {
             let db_weight = T::DbWeight::get();
             weight = weight.saturating_add(db_weight.reads(1));
             if let Some(last_time_frame) = LastTimeFrame::<T>::get() {
-                LastTimeFrame::<T>::set(Some(
-                    last_time_frame.saturating_mul(migrations::mbm::TIME_FRAME_SCALE_FACTOR),
-                ));
+                let new_last_time_frame =
+                    last_time_frame.saturating_mul(migrations::mbm::TIME_FRAME_SCALE_FACTOR);
+                log::info!(
+                    target: LOG_TARGET,
+                    "LastTimeFrame migrated from {} to {} during on_runtime_upgrade",
+                    last_time_frame,
+                    new_last_time_frame,
+                );
+                LastTimeFrame::<T>::set(Some(new_last_time_frame));
                 weight = weight.saturating_add(db_weight.writes(1));
             }
 

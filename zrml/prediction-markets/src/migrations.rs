@@ -27,7 +27,7 @@ pub mod mbm {
         weights::{Weight, WeightMeter},
         BoundedVec,
     };
-    use log::error;
+    use log::{error, info};
     use sp_runtime::codec::{Decode, Encode, MaxEncodedLen};
 
     /// Block time (ms) used before the AsyncBacking upgrade halved block time.
@@ -74,6 +74,7 @@ pub mod mbm {
             meter: &mut WeightMeter,
             db_weight: frame_support::weights::RuntimeDbWeight,
             market_id: MarketIdOf<T>,
+            source_time_frame: TimeFrame,
             mut target_time_frame: TimeFrame,
         ) -> Result<(), SteppedMigrationError> {
             // Try a bounded number of adjacent time frames to avoid unbounded looping.
@@ -81,11 +82,25 @@ pub mod mbm {
                 Self::weight_or_insufficient(meter, db_weight.reads(1))?;
                 let mut bucket = MarketIdsPerCloseTimeFrame::<T>::get(target_time_frame);
                 if bucket.contains(&market_id) {
+                    info!(
+                        target: LOG_TARGET,
+                        "TimeFrameRescaleMigration: market {:?} already present in target {} (source {})",
+                        market_id,
+                        target_time_frame,
+                        source_time_frame,
+                    );
                     return Ok(());
                 }
                 if bucket.try_push(market_id).is_ok() {
                     Self::weight_or_insufficient(meter, db_weight.writes(1))?;
                     MarketIdsPerCloseTimeFrame::<T>::insert(target_time_frame, bucket);
+                    info!(
+                        target: LOG_TARGET,
+                        "TimeFrameRescaleMigration migrated market {:?} from time frame {} to {}",
+                        market_id,
+                        source_time_frame,
+                        target_time_frame,
+                    );
                     return Ok(());
                 }
                 target_time_frame = target_time_frame.saturating_add(1);
@@ -184,19 +199,22 @@ pub mod mbm {
                         let remaining = ids[idx..].to_vec();
                         if remaining.is_empty() {
                             MarketIdsPerCloseTimeFrame::<T>::remove(current_tf);
+                            state.current_time_frame = None;
+                            state.offset = 0;
                         } else {
                             let bounded = BoundedVec::try_from(remaining)
                                 .map_err(|_| SteppedMigrationError::Failed)?;
                             MarketIdsPerCloseTimeFrame::<T>::insert(current_tf, bounded);
+                            // Resume from the start of the truncated bucket on the next step.
+                            state.current_time_frame = Some(current_tf);
+                            state.offset = 0;
                         }
-                        state.current_time_frame = Some(current_tf);
-                        state.offset = idx as u32;
                         return Ok(Some(state));
                     }
 
                     let market_id = ids[idx];
                     let target_tf = current_tf.saturating_mul(TIME_FRAME_SCALE_FACTOR);
-                    Self::insert_with_shift(meter, db_weight, market_id, target_tf)?;
+                    Self::insert_with_shift(meter, db_weight, market_id, current_tf, target_tf)?;
                     idx = idx.saturating_add(1);
                 }
 
