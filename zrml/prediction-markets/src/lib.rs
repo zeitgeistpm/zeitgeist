@@ -34,7 +34,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::weights::*;
+    use crate::{migrations, weights::*};
     use alloc::{format, vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
@@ -53,6 +53,8 @@ mod pallet {
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::traits::AccountIdConversion;
+    #[cfg(feature = "try-runtime")]
+    use sp_runtime::{codec::{Decode, Encode}, TryRuntimeError};
 
     #[cfg(feature = "parachain")]
     use {orml_traits::asset_registry::Inspect, zeitgeist_primitives::types::CustomMetadata};
@@ -1868,6 +1870,49 @@ mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight = T::DbWeight::get().reads(1);
+
+            if StorageVersion::get::<Self>() >= STORAGE_VERSION {
+                return weight;
+            }
+
+            let db_weight = T::DbWeight::get();
+            weight = weight.saturating_add(db_weight.reads(1));
+            if let Some(last_time_frame) = LastTimeFrame::<T>::get() {
+                LastTimeFrame::<T>::set(Some(
+                    last_time_frame.saturating_mul(migrations::mbm::TIME_FRAME_SCALE_FACTOR),
+                ));
+                weight = weight.saturating_add(db_weight.writes(1));
+            }
+
+            weight
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
+            let version_before = StorageVersion::get::<Self>();
+            let ran = version_before < STORAGE_VERSION;
+            Ok((ran, LastTimeFrame::<T>::get()).encode())
+        }
+
+        #[cfg(feature = "try-runtime")]
+        fn post_upgrade(state: Vec<u8>) -> Result<(), TryRuntimeError> {
+            let (ran, before): (bool, Option<TimeFrame>) = Decode::decode(&mut &state[..])
+                .map_err(|_| TryRuntimeError::Other("Failed to decode upgrade state".into()))?;
+            if !ran {
+                return Ok(());
+            }
+            let expected = before.map(|v| v.saturating_mul(migrations::mbm::TIME_FRAME_SCALE_FACTOR));
+            let after = LastTimeFrame::<T>::get();
+            if after != expected {
+                return Err(TryRuntimeError::Other(
+                    "LastTimeFrame not rescaled correctly during upgrade",
+                ));
+            }
+            Ok(())
+        }
+
         fn on_initialize(now: BlockNumberFor<T>) -> Weight {
             let mut total_weight: Weight = Weight::zero();
 

@@ -17,7 +17,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 pub mod mbm {
-    use crate::{Config, LastTimeFrame, MarketIdOf, MarketIdsPerCloseTimeFrame, TimeFrame};
+    use crate::{Config, MarketIdOf, MarketIdsPerCloseTimeFrame, TimeFrame};
     use alloc::vec::Vec;
     use core::marker::PhantomData;
     use frame_support::{
@@ -28,25 +28,26 @@ pub mod mbm {
         BoundedVec,
     };
     use sp_runtime::codec::{Decode, Encode, MaxEncodedLen};
+    use log::error;
 
     /// Block time (ms) used before the AsyncBacking upgrade halved block time.
     pub const PREVIOUS_MILLISECS_PER_BLOCK: u32 = 12_000;
     /// Ratio between the previous and current block times, used to rescale timestamp frames.
     pub const TIME_FRAME_SCALE_FACTOR: TimeFrame = PREVIOUS_MILLISECS_PER_BLOCK as TimeFrame
         / zeitgeist_primitives::constants::MILLISECS_PER_BLOCK as TimeFrame;
+    const LOG_TARGET: &str = "runtime::zrml-prediction-markets";
 
     /// Target pallet storage version after migration.
     const TARGET_STORAGE_VERSION: u16 = 9;
 
     #[derive(Clone, Encode, Decode, MaxEncodedLen, PartialEq, Eq, Debug)]
     pub struct Cursor {
-        /// Whether `LastTimeFrame` was already rescaled.
-        pub rescaled_last_time_frame: bool,
         /// The time frame key to start from on the next iteration.
         pub current_time_frame: Option<TimeFrame>,
         /// Offset into the current time frame's market list.
         pub offset: u32,
-        /// Highest source time frame to process (pre-migration space).
+        /// Highest source time frame observed at migration start; used to avoid
+        /// reprocessing newly inserted target buckets.
         pub max_source_time_frame: Option<TimeFrame>,
     }
 
@@ -69,34 +70,42 @@ pub mod mbm {
                 .map_err(|_| SteppedMigrationError::InsufficientWeight { required: weight })
         }
 
-        fn rescale_last_time_frame(meter: &mut WeightMeter) -> Result<(), SteppedMigrationError> {
-            Self::weight_or_insufficient(meter, Self::db_weight().reads_writes(1, 1))?;
-            if let Some(last_time_frame) = LastTimeFrame::<T>::get() {
-                LastTimeFrame::<T>::set(Some(
-                    last_time_frame.saturating_mul(TIME_FRAME_SCALE_FACTOR),
-                ));
-            }
-            Ok(())
-        }
-
-        fn insert_with_shift(market_id: MarketIdOf<T>, mut target_time_frame: TimeFrame) {
-            loop {
+        fn insert_with_shift(
+            meter: &mut WeightMeter,
+            db_weight: frame_support::weights::RuntimeDbWeight,
+            market_id: MarketIdOf<T>,
+            mut target_time_frame: TimeFrame,
+        ) -> Result<(), SteppedMigrationError> {
+            // Try a bounded number of adjacent time frames to avoid unbounded looping.
+            for _ in 0..3 {
+                Self::weight_or_insufficient(meter, db_weight.reads(1))?;
                 let mut bucket = MarketIdsPerCloseTimeFrame::<T>::get(target_time_frame);
                 if bucket.contains(&market_id) {
-                    return;
+                    return Ok(());
                 }
                 if bucket.try_push(market_id).is_ok() {
+                    Self::weight_or_insufficient(meter, db_weight.writes(1))?;
                     MarketIdsPerCloseTimeFrame::<T>::insert(target_time_frame, bucket);
-                    return;
+                    return Ok(());
                 }
                 target_time_frame = target_time_frame.saturating_add(1);
             }
+
+            error!(
+                target: LOG_TARGET,
+                "Failed to insert market {:?} into close time frame starting at {:?}",
+                market_id,
+                target_time_frame,
+            );
+
+            Ok(())
         }
 
-        fn next_start_time_frame(from: TimeFrame, max: TimeFrame) -> Option<TimeFrame> {
-            MarketIdsPerCloseTimeFrame::<T>::iter()
-                .find(|(tf, _)| *tf >= from && *tf <= max)
-                .map(|(tf, _)| tf)
+        fn next_start_time_frame(max: TimeFrame) -> Option<TimeFrame> {
+            // Pick any remaining source key not beyond the original maximum so we don't
+            // loop over newly inserted target buckets.
+            MarketIdsPerCloseTimeFrame::<T>::iter_keys()
+                .find(|tf| *tf <= max)
         }
     }
 
@@ -120,20 +129,17 @@ pub mod mbm {
             }
 
             let mut state = cursor.take().unwrap_or(Cursor {
-                rescaled_last_time_frame: false,
                 current_time_frame: None,
                 offset: 0,
-                max_source_time_frame: MarketIdsPerCloseTimeFrame::<T>::iter()
-                    .last()
-                    .map(|(tf, _)| tf),
+                max_source_time_frame: None,
             });
 
-            if !state.rescaled_last_time_frame {
-                Self::rescale_last_time_frame(meter)?;
-                state.rescaled_last_time_frame = true;
-            }
-
             let db_weight = Self::db_weight();
+
+            if state.max_source_time_frame.is_none() {
+                state.max_source_time_frame =
+                    MarketIdsPerCloseTimeFrame::<T>::iter_keys().max();
+            }
 
             let max_source = match state.max_source_time_frame {
                 Some(v) => v,
@@ -146,8 +152,9 @@ pub mod mbm {
                 }
             };
 
-            let mut start_tf =
-                state.current_time_frame.or_else(|| Self::next_start_time_frame(0, max_source));
+            let mut start_tf = state
+                .current_time_frame
+                .or_else(|| Self::next_start_time_frame(max_source));
 
             while let Some(current_tf) = start_tf {
                 let ids: Vec<_> = MarketIdsPerCloseTimeFrame::<T>::get(current_tf).into();
@@ -160,8 +167,7 @@ pub mod mbm {
                     MarketIdsPerCloseTimeFrame::<T>::remove(current_tf);
                     state.current_time_frame = None;
                     state.offset = 0;
-                    start_tf =
-                        Self::next_start_time_frame(current_tf.saturating_add(1), max_source);
+                    start_tf = Self::next_start_time_frame(max_source);
                     continue;
                 }
 
@@ -193,7 +199,7 @@ pub mod mbm {
 
                     let market_id = ids[idx];
                     let target_tf = current_tf.saturating_mul(TIME_FRAME_SCALE_FACTOR);
-                    Self::insert_with_shift(market_id, target_tf);
+                    Self::insert_with_shift(meter, db_weight, market_id, target_tf)?;
                     idx = idx.saturating_add(1);
                 }
 
@@ -204,7 +210,7 @@ pub mod mbm {
                 // Move to next available key.
                 state.current_time_frame = None;
                 state.offset = 0;
-                start_tf = Self::next_start_time_frame(current_tf.saturating_add(1), max_source);
+                start_tf = Self::next_start_time_frame(max_source);
             }
 
             // No more entries; bump storage version.
@@ -222,7 +228,7 @@ mod tests {
     use crate::{mock::*, CacheSize, LastTimeFrame, MarketIdsPerCloseTimeFrame};
     use frame_support::{
         migrations::SteppedMigration,
-        traits::StorageVersion,
+        traits::{Hooks as _, StorageVersion},
         weights::{Weight, WeightMeter},
         BoundedVec,
     };
@@ -239,6 +245,8 @@ mod tests {
             );
 
             let mut cursor = None;
+            // Run the single-block migration to rescale `LastTimeFrame`.
+            crate::Pallet::<Runtime>::on_runtime_upgrade();
             // Give plenty of weight to finish in one go.
             let mut meter = WeightMeter::with_limit(Weight::from_parts(u64::MAX, u64::MAX));
             cursor = TimeFrameRescaleMigration::<Runtime>::step(cursor, &mut meter).unwrap();
