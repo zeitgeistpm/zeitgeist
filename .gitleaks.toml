@@ -1,0 +1,15 @@
+description = "Allow known public addresses and test keys that gitleaks flags"
+title = "Zeitgeist gitleaks allowlist"
+
+[allowlist]
+paths = [
+    '''^integration-tests/scripts/chopsticks-relay-timestamp-hook\.js$''',
+    '''^integration-tests/configs/rococo\.yml$''',
+    '''^integration-tests/configs/battery-station\.yml$''',
+    '''^runtime/battery-station/src/parachain_params\.rs$''',
+    '''^runtime/zeitgeist/src/parachain_params\.rs$''',
+    '''^scripts/runtime-upgrade/test_runtime_upgrade\.sh$''',
+    '''^node/res/bs_parachain\.json$''',
+    '''^node/res/bp\.json$''',
+    '''^node/res/bp_parachain\.json$''',
+]

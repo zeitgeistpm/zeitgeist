@@ -1,0 +1,20 @@
+rules:
+  - id: rust-no-dbg-in-runtime
+    message: Avoid dbg! in runtimes and pallets; use logging macros instead.
+    severity: WARNING
+    languages: [rust]
+    pattern: dbg!($X)
+    paths:
+      include:
+        - /runtime/**
+        - /zrml/**
+
+  - id: rust-no-println-in-runtime
+    message: Avoid println! in runtimes and pallets; use logging macros instead.
+    severity: WARNING
+    languages: [rust]
+    pattern: println!($X)
+    paths:
+      include:
+        - /runtime/**
+        - /zrml/**

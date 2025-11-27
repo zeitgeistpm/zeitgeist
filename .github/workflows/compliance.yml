@@ -1,0 +1,154 @@
+name: Compliance
+
+on:
+  pull_request:
+    types: [ labeled ]
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: compliance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cargo-deny:
+    name: Cargo Deny
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - name: Run cargo-deny
+        run: |
+          cargo deny check licenses bans sources advisories
+
+  semgrep:
+    name: Semgrep
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: .github/semgrep-rules.yml
+
+  node-licenses:
+    name: Node Licenses
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: integration-tests
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+          version: 9
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: integration-tests/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check licenses
+        run: pnpm dlx license-checker --production --summary
+      - name: Audit npm
+        run: pnpm audit --prod
+
+  gitleaks:
+    name: Gitleaks
+    if: |
+      (
+        github.event_name == 'pull_request' && 
+          (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+          contains(github.event.pull_request.labels.*.name, 's:accepted'))
+      ) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install gitleaks (OSS)
+        run: |
+          set -euo pipefail
+          version="$(
+            curl -sI https://github.com/gitleaks/gitleaks/releases/latest \
+              | tr -d '\r' \
+              | awk 'tolower($1) == "location:" {print $2}' \
+              | sed -E 's#.*/tag/v?##; s#^v##'
+          )"
+
+          if [[ -z "${version}" || "${version}" == "null" ]]; then
+            echo "Failed to determine gitleaks version" >&2
+            exit 1
+          fi
+
+          arch="$(uname -m)"
+          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+
+          case "${arch}" in
+            x86_64) arch="x64" ;;
+            aarch64 | arm64) arch="arm64" ;;
+            *)
+              echo "Unsupported architecture: ${arch}" >&2
+              exit 1
+              ;;
+          esac
+
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_${os}_${arch}.tar.gz" \
+            | tar -xz -C /tmp gitleaks
+          chmod +x /tmp/gitleaks
+          /tmp/gitleaks version
+      - name: Run gitleaks
+        run: /tmp/gitleaks detect --redact
+
+  sbom-vuln:
+    name: SBOM and Vulnerability Scan
+    if: |
+      github.event_name == 'pull_request' && 
+        (contains(github.event.pull_request.labels.*.name, 's:review-needed') ||
+        contains(github.event.pull_request.labels.*.name, 's:accepted')) ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          output-file: sbom.json
+          format: cyclonedx-json
+          syft-version: latest
+      - name: Scan SBOM
+        uses: anchore/scan-action@v3
+        env:
+          GRYPE_CONFIG: ${{ github.workspace }}/.grype.yaml
+        with:
+          sbom: sbom.json
+          grype-version: latest
+          fail-build: false
+          severity-cutoff: medium

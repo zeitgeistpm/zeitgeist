@@ -1,0 +1,24 @@
+name: Scancode
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "^v[0-9]+.[0-9]+.[0-9]+(-rc[0-9]+)?$"
+
+jobs:
+  scancode:
+    name: Scancode
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install scancode
+        run: pip install scancode-toolkit
+      - name: Run scancode
+        run: scancode --processes 4 -clp . --json-pp compliance-report.json
+      - name: Upload scancode report
+        uses: actions/upload-artifact@v4
+        with:
+          name: scancode-report
+          path: compliance-report.json

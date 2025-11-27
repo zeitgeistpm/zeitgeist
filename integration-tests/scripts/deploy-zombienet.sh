@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 if [ "$(dirname "$0")" != "./scripts" ]; then
     echo "Please execute this script from the integration-tests directory."

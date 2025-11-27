@@ -30,6 +30,7 @@ zrml-combinatorial-tokens = { workspace = true, features = ["default", "mock"] }
 [package]
 authors = ["Forecasting Technologies Ltd"]
 edition.workspace = true
+license = "GPL-3.0-or-later"
 name = "zrml-combinatorial-tokens-fuzz"
 publish = false
 version = "0.6.1"

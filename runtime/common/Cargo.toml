@@ -118,7 +118,9 @@ try-runtime = [
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
+license = "GPL-3.0-or-later"
 name = "common-runtime"
+publish = false
 version = "0.6.1"
 
 [package.metadata.docs.rs]

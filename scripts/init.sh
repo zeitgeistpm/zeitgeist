@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 # Initializes a build environment.
 # Passing "nosudo" in the first argument results in avoiding the usage of sudo for privileged commands.

@@ -30,6 +30,7 @@ zrml-neo-swaps = { workspace = true, features = ["default", "mock"] }
 [package]
 authors = ["Forecasting Technologies Ltd"]
 edition.workspace = true
+license = "GPL-3.0-or-later"
 name = "zrml-neo-swaps-fuzz"
 publish = false
 version = "0.6.1"
