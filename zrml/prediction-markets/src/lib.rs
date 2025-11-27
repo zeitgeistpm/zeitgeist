@@ -1874,24 +1874,30 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
-            let mut weight = T::DbWeight::get().reads(1);
+            let db_weight = T::DbWeight::get();
+            let mut weight = db_weight.reads(1);
 
             if StorageVersion::get::<Self>() >= STORAGE_VERSION {
                 return weight;
             }
 
-            let db_weight = T::DbWeight::get();
             weight = weight.saturating_add(db_weight.reads(1));
-            if let Some(last_time_frame) = LastTimeFrame::<T>::get() {
-                let new_last_time_frame =
-                    last_time_frame.saturating_mul(migrations::mbm::TIME_FRAME_SCALE_FACTOR);
-                log::info!(
-                    target: LOG_TARGET,
-                    "LastTimeFrame migrated from {} to {} during on_runtime_upgrade",
-                    last_time_frame,
-                    new_last_time_frame,
-                );
-                LastTimeFrame::<T>::set(Some(new_last_time_frame));
+            if !LastTimeFrameRescaled::<T>::get() {
+                weight = weight.saturating_add(db_weight.reads(1));
+                if let Some(last_time_frame) = LastTimeFrame::<T>::get() {
+                    let new_last_time_frame =
+                        last_time_frame.saturating_mul(migrations::mbm::TIME_FRAME_SCALE_FACTOR);
+                    log::info!(
+                        target: LOG_TARGET,
+                        "LastTimeFrame migrated from {} to {} during on_runtime_upgrade",
+                        last_time_frame,
+                        new_last_time_frame,
+                    );
+                    LastTimeFrame::<T>::set(Some(new_last_time_frame));
+                    weight = weight.saturating_add(db_weight.writes(1));
+                }
+
+                LastTimeFrameRescaled::<T>::put(true);
                 weight = weight.saturating_add(db_weight.writes(1));
             }
 
@@ -1901,23 +1907,31 @@ mod pallet {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
             let version_before = StorageVersion::get::<Self>();
-            let ran = version_before < STORAGE_VERSION;
-            Ok((ran, LastTimeFrame::<T>::get()).encode())
+            let last_time_frame_rescaled = LastTimeFrameRescaled::<T>::get();
+            let ran = version_before < STORAGE_VERSION && !last_time_frame_rescaled;
+            Ok((ran, LastTimeFrame::<T>::get(), last_time_frame_rescaled).encode())
         }
 
         #[cfg(feature = "try-runtime")]
         fn post_upgrade(state: Vec<u8>) -> Result<(), TryRuntimeError> {
-            let (ran, before): (bool, Option<TimeFrame>) = Decode::decode(&mut &state[..])
-                .map_err(|_| TryRuntimeError::Other("Failed to decode upgrade state".into()))?;
+            let (ran, before, rescaled_before): (bool, Option<TimeFrame>, bool) =
+                Decode::decode(&mut &state[..])
+                    .map_err(|_| TryRuntimeError::Other("Failed to decode upgrade state".into()))?;
             if !ran {
                 return Ok(());
             }
+            debug_assert!(!rescaled_before, "Unexpected pre-upgrade rescale flag");
             let expected =
                 before.map(|v| v.saturating_mul(migrations::mbm::TIME_FRAME_SCALE_FACTOR));
             let after = LastTimeFrame::<T>::get();
             if after != expected {
                 return Err(TryRuntimeError::Other(
                     "LastTimeFrame not rescaled correctly during upgrade",
+                ));
+            }
+            if !LastTimeFrameRescaled::<T>::get() {
+                return Err(TryRuntimeError::Other(
+                    "LastTimeFrameRescaled flag not set during upgrade",
                 ));
             }
             Ok(())
@@ -2038,6 +2052,11 @@ mod pallet {
     /// The last time frame that was checked for markets to close.
     #[pallet::storage]
     pub type LastTimeFrame<T: Config> = StorageValue<_, TimeFrame>;
+
+    /// Tracks whether `LastTimeFrame` was already rescaled during the block-time migration.
+    #[pallet::storage]
+    #[pallet::getter(fn last_time_frame_rescaled)]
+    pub type LastTimeFrameRescaled<T: Config> = StorageValue<_, bool, ValueQuery>;
 
     /// A mapping of market identifiers to the block they were disputed at.
     /// A market only ends up here if it was disputed.

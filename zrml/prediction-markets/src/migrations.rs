@@ -113,7 +113,7 @@ pub mod mbm {
                 target_time_frame,
             );
 
-            Ok(())
+            Err(SteppedMigrationError::Failed)
         }
 
         fn next_start_time_frame(max: TimeFrame) -> Option<TimeFrame> {
@@ -229,7 +229,8 @@ pub mod mbm {
             }
 
             // No more entries; bump storage version.
-            Self::weight_or_insufficient(meter, db_weight.writes(1))?;
+            Self::weight_or_insufficient(meter, db_weight.writes(2))?;
+            crate::LastTimeFrameRescaled::<T>::kill();
             frame_support::traits::StorageVersion::new(TARGET_STORAGE_VERSION)
                 .put::<crate::Pallet<T>>();
             Ok(None)
@@ -240,10 +241,12 @@ pub mod mbm {
 #[cfg(all(test, feature = "mock"))]
 mod tests {
     use super::mbm::{TimeFrameRescaleMigration, TIME_FRAME_SCALE_FACTOR};
-    use crate::{mock::*, CacheSize, LastTimeFrame, MarketIdsPerCloseTimeFrame};
+    use crate::{
+        mock::*, CacheSize, LastTimeFrame, LastTimeFrameRescaled, MarketIdsPerCloseTimeFrame,
+    };
     use frame_support::{
-        migrations::SteppedMigration,
-        traits::{Hooks as _, StorageVersion},
+        migrations::{SteppedMigration, SteppedMigrationError},
+        traits::{Get, Hooks as _, StorageVersion},
         weights::{Weight, WeightMeter},
         BoundedVec,
     };
@@ -262,6 +265,7 @@ mod tests {
             let mut cursor = None;
             // Run the single-block migration to rescale `LastTimeFrame`.
             crate::Pallet::<Runtime>::on_runtime_upgrade();
+            assert!(LastTimeFrameRescaled::<Runtime>::get());
             // Give plenty of weight to finish in one go.
             let mut meter = WeightMeter::with_limit(Weight::from_parts(u64::MAX, u64::MAX));
             cursor = TimeFrameRescaleMigration::<Runtime>::step(cursor, &mut meter).unwrap();
@@ -269,6 +273,7 @@ mod tests {
 
             assert_eq!(StorageVersion::get::<crate::Pallet<Runtime>>(), StorageVersion::new(9));
             assert_eq!(LastTimeFrame::<Runtime>::get(), Some(5 * TIME_FRAME_SCALE_FACTOR));
+            assert!(!LastTimeFrameRescaled::<Runtime>::get());
             assert_eq!(
                 MarketIdsPerCloseTimeFrame::<Runtime>::get(10),
                 BoundedVec::<u128, CacheSize>::new()
@@ -277,6 +282,59 @@ mod tests {
                 MarketIdsPerCloseTimeFrame::<Runtime>::get(10 * TIME_FRAME_SCALE_FACTOR),
                 BoundedVec::<u128, CacheSize>::try_from(vec![1u128]).unwrap(),
             );
+        });
+    }
+
+    #[test]
+    fn migration_aborts_when_target_buckets_full() {
+        ExtBuilder::default().build().execute_with(|| {
+            StorageVersion::new(8).put::<crate::Pallet<Runtime>>();
+
+            let source_tf: u64 = 5;
+            let target_tf = source_tf * TIME_FRAME_SCALE_FACTOR;
+
+            let full_bucket: BoundedVec<u128, CacheSize> =
+                BoundedVec::try_from((0..CacheSize::get()).map(|i| i as u128).collect::<Vec<_>>())
+                    .unwrap();
+
+            MarketIdsPerCloseTimeFrame::<Runtime>::insert(target_tf, full_bucket.clone());
+            MarketIdsPerCloseTimeFrame::<Runtime>::insert(
+                target_tf.saturating_add(1),
+                full_bucket.clone(),
+            );
+            MarketIdsPerCloseTimeFrame::<Runtime>::insert(target_tf.saturating_add(2), full_bucket);
+            let source_bucket =
+                BoundedVec::<u128, CacheSize>::try_from(vec![999u128]).expect("within bounds");
+            MarketIdsPerCloseTimeFrame::<Runtime>::insert(source_tf, source_bucket.clone());
+
+            let mut meter = WeightMeter::with_limit(Weight::from_parts(u64::MAX, u64::MAX));
+            let cursor = Some(super::mbm::Cursor {
+                current_time_frame: Some(source_tf),
+                offset: 0,
+                max_source_time_frame: None,
+            });
+
+            let result = TimeFrameRescaleMigration::<Runtime>::step(cursor, &mut meter);
+            assert!(matches!(result, Err(SteppedMigrationError::Failed)));
+            assert_eq!(MarketIdsPerCloseTimeFrame::<Runtime>::get(source_tf), source_bucket);
+            assert_eq!(StorageVersion::get::<crate::Pallet<Runtime>>(), StorageVersion::new(8));
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_rescales_last_time_frame_only_once() {
+        ExtBuilder::default().build().execute_with(|| {
+            StorageVersion::new(8).put::<crate::Pallet<Runtime>>();
+            LastTimeFrame::<Runtime>::set(Some(7));
+
+            crate::Pallet::<Runtime>::on_runtime_upgrade();
+            assert_eq!(LastTimeFrame::<Runtime>::get(), Some(7 * TIME_FRAME_SCALE_FACTOR));
+            assert!(LastTimeFrameRescaled::<Runtime>::get());
+
+            // Simulate another runtime upgrade while migration is still pending.
+            crate::Pallet::<Runtime>::on_runtime_upgrade();
+            assert_eq!(LastTimeFrame::<Runtime>::get(), Some(7 * TIME_FRAME_SCALE_FACTOR));
+            assert!(LastTimeFrameRescaled::<Runtime>::get());
         });
     }
 
@@ -300,6 +358,7 @@ mod tests {
             );
 
             crate::Pallet::<Runtime>::on_runtime_upgrade();
+            assert!(LastTimeFrameRescaled::<Runtime>::get());
             let mut cursor = None;
             let mut meter = WeightMeter::with_limit(Weight::from_parts(u64::MAX, u64::MAX));
             cursor = TimeFrameRescaleMigration::<Runtime>::step(cursor, &mut meter).unwrap();
@@ -307,6 +366,7 @@ mod tests {
 
             assert_eq!(StorageVersion::get::<crate::Pallet<Runtime>>(), StorageVersion::new(9));
             assert_eq!(LastTimeFrame::<Runtime>::get(), Some(12 * TIME_FRAME_SCALE_FACTOR));
+            assert!(!LastTimeFrameRescaled::<Runtime>::get());
             assert_eq!(
                 MarketIdsPerCloseTimeFrame::<Runtime>::get(5),
                 BoundedVec::<u128, CacheSize>::new()
