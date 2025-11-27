@@ -54,7 +54,10 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::traits::AccountIdConversion;
     #[cfg(feature = "try-runtime")]
-    use sp_runtime::{codec::{Decode, Encode}, TryRuntimeError};
+    use sp_runtime::{
+        codec::{Decode, Encode},
+        TryRuntimeError,
+    };
 
     #[cfg(feature = "parachain")]
     use {orml_traits::asset_registry::Inspect, zeitgeist_primitives::types::CustomMetadata};
@@ -1903,7 +1906,8 @@ mod pallet {
             if !ran {
                 return Ok(());
             }
-            let expected = before.map(|v| v.saturating_mul(migrations::mbm::TIME_FRAME_SCALE_FACTOR));
+            let expected =
+                before.map(|v| v.saturating_mul(migrations::mbm::TIME_FRAME_SCALE_FACTOR));
             let after = LastTimeFrame::<T>::get();
             if after != expected {
                 return Err(TryRuntimeError::Other(

@@ -27,8 +27,8 @@ pub mod mbm {
         weights::{Weight, WeightMeter},
         BoundedVec,
     };
-    use sp_runtime::codec::{Decode, Encode, MaxEncodedLen};
     use log::error;
+    use sp_runtime::codec::{Decode, Encode, MaxEncodedLen};
 
     /// Block time (ms) used before the AsyncBacking upgrade halved block time.
     pub const PREVIOUS_MILLISECS_PER_BLOCK: u32 = 12_000;
@@ -104,8 +104,7 @@ pub mod mbm {
         fn next_start_time_frame(max: TimeFrame) -> Option<TimeFrame> {
             // Pick any remaining source key not beyond the original maximum so we don't
             // loop over newly inserted target buckets.
-            MarketIdsPerCloseTimeFrame::<T>::iter_keys()
-                .find(|tf| *tf <= max)
+            MarketIdsPerCloseTimeFrame::<T>::iter_keys().find(|tf| *tf <= max)
         }
     }
 
@@ -137,8 +136,7 @@ pub mod mbm {
             let db_weight = Self::db_weight();
 
             if state.max_source_time_frame.is_none() {
-                state.max_source_time_frame =
-                    MarketIdsPerCloseTimeFrame::<T>::iter_keys().max();
+                state.max_source_time_frame = MarketIdsPerCloseTimeFrame::<T>::iter_keys().max();
             }
 
             let max_source = match state.max_source_time_frame {
@@ -152,9 +150,8 @@ pub mod mbm {
                 }
             };
 
-            let mut start_tf = state
-                .current_time_frame
-                .or_else(|| Self::next_start_time_frame(max_source));
+            let mut start_tf =
+                state.current_time_frame.or_else(|| Self::next_start_time_frame(max_source));
 
             while let Some(current_tf) = start_tf {
                 let ids: Vec<_> = MarketIdsPerCloseTimeFrame::<T>::get(current_tf).into();
@@ -261,6 +258,60 @@ mod tests {
             assert_eq!(
                 MarketIdsPerCloseTimeFrame::<Runtime>::get(10 * TIME_FRAME_SCALE_FACTOR),
                 BoundedVec::<u128, CacheSize>::try_from(vec![1u128]).unwrap(),
+            );
+        });
+    }
+
+    #[test]
+    fn migration_rescales_multiple_buckets_with_varied_lengths() {
+        ExtBuilder::default().build().execute_with(|| {
+            StorageVersion::new(8).put::<crate::Pallet<Runtime>>();
+
+            LastTimeFrame::<Runtime>::set(Some(12));
+            MarketIdsPerCloseTimeFrame::<Runtime>::insert(
+                5,
+                BoundedVec::<u128, CacheSize>::try_from(vec![1u128]).unwrap(),
+            );
+            MarketIdsPerCloseTimeFrame::<Runtime>::insert(
+                6,
+                BoundedVec::<u128, CacheSize>::try_from(vec![2u128, 3u128]).unwrap(),
+            );
+            MarketIdsPerCloseTimeFrame::<Runtime>::insert(
+                9,
+                BoundedVec::<u128, CacheSize>::try_from(vec![4u128, 5u128, 6u128]).unwrap(),
+            );
+
+            crate::Pallet::<Runtime>::on_runtime_upgrade();
+            let mut cursor = None;
+            let mut meter = WeightMeter::with_limit(Weight::from_parts(u64::MAX, u64::MAX));
+            cursor = TimeFrameRescaleMigration::<Runtime>::step(cursor, &mut meter).unwrap();
+            assert!(cursor.is_none());
+
+            assert_eq!(StorageVersion::get::<crate::Pallet<Runtime>>(), StorageVersion::new(9));
+            assert_eq!(LastTimeFrame::<Runtime>::get(), Some(12 * TIME_FRAME_SCALE_FACTOR));
+            assert_eq!(
+                MarketIdsPerCloseTimeFrame::<Runtime>::get(5),
+                BoundedVec::<u128, CacheSize>::new()
+            );
+            assert_eq!(
+                MarketIdsPerCloseTimeFrame::<Runtime>::get(6),
+                BoundedVec::<u128, CacheSize>::new()
+            );
+            assert_eq!(
+                MarketIdsPerCloseTimeFrame::<Runtime>::get(9),
+                BoundedVec::<u128, CacheSize>::new()
+            );
+            assert_eq!(
+                MarketIdsPerCloseTimeFrame::<Runtime>::get(5 * TIME_FRAME_SCALE_FACTOR),
+                BoundedVec::<u128, CacheSize>::try_from(vec![1u128]).unwrap(),
+            );
+            assert_eq!(
+                MarketIdsPerCloseTimeFrame::<Runtime>::get(6 * TIME_FRAME_SCALE_FACTOR),
+                BoundedVec::<u128, CacheSize>::try_from(vec![2u128, 3u128]).unwrap(),
+            );
+            assert_eq!(
+                MarketIdsPerCloseTimeFrame::<Runtime>::get(9 * TIME_FRAME_SCALE_FACTOR),
+                BoundedVec::<u128, CacheSize>::try_from(vec![4u128, 5u128, 6u128]).unwrap(),
             );
         });
     }
