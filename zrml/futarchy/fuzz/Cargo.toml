@@ -18,6 +18,7 @@ zrml-futarchy = { workspace = true, features = ["default", "fuzzing", "mock"] }
 [package]
 authors = ["Forecasting Technologies Ltd"]
 edition.workspace = true
+license = "GPL-3.0-or-later"
 name = "zrml-futarchy-fuzz"
 publish = false
 version = "0.6.1"

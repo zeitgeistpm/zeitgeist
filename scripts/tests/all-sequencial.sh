@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 # Checks everything in a sequential fashion. Useful for debugging but slow to compile/complete.
 #

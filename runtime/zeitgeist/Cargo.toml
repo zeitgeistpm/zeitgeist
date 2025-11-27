@@ -444,7 +444,9 @@ force-debug = ["sp-debug-derive/force-debug"]
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition.workspace = true
+license = "GPL-3.0-or-later"
 name = "zeitgeist-runtime"
+publish = false
 version = "0.6.1"
 
 [package.metadata.docs.rs]

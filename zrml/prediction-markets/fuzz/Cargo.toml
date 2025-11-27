@@ -15,6 +15,7 @@ zrml-prediction-markets = { workspace = true, features = ["mock", "default"] }
 [package]
 authors = ["Automatically generated"]
 edition.workspace = true
+license = "GPL-3.0-or-later"
 name = "zrml-prediction-markets-fuzz"
 publish = false
 version = "0.6.1"
