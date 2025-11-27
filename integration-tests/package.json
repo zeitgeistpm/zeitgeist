@@ -31,7 +31,13 @@
       "ws": "8.17.1",
       "sha.js": "2.4.12",
       "js-yaml": "4.1.1",
-      "tmp": "0.2.4"
+      "tmp": "0.2.4",
+      "@polkadot/api": "16.5.2",
+      "@polkadot/types": "16.5.2",
+      "@polkadot/types-support": "16.5.2",
+      "@polkadot/util": "13.5.2",
+      "@polkadot/util-crypto": "13.5.2",
+      "@polkadot/keyring": "13.5.2"
     }
   },
   "description": "Integration tests",
@@ -40,15 +46,5 @@
   "main": "index.js",
   "name": "integration-tests",
   "scripts": {},
-  "version": "0.0.0",
-  "pnpm": {
-    "overrides": {
-      "@polkadot/api": "16.5.2",
-      "@polkadot/types": "16.5.2",
-      "@polkadot/types-support": "16.5.2",
-      "@polkadot/util": "13.5.2",
-      "@polkadot/util-crypto": "13.5.2",
-      "@polkadot/keyring": "13.5.2"
-    }
-  }
+  "version": "0.0.0"
 }
