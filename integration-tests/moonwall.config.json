@@ -4,7 +4,7 @@
   "scriptsDir": "scripts/",
   "environments": [
     {
-      "name": "zombienet_zeitgeist_upgrade",
+      "name": "zombienet_battery_station_upgrade",
       "testFileDir": ["tests/rt-upgrade-zombienet"],
       "runScripts": [
         "build-node.sh",
@@ -17,10 +17,10 @@
             "binPath": "../target/release/zeitgeist"
           }
         ],
-        "rtUpgradePath": "../target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
+        "rtUpgradePath": "../target/release/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm",
         "type": "zombie",
         "zombieSpec": {
-          "configPath": "./configs/zombieZeitgeist.json"
+          "configPath": "./configs/zombieBatteryStation.json"
         }
       },
       "connections": [

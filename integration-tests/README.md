@@ -86,10 +86,10 @@ Unable to map [u8; 32] to a lookup index
 [16:36:17.240] INFO (xcm/24440): Connected relaychain 'Polkadot' with parachain 'Zeitgeist'
 ```
 
-#### Test the upgrade to the WASM from `./target/release/wbuild/zeitgeist-runtime` on zombienet:
+#### Test the upgrade to the WASM from `./target/release/wbuild/battery-station-runtime` on zombienet:
 
 ```bash
-pnpm exec moonwall test zombienet_zeitgeist_upgrade --runInBand
+pnpm exec moonwall test zombienet_battery_station_upgrade --runInBand
 ```
 
 #### Test the upgrade to the WASM from `./target/release/wbuild/zeitgeist-runtime` on the live main-net fork using chopsticks:
