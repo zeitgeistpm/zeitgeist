@@ -138,7 +138,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            SingleBlockMigrations,
+            (),
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -563,7 +563,7 @@ macro_rules! impl_config_traits {
             type SS58Prefix = SS58Prefix;
             type SystemWeightInfo = weights::frame_system::WeightInfo<Runtime>;
             type Version = Version;
-            type SingleBlockMigrations = ();
+            type SingleBlockMigrations = SingleBlockMigrations;
             type MultiBlockMigrator = pallet_migrations::Pallet<Runtime>;
             type PreInherents = ();
             type PostInherents = ();

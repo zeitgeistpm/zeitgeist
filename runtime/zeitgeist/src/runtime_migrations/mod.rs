@@ -21,6 +21,7 @@ use pallet_parachain_staking::migrations::{
     LegacyAtStakeCursorMigration, LegacyAtStakeMigrationKey, LegacyAtStakeMigrationList,
     LEGACY_AT_STAKE_MIGRATION_ID_LEN,
 };
+use zrml_prediction_markets::migrations::mbm::TimeFrameRescaleMigration;
 
 mod legacy_keys;
 use legacy_keys::ZEITGEIST_LEGACY_KEYS;
@@ -41,4 +42,5 @@ impl LegacyAtStakeMigrationList for ZeitgeistLegacyKeys {
 
 pub type LegacyMigrations = (
     LegacyAtStakeCursorMigration<crate::Runtime, ZeitgeistLegacyKeys, ZEITGEIST_MIGRATION_BATCH>,
+    TimeFrameRescaleMigration<crate::Runtime>,
 );
