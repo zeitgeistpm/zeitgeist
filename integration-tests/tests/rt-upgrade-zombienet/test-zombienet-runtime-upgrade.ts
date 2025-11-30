@@ -244,36 +244,36 @@ describeSuite({
         const relayTsStorageKey =
           "0x54dbd40f5201dbc18b0eed4b2ecd9cc67e2cdf745d68eeb295336330e3a1a063";
 
-        const readRelayTs = async (): Promise<number> => {
+        const readRelayTs = async (): Promise<bigint> => {
           const raw = await paraApi.rpc.state.getStorage(relayTsStorageKey);
           expect(raw, "RelayTimestampNow storage should exist").to.not.be.null;
           const rawHex = raw?.toHex();
           expect(rawHex, "RelayTimestampNow should decode to hex").to.not.be.undefined;
           log(`RelayTimestampNow raw=${rawHex}`);
-          return paraApi.createType("u64", rawHex ?? 0).toNumber();
+          return paraApi.createType("u64", rawHex ?? 0).toBigInt();
         };
 
-        let tsRelay1 = 0;
+        let tsRelay1 = 0n;
         let retries = 0;
-        while (tsRelay1 === 0 && retries < 5) {
+        while (tsRelay1 === 0n && retries < 5) {
           log(`Attempt ${retries + 1}: reading RelayTimestampNow`);
           tsRelay1 = await readRelayTs();
           const rawDirect = await paraApi.rpc.state.getStorage(
             relayTsStorageKey
           );
           log(`RelayTimestampNow direct RPC read: ${rawDirect?.toHex() ?? "null"}`);
-          if (tsRelay1 === 0) {
+          if (tsRelay1 === 0n) {
             await context.waitBlock(1);
           }
           retries++;
         }
 
-        const tsPara1 = (await paraApi.query.timestamp.now()).toNumber();
+        const tsPara1 = (await paraApi.query.timestamp.now()).toBigInt();
         const block1 = (
           await paraApi.rpc.chain.getBlock()
         ).block.header.number.toNumber();
 
-        expect(tsRelay1, "Initial relay timestamp should be non-zero").to.be.greaterThan(0);
+        expect(tsRelay1, "Initial relay timestamp should be non-zero").to.be.greaterThan(0n);
         expect(
           tsPara1,
           "Parachain timestamp should mirror relay timestamp"
@@ -282,7 +282,7 @@ describeSuite({
         await context.waitBlock(2);
 
         const tsRelay2 = await readRelayTs();
-        const tsPara2 = (await paraApi.query.timestamp.now()).toNumber();
+        const tsPara2 = (await paraApi.query.timestamp.now()).toBigInt();
         const block2 = (
           await paraApi.rpc.chain.getBlock()
         ).block.header.number.toNumber();
