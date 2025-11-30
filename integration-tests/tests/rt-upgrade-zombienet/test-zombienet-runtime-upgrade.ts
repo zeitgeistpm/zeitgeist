@@ -26,6 +26,7 @@ import { KeyringPair } from "@moonwall/util";
 import { ApiPromise, Keyring } from "@polkadot/api";
 import { u8aConcat } from "@polkadot/util";
 import { blake2AsHex, xxhashAsU8a } from "@polkadot/util-crypto";
+import { u8aToBigInt } from "@polkadot/util";
 import fs from "node:fs";
 import { RuntimeVersion } from "@polkadot/types/interfaces";
 
@@ -250,7 +251,9 @@ describeSuite({
           const rawHex = raw?.toHex();
           expect(rawHex, "RelayTimestampNow should decode to hex").to.not.be.undefined;
           log(`RelayTimestampNow raw=${rawHex}`);
-          return paraApi.createType("u64", rawHex ?? 0).toBigInt();
+          // Storage encodes u64 little-endian; decode explicitly.
+          const ts = u8aToBigInt(raw?.toU8a(true) ?? new Uint8Array(), true);
+          return ts;
         };
 
         let tsRelay1 = 0n;
