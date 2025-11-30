@@ -241,12 +241,11 @@ describeSuite({
       title: "Relay timestamp (from relay proof) is present and increases across blocks",
       timeout: 120000,
       test: async function () {
-        const runtimePrefix = xxhashAsU8a("runtime", 128);
-        const tsPrefix = xxhashAsU8a("RelayTimestampNow", 128);
-        const relayTsKey = u8aConcat(runtimePrefix, tsPrefix);
+        const relayTsStorageKey =
+          "0x54dbd40f5201dbc18b0eed4b2ecd9cc67e2cdf745d68eeb295336330e3a1a063";
 
         const readRelayTs = async (): Promise<number> => {
-          const raw = await paraApi.rpc.state.getStorage(relayTsKey);
+          const raw = await paraApi.rpc.state.getStorage(relayTsStorageKey);
           expect(raw, "RelayTimestampNow storage should exist").to.not.be.null;
           const rawHex = raw?.toHex();
           expect(rawHex, "RelayTimestampNow should decode to hex").to.not.be.undefined;
@@ -259,6 +258,10 @@ describeSuite({
         while (tsRelay1 === 0 && retries < 5) {
           log(`Attempt ${retries + 1}: reading RelayTimestampNow`);
           tsRelay1 = await readRelayTs();
+          const rawDirect = await paraApi.rpc.state.getStorage(
+            relayTsStorageKey
+          );
+          log(`RelayTimestampNow direct RPC read: ${rawDirect?.toHex() ?? "null"}`);
           if (tsRelay1 === 0) {
             await context.waitBlock(1);
           }
