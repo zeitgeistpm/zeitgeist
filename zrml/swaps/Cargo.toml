@@ -67,4 +67,4 @@ edition.workspace = true
 license = "GPL-3.0-or-later"
 name = "zrml-swaps"
 publish = false
-version = "0.6.1"
+version = "0.6.2"
