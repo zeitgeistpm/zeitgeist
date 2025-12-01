@@ -37,6 +37,39 @@
       ]
     },
     {
+      "name": "zombienet_zeitgeist_upgrade",
+      "testFileDir": ["tests/rt-upgrade-zombienet"],
+      "runScripts": [
+        "build-node.sh",
+        "build-zeitgeist-spec.sh",
+        "download-polkadot.sh"
+      ],
+      "foundation": {
+        "launchSpec": [
+          {
+            "binPath": "../target/release/zeitgeist"
+          }
+        ],
+        "rtUpgradePath": "../target/release/wbuild/zeitgeist-runtime/zeitgeist_runtime.compact.compressed.wasm",
+        "type": "zombie",
+        "zombieSpec": {
+          "configPath": "./configs/zombieZeitgeist.json"
+        }
+      },
+      "connections": [
+        {
+          "name": "Relay",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:9957"]
+        },
+        {
+          "name": "parachain",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:9954"]
+        }
+      ]
+    },
+    {
       "name": "chopsticks_zeitgeist_upgrade",
       "testFileDir": ["tests/rt-upgrade-zeitgeist-chopsticks"],
       "runScripts": ["build-node.sh"],
