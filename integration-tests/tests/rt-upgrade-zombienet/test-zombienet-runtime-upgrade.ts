@@ -24,8 +24,7 @@ import {
 } from "@moonwall/cli";
 import { KeyringPair } from "@moonwall/util";
 import { ApiPromise, Keyring } from "@polkadot/api";
-import { u8aConcat } from "@polkadot/util";
-import { blake2AsHex, xxhashAsU8a } from "@polkadot/util-crypto";
+import { blake2AsHex } from "@polkadot/util-crypto";
 import { u8aToBigInt } from "@polkadot/util";
 import fs from "node:fs";
 import { RuntimeVersion } from "@polkadot/types/interfaces";
