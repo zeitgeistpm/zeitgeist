@@ -1,4 +1,8 @@
-endpoint: wss://rpc.hydradx.cloud/public-ws
+endpoint:
+  - wss://hydration-rpc.n.dwellir.com
+  - wss://hydration.ibp.network
+  - wss://rpc.helikon.io/hydradx
+  - wss://hydration.dotters.network
 mock-signature-host: true
 block: ${env.HYDRADX_BLOCK_NUMBER}
 db: ./tmp/hydradx_db_mba.sqlite

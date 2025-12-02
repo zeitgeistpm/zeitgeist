@@ -1,45 +1,55 @@
 {
-    "settings": {
-        "timeout": 1000,
-        "provider": "native"
-    },
-    "relaychain": {
-        "chain": "rococo-local",
-        "default_command": "./tmp/polkadot",
-        "default_args": ["--no-hardware-benchmarks", "-lparachain=debug", "--database=paritydb", "--no-beefy", "--detailed-log-output"],
-        "nodes": [
-            {
-                "name": "charlie",
-                "rpc_port": 9947,
-                "validator": true
-            },
-            {
-                "name": "bob",
-                "rpc_port": 9950,
-                "validator": true
-            }
-        ]
-    },
-    "parachains": [
-        {
-            "id": 2101,
-            "chain": "dev",
-            "collators": [
-                {
-                    "name": "alice",
-                    "command": "../target/release/zeitgeist",
-                    "rpc_port": 9944,
-                    "p2p_port": 33049,
-                    "args": ["-lparachain=debug", "--force-authoring", "--detailed-log-output"]
-                }
-            ]
-        }
+  "settings": {
+    "timeout": 1000,
+    "provider": "native"
+  },
+  "relaychain": {
+    "chain": "rococo-local",
+    "default_command": "./tmp/polkadot",
+    "default_args": [
+      "--no-hardware-benchmarks",
+      "-lparachain=debug",
+      "--database=paritydb",
+      "--no-beefy",
+      "--detailed-log-output"
     ],
-    "types": {
-        "Header": {
-            "number": "u64",
-            "parent_hash": "Hash",
-            "post_state": "Hash"
+    "nodes": [
+      {
+        "name": "charlie",
+        "rpc_port": 9957,
+        "validator": true
+      },
+      {
+        "name": "bob",
+        "rpc_port": 9960,
+        "validator": true
+      }
+    ]
+  },
+  "parachains": [
+    {
+      "id": 2092,
+      "chain": "./zeitgeist-parachain-2092.json",
+      "collators": [
+        {
+          "name": "alice",
+          "command": "../target/release/zeitgeist",
+          "rpc_port": 9954,
+          "p2p_port": 33059,
+          "args": [
+            "-lparachain=debug",
+            "--force-authoring",
+            "--detailed-log-output"
+          ]
         }
+      ]
     }
+  ],
+  "types": {
+    "Header": {
+      "number": "u64",
+      "parent_hash": "Hash",
+      "post_state": "Hash"
+    }
+  }
 }

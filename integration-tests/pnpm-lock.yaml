@@ -57,6 +57,9 @@ importers:
       '@polkadot/types':
         specifier: 16.5.2
         version: 16.5.2
+      '@polkadot/util':
+        specifier: 13.5.2
+        version: 13.5.2
       '@polkadot/util-crypto':
         specifier: 13.5.2
         version: 13.5.2(@polkadot/util@13.5.2)

@@ -4,6 +4,39 @@
   "scriptsDir": "scripts/",
   "environments": [
     {
+      "name": "zombienet_battery_station_upgrade",
+      "testFileDir": ["tests/rt-upgrade-zombienet"],
+      "runScripts": [
+        "build-node.sh",
+        "build-zeitgeist-spec.sh",
+        "download-polkadot.sh"
+      ],
+      "foundation": {
+        "launchSpec": [
+          {
+            "binPath": "../target/release/zeitgeist"
+          }
+        ],
+        "rtUpgradePath": "../target/release/wbuild/battery-station-runtime/battery_station_runtime.compact.compressed.wasm",
+        "type": "zombie",
+        "zombieSpec": {
+          "configPath": "./configs/zombieBatteryStation.json"
+        }
+      },
+      "connections": [
+        {
+          "name": "Relay",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:9947"]
+        },
+        {
+          "name": "parachain",
+          "type": "polkadotJs",
+          "endpoints": ["ws://127.0.0.1:9944"]
+        }
+      ]
+    },
+    {
       "name": "zombienet_zeitgeist_upgrade",
       "testFileDir": ["tests/rt-upgrade-zombienet"],
       "runScripts": [
@@ -27,12 +60,12 @@
         {
           "name": "Relay",
           "type": "polkadotJs",
-          "endpoints": ["ws://127.0.0.1:9947"]
+          "endpoints": ["ws://127.0.0.1:9957"]
         },
         {
           "name": "parachain",
           "type": "polkadotJs",
-          "endpoints": ["ws://127.0.0.1:9944"]
+          "endpoints": ["ws://127.0.0.1:9954"]
         }
       ]
     },

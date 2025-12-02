@@ -190,6 +190,10 @@ delete_if_not_binary "tmp/polkadot-prepare-worker"
 
 if [[ -x tmp/polkadot && -x tmp/polkadot-execute-worker && -x tmp/polkadot-prepare-worker ]]; then
 	POLKADOT_VERSION=$(tmp/polkadot --version || true)
+	if [[ -n "${POLKADOT_SKIP_DOWNLOAD:-}" ]]; then
+		echo "POLKADOT_SKIP_DOWNLOAD set; using existing polkadot binaries (${POLKADOT_VERSION:-unknown})."
+		exit 0
+	fi
 	if [[ "${POLKADOT_RELEASE}" == "latest" || "${POLKADOT_VERSION}" == *"${POLKADOT_RELEASE}"* ]]; then
 		echo "Polkadot binaries already match the requested release."
 		exit 0
