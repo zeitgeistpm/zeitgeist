@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+import "./setup-websocket";
 import { expect, ChopsticksContext } from "@moonwall/cli";
 import { generateKeyringPair } from "@moonwall/util";
 import { ApiPromise, Keyring } from "@polkadot/api";
