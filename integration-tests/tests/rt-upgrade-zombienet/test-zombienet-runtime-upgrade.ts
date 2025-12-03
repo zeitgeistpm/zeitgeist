@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+import "../setup-websocket";
 import {
   MoonwallContext,
   beforeAll,
@@ -117,32 +118,67 @@ describeSuite({
           );
         }
 
-        const txStatus = async (tx: any, label: string) =>
+        const txStatus = async (tx: any, label: string, timeoutMs = 120_000) =>
           new Promise<void>((resolve, reject) => {
             let unsubscribe: (() => void) | undefined;
+            const timeout = setTimeout(() => {
+              const err = new Error(`${label} timed out waiting for inclusion`);
+              log(err.message);
+              unsubscribe?.();
+              reject(err);
+            }, timeoutMs);
+
+            const finish = (fn: (value?: any) => void, msg?: string, err?: any) => {
+              clearTimeout(timeout);
+              if (msg) {
+                log(msg);
+              }
+              unsubscribe?.();
+              fn(err);
+            };
+
             tx.signAndSend(alice, (result: any) => {
+              const status = result.status;
+
               if (result.dispatchError) {
                 // Dispatch errors won't throw, so surface them explicitly.
                 const errText = result.dispatchError.toString();
-                log(`${label} dispatchError=${errText}`);
-                reject(new Error(`${label} failed: ${errText}`));
-                unsubscribe?.();
+                finish(reject, `${label} dispatchError=${errText}`, new Error(errText));
                 return;
               }
+
               log(
-                `${label} status=${result.status?.type ?? "unknown"}, events=${result.events
+                `${label} status=${status?.type ?? "unknown"}, events=${result.events
                   ?.map((ev: any) => `${ev.event.section}.${ev.event.method}`)
                   .join(",")}`
               );
-              if (result.status?.isInBlock || result.status?.isFinalized) {
-                unsubscribe?.();
-                resolve();
+
+              if (
+                status?.isDropped ||
+                status?.isInvalid ||
+                status?.isUsurped ||
+                status?.isRetracted ||
+                status?.isFinalityTimeout
+              ) {
+                finish(
+                  reject,
+                  `${label} failed with status=${status?.type ?? "unknown"}`,
+                  new Error(`${label} failed with status=${status?.type ?? "unknown"}`)
+                );
+                return;
+              }
+
+              if (status?.isInBlock || status?.isFinalized) {
+                finish(resolve);
               }
             })
               .then((unsub: () => void) => {
                 unsubscribe = unsub;
               })
-              .catch(reject);
+              .catch((err: any) => {
+                clearTimeout(timeout);
+                reject(err);
+              });
           });
 
         const findCall = (callName: string) => {
