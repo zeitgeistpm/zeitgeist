@@ -157,6 +157,7 @@ jobs:
           chmod uog+x target/release/zeitgeist
 
           cd integration-tests
+          export NODE_OPTIONS="--require ./scripts/ws-shim.cjs"
           pnpm exec moonwall test zombienet_zeitgeist_upgrade --runInBand
 
   zombienet_battery_station_upgrade:
@@ -213,6 +214,7 @@ jobs:
           chmod uog+x target/release/zeitgeist
 
           cd integration-tests
+          export NODE_OPTIONS="--require ./scripts/ws-shim.cjs"
           pnpm exec moonwall test zombienet_battery_station_upgrade --runInBand
 
   chopsticks_battery_station_upgrade:
@@ -261,6 +263,7 @@ jobs:
       - name: Battery Station post-upgrade tests using Chopsticks
         run: |
           cd integration-tests
+          export NODE_OPTIONS="--require ./scripts/ws-shim.cjs"
           pnpm exec moonwall test chopsticks_battery_station_upgrade --runInBand
 
       - name: Show chopsticks logs
@@ -316,6 +319,7 @@ jobs:
       - name: Zeitgeist post-upgrade tests using Chopsticks
         run: |
           cd integration-tests
+          export NODE_OPTIONS="--require ./scripts/ws-shim.cjs"
           pnpm exec moonwall test chopsticks_zeitgeist_upgrade --runInBand
 
       - name: Show chopsticks logs
