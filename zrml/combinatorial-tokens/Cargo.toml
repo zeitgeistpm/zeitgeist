@@ -69,4 +69,4 @@ edition.workspace = true
 license = "GPL-3.0-or-later"
 name = "zrml-combinatorial-tokens"
 publish = false
-version = "0.6.1"
+version = "0.6.2"
